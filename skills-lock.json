@@ -6,11 +6,6 @@
       "sourceType": "github",
       "computedHash": "58ce68f628890c3925aea2b5435a649251ac182057541045c68fc19a27aaa0ec"
     },
-    "codegen": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "058fec9bf514a97583ce670f9d084ba8bb1aacc3f63ab2ebe6afc7dd47b7302f"
-    },
     "core": {
       "source": "vercel-labs/json-render",
       "sourceType": "github",
@@ -20,16 +15,6 @@
       "source": "vercel-labs/json-render",
       "sourceType": "github",
       "computedHash": "f4e8c094db4900ddf1467f8a69596fc9445136b3a62c1312831ff968451f4eb5"
-    },
-    "jotai": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "1773e11369c7e45e30d52519869dc758e557e41ec4b3d923fa9911780a4bdde7"
-    },
-    "mcp": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "b7cbc4e81c3115e1c9bdc4b9fd925488b00b600622b34e28361c1b7e081d42d1"
     },
     "next-best-practices": {
       "source": "vercel-labs/next-skills",
@@ -41,60 +26,15 @@
       "sourceType": "github",
       "computedHash": "22dde85d5a69aaee45eb56aeed8e7f8fb5d2ae2559b38f71621d0654385bed1d"
     },
-    "react-email": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "fcdc6735efd9d8f4cfd8bd702608a77a6a312be0b5a4e8de58e47eba145045c3"
-    },
-    "react-native": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "1cfeffbd71f8fc350e7fdb5cd1f76067d64b60f2fef2300fd83181ad90148451"
-    },
     "react-pdf": {
       "source": "vercel-labs/json-render",
       "sourceType": "github",
       "computedHash": "a02018e64af5fc7e07e09fdd27ed43cc2b34b4ff1fbfcc21c0b391564f6a9528"
     },
-    "redux": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "9b71c3a0dd33f8ff2cea3214eed4d7a0f3d4c04e0714ad069b8ce3efc08386f3"
-    },
-    "remotion": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "391d340781220430ac6a8cc92fea99c5df026439d2e9be46b9d2c5d20488e3ef"
-    },
     "shadcn": {
       "source": "vercel-labs/json-render",
       "sourceType": "github",
       "computedHash": "fa8e374b96f1f1d0a0f81adb97a843b82753e546d9ac176c0dace04f879090d3"
-    },
-    "solid": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "b9d43604f69a8dc6651f82047bfd1c407a5686f40ec9f10ba6d5c503ef50024f"
-    },
-    "svelte": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "1f1b211c6339f49234e24e30b70e3d4214c9e8af01b7262d66dc8dbe6e1da669"
-    },
-    "vue": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "48423d8d0c69b434ce564f5b05dd66c9767acc77bc8c82fec3f0bf98256089bb"
-    },
-    "xstate": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "38a8a16963a571a68902d40ca51c1b193442ae1c78399866d39e832a8f425b21"
-    },
-    "zustand": {
-      "source": "vercel-labs/json-render",
-      "sourceType": "github",
-      "computedHash": "41cb7e8b24638b78524e9b71a3fcd6f54a672009526b1643920a258f3baccb32"
     }
   }
 }
