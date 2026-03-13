@@ -1,5 +1,5 @@
 
-import { Textarea } from '@/components/ui/Textarea';
+import { Textarea } from '@/components/ui/textarea';
 
 interface SummaryProps {
   data: string | undefined;
@@ -19,7 +19,7 @@ export function Summary({ data, onChange, readOnly }: SummaryProps) {
         </p>
       ) : (
         <Textarea
-          value={data || ''}
+          value={data ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className="min-h-[150px]"
           placeholder="Enter professional summary..."

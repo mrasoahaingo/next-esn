@@ -1,6 +1,7 @@
 
 import { ExtractedCV } from '@/lib/schema';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface PersonalInfoProps {
   data: Partial<ExtractedCV['personalInfo']> | undefined;
@@ -20,43 +21,55 @@ export function PersonalInfo({ data, onChange, readOnly }: PersonalInfoProps) {
       </h2>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">First Name</Label>
+            <Input
+              value={data?.firstName ?? ''}
+              onChange={(e) => handleChange('firstName', e.target.value)}
+              disabled={readOnly}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Last Name</Label>
+            <Input
+              value={data?.lastName ?? ''}
+              onChange={(e) => handleChange('lastName', e.target.value)}
+              disabled={readOnly}
+            />
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Title</Label>
           <Input
-            label="First Name"
-            value={data?.firstName || ''}
-            onChange={(e) => handleChange('firstName', e.target.value)}
-            disabled={readOnly}
-          />
-          <Input
-            label="Last Name"
-            value={data?.lastName || ''}
-            onChange={(e) => handleChange('lastName', e.target.value)}
+            value={data?.title ?? ''}
+            onChange={(e) => handleChange('title', e.target.value)}
             disabled={readOnly}
           />
         </div>
-        <Input
-          label="Title"
-          value={data?.title || ''}
-          onChange={(e) => handleChange('title', e.target.value)}
-          disabled={readOnly}
-        />
-        <Input
-          label="Email"
-          value={data?.email || ''}
-          onChange={(e) => handleChange('email', e.target.value)}
-          disabled={readOnly}
-        />
-        <Input
-          label="Phone"
-          value={data?.phone || ''}
-          onChange={(e) => handleChange('phone', e.target.value)}
-          disabled={readOnly}
-        />
-        <Input
-          label="Location"
-          value={data?.location || ''}
-          onChange={(e) => handleChange('location', e.target.value)}
-          disabled={readOnly}
-        />
+        <div className="space-y-1.5">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
+          <Input
+            value={data?.email ?? ''}
+            onChange={(e) => handleChange('email', e.target.value)}
+            disabled={readOnly}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Phone</Label>
+          <Input
+            value={data?.phone ?? ''}
+            onChange={(e) => handleChange('phone', e.target.value)}
+            disabled={readOnly}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Location</Label>
+          <Input
+            value={data?.location ?? ''}
+            onChange={(e) => handleChange('location', e.target.value)}
+            disabled={readOnly}
+          />
+        </div>
       </div>
     </section>
   );

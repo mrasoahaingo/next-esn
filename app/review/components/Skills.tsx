@@ -1,4 +1,7 @@
 
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { X, Plus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -37,42 +40,39 @@ export function Skills({ data, onChange, readOnly }: SkillsProps) {
       <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
         Skills
       </h2>
-      
+
       {!readOnly && (
         <div className="flex gap-2 mb-4">
-          <input
+          <Input
             type="text"
-            className="flex-1 rounded-xl border border-white/10 bg-[#0d111b] px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet/60"
             placeholder="Add a skill..."
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <button
-            onClick={handleAdd}
-            className="rounded-xl bg-neon p-2 text-black transition-colors hover:bg-neon/90"
-          >
+          <Button size="default" onClick={handleAdd}>
             <Plus className="w-5 h-5" />
-          </button>
+          </Button>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
         {normalizedData.map((skill, i) => (
-          <span
+          <Badge
             key={i}
-            className="group flex items-center gap-1 rounded-full border border-violet/30 bg-violet/15 px-3 py-1 text-sm font-medium text-violet-100"
+            variant="outline"
+            className="gap-1 border-accent/30 bg-accent/15 text-accent-foreground"
           >
             {skill}
             {!readOnly && (
               <button
                 onClick={() => handleRemove(i)}
-                className="hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                className="hover:text-destructive transition-colors ml-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
             )}
-          </span>
+          </Badge>
         ))}
       </div>
     </section>

@@ -7,6 +7,7 @@ import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Plus } from 'lucide-react';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
@@ -94,25 +95,25 @@ export default function ReviewPage() {
 
   if (!cvData && !isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-shell text-white">
+      <div className="flex justify-center items-center h-screen bg-background text-foreground">
         <Loader2 className="animate-spin mr-2" /> Chargement...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-shell text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
             <div className="flex items-center gap-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/20 text-neon neon-ring">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 text-primary neon-ring">
                 <Sparkles className="h-4 w-4" />
               </div>
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs text-slate-300">
-                  <PanelLeft className="h-3 w-3 text-violet" />
+                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
+                  <PanelLeft className="h-3 w-3 text-accent" />
                   CV Builder
                 </div>
                 <h1 className="text-lg font-semibold title-gradient">
@@ -121,21 +122,17 @@ export default function ReviewPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => router.push('/')}
-                className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10"
-              >
+              <Button variant="outline" onClick={() => router.push('/')}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 Nouveau CV
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleSave}
-                className="inline-flex items-center rounded-xl bg-neon px-5 py-2 font-semibold text-black transition hover:bg-neon/90 disabled:opacity-50"
                 disabled={isLoading || !cvData}
               >
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Sauvegarder
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -144,7 +141,7 @@ export default function ReviewPage() {
         </div>
 
         {error && (
-          <div className="mb-4 flex items-center rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+          <div className="mb-4 flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
             <AlertCircle className="mr-2 h-5 w-5" />
             {error.message}
           </div>
