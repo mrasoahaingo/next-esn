@@ -6,7 +6,8 @@ import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Plus } from 'lucide-react';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
 import { Strengths } from '../components/Strengths';
@@ -14,6 +15,8 @@ import { Experiences } from '../components/Experiences';
 import { Education } from '../components/Education';
 import { Summary } from '../components/Summary';
 import { PdfPreview } from '../components/PdfPreview';
+import { SectionShell } from '../components/SectionShell';
+import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
 
 export default function ReviewPage() {
   const params = useParams();
@@ -25,23 +28,26 @@ export default function ReviewPage() {
     setStreaming,
   } = useCvBuilderStore();
 
+  const router = useRouter();
+
   const { object, submit, isLoading, error } = useObject({
     api: '/api/extract',
     schema: extractionSchema,
   });
 
-  // Activate PDF preview hook
   usePdfPreview();
 
-  // Load candidate and start extraction
   useEffect(() => {
     if (params?.id) {
       fetch(`/api/candidates/${params.id}`)
         .then(res => res.json())
         .then(data => {
-          if (data.extracted_data && !isLoading) {
+          // Already extracted — load data without triggering AI
+          if (data.extracted_data && ['reviewing', 'ready', 'generated'].includes(data.status)) {
             setCvData(data.extracted_data);
+            return;
           }
+          // Not yet extracted — start extraction
           if (data.status === 'uploaded' || data.status === 'extracting') {
             setStreaming(true);
             submit({ candidateId: params.id });
@@ -51,14 +57,12 @@ export default function ReviewPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id]);
 
-  // Pipe streaming object into store
   useEffect(() => {
     if (object) {
       setCvData(object as Partial<ExtractedCV>);
     }
   }, [object, setCvData]);
 
-  // Track streaming state
   useEffect(() => {
     if (!isLoading && isStreaming) {
       setStreaming(false);
@@ -84,6 +88,10 @@ export default function ReviewPage() {
   const safeSkills = (safeData?.skills ?? []).filter(Boolean);
   const safeStrengths = (safeData?.strengths ?? []).filter(Boolean);
 
+  // Section status helper
+  const status = (field: keyof ExtractedCV) =>
+    getSectionStatus(cvData, isLoading, field);
+
   if (!cvData && !isLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-shell text-white">
@@ -97,7 +105,7 @@ export default function ReviewPage() {
       <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
             <div className="flex items-center gap-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neon/20 text-neon neon-ring">
                 <Sparkles className="h-4 w-4" />
@@ -113,12 +121,13 @@ export default function ReviewPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              {isLoading && (
-                <span className="inline-flex items-center rounded-xl border border-neon/25 bg-neon/10 px-3 py-2 text-sm text-neon">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  AI Extracting...
-                </span>
-              )}
+              <button
+                onClick={() => router.push('/')}
+                className="inline-flex items-center rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10"
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Nouveau CV
+              </button>
               <button
                 onClick={handleSave}
                 className="inline-flex items-center rounded-xl bg-neon px-5 py-2 font-semibold text-black transition hover:bg-neon/90 disabled:opacity-50"
@@ -129,6 +138,9 @@ export default function ReviewPage() {
               </button>
             </div>
           </div>
+
+          {/* Extraction progress */}
+          <ExtractionProgress data={cvData} isStreaming={isLoading} />
         </div>
 
         {error && (
@@ -139,43 +151,55 @@ export default function ReviewPage() {
         )}
 
         {/* Split layout: form left, PDF right */}
-        <div className="flex gap-4" style={{ height: 'calc(100vh - 140px)' }}>
+        <div className="flex gap-4" style={{ height: 'calc(100vh - 200px)' }}>
           {/* Left: Form */}
           <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <PersonalInfo
-                data={safeData?.personalInfo}
-                onChange={(val) => handleUpdate('personalInfo', val)}
-                readOnly={isLoading}
-              />
-              <Summary
-                data={safeData?.summary}
-                onChange={(val) => handleUpdate('summary', val)}
-                readOnly={isLoading}
-              />
+              <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
+                <PersonalInfo
+                  data={safeData?.personalInfo}
+                  onChange={(val) => handleUpdate('personalInfo', val)}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
+              <SectionShell status={status('summary')} label="Rédaction du résumé...">
+                <Summary
+                  data={safeData?.summary}
+                  onChange={(val) => handleUpdate('summary', val)}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
             </div>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <Skills
-                data={safeSkills}
-                onChange={(val) => handleUpdate('skills', val)}
-                readOnly={isLoading}
-              />
-              <Strengths
-                data={safeStrengths}
-                onChange={(val) => handleUpdate('strengths', val)}
-                readOnly={isLoading}
-              />
+              <SectionShell status={status('skills')} label="Analyse des compétences...">
+                <Skills
+                  data={safeSkills}
+                  onChange={(val) => handleUpdate('skills', val)}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
+              <SectionShell status={status('strengths')} label="Génération des points forts...">
+                <Strengths
+                  data={safeStrengths}
+                  onChange={(val) => handleUpdate('strengths', val)}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
             </div>
-            <Experiences
-              data={safeExperiences}
-              onChange={(val) => handleUpdate('experiences', val)}
-              readOnly={isLoading}
-            />
-            <Education
-              data={safeEducation}
-              onChange={(val) => handleUpdate('education', val)}
-              readOnly={isLoading}
-            />
+            <SectionShell status={status('experiences')} label="Analyse des expériences...">
+              <Experiences
+                data={safeExperiences}
+                onChange={(val) => handleUpdate('experiences', val)}
+                readOnly={isLoading}
+              />
+            </SectionShell>
+            <SectionShell status={status('education')} label="Extraction des formations...">
+              <Education
+                data={safeEducation}
+                onChange={(val) => handleUpdate('education', val)}
+                readOnly={isLoading}
+              />
+            </SectionShell>
           </div>
 
           {/* Right: PDF Preview */}

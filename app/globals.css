@@ -59,10 +59,19 @@ body {
     background-size: 28px 28px;
   }
 
+  .animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
   .title-gradient {
     background: linear-gradient(90deg, #ecf2ff 0%, #b2ff3f 45%, #a78bfa 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
 }
