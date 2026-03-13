@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // 1. Upload to Supabase Storage
-    const { data: storageData, error: storageError } = await supabase.storage
+    const { error: storageError } = await supabase.storage
       .from('cv-original')
       .upload(fileName, buffer, {
         contentType: file.type,

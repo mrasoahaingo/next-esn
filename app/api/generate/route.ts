@@ -1,35 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { generateHimeoDocx } from '@/lib/services/docx.service';
+import { generateHimeoPdf } from '@/lib/services/pdf.service';
 
 export async function POST(req: NextRequest) {
   try {
     const { candidateId, data } = await req.json();
     const supabase = getSupabase();
 
-    // If data is provided, update the candidate first
     if (data) {
       const { error: updateError } = await supabase
         .from('candidates')
         .update({ extracted_data: data })
         .eq('id', candidateId);
-      
+
       if (updateError) throw updateError;
     }
 
-    // Get candidate (to get names etc if not in data, or just to be safe)
-    // Actually if data is provided we have it. But we need names for filename.
-    // Let's assume data is complete ExtractedCV.
-    
-    // Generate buffer
-    const docBuffer = await generateHimeoDocx(data);
-    const fileName = `HIMEO_CV_${data.personalInfo.lastName}_${Date.now()}.docx`;
+    const pdfBuffer = await generateHimeoPdf(data);
+    const fileName = `HIMEO_CV_${data.personalInfo.lastName}_${Date.now()}.pdf`;
 
-    // Upload to formatted bucket
     const { error: uploadError } = await supabase.storage
       .from('cv-formatted')
-      .upload(fileName, docBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      .upload(fileName, pdfBuffer, {
+        contentType: 'application/pdf',
       });
 
     if (uploadError) throw uploadError;
@@ -38,7 +31,6 @@ export async function POST(req: NextRequest) {
       .from('cv-formatted')
       .getPublicUrl(fileName);
 
-    // Update candidate status and url
     const { data: updatedCandidate, error: finalUpdateError } = await supabase
       .from('candidates')
       .update({
@@ -52,8 +44,8 @@ export async function POST(req: NextRequest) {
     if (finalUpdateError) throw finalUpdateError;
 
     return NextResponse.json(updatedCandidate);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Generation error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

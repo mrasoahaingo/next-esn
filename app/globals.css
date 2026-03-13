@@ -3,19 +3,66 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #07090f;
+  --foreground: #edf1ff;
+  --surface: #101420;
+  --surface-soft: #141a29;
+  --line: #242b3d;
+  --neon: #b2ff3f;
+  --violet: #a78bfa;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+.dark {
+  --background: #07090f;
+  --foreground: #edf1ff;
+  --surface: #101420;
+  --surface-soft: #141a29;
+  --line: #242b3d;
+  --neon: #b2ff3f;
+  --violet: #a78bfa;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(178, 255, 63, 0.1), transparent 35%),
+    radial-gradient(circle at 80% 20%, rgba(167, 139, 250, 0.16), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.14), transparent 35%);
+}
+
+@layer utilities {
+  .glass-panel {
+    background: linear-gradient(160deg, rgba(20, 26, 41, 0.86), rgba(10, 12, 19, 0.86));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+    backdrop-filter: blur(14px);
+  }
+
+  .neon-ring {
+    box-shadow:
+      0 0 0 1px rgba(178, 255, 63, 0.25),
+      0 0 22px rgba(178, 255, 63, 0.28);
+  }
+
+  .violet-ring {
+    box-shadow:
+      0 0 0 1px rgba(167, 139, 250, 0.32),
+      0 0 24px rgba(167, 139, 250, 0.2);
+  }
+
+  .grid-noise {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .title-gradient {
+    background: linear-gradient(90deg, #ecf2ff 0%, #b2ff3f 45%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
 }

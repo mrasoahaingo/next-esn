@@ -1,9 +1,9 @@
 import { streamObject } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { parseCVFile } from '@/lib/utils/parser';
 import { extractionSchema, SYSTEM_PROMPT } from '@/lib/services/ai.service';
-import { anthropic } from '@ai-sdk/anthropic';
+import { model, modelName } from '@/lib/ai';
+import mammoth from 'mammoth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,25 +28,44 @@ export async function POST(req: NextRequest) {
       .from('cv-original')
       .download(fileName);
 
-    if (downloadError) throw downloadError;
+    if (downloadError) {
+      console.error('Download error:', downloadError);
+      throw downloadError;
+    }
 
     const arrayBuffer = await fileBlob.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // 4. Parse
     const ext = fileName.split('.').pop()?.toLowerCase();
-    const mimetype = ext === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    const cvText = await parseCVFile(buffer, mimetype);
+    const isPdf = ext === 'pdf';
+
+    // 4. Build message content
+    // PDF → send as file attachment (Gemini vision/file-input)
+    // DOCX → extract text with mammoth (Gemini doesn't support DOCX files)
+    const jobContext = jobDescription
+      ? `\n\nVoici la fiche de poste pour le matching :\n\n${jobDescription}`
+      : '';
+
+    type ContentPart = { type: 'text'; text: string } | { type: 'file'; mediaType: string; data: Buffer };
+    const content: ContentPart[] = isPdf
+      ? [
+          { type: 'text' as const, text: `Extrais et structure toutes les informations de ce CV.${jobContext}` },
+          { type: 'file' as const, mediaType: 'application/pdf', data: buffer },
+        ]
+      : await (async () => {
+          const { value: cvText } = await mammoth.extractRawText({ buffer });
+          return [
+            { type: 'text' as const, text: `Voici le texte extrait du CV :\n\n${cvText}${jobContext}` },
+          ];
+        })();
 
     // 5. Stream Object
     const result = streamObject({
-      model: anthropic('claude-3-5-sonnet-20240620'),
+      model,
       schema: extractionSchema,
       system: SYSTEM_PROMPT,
-      prompt: `Voici le texte extrait du CV :\n\n${cvText}${jobDescription ? `\n\nVoici la fiche de poste pour le matching :\n\n${jobDescription}` : ''}`,
+      messages: [{ role: 'user', content }],
       onFinish: async ({ object }) => {
         if (object) {
-          // Update DB with final result
           await supabase
             .from('candidates')
             .update({
@@ -55,19 +74,18 @@ export async function POST(req: NextRequest) {
             })
             .eq('id', candidateId);
 
-          // History
           await supabase.from('extraction_history').insert({
             candidate_id: candidateId,
             extraction_result: object,
-            ai_model: 'claude-3-5-sonnet',
+            ai_model: modelName,
           });
         }
       },
     });
 
     return result.toTextStreamResponse();
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Extraction error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

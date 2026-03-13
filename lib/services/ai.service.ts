@@ -1,9 +1,10 @@
 import { generateObject } from 'ai';
 import { extractionSchema, ExtractedCV } from '@/lib/schema';
-import { anthropic } from '@ai-sdk/anthropic';
+import { model } from '@/lib/ai';
+import mammoth from 'mammoth';
 
 export const SYSTEM_PROMPT = `Tu es un expert en recrutement technique pour Himeo, une ESN française.
-Ton objectif est d'extraire les données d'un CV texte et de les normaliser.
+Ton objectif est d'extraire les données d'un CV et de les normaliser.
 
 IMPORTANT : Tu dois impérativement utiliser la liste de référence de https://skills.sh/ pour mapper les compétences techniques.
 Normalisation des termes :
@@ -21,13 +22,36 @@ Langue : Français.`;
 
 export { extractionSchema, type ExtractedCV };
 
-export async function extractCVData(cvText: string, jobDescription?: string): Promise<ExtractedCV> {
+export async function extractCVData(
+  fileBuffer: Buffer,
+  isPdf: boolean,
+  jobDescription?: string,
+): Promise<ExtractedCV> {
+  const jobContext = jobDescription
+    ? `\n\nVoici la fiche de poste pour le matching :\n\n${jobDescription}`
+    : '';
+
+  type ContentPart = { type: 'text'; text: string } | { type: 'file'; mediaType: string; data: Buffer };
+  let content: ContentPart[];
+
+  if (isPdf) {
+    content = [
+      { type: 'text', text: `Extrais et structure toutes les informations de ce CV.${jobContext}` },
+      { type: 'file', mediaType: 'application/pdf', data: fileBuffer },
+    ];
+  } else {
+    const { value: cvText } = await mammoth.extractRawText({ buffer: fileBuffer });
+    content = [
+      { type: 'text', text: `Voici le texte extrait du CV :\n\n${cvText}${jobContext}` },
+    ];
+  }
+
   const { object } = await generateObject({
-    model: anthropic('claude-3-5-sonnet-20240620'), // Automatically uses Vercel AI Gateway in creators/model-name format
+    model,
     schema: extractionSchema,
     system: SYSTEM_PROMPT,
-    prompt: `Voici le texte extrait du CV :\n\n${cvText}${jobDescription ? `\n\nVoici la fiche de poste pour le matching :\n\n${jobDescription}` : ''}`,
+    messages: [{ role: 'user', content }],
   });
 
-  return object;
+  return object as ExtractedCV;
 }
