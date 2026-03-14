@@ -102,6 +102,12 @@ export function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
                       onChange={(e) => handleUpdate(i, 'company', e.target.value)}
                       placeholder="Company"
                     />
+                    <Input
+                      value={exp.companyDomain ?? ''}
+                      onChange={(e) => handleUpdate(i, 'companyDomain', e.target.value)}
+                      placeholder="Domaine entreprise (ex: google.com)"
+                      className="text-xs md:col-span-2"
+                    />
                   </div>
                 )}
               </div>

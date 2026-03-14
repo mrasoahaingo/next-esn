@@ -13,6 +13,7 @@ export const extractionSchema = z.object({
   experiences: z.array(z.object({
     role: z.string(),
     company: z.string(),
+    companyDomain: z.string().optional().describe("Company website domain (e.g. google.com) for logo display"),
     location: z.string().optional(),
     startDate: z.string(),
     endDate: z.string().optional(),

@@ -23,6 +23,9 @@ importers:
       '@json-render/react-pdf':
         specifier: 0.14.0
         version: 0.14.0(react@19.2.4)(zod@4.3.6)
+      '@react-pdf/renderer':
+        specifier: 4.3.2
+        version: 4.3.2(react@19.2.4)
       '@supabase/supabase-js':
         specifier: 2.99.1
         version: 2.99.1
