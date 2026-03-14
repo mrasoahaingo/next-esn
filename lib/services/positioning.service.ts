@@ -144,6 +144,21 @@ C'est Himeo qui contacte le candidat pour lui proposer cette opportunité de mis
 - Ne JAMAIS inventer des expériences ou compétences que le candidat n'a pas. Tu peux reformuler, réordonner et mettre en avant, mais pas fabriquer.
 - Les réponses aux questions sont ta source principale d'enrichissement : utilise-les systématiquement quand elles apportent de la valeur.
 
+## Format des emails
+- Le champ "body" de chaque email (email et candidateEmail) DOIT être en HTML valide pour un rendu riche.
+- Utilise les balises HTML classiques : <p> pour les paragraphes, <strong> pour le gras, <em> pour l'italique, <u> pour le souligné, <ol>/<ul>/<li> pour les listes.
+- Ne PAS utiliser de Markdown dans le body. Uniquement du HTML.
+- Ne PAS inclure de balises <html>, <head>, <body> ou <style>. Uniquement le contenu inline.
+- AÉRATION : le mail doit être visuellement aéré et agréable à lire. Insère un paragraphe vide <p></p> pour créer un espace visuel :
+  - Après la formule d'ouverture ("Bonjour ...,")
+  - Entre l'accroche et la présentation du candidat/de l'opportunité
+  - Avant et après la liste d'arguments (avant le <ol>/<ul> et après)
+  - Avant la formule de disponibilité/appel à l'action
+  - Avant la formule de politesse finale
+  - Avant la signature
+- Exemple :
+  "<p>Bonjour Madame Dupont,</p><p></p><p>Suite à votre offre de <strong>Développeur Full-Stack Senior</strong>, nous souhaitions vous présenter un profil correspondant précisément à vos attentes.</p><p></p><p>Notre candidat justifie de 8 années d'expérience en développement web, principalement sur des architectures React/Node.js en environnement e-commerce à forte charge.</p><p></p><ol><li><strong>8 ans d'expérience sur React</strong> dont 3 ans en lead technique — en adéquation directe avec votre besoin</li><li><strong>Expertise Node.js/TypeScript</strong> confirmée chez Société X sur une API traitant 2M requêtes/jour</li></ol><p></p><p>Seriez-vous disponible cette semaine pour un échange ?</p><p></p><p>Cordialement,</p><p></p><p>L'équipe Himeo</p>"
+
 Langue : Français.`;
 
 export function buildAnalysisMessages(cv: ExtractedCV, jobDescription: string) {
