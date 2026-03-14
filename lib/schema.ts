@@ -29,3 +29,52 @@ export const extractionSchema = z.object({
 });
 
 export type ExtractedCV = z.infer<typeof extractionSchema>;
+
+// Positioning schemas
+
+export const positioningAnalysisSchema = z.object({
+  skillMatches: z.array(z.object({
+    skill: z.string(),
+    relevance: z.enum(['strong', 'partial', 'missing']),
+    comment: z.string(),
+    note: z.string().describe("Note détaillée expliquant pourquoi cette compétence match ou ne match pas, avec références concrètes au CV"),
+  })),
+  experienceRelevance: z.array(z.object({
+    experience: z.string(),
+    relevance: z.enum(['high', 'medium', 'low']),
+    comment: z.string(),
+    note: z.string().describe("Note détaillée expliquant la pertinence de cette expérience par rapport au poste, avec éléments factuels"),
+  })),
+  gaps: z.array(z.object({
+    gap: z.string(),
+    note: z.string().describe("Note détaillée expliquant pourquoi c'est une lacune et son impact potentiel sur le poste"),
+  })),
+  candidateQuestions: z.array(z.object({
+    question: z.string(),
+    context: z.string(),
+    answer: z.string().optional(),
+  })),
+  clientQuestions: z.array(z.object({
+    question: z.string(),
+    context: z.string(),
+    answer: z.string().optional(),
+  })),
+  matchScore: z.number().min(0).max(100),
+  matchSummary: z.string(),
+});
+
+export type PositioningAnalysis = z.infer<typeof positioningAnalysisSchema>;
+
+export const positioningEmailSchema = z.object({
+  subject: z.string(),
+  body: z.string(),
+});
+
+export type PositioningEmail = z.infer<typeof positioningEmailSchema>;
+
+export const positioningOutputSchema = z.object({
+  tailoredCv: extractionSchema,
+  email: positioningEmailSchema,
+});
+
+export type PositioningOutput = z.infer<typeof positioningOutputSchema>;
