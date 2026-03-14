@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
+import { getTemplateConfig } from '@/lib/utils/template';
 
 export async function POST(
   req: NextRequest,
@@ -13,7 +14,7 @@ export async function POST(
 
     const { data: positioning, error: fetchError } = await supabase
       .from('positionings')
-      .select('*, candidates(*)')
+      .select('*, candidates(template_id)')
       .eq('id', id)
       .single();
 
@@ -22,7 +23,8 @@ export async function POST(
     const cvData = tailoredCv ?? positioning.tailored_cv;
     if (!cvData) throw new Error('No tailored CV data');
 
-    const pdfBuffer = await generateHimeoPdf(cvData);
+    const templateConfig = await getTemplateConfig(positioning.candidates?.template_id);
+    const pdfBuffer = await generateHimeoPdf(cvData, templateConfig);
     const lastName = cvData.personalInfo?.lastName ?? 'candidat';
     const fileName = `HIMEO_CV_${lastName}_positioning_${Date.now()}.pdf`;
 

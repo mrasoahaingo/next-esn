@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
+import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export default function ReviewPage() {
     setStreaming,
   } = useCvBuilderStore();
 
+  const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
   const router = useRouter();
 
   const { object, submit, isLoading, error } = useObject({
@@ -42,7 +44,11 @@ export default function ReviewPage() {
     if (params?.id) {
       fetch(`/api/candidates/${params.id}`)
         .then(res => res.json())
-        .then(data => {
+        .then(async (data) => {
+          // Load template config (from candidate's template or default)
+          const config = await fetchTemplateConfig(data.template_id);
+          setTemplateConfig(config);
+
           // Already extracted — load data without triggering AI
           if (data.extracted_data && ['reviewing', 'ready', 'generated'].includes(data.status)) {
             setCvData(data.extracted_data);
@@ -95,15 +101,15 @@ export default function ReviewPage() {
 
   if (!cvData && !isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-background text-foreground">
+      <div className="flex justify-center items-center h-full bg-background text-foreground">
         <Loader2 className="animate-spin mr-2" /> Chargement...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6">
+    <div className="flex h-full flex-col bg-background text-foreground">
+      <div className="flex flex-1 flex-col px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
@@ -157,7 +163,7 @@ export default function ReviewPage() {
         )}
 
         {/* Split layout: form left, PDF right */}
-        <div className="flex gap-4" style={{ height: 'calc(100vh - 200px)' }}>
+        <div className="flex min-h-0 flex-1 gap-4">
           {/* Left: Form */}
           <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

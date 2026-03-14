@@ -6,6 +6,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { positioningAnalysisSchema, positioningOutputSchema } from '@/lib/schema';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
+import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePositioningPdfPreview } from '@/lib/hooks/usePositioningPdfPreview';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -62,6 +63,8 @@ export default function PositioningWizardPage() {
     reset,
   } = usePositioningStore();
 
+  const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
+
   const [isExporting, setIsExporting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   // Track if we already auto-launched analysis on mount
@@ -97,7 +100,12 @@ export default function PositioningWizardPage() {
 
     fetch(`/api/positioning/${positioningIdParam}`)
       .then((res) => res.json())
-      .then((data) => {
+      .then(async (data) => {
+        // Load template config from candidate
+        const templateId = data.candidates?.template_id;
+        const config = await fetchTemplateConfig(templateId);
+        setTemplateConfig(config);
+
         setJobDescription(data.job_description ?? '');
         if (data.analysis) {
           setAnalysis(data.analysis);
@@ -304,15 +312,15 @@ export default function PositioningWizardPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex justify-center items-center h-screen bg-background text-foreground">
+      <div className="flex justify-center items-center h-full bg-background text-foreground">
         <Loader2 className="animate-spin mr-2" /> Chargement...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto max-w-[1800px] px-4 py-4 md:px-6">
+    <div className="flex h-full flex-col bg-background text-foreground">
+      <div className="flex flex-1 flex-col px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
@@ -385,7 +393,7 @@ export default function PositioningWizardPage() {
         </div>
 
         {/* Split layout */}
-        <div className="flex gap-4" style={{ height: 'calc(100vh - 200px)' }}>
+        <div className="flex min-h-0 flex-1 gap-4">
           {/* Left panel */}
           <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
             {currentStep === 1 && (

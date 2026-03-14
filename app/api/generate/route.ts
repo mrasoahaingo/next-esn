@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
+import { getTemplateConfig } from '@/lib/utils/template';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,15 @@ export async function POST(req: NextRequest) {
       if (updateError) throw updateError;
     }
 
-    const pdfBuffer = await generateHimeoPdf(data);
+    // Fetch candidate to get template_id
+    const { data: candidate } = await supabase
+      .from('candidates')
+      .select('template_id')
+      .eq('id', candidateId)
+      .single();
+
+    const templateConfig = await getTemplateConfig(candidate?.template_id);
+    const pdfBuffer = await generateHimeoPdf(data, templateConfig);
     const fileName = `HIMEO_CV_${data.personalInfo.lastName}_${Date.now()}.pdf`;
 
     const { error: uploadError } = await supabase.storage

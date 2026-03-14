@@ -1,5 +1,51 @@
 import { z } from 'zod';
 
+// ─── Template config ─────────────────────────────────────────────
+
+export const templateConfigSchema = z.object({
+  colors: z.object({
+    primary: z.string(),
+    secondary: z.string(),
+    background: z.string(),
+    text: z.string(),
+    lightText: z.string(),
+  }),
+  logo: z.object({
+    url: z.string(),
+    width: z.number(),
+    height: z.number(),
+  }),
+  footer: z.object({
+    line1: z.string(),
+    line2: z.string(),
+  }),
+  sections: z.array(z.enum([
+    'strengths', 'summary', 'skills', 'experiences', 'education',
+  ])),
+});
+
+export type TemplateConfig = z.infer<typeof templateConfigSchema>;
+
+export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
+  colors: {
+    primary: '#010557',
+    secondary: '#9bcaff',
+    background: '#ffffff',
+    text: '#4b5563',
+    lightText: '#9ca3af',
+  },
+  logo: {
+    url: '',
+    width: 90,
+    height: 20,
+  },
+  footer: {
+    line1: 'Himeo Group – Solutions humaines & digitales',
+    line2: 'contact@himeo.fr – www.himeo.fr',
+  },
+  sections: ['strengths', 'summary', 'skills', 'experiences', 'education'],
+};
+
 export const extractionSchema = z.object({
   personalInfo: z.object({
     firstName: z.string(),

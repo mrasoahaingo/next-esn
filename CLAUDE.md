@@ -57,6 +57,10 @@ Required in `.env`:
 - `cv-original`: uploaded source CVs
 - `cv-formatted`: generated Himeo PDF files
 
+### UI Components
+
+Always prefer shadcn/ui components (`components/ui/`) over custom HTML elements. Use Button, Badge, Tooltip, Separator, Card, Input, Label, etc. before writing raw markup. Add new shadcn components via `pnpm dlx shadcn@latest add <component>` when needed.
+
 ### Custom Tailwind Theme
 
 Defined in `tailwind.config.ts` — dark-first palette with custom colors: `shell`, `panel`, `neon` (accent green), `violet` (accent purple). Glass-panel and neon-ring utility classes defined in `globals.css`.

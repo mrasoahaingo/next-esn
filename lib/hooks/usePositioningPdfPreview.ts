@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
+import { useTemplateStore } from '@/lib/stores/template.store';
 
 export function usePositioningPdfPreview() {
   const tailoredCv = usePositioningStore((s) => s.tailoredCv);
   const setPdfBlobUrl = usePositioningStore((s) => s.setPdfBlobUrl);
   const setIsPdfLoading = usePositioningStore((s) => s.setIsPdfLoading);
+  const templateConfig = useTemplateStore((s) => s.templateConfig);
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,7 +26,7 @@ export function usePositioningPdfPreview() {
         const res = await fetch('/api/pdf-preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: tailoredCv }),
+          body: JSON.stringify({ data: tailoredCv, templateConfig }),
           signal: controller.signal,
         });
 
@@ -47,5 +49,5 @@ export function usePositioningPdfPreview() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [tailoredCv, setPdfBlobUrl, setIsPdfLoading]);
+  }, [tailoredCv, templateConfig, setPdfBlobUrl, setIsPdfLoading]);
 }

@@ -3,8 +3,8 @@ import { generateHimeoPdf } from '@/lib/services/pdf.service';
 
 export async function POST(req: NextRequest) {
   try {
-    const { data } = await req.json();
-    const buffer = await generateHimeoPdf(data);
+    const { data, templateConfig } = await req.json();
+    const buffer = await generateHimeoPdf(data, templateConfig);
 
     return new Response(buffer, {
       headers: {

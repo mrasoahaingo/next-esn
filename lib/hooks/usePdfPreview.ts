@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
+import { useTemplateStore } from '@/lib/stores/template.store';
 
 export function usePdfPreview() {
   const cvData = useCvBuilderStore((s) => s.cvData);
   const setPdfBlobUrl = useCvBuilderStore((s) => s.setPdfBlobUrl);
   const setIsPdfLoading = useCvBuilderStore((s) => s.setIsPdfLoading);
+  const templateConfig = useTemplateStore((s) => s.templateConfig);
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -26,7 +28,7 @@ export function usePdfPreview() {
         const res = await fetch('/api/pdf-preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: cvData }),
+          body: JSON.stringify({ data: cvData, templateConfig }),
           signal: controller.signal,
         });
 
@@ -49,5 +51,5 @@ export function usePdfPreview() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [cvData, setPdfBlobUrl, setIsPdfLoading]);
+  }, [cvData, templateConfig, setPdfBlobUrl, setIsPdfLoading]);
 }

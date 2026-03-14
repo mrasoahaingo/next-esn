@@ -33,7 +33,7 @@ export default function PositioningNewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="h-full bg-background text-foreground overflow-y-auto">
       <div className="mx-auto max-w-3xl px-4 py-8 md:px-6">
         <div className="mb-6">
           <Button variant="outline" onClick={() => router.push(`/review/${candidateId}`)}>
