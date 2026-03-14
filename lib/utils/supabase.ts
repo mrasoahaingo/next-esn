@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-let supabaseClient: any = null;
+let supabaseClient: SupabaseClient | null = null;
 
 export const getSupabase = () => {
   if (!supabaseClient) {

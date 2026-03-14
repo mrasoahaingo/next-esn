@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import {
   Upload,
   Loader2,
@@ -15,7 +14,6 @@ import {
   Briefcase,
   Target,
   TrendingUp,
-  Plus,
 } from 'lucide-react';
 
 interface Candidate {

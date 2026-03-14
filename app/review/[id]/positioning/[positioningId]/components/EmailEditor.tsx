@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import type { PositioningEmail } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -93,14 +93,6 @@ export function EmailEditor({
       editor.commands.setContent(incoming, { emitUpdate: false });
     }
   }, [editor, email?.body]);
-
-  const toggle = useCallback(
-    (command: () => void) => (e: React.MouseEvent) => {
-      e.preventDefault();
-      command();
-    },
-    [],
-  );
 
   return (
     <section className="glass-panel p-6 rounded-2xl">

@@ -40,7 +40,6 @@ export default function PositioningWizardPage() {
   const positioningIdParam = params?.positioningId as string;
 
   const {
-    positioningId,
     jobDescription,
     analysis,
     tailoredCv,
@@ -409,7 +408,7 @@ export default function PositioningWizardPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-white">Génération en cours...</p>
-                        <p className="text-xs text-slate-400 mt-1">L'IA retravaille le CV et rédige l'email de positionnement</p>
+                        <p className="text-xs text-slate-400 mt-1">L&apos;IA retravaille le CV et rédige l&apos;email de positionnement</p>
                       </div>
                       <div className="w-full max-w-xs space-y-3 mt-2">
                         <div className="h-2 rounded-full bg-white/5 overflow-hidden">

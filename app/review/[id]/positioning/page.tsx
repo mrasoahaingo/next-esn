@@ -49,7 +49,7 @@ export default function PositioningNewPage() {
             </div>
             <div>
               <h1 className="text-xl font-semibold title-gradient">Nouveau positionnement</h1>
-              <p className="text-sm text-muted-foreground">Collez la fiche de poste pour lancer l'analyse</p>
+              <p className="text-sm text-muted-foreground">Collez la fiche de poste pour lancer l&apos;analyse</p>
             </div>
           </div>
 
