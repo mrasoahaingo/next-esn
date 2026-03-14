@@ -55,9 +55,11 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 
 const positioningStatusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   draft: { label: 'Brouillon', variant: 'secondary' },
+  analyzing: { label: 'Analyse...', variant: 'outline' },
   analyzed: { label: 'Analysé', variant: 'outline' },
-  answered: { label: 'Répondu', variant: 'outline' },
+  generating: { label: 'Génération...', variant: 'outline' },
   generated: { label: 'Généré', variant: 'default' },
+  exported: { label: 'Exporté', variant: 'default' },
 };
 
 export default function Dashboard() {

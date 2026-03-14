@@ -245,10 +245,10 @@ export default function PositioningWizardPage() {
 
     const answers: Record<string, string> = {};
     for (const q of analysis.candidateQuestions ?? []) {
-      if (q.answer) answers[q.question] = q.answer;
+      if (q.answer) answers[`candidat:${q.question}`] = q.answer;
     }
     for (const q of analysis.clientQuestions ?? []) {
-      if (q.answer) answers[q.question] = q.answer;
+      if (q.answer) answers[`client:${q.question}`] = q.answer;
     }
 
     await fetch(`/api/positioning/${positioningIdParam}`, {
