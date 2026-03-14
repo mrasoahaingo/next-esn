@@ -45,6 +45,7 @@ export default function PositioningWizardPage() {
     analysis,
     tailoredCv,
     email,
+    candidateEmail,
     currentStep,
     isAnalyzing,
     isGenerating,
@@ -55,6 +56,7 @@ export default function PositioningWizardPage() {
     setAnalysis,
     setTailoredCv,
     setEmail,
+    setCandidateEmail,
     setCurrentStep,
     setIsAnalyzing,
     setIsGenerating,
@@ -65,7 +67,7 @@ export default function PositioningWizardPage() {
 
   const originalPdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
 
-  const [activeTab, setActiveTab] = useState<'email' | 'cv'>('email');
+  const [activeTab, setActiveTab] = useState<'email' | 'candidateEmail' | 'cv'>('email');
   const [isExporting, setIsExporting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   // Track if we already auto-launched analysis on mount
@@ -111,6 +113,9 @@ export default function PositioningWizardPage() {
         }
         if (data.email) {
           setEmail(data.email);
+        }
+        if (data.candidate_email) {
+          setCandidateEmail(data.candidate_email);
         }
 
         // Restore answers into analysis questions if available
@@ -178,8 +183,9 @@ export default function PositioningWizardPage() {
       const obj = generateObject as Partial<PositioningOutput>;
       if (obj.tailoredCv) setTailoredCv(obj.tailoredCv as Partial<ExtractedCV>);
       if (obj.email) setEmail(obj.email);
+      if (obj.candidateEmail) setCandidateEmail(obj.candidateEmail);
     }
-  }, [generateObject, setTailoredCv, setEmail]);
+  }, [generateObject, setTailoredCv, setEmail, setCandidateEmail]);
 
   useEffect(() => {
     if (!isGenerateLoading && isGenerating) {
@@ -212,6 +218,12 @@ export default function PositioningWizardPage() {
     if (!isLoaded || !email || isGenerating || isGenerateLoading) return;
     debouncedSave({ email });
   }, [isLoaded, email, isGenerating, isGenerateLoading, debouncedSave]);
+
+  // Persist candidate email edits to DB (debounced)
+  useEffect(() => {
+    if (!isLoaded || !candidateEmail || isGenerating || isGenerateLoading) return;
+    debouncedSave({ candidate_email: candidateEmail });
+  }, [isLoaded, candidateEmail, isGenerating, isGenerateLoading, debouncedSave]);
 
   // Reset store on unmount
   useEffect(() => {
@@ -255,8 +267,9 @@ export default function PositioningWizardPage() {
     setIsGenerating(true);
     setTailoredCv(null);
     setEmail(null);
+    setCandidateEmail(null);
     submitGenerate({ positioningId: positioningIdParam, answers });
-  }, [positioningIdParam, analysis, setCurrentStep, setIsGenerating, setTailoredCv, setEmail, submitGenerate]);
+  }, [positioningIdParam, analysis, setCurrentStep, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate]);
 
   const handleExport = useCallback(async () => {
     if (!positioningIdParam || !tailoredCv) return;
@@ -265,7 +278,7 @@ export default function PositioningWizardPage() {
       const res = await fetch(`/api/positioning/${positioningIdParam}/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tailoredCv, email }),
+        body: JSON.stringify({ tailoredCv, email, candidateEmail }),
       });
       const data = await res.json();
       if (data.fileUrl) {
@@ -278,12 +291,12 @@ export default function PositioningWizardPage() {
     } finally {
       setIsExporting(false);
     }
-  }, [positioningIdParam, tailoredCv, email]);
+  }, [positioningIdParam, tailoredCv, email, candidateEmail]);
 
   // Navigation
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
   const analysisComplete = !!analysis?.matchScore && !isAnalyzing && !isAnalysisLoading;
-  const hasGenerated = !!tailoredCv || !!email;
+  const hasGenerated = !!tailoredCv || !!email || !!candidateEmail;
 
   const canGoToStep = (step: 1 | 2 | 3) => {
     if (isStreaming) return false;
@@ -432,7 +445,17 @@ export default function PositioningWizardPage() {
                             : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
                         }`}
                       >
-                        Email de positionnement
+                        Email client
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('candidateEmail')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          activeTab === 'candidateEmail'
+                            ? 'bg-neon/15 text-neon border border-neon/30'
+                            : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
+                        }`}
+                      >
+                        Email candidat
                       </button>
                       <button
                         onClick={() => setActiveTab('cv')}
@@ -451,6 +474,16 @@ export default function PositioningWizardPage() {
                         email={email}
                         onChange={setEmail}
                         readOnly={isGenerating || isGenerateLoading}
+                        title="Email de positionnement client"
+                      />
+                    )}
+
+                    {activeTab === 'candidateEmail' && (
+                      <EmailEditor
+                        email={candidateEmail}
+                        onChange={setCandidateEmail}
+                        readOnly={isGenerating || isGenerateLoading}
+                        title="Email de proposition au candidat"
                       />
                     )}
 

@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
             .update({
               tailored_cv: object.tailoredCv,
               email: object.email,
+              candidate_email: object.candidateEmail,
               status: 'generated',
             })
             .eq('id', positioningId);

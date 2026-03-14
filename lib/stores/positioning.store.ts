@@ -7,6 +7,7 @@ interface PositioningState {
   analysis: Partial<PositioningAnalysis> | null;
   tailoredCv: Partial<ExtractedCV> | null;
   email: Partial<PositioningEmail> | null;
+  candidateEmail: Partial<PositioningEmail> | null;
   currentStep: 1 | 2 | 3;
   isAnalyzing: boolean;
   isGenerating: boolean;
@@ -18,6 +19,7 @@ interface PositioningState {
   setAnalysis: (data: Partial<PositioningAnalysis> | null) => void;
   setTailoredCv: (data: Partial<ExtractedCV> | null) => void;
   setEmail: (data: Partial<PositioningEmail> | null) => void;
+  setCandidateEmail: (data: Partial<PositioningEmail> | null) => void;
   setCurrentStep: (step: 1 | 2 | 3) => void;
   setIsAnalyzing: (v: boolean) => void;
   setIsGenerating: (v: boolean) => void;
@@ -34,6 +36,7 @@ const initialState = {
   analysis: null,
   tailoredCv: null,
   email: null,
+  candidateEmail: null,
   currentStep: 1 as const,
   isAnalyzing: false,
   isGenerating: false,
@@ -49,6 +52,7 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
   setAnalysis: (data) => set({ analysis: data }),
   setTailoredCv: (data) => set({ tailoredCv: data }),
   setEmail: (data) => set({ email: data }),
+  setCandidateEmail: (data) => set({ candidateEmail: data }),
   setCurrentStep: (step) => set({ currentStep: step }),
   setIsAnalyzing: (v) => set({ isAnalyzing: v }),
   setIsGenerating: (v) => set({ isGenerating: v }),

@@ -8,7 +8,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const { tailoredCv, email } = await req.json();
+    const { tailoredCv, email, candidateEmail } = await req.json();
     const supabase = getSupabase();
 
     const { data: positioning, error: fetchError } = await supabase
@@ -41,6 +41,7 @@ export async function POST(
       .update({
         tailored_cv: cvData,
         email: email ?? positioning.email,
+        candidate_email: candidateEmail ?? positioning.candidate_email,
         tailored_file_url: fileUrl,
         status: 'exported',
       })

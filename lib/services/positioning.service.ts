@@ -72,9 +72,72 @@ export const POSITIONING_GENERATE_PROMPT = `Tu es un expert en recrutement techn
 - Conserve tels quels, sauf corrections mineures.
 
 ## 2. Email de positionnement
-- Objet concis et accrocheur mentionnant le poste et le profil.
-- Corps : présentation synthétique du candidat, 3-4 arguments clés de matching avec le poste, disponibilité.
-- Ton professionnel mais dynamique, typique d'une ESN.
+
+C'est Himeo qui positionne le candidat auprès du client. Cet email doit convaincre le décideur (DRH, manager technique, responsable projet) que ce profil mérite un entretien.
+
+### Objet du mail
+- Format : "Positionnement [Prénom Nom] — [Intitulé exact du poste]"
+- Si le nom de l'entreprise cliente est identifiable dans la fiche de poste, l'ajouter : "Positionnement [Prénom Nom] — [Poste] | [Entreprise cliente]"
+
+### Structure du corps de l'email
+1. **Formule d'ouverture** : adresse le destinataire de manière professionnelle. Si le nom du contact ou de l'entreprise cliente est dans la fiche de poste, personnalise ("Madame X", "Cher Monsieur Y", ou à défaut "Madame, Monsieur").
+
+2. **Accroche contextualisée** (1-2 phrases) : fais référence à l'offre de poste spécifique, au contexte projet du client si mentionné dans la fiche, et explique qu'Himeo souhaite proposer un profil correspondant précisément à ce besoin.
+
+3. **Présentation synthétique du candidat** (2-3 phrases) : nombre d'années d'expérience, domaine d'expertise principal, type de postes occupés (lead, senior, etc.), secteurs d'activité pertinents. Pas de liste, un paragraphe fluide.
+
+4. **Arguments de matching** (3-5 points numérotés) : chaque argument doit être un fait concret reliant une compétence/expérience du candidat à un besoin spécifique de la fiche de poste. Utilise des données factuelles : durées, technologies, volumétries, résultats. Exemples de formulations :
+   - "X années d'expérience sur [Techno] en environnement [contexte], répondant directement à votre besoin de [besoin fiche de poste]"
+   - "Expérience confirmée en [domaine] chez [entreprise/secteur], avec une montée en charge de [métrique]"
+   - "Maîtrise de [stack/outil] couplée à une expérience en [méthodologie], en adéquation avec votre environnement technique"
+
+5. **Valeur ajoutée différenciante** (1-2 phrases) : ce qui distingue ce candidat des autres profils (soft skills, certifications, double compétence, connaissance du secteur du client, capacité d'adaptation démontrée).
+
+6. **Disponibilité et modalités** : date de disponibilité, mobilité géographique si pertinent, TJM/package si mentionné dans la fiche.
+
+7. **Appel à l'action** : propose un échange ou un entretien, avec une formulation engageante ("Je serais ravie de vous présenter son parcours plus en détail lors d'un échange", "Seriez-vous disponible cette semaine pour un point rapide ?").
+
+8. **Formule de politesse professionnelle** et signature Himeo (prénom du consultant RH qui positionne — utilise un prénom générique comme "L'équipe Himeo" si non disponible).
+
+### Ton et style
+- Professionnel, confiant et convaincant sans être commercial ou agressif.
+- Phrases courtes et percutantes. Pas de jargon RH creux ("profil dynamique", "force de proposition" sans contexte).
+- Chaque affirmation doit être étayée par un élément factuel du CV ou des réponses aux questions.
+- Vouvoiement systématique envers le client.
+- Pas de formules génériques : personnalise au maximum en fonction de l'entreprise cliente, du secteur, et du poste.
+
+## 3. Email de proposition au candidat
+
+C'est Himeo qui contacte le candidat pour lui proposer cette opportunité de mission. Le ton est professionnel et respectueux, ni trop formel ni trop familier — un échange entre professionnels du secteur IT.
+
+### Objet du mail
+- Format : "Opportunité de mission — [Intitulé du poste]"
+- Si le secteur ou le nom de l'entreprise cliente est identifiable et communicable, l'ajouter : "Opportunité de mission — [Poste] dans le secteur [Secteur]"
+
+### Structure du corps de l'email
+1. **Formule d'ouverture** : utilise le prénom du candidat si disponible ("Bonjour [Prénom],"). Vouvoiement systématique.
+
+2. **Accroche** (1-2 phrases) : explique qu'Himeo a identifié une opportunité correspondant à son profil. Mentionne le type de poste et le contexte général sans survendre.
+
+3. **Présentation de l'opportunité** (3-5 phrases) : décris le poste de manière concrète — intitulé, type de mission (régie, forfait, CDI), environnement technique, contexte projet (équipe, enjeux métier). Ne copie pas la fiche de poste mot pour mot, reformule de manière synthétique et engageante.
+
+4. **Pourquoi ce poste correspond à son profil** (3-4 points) : relie des éléments concrets de son parcours aux besoins du poste. Montre que cette proposition est ciblée, pas un envoi en masse. Exemples :
+   - "Votre expérience de X ans sur [Techno] correspond parfaitement à l'environnement technique de cette mission"
+   - "Votre parcours chez [Entreprise] sur des problématiques de [domaine] est en ligne directe avec les enjeux de ce projet"
+   - "Votre maîtrise de [compétence] couplée à votre expérience en [contexte] répond précisément au besoin exprimé"
+
+5. **Informations pratiques** (si disponibles dans la fiche de poste) : localisation, télétravail, durée estimée, démarrage souhaité. Être factuel sans tout détailler — l'idée est de donner assez d'infos pour susciter l'intérêt.
+
+6. **Appel à l'action** : propose un échange téléphonique ou visio pour en discuter. Formulation ouverte et non pressante ("Seriez-vous disponible pour un échange cette semaine afin d'en discuter ?", "N'hésitez pas à me faire part de votre intérêt, je pourrai vous donner plus de détails lors d'un appel.").
+
+7. **Formule de politesse** et signature Himeo.
+
+### Ton et style
+- Professionnel mais accessible — parler d'égal à égal avec un consultant IT.
+- Pas de ton commercial ou RH classique ("nous avons le plaisir de...", "nous serions ravis de..."). Préférer un ton direct et sincère.
+- Montrer que le profil a été réellement étudié, pas juste scanné par un ATS.
+- Pas de superlatifs ("opportunité exceptionnelle", "mission passionnante") — laisser les faits parler.
+- Vouvoiement, mais ton chaleureux sans excès.
 
 ## Règles importantes
 - Le CV retravaillé DOIT garder la même structure JSON (personalInfo, summary, experiences, education, skills, strengths).

@@ -6,6 +6,7 @@ CREATE TABLE positionings (
   answers JSONB,
   tailored_cv JSONB,
   email JSONB,
+  candidate_email JSONB,
   tailored_file_url TEXT,
   status VARCHAR(50) DEFAULT 'draft',
   created_at TIMESTAMPTZ DEFAULT NOW(),

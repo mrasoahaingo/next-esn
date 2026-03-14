@@ -9,13 +9,14 @@ interface EmailEditorProps {
   email: Partial<PositioningEmail> | null;
   onChange: (email: Partial<PositioningEmail>) => void;
   readOnly?: boolean;
+  title?: string;
 }
 
-export function EmailEditor({ email, onChange, readOnly }: EmailEditorProps) {
+export function EmailEditor({ email, onChange, readOnly, title = 'Email de positionnement' }: EmailEditorProps) {
   return (
     <section className="glass-panel p-6 rounded-2xl">
       <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
-        Email de positionnement
+        {title}
       </h2>
       <div className="space-y-4">
         <div className="space-y-1.5">
