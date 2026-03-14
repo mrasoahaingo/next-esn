@@ -35,6 +35,7 @@ export type ExtractedCV = z.infer<typeof extractionSchema>;
 export const positioningAnalysisSchema = z.object({
   skillMatches: z.array(z.object({
     skill: z.string(),
+    category: z.string().describe("Catégorie libre de la compétence, choisie par l'IA pour regrouper les compétences de manière pertinente (ex: 'Backend', 'Cloud & DevOps', 'Leadership', 'Data', 'Frontend', 'Méthodologie'...). Utiliser des noms courts et parlants en français."),
     relevance: z.enum(['strong', 'partial', 'missing']),
     comment: z.string(),
     note: z.string().describe("Note détaillée expliquant pourquoi cette compétence match ou ne match pas, avec références concrètes au CV"),

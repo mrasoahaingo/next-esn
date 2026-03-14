@@ -3,20 +3,18 @@
 import type { PositioningAnalysis } from '@/lib/schema';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Building2 } from 'lucide-react';
+import { MessageCircle, Building2, ArrowRight } from 'lucide-react';
 
 interface QuestionsPanelProps {
   analysis: Partial<PositioningAnalysis> | null;
   onUpdateAnswer: (type: 'candidate' | 'client', index: number, answer: string) => void;
-  onGenerate: () => void;
-  isGenerating: boolean;
+  onNext: () => void;
 }
 
 export function QuestionsPanel({
   analysis,
   onUpdateAnswer,
-  onGenerate,
-  isGenerating,
+  onNext,
 }: QuestionsPanelProps) {
   const candidateQuestions = analysis?.candidateQuestions ?? [];
   const clientQuestions = analysis?.clientQuestions ?? [];
@@ -78,8 +76,9 @@ export function QuestionsPanel({
       )}
 
       <div className="flex justify-end">
-        <Button onClick={onGenerate} disabled={isGenerating}>
-          {isGenerating ? 'Génération en cours...' : 'Générer le positionnement'}
+        <Button onClick={onNext}>
+          Suivant
+          <ArrowRight className="ml-1.5 h-4 w-4" />
         </Button>
       </div>
     </div>

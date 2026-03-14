@@ -7,15 +7,14 @@ import { positioningAnalysisSchema, positioningOutputSchema } from '@/lib/schema
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { usePositioningPdfPreview } from '@/lib/hooks/usePositioningPdfPreview';
-import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Loader2, Target, FileText } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { StepIndicator } from './components/StepIndicator';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
+import { AnalysisCharts } from './components/AnalysisCharts';
 import { QuestionsPanel } from './components/QuestionsPanel';
-import { EmailEditor } from './components/EmailEditor';
-import { TailoredCvForm } from './components/TailoredCvForm';
+import { GenerationStep } from './components/GenerationStep';
 
 function useDebouncedSave(positioningId: string | null) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,13 +59,9 @@ export default function PositioningWizardPage() {
     setIsAnalyzing,
     setIsGenerating,
     updateAnswer,
-    updateTailoredCvField,
     reset,
   } = usePositioningStore();
 
-  const originalPdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
-
-  const [activeTab, setActiveTab] = useState<'email' | 'candidateEmail' | 'cv'>('email');
   const [isExporting, setIsExporting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   // Track if we already auto-launched analysis on mount
@@ -262,7 +257,6 @@ export default function PositioningWizardPage() {
       body: JSON.stringify({ answers }),
     });
 
-    setCurrentStep(3);
     setIsGenerating(true);
     setTailoredCv(null);
     setEmail(null);
@@ -295,13 +289,12 @@ export default function PositioningWizardPage() {
   // Navigation
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
   const analysisComplete = !!analysis?.matchScore && !isAnalyzing && !isAnalysisLoading;
-  const hasGenerated = !!tailoredCv || !!email || !!candidateEmail;
 
   const canGoToStep = (step: 1 | 2 | 3) => {
     if (isStreaming) return false;
     if (step === 1) return true;
     if (step === 2) return analysisComplete;
-    if (step === 3) return hasGenerated; // only via "Générer" button or if already generated
+    if (step === 3) return analysisComplete; // accessible once analysis is done
     return false;
   };
 
@@ -337,6 +330,35 @@ export default function PositioningWizardPage() {
                 </h1>
               </div>
             </div>
+            {/* Key metrics */}
+            {analysis?.matchScore != null && !isAnalyzing && !isAnalysisLoading && (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                  <TrendingUp className={`h-4 w-4 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-400' : 'text-destructive'}`} />
+                  <span className={`text-lg font-bold ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-400' : 'text-destructive'}`}>
+                    {analysis.matchScore}%
+                  </span>
+                  <span className="text-xs text-slate-400">Score</span>
+                </div>
+                {analysis.skillMatches && (
+                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-neon" />
+                    <span className="text-sm font-semibold text-white">
+                      {analysis.skillMatches.filter((s) => s.relevance === 'strong').length}/{analysis.skillMatches.length}
+                    </span>
+                    <span className="text-xs text-slate-400">Compétences</span>
+                  </div>
+                )}
+                {analysis.gaps && analysis.gaps.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
+                    <span className="text-sm font-semibold text-white">{analysis.gaps.length}</span>
+                    <span className="text-xs text-slate-400">Lacunes</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button variant="outline" onClick={() => router.push(`/review/${candidateId}`)}>
                 <ArrowLeft className="mr-1.5 h-4 w-4" />
@@ -386,173 +408,79 @@ export default function PositioningWizardPage() {
               <QuestionsPanel
                 analysis={analysis}
                 onUpdateAnswer={updateAnswer}
-                onGenerate={handleGenerate}
-                isGenerating={isGenerating || isGenerateLoading}
+                onNext={() => setCurrentStep(3)}
               />
             )}
 
             {currentStep === 3 && (
-              <>
-                {(isGenerating || isGenerateLoading) && !tailoredCv && !email && (
-                  <section className="glass-panel rounded-2xl p-8 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-shimmer" />
-                    <div className="flex flex-col items-center gap-4 text-center">
-                      <div className="relative">
-                        <div className="h-12 w-12 rounded-xl bg-violet/20 flex items-center justify-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-violet" />
-                        </div>
-                        <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" />
-                          <span className="relative inline-flex h-3 w-3 rounded-full bg-violet" />
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-white">Génération en cours...</p>
-                        <p className="text-xs text-slate-400 mt-1">L&apos;IA retravaille le CV et rédige l&apos;email de positionnement</p>
-                      </div>
-                      <div className="w-full max-w-xs space-y-3 mt-2">
-                        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                          <div className="h-full rounded-full bg-violet/40 animate-pulse" style={{ width: '60%' }} />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-slate-500">
-                          <span>CV retravaillé</span>
-                          <span>Email</span>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                )}
-
-                {(tailoredCv || email) && (
-                  <>
-                    {(isGenerating || isGenerateLoading) && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20">
-                        <span className="relative flex h-2 w-2">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-violet" />
-                        </span>
-                        <span className="text-xs font-medium text-violet">Génération en cours...</span>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setActiveTab('email')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          activeTab === 'email'
-                            ? 'bg-violet/15 text-violet border border-violet/30'
-                            : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
-                        }`}
-                      >
-                        Email client
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('candidateEmail')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          activeTab === 'candidateEmail'
-                            ? 'bg-neon/15 text-neon border border-neon/30'
-                            : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
-                        }`}
-                      >
-                        Email candidat
-                      </button>
-                      <button
-                        onClick={() => setActiveTab('cv')}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          activeTab === 'cv'
-                            ? 'bg-violet/15 text-violet border border-violet/30'
-                            : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
-                        }`}
-                      >
-                        CV retravaillé
-                      </button>
-                    </div>
-
-                    {activeTab === 'email' && (
-                      <EmailEditor
-                        email={email}
-                        onChange={setEmail}
-                        readOnly={isGenerating || isGenerateLoading}
-                        title="Email de positionnement client"
-                      />
-                    )}
-
-                    {activeTab === 'candidateEmail' && (
-                      <EmailEditor
-                        email={candidateEmail}
-                        onChange={setCandidateEmail}
-                        readOnly={isGenerating || isGenerateLoading}
-                        title="Email de proposition au candidat"
-                      />
-                    )}
-
-                    {activeTab === 'cv' && (
-                      <TailoredCvForm
-                        data={tailoredCv}
-                        onUpdateField={updateTailoredCvField}
-                        readOnly={isGenerating || isGenerateLoading}
-                      />
-                    )}
-                  </>
-                )}
-              </>
+              <GenerationStep
+                positioningId={positioningIdParam}
+                isStreaming={isGenerating || isGenerateLoading}
+                onGenerate={handleGenerate}
+              />
             )}
           </div>
 
-          {/* Right panel - PDF Preview */}
+          {/* Right panel */}
           <div className="w-1/2 sticky top-0">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <h2 className="flex items-center text-sm font-semibold text-white">
-                  <FileText className="mr-2 h-4 w-4 text-accent" />
-                  {currentStep === 3 ? 'Aperçu CV retravaillé' : 'CV original'}
-                </h2>
-                {currentStep === 3 && pdfBlobUrl && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (!pdfBlobUrl) return;
-                      const a = document.createElement('a');
-                      a.href = pdfBlobUrl;
-                      a.download = 'HIMEO_CV_positioning.pdf';
-                      a.click();
-                    }}
-                    className="border-accent/30 text-accent-foreground hover:bg-accent/10"
-                  >
-                    <Download className="mr-1.5 h-3.5 w-3.5" />
-                    Télécharger
-                  </Button>
-                )}
-              </div>
-
-              <div className="relative flex-1 bg-[#0a0d16]">
-                {currentStep === 3 && isPdfLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              {currentStep === 3 ? (
+                <>
+                  <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                    <h2 className="flex items-center text-sm font-semibold text-white">
+                      <FileText className="mr-2 h-4 w-4 text-accent" />
+                      Aperçu CV retravaillé
+                    </h2>
+                    {pdfBlobUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (!pdfBlobUrl) return;
+                          const a = document.createElement('a');
+                          a.href = pdfBlobUrl;
+                          a.download = 'HIMEO_CV_positioning.pdf';
+                          a.click();
+                        }}
+                        className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                      >
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                        Télécharger
+                      </Button>
+                    )}
                   </div>
-                )}
-
-                {currentStep === 3 ? (
-                  pdfBlobUrl ? (
-                    <iframe src={pdfBlobUrl} className="h-full w-full" title="CV Preview" />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                      <FileText className="mb-2 h-10 w-10" />
-                      <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
-                    </div>
-                  )
-                ) : (
-                  originalPdfBlobUrl ? (
-                    <iframe src={originalPdfBlobUrl} className="h-full w-full" title="CV Original" />
-                  ) : (
-                    <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                      <FileText className="mb-2 h-10 w-10" />
-                      <p className="text-sm">CV original</p>
-                    </div>
-                  )
-                )}
-              </div>
+                  <div className="relative flex-1 bg-[#0a0d16]">
+                    {isPdfLoading && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    )}
+                    {pdfBlobUrl ? (
+                      <iframe src={pdfBlobUrl} className="h-full w-full" title="CV Preview" />
+                    ) : (
+                      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+                        <FileText className="mb-2 h-10 w-10" />
+                        <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                    <h2 className="flex items-center text-sm font-semibold text-white">
+                      <Target className="mr-2 h-4 w-4 text-violet" />
+                      Visualisation de l&apos;analyse
+                    </h2>
+                  </div>
+                  <div className="relative overflow-y-auto flex-1 bg-[#0a0d16]">
+                    <AnalysisCharts
+                      analysis={analysis}
+                      isAnalyzing={isAnalyzing || isAnalysisLoading}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
