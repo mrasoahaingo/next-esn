@@ -15,7 +15,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -31,9 +31,8 @@ import {
   XAxis,
   YAxis,
   Cell,
-  RadialBarChart,
-  RadialBar,
-  PolarAngleAxis,
+  PieChart,
+  Pie,
 } from 'recharts';
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -431,6 +430,11 @@ export default function Dashboard() {
                 <EmptyChart label="Aucun positionnement analysé" />
               )}
             </CardContent>
+            <CardFooter>
+              <p className="text-[10px] text-muted-foreground/60">
+                Répartition des scores de matching candidat/poste sur l&apos;ensemble des positionnements analysés par l&apos;IA.
+              </p>
+            </CardFooter>
           </Card>
 
           {/* ─── Skill coverage (radial gauge) ──────────────────────── */}
@@ -443,33 +447,25 @@ export default function Dashboard() {
             <CardContent>
               {skillCoverage.total > 0 ? (
                 <div>
-                  <ChartContainer config={skillCoverageConfig} className="h-[130px] w-full">
-                    <RadialBarChart
-                      innerRadius="60%"
-                      outerRadius="100%"
-                      data={[
-                        {
-                          name: 'coverage',
-                          value: Math.round(
-                            ((skillCoverage.strong + skillCoverage.partial * 0.5) /
-                              skillCoverage.total) *
-                              100
-                          ),
-                          fill: '#b2ff3f',
-                        },
-                      ]}
-                      startAngle={180}
-                      endAngle={0}
-                    >
-                      <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                      <RadialBar
+                  <ChartContainer config={skillCoverageConfig} className="mx-auto aspect-square h-[160px]">
+                    <PieChart>
+                      <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                      <Pie
+                        data={[
+                          { name: 'strong', value: skillCoverage.strong, fill: '#b2ff3f' },
+                          { name: 'partial', value: skillCoverage.partial, fill: '#fbbf24' },
+                          { name: 'missing', value: skillCoverage.missing, fill: '#f87171' },
+                        ]}
                         dataKey="value"
-                        cornerRadius={8}
-                        background={{ fill: 'rgba(255,255,255,0.06)' }}
+                        nameKey="name"
+                        innerRadius={48}
+                        outerRadius={72}
+                        strokeWidth={2}
+                        stroke="rgba(0,0,0,0.3)"
                       />
                       <text
                         x="50%"
-                        y="55%"
+                        y="47%"
                         textAnchor="middle"
                         dominantBaseline="middle"
                         className="fill-foreground text-2xl font-bold"
@@ -478,12 +474,20 @@ export default function Dashboard() {
                           ((skillCoverage.strong + skillCoverage.partial * 0.5) /
                             skillCoverage.total) *
                             100
-                        )}
-                        %
+                        )}%
                       </text>
-                    </RadialBarChart>
+                      <text
+                        x="50%"
+                        y="58%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-muted-foreground text-[10px]"
+                      >
+                        couverture
+                      </text>
+                    </PieChart>
                   </ChartContainer>
-                  <div className="mt-2 flex justify-center gap-4">
+                  <div className="mt-1 flex justify-center gap-4">
                     {[
                       { label: 'Maîtrisé', count: skillCoverage.strong, color: 'bg-neon' },
                       { label: 'Partiel', count: skillCoverage.partial, color: 'bg-amber-400' },
@@ -500,6 +504,11 @@ export default function Dashboard() {
                 <EmptyChart label="Aucune compétence analysée" />
               )}
             </CardContent>
+            <CardFooter>
+              <p className="text-[10px] text-muted-foreground/60">
+                Taux de couverture global des compétences demandées. Les compétences partielles comptent pour 50%.
+              </p>
+            </CardFooter>
           </Card>
 
           {/* ─── Pipeline CVs ───────────────────────────────────────── */}
@@ -532,6 +541,11 @@ export default function Dashboard() {
                 <EmptyChart label="Aucun CV importé" />
               )}
             </CardContent>
+            <CardFooter>
+              <p className="text-[10px] text-muted-foreground/60">
+                Progression des CVs dans le workflow : de l&apos;upload initial jusqu&apos;à la génération du PDF Himeo final.
+              </p>
+            </CardFooter>
           </Card>
         </div>
 
@@ -617,6 +631,11 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
+          <CardFooter>
+            <p className="text-[10px] text-muted-foreground/60">
+              Compétences les plus fréquemment évaluées dans les positionnements. Le pourcentage indique le taux de maîtrise moyen de vos candidats sur cette compétence.
+            </p>
+          </CardFooter>
         </Card>
 
         {/* ─── Matchings table ────────────────────────────────────── */}
@@ -767,6 +786,11 @@ export default function Dashboard() {
               </div>
             )}
           </CardContent>
+          <CardFooter>
+            <p className="text-[10px] text-muted-foreground/60">
+              Les derniers positionnements analysés par l&apos;IA. Chaque barre montre la répartition compétences maîtrisées / partielles / manquantes. Cliquez pour accéder au détail.
+            </p>
+          </CardFooter>
         </Card>
 
         {/* Bottom hint */}
