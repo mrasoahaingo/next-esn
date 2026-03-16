@@ -368,9 +368,9 @@ export default function PositioningWizardPage() {
             )}
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => router.push(`/review/${candidateId}`)}>
-                <ArrowLeft className="mr-1.5 h-4 w-4" />
-                Retour au CV
+              <Button variant="ghost" size="sm" onClick={() => router.push(`/review/${candidateId}`)}>
+                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
+                CV
               </Button>
               {currentStep === 3 && (
                 <Button onClick={handleExport} disabled={isExporting || isStreaming || !tailoredCv}>

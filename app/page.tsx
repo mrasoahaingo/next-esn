@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { FileText, Target, TrendingUp, Clock, Upload } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { FileText, Target, TrendingUp, Clock, Upload, Loader2, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Stats {
   totalCvs: number;
@@ -19,6 +20,10 @@ export default function Dashboard() {
     generatedPositionings: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     Promise.all([
@@ -43,6 +48,48 @@ export default function Dashboard() {
       .finally(() => setIsLoading(false));
   }, []);
 
+  const handleUpload = async (file: File) => {
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      toast.success('CV uploadé', {
+        description: 'Extraction automatique en cours...',
+      });
+      router.push(`/review/${data.id}`);
+    } catch {
+      toast.error("Erreur lors de l'upload", {
+        description: 'Vérifie le fichier et réessaie.',
+      });
+      setIsUploading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) handleUpload(e.target.files[0]);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleUpload(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
   const statCards = [
     {
       icon: FileText,
@@ -64,63 +111,78 @@ export default function Dashboard() {
     },
     {
       icon: Clock,
-      label: 'Temps estimé gagné',
+      label: 'Temps gagné',
       value: `${stats.totalCvs * 40 + stats.generatedPositionings * 90}min`,
       accent: 'text-primary bg-primary/15',
     },
   ];
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="mx-auto w-full max-w-2xl px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-xl font-semibold title-gradient">Tableau de bord</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Vue d'ensemble de l'activité Himeo CV
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
+    <div className="flex h-full items-center justify-center">
+      <div className="w-full max-w-xl px-6">
+        {/* Stats strip */}
+        <div className="mb-8 grid grid-cols-4 gap-2">
           {statCards.map((card) => {
             const Icon = card.icon;
             return (
-              <div
-                key={card.label}
-                className="rounded-xl glass-panel p-4"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.accent}`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className={`text-xl font-bold text-foreground ${isLoading ? 'animate-pulse' : ''}`}>
-                      {isLoading ? '–' : card.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{card.label}</p>
-                  </div>
+              <div key={card.label} className="rounded-xl glass-panel px-3 py-3 text-center">
+                <div className={`mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg ${card.accent}`}>
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
+                <p className={`text-lg font-bold text-foreground ${isLoading ? 'animate-pulse' : ''}`}>
+                  {isLoading ? '–' : card.value}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{card.label}</p>
               </div>
             );
           })}
         </div>
 
-        <Separator className="my-8" />
-
-        <div className="flex flex-col items-center gap-3 text-center text-muted-foreground">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card/50">
-            <Upload className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Sélectionne un CV ou ajoute-en un nouveau
-            </p>
-            <p className="mt-0.5 text-xs">
-              Utilise le bouton + dans la barre latérale
-            </p>
-          </div>
+        {/* Upload zone */}
+        <div
+          ref={dropRef}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={`relative rounded-2xl border-2 border-dashed transition-all duration-200 ${
+            isDragging
+              ? 'border-accent bg-accent/5 scale-[1.01]'
+              : 'border-white/10 hover:border-white/20'
+          }`}
+        >
+          <label className="flex cursor-pointer flex-col items-center gap-4 px-8 py-14">
+            <input
+              type="file"
+              onChange={handleFileChange}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              accept=".pdf,.docx,.doc"
+              disabled={isUploading}
+            />
+            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl transition ${
+              isDragging ? 'bg-accent/20 text-accent' : 'bg-card/80 text-muted-foreground'
+            }`}>
+              {isUploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-accent" />
+              ) : (
+                <Upload className="h-6 w-6" />
+              )}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">
+                {isUploading ? 'Upload en cours...' : 'Dépose un CV ici ou clique pour importer'}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                PDF, DOCX — extraction automatique par IA
+              </p>
+            </div>
+          </label>
         </div>
+
+        {/* Hint */}
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/60">
+          <ArrowRight className="h-3 w-3" />
+          Ou sélectionne un CV dans la barre latérale
+        </p>
       </div>
     </div>
   );

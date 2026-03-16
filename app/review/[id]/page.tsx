@@ -7,9 +7,8 @@ import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Plus, Target } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck } from 'lucide-react';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
 import { Strengths } from '../components/Strengths';
@@ -31,7 +30,6 @@ export default function ReviewPage() {
   } = useCvBuilderStore();
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
-  const router = useRouter();
 
   const { object, submit, isLoading, error } = useObject({
     api: '/api/extract',
@@ -128,19 +126,6 @@ export default function ReviewPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" onClick={() => router.push('/')}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                Nouveau CV
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/review/${params.id}/positioning`)}
-                disabled={isLoading || !cvData}
-                className="border-violet/30 text-violet hover:bg-violet/10"
-              >
-                <Target className="mr-1.5 h-4 w-4" />
-                Positionner
-              </Button>
               <Button
                 onClick={handleSave}
                 disabled={isLoading || !cvData}

@@ -3,10 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider } from "@/components/sidebar-context";
 import { Toaster } from "@/components/ui/sonner";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SecondarySidebar } from "@/components/secondary-sidebar";
+import { UnifiedSidebar } from "@/components/unified-sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -40,15 +38,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            <SidebarProvider>
-              <div className="flex h-screen overflow-hidden">
-                <AppSidebar />
-                <SecondarySidebar />
-                <main className="flex-1 overflow-y-auto">
-                  {children}
-                </main>
-              </div>
-            </SidebarProvider>
+            <div className="flex h-screen overflow-hidden">
+              <UnifiedSidebar />
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </div>
             <Toaster position="bottom-right" />
           </TooltipProvider>
         </ThemeProvider>
