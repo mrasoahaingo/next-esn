@@ -25,8 +25,8 @@ interface AnalysisChartsProps {
   isAnalyzing: boolean;
 }
 
-const NEON = '#b2ff3f';
-const VIOLET = '#a78bfa';
+const NEON = '#b5ff40';
+const VIOLET = '#8b5cf6';
 const AMBER = '#fbbf24';
 const DESTRUCTIVE = '#ef4444';
 

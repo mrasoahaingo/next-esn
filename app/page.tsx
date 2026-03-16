@@ -81,7 +81,7 @@ const scoreDistributionConfig: ChartConfig = {
 };
 
 const skillCoverageConfig: ChartConfig = {
-  strong: { label: 'Maîtrisé', color: '#b2ff3f' },
+  strong: { label: 'Maîtrisé', color: '#b5ff40' },
   partial: { label: 'Partiel', color: '#fbbf24' },
   missing: { label: 'Manquant', color: '#f87171' },
 };
@@ -114,8 +114,8 @@ function getScoreBg(score: number) {
 }
 
 function getBarColor(range: string) {
-  if (range === '80-100') return '#b2ff3f';
-  if (range === '60-79') return '#a78bfa';
+  if (range === '80-100') return '#b5ff40';
+  if (range === '60-79') return '#8b5cf6';
   if (range === '40-59') return '#fbbf24';
   return '#f87171';
 }
@@ -452,7 +452,7 @@ export default function Dashboard() {
                       <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                       <Pie
                         data={[
-                          { name: 'strong', value: skillCoverage.strong, fill: '#b2ff3f' },
+                          { name: 'strong', value: skillCoverage.strong, fill: '#b5ff40' },
                           { name: 'partial', value: skillCoverage.partial, fill: '#fbbf24' },
                           { name: 'missing', value: skillCoverage.missing, fill: '#f87171' },
                         ]}

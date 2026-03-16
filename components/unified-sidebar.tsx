@@ -167,7 +167,7 @@ export function UnifiedSidebar() {
   const isOnTemplates = pathname.startsWith('/templates');
 
   return (
-    <aside className="flex h-screen w-[280px] flex-col border-r border-border bg-panel">
+    <aside className="flex h-screen w-[280px] flex-col border-r border-violet/10 bg-panel">
       {/* Header */}
       <Link href="/" className="flex items-center gap-3 px-4 py-4">
         <svg

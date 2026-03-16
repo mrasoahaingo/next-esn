@@ -1,4 +1,4 @@
-import { View, Text, Image } from '@react-pdf/renderer';
+import { View, Text, Image, Svg, Path, Rect, Circle } from '@react-pdf/renderer';
 import type { RenderComponentRegistry } from '@json-render/react-pdf/render';
 
 // Custom components with fixed={true} to repeat on every page
@@ -127,6 +127,25 @@ function FixedColumnComponent({ element, children }: { element: { props: Record<
   );
 }
 
+function HimeoLogoComponent({ element }: { element: { props: Record<string, unknown> } }) {
+  const p = element.props;
+  const width = (p.width as number) ?? 80;
+  const height = (p.height as number) ?? 18;
+  // Original viewBox: 0 0 158 36
+  return (
+    <Svg viewBox="0 0 158 36" width={width} height={height}>
+      <Path d="M28.7257 0H23.9381V14.9995H4.63563V0H0V13.3159L5.0156 17.2953L0 21.3513V35.0498H4.63563V19.6677H23.9381V35.0498H28.7257V0Z" fill="white" />
+      <Rect x="36.3518" y="0" width="4.55964" height="35.0498" fill="white" />
+      <Path d="M83.878 34.9729V12.2441L79.0144 20.8918V34.9729H83.878Z" fill="white" />
+      <Path d="M83.8747 0.078125V2.14438L67.536 30.5362H64.7242L53.3251 10.9451V35.0514H48.5375V0.078125H52.5652L66.2441 23.8018L79.923 0.078125H83.8747Z" fill="white" />
+      <Rect x="91.5039" y="0" width="24.1661" height="4.59167" fill="white" />
+      <Rect x="91.5039" y="15" width="24.1661" height="4.59167" fill="white" />
+      <Rect x="91.5039" y="30.459" width="24.1661" height="4.59167" fill="white" />
+      <Circle cx="140.648" cy="17.582" r="14.95" stroke="white" strokeWidth={5.03319} fill="none" />
+    </Svg>
+  );
+}
+
 export const fixedComponents: RenderComponentRegistry = {
   FixedView: FixedViewComponent,
   FixedRow: FixedRowComponent,
@@ -135,4 +154,5 @@ export const fixedComponents: RenderComponentRegistry = {
   FixedImage: FixedImageComponent,
   FixedDivider: FixedDividerComponent,
   FixedSpacer: FixedSpacerComponent,
+  HimeoLogo: HimeoLogoComponent,
 };

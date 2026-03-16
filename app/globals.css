@@ -25,12 +25,12 @@
   --color-ring: var(--ring);
 
   /* Custom Himeo colors */
-  --color-shell: #07090f;
-  --color-panel: #101420;
-  --color-panel-soft: #141a29;
-  --color-line: #242b3d;
-  --color-neon: #b2ff3f;
-  --color-violet: #a78bfa;
+  --color-shell: #08080f;
+  --color-panel: #10101e;
+  --color-panel-soft: #16162a;
+  --color-line: #23233d;
+  --color-neon: #b5ff40;
+  --color-violet: #8b5cf6;
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -62,26 +62,26 @@
   }
 
   .dark {
-    /* Himeo dark theme — shell #07090f, surface #101420, neon #b2ff3f, violet #a78bfa */
-    --background: oklch(0.085 0.02 265);
-    --foreground: oklch(0.96 0.015 270);
-    --card: oklch(0.12 0.025 260);
-    --card-foreground: oklch(0.96 0.015 270);
-    --popover: oklch(0.12 0.025 260);
-    --popover-foreground: oklch(0.96 0.015 270);
+    /* Himeo dark theme — deep purple-tinted dark */
+    --background: oklch(0.08 0.025 280);
+    --foreground: oklch(0.95 0.01 280);
+    --card: oklch(0.115 0.03 275);
+    --card-foreground: oklch(0.95 0.01 280);
+    --popover: oklch(0.115 0.03 275);
+    --popover-foreground: oklch(0.95 0.01 280);
     --primary: oklch(0.91 0.22 130);
-    --primary-foreground: oklch(0.13 0.02 265);
-    --secondary: oklch(0.15 0.02 260);
-    --secondary-foreground: oklch(0.96 0.015 270);
-    --muted: oklch(0.15 0.02 260);
-    --muted-foreground: oklch(0.65 0.02 260);
-    --accent: oklch(0.69 0.15 290);
-    --accent-foreground: oklch(0.96 0.015 270);
+    --primary-foreground: oklch(0.12 0.025 280);
+    --secondary: oklch(0.145 0.025 275);
+    --secondary-foreground: oklch(0.95 0.01 280);
+    --muted: oklch(0.145 0.025 275);
+    --muted-foreground: oklch(0.58 0.03 280);
+    --accent: oklch(0.62 0.18 290);
+    --accent-foreground: oklch(0.95 0.01 280);
     --destructive: oklch(0.704 0.191 22.216);
     --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(1 0 0 / 8%);
-    --input: oklch(1 0 0 / 12%);
-    --ring: oklch(0.91 0.22 130);
+    --border: oklch(0.75 0.05 280 / 12%);
+    --input: oklch(0.75 0.05 280 / 15%);
+    --ring: oklch(0.62 0.18 290);
   }
 
   * {
@@ -95,35 +95,35 @@
 }
 
 :root {
-  --surface: #101420;
-  --surface-soft: #141a29;
+  --surface: #10101e;
+  --surface-soft: #16162a;
 }
 
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   background-image:
-    radial-gradient(circle at 20% 10%, rgba(178, 255, 63, 0.1), transparent 35%),
-    radial-gradient(circle at 80% 20%, rgba(167, 139, 250, 0.16), transparent 30%),
-    radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.14), transparent 35%);
+    radial-gradient(circle at 15% 5%, rgba(139, 92, 246, 0.12), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.10), transparent 35%),
+    radial-gradient(circle at 50% 85%, rgba(99, 72, 241, 0.12), transparent 40%);
 }
 
 @utility glass-panel {
-  background: linear-gradient(160deg, rgba(20, 26, 41, 0.86), rgba(10, 12, 19, 0.86));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+  background: linear-gradient(160deg, rgba(22, 22, 42, 0.88), rgba(12, 12, 22, 0.88));
+  border: 1px solid rgba(139, 92, 246, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(14px);
 }
 
 @utility neon-ring {
   box-shadow:
-    0 0 0 1px rgba(178, 255, 63, 0.25),
-    0 0 22px rgba(178, 255, 63, 0.28);
+    0 0 0 1px rgba(181, 255, 64, 0.25),
+    0 0 22px rgba(181, 255, 64, 0.28);
 }
 
 @utility violet-ring {
   box-shadow:
-    0 0 0 1px rgba(167, 139, 250, 0.32),
-    0 0 24px rgba(167, 139, 250, 0.2);
+    0 0 0 1px rgba(139, 92, 246, 0.35),
+    0 0 24px rgba(139, 92, 246, 0.2);
 }
 
 @utility grid-noise {
@@ -138,7 +138,7 @@ body {
 }
 
 @utility title-gradient {
-  background: linear-gradient(90deg, #ecf2ff 0%, #b2ff3f 45%, #a78bfa 100%);
+  background: linear-gradient(90deg, #e8e0ff 0%, #b5ff40 45%, #8b5cf6 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
