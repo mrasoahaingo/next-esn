@@ -5,11 +5,6 @@ import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
 // Himeo logo SVG encoded as data URI (white version for dark header)
 const HIMEO_LOGO_WHITE = `data:image/svg+xml;base64,${Buffer.from(`<svg width="158" height="36" viewBox="0 0 158 36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M28.7257 0H23.9381V14.9995H4.63563V0H0V13.3159L5.0156 17.2953L0 21.3513V35.0498H4.63563V19.6677H23.9381V35.0498H28.7257V0Z" fill="white"/><rect x="36.3518" y="35.0508" width="35.0498" height="4.55964" transform="rotate(-90 36.3518 35.0508)" fill="white"/><path d="M83.878 34.9729V12.2441L79.0144 20.8918V34.9729H83.878Z" fill="white"/><path d="M83.8747 0.078125V2.14438L67.536 30.5362H64.7242L53.3251 10.9451V35.0514H48.5375V0.078125H52.5652L66.2441 23.8018L79.923 0.078125H83.8747Z" fill="white"/><rect x="91.5039" width="24.1661" height="4.59167" fill="white"/><rect x="91.5039" y="15" width="24.1661" height="4.59167" fill="white"/><rect x="91.5039" y="30.459" width="24.1661" height="4.59167" fill="white"/><path d="M140.648 2.63184C148.825 2.63184 155.483 9.30948 155.484 17.582C155.484 25.8548 148.825 32.5332 140.648 32.5332C132.47 32.533 125.813 25.8547 125.813 17.582C125.813 9.30961 132.47 2.63204 140.648 2.63184Z" stroke="white" stroke-width="5.03319"/></svg>`).toString('base64')}`;
 
-// Light-background color derived from primary (subtle tint)
-function getLightBg(primary: string): string {
-  return '#f5f5f4';
-}
-
 function addSectionHeading(
   elements: Spec['elements'],
   id: string,
@@ -21,7 +16,7 @@ function addSectionHeading(
   elements[`${id}-container`] = {
     type: 'View',
     props: {
-      padding: null, paddingTop: null, paddingBottom: 4, paddingLeft: null, paddingRight: null,
+      padding: null, paddingTop: null, paddingBottom: 6, paddingLeft: null, paddingRight: null,
       margin: null, backgroundColor: null,
       borderWidth: null, borderColor: null, borderRadius: null,
       flex: null, alignItems: null, justifyContent: null,
@@ -32,7 +27,7 @@ function addSectionHeading(
     type: 'Text',
     props: {
       text: text.toUpperCase(),
-      fontSize: 12,
+      fontSize: 10,
       color: primaryColor,
       fontWeight: 'bold',
       fontStyle: null,
@@ -43,7 +38,7 @@ function addSectionHeading(
   };
   elements[`${id}-line`] = {
     type: 'Divider',
-    props: { color: secondaryColor, thickness: 2, marginTop: 4, marginBottom: 12 },
+    props: { color: secondaryColor, thickness: 1.5, marginTop: 4, marginBottom: 0 },
     children: [],
   };
   children.push(`${id}-container`);
@@ -64,11 +59,11 @@ const sectionBuilders: Record<string, SectionBuilder> = {
     addSectionHeading(elements, 'strengths', 'Synthèse', pageChildren, colors.primary, colors.secondary);
     elements['strengths-list'] = {
       type: 'List',
-      props: { items: strengths, ordered: false, fontSize: 10, color: colors.text, spacing: 4 },
+      props: { items: strengths, ordered: false, fontSize: 9, color: colors.text, spacing: 4 },
       children: [],
     };
     pageChildren.push('strengths-list');
-    elements['spacer-strengths'] = { type: 'Spacer', props: { height: 18 }, children: [] };
+    elements['spacer-strengths'] = { type: 'Spacer', props: { height: 20 }, children: [] };
     pageChildren.push('spacer-strengths');
   },
 
@@ -77,11 +72,11 @@ const sectionBuilders: Record<string, SectionBuilder> = {
     addSectionHeading(elements, 'summary', 'Résumé Professionnel', pageChildren, colors.primary, colors.secondary);
     elements['summary-text'] = {
       type: 'Text',
-      props: { text: data.summary, fontSize: 10, color: colors.text, fontWeight: null, fontStyle: null, align: null, lineHeight: 1.6 },
+      props: { text: data.summary, fontSize: 9, color: colors.text, fontWeight: null, fontStyle: 'italic', align: null, lineHeight: 1.7 },
       children: [],
     };
     pageChildren.push('summary-text');
-    elements['spacer-summary'] = { type: 'Spacer', props: { height: 18 }, children: [] };
+    elements['spacer-summary'] = { type: 'Spacer', props: { height: 20 }, children: [] };
     pageChildren.push('spacer-summary');
   },
 
@@ -89,23 +84,30 @@ const sectionBuilders: Record<string, SectionBuilder> = {
     const skills = (data.skills ?? []).filter(Boolean);
     if (skills.length === 0) return;
     addSectionHeading(elements, 'skills', 'Compétences Techniques', pageChildren, colors.primary, colors.secondary);
-    elements['skills-container'] = {
-      type: 'View',
-      props: {
-        padding: null, paddingTop: 10, paddingBottom: 10, paddingLeft: 14, paddingRight: 14,
-        margin: null, backgroundColor: getLightBg(colors.primary),
-        borderWidth: null, borderColor: null, borderRadius: 4,
-        flex: null, alignItems: null, justifyContent: null,
-      },
-      children: ['skills-text'],
+    elements['skills-row'] = {
+      type: 'Row',
+      props: { justifyContent: null, alignItems: null, gap: 6, padding: null, flex: null, wrap: true },
+      children: skills.map((_, i) => `skill-chip-${i}`),
     };
-    elements['skills-text'] = {
-      type: 'Text',
-      props: { text: skills.join('  •  '), fontSize: 10, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: 1.6 },
-      children: [],
-    };
-    pageChildren.push('skills-container');
-    elements['spacer-skills'] = { type: 'Spacer', props: { height: 18 }, children: [] };
+    skills.forEach((skill, i) => {
+      elements[`skill-chip-${i}`] = {
+        type: 'View',
+        props: {
+          padding: null, paddingTop: 4, paddingBottom: 4, paddingLeft: 10, paddingRight: 10,
+          margin: null, backgroundColor: '#eef2ff',
+          borderWidth: null, borderColor: null, borderRadius: 12,
+          flex: null, alignItems: null, justifyContent: null,
+        },
+        children: [`skill-chip-text-${i}`],
+      };
+      elements[`skill-chip-text-${i}`] = {
+        type: 'Text',
+        props: { text: skill, fontSize: 8, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+        children: [],
+      };
+    });
+    pageChildren.push('skills-row');
+    elements['spacer-skills'] = { type: 'Spacer', props: { height: 20 }, children: [] };
     pageChildren.push('spacer-skills');
   },
 
@@ -120,61 +122,84 @@ const sectionBuilders: Record<string, SectionBuilder> = {
       const dateText = `${exp.startDate ?? ''} – ${exp.endDate ?? 'Présent'}`;
       const companyDomain = exp.companyDomain?.trim();
 
+      // Experience wrapper with left accent border
+      elements[`exp-${i}-wrapper`] = {
+        type: 'View',
+        props: {
+          padding: null, paddingTop: 0, paddingBottom: 0, paddingLeft: 12, paddingRight: 0,
+          margin: null, backgroundColor: null,
+          borderWidth: null, borderColor: colors.secondary, borderRadius: null,
+          flex: null, alignItems: null, justifyContent: null,
+        },
+        children: [`exp-${i}-header`, ...(companyDomain || companyText ? [`exp-${i}-meta`] : []), ...((exp.description ?? []).filter(Boolean).length > 0 ? [`exp-${i}-desc-spacer`, `exp-${i}-desc`] : [])],
+      };
+
+      // Role + date on same line
+      elements[`exp-${i}-header`] = {
+        type: 'Row',
+        props: { justifyContent: 'space-between', alignItems: 'flex-end', gap: 8, padding: null, flex: null, wrap: null },
+        children: [`exp-${i}-role`, `exp-${i}-date`],
+      };
       elements[`exp-${i}-role`] = {
         type: 'Text',
-        props: { text: roleText, fontSize: 11, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
-        children: [],
-      };
-      pageChildren.push(`exp-${i}-role`);
-
-      const metaChildren: string[] = [];
-      if (companyDomain) {
-        elements[`exp-${i}-company-with-logo`] = {
-          type: 'Row',
-          props: { justifyContent: null, alignItems: 'center', gap: 6, padding: null, flex: null, wrap: null },
-          children: [`exp-${i}-logo`, `exp-${i}-company`],
-        };
-        elements[`exp-${i}-logo`] = {
-          type: 'Image',
-          props: { src: `https://logo.clearbit.com/${companyDomain}`, width: 14, height: 14, objectFit: 'contain' },
-          children: [],
-        };
-        metaChildren.push(`exp-${i}-company-with-logo`);
-      } else {
-        metaChildren.push(`exp-${i}-company`);
-      }
-      metaChildren.push(`exp-${i}-date`);
-
-      elements[`exp-${i}-meta`] = {
-        type: 'Row',
-        props: { justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: null, flex: null, wrap: null },
-        children: metaChildren,
-      };
-      elements[`exp-${i}-company`] = {
-        type: 'Text',
-        props: { text: companyText, fontSize: 9, color: colors.text, fontWeight: null, fontStyle: 'italic', align: null, lineHeight: null },
+        props: { text: roleText, fontSize: 10, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
         children: [],
       };
       elements[`exp-${i}-date`] = {
         type: 'Text',
-        props: { text: dateText, fontSize: 9, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
+        props: { text: dateText, fontSize: 8, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
         children: [],
       };
-      pageChildren.push(`exp-${i}-meta`);
+
+      // Company row
+      const metaChildren: string[] = [];
+      if (companyDomain) {
+        elements[`exp-${i}-company-with-logo`] = {
+          type: 'Row',
+          props: { justifyContent: null, alignItems: 'center', gap: 5, padding: null, flex: null, wrap: null },
+          children: [`exp-${i}-logo`, `exp-${i}-company`],
+        };
+        elements[`exp-${i}-logo`] = {
+          type: 'Image',
+          props: { src: `https://logo.clearbit.com/${companyDomain}`, width: 12, height: 12, objectFit: 'contain' },
+          children: [],
+        };
+        metaChildren.push(`exp-${i}-company-with-logo`);
+      } else if (companyText) {
+        metaChildren.push(`exp-${i}-company`);
+      }
+
+      if (metaChildren.length > 0) {
+        elements[`exp-${i}-meta`] = {
+          type: 'Row',
+          props: { justifyContent: null, alignItems: 'center', gap: 8, padding: null, flex: null, wrap: null },
+          children: metaChildren,
+        };
+      }
+      elements[`exp-${i}-company`] = {
+        type: 'Text',
+        props: { text: companyText, fontSize: 8, color: colors.text, fontWeight: null, fontStyle: 'italic', align: null, lineHeight: null },
+        children: [],
+      };
 
       const descItems = (exp.description ?? []).filter(Boolean);
       if (descItems.length > 0) {
+        elements[`exp-${i}-desc-spacer`] = { type: 'Spacer', props: { height: 4 }, children: [] };
         elements[`exp-${i}-desc`] = {
           type: 'List',
-          props: { items: descItems, ordered: false, fontSize: 9, color: colors.text, spacing: 3 },
+          props: { items: descItems, ordered: false, fontSize: 8, color: colors.text, spacing: 2 },
           children: [],
         };
-        pageChildren.push(`exp-${i}-desc`);
       }
 
-      elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: 14 }, children: [] };
+      pageChildren.push(`exp-${i}-wrapper`);
+      elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: 12 }, children: [] };
       pageChildren.push(`exp-${i}-spacer`);
     });
+
+    // Extra spacing after last experience
+    elements['spacer-exp-end'] = { type: 'Spacer', props: { height: 8 }, children: [] };
+    pageChildren.push('spacer-exp-end');
   },
 
   education(elements, pageChildren, data, colors) {
@@ -186,22 +211,34 @@ const sectionBuilders: Record<string, SectionBuilder> = {
       elements[`edu-${i}-row`] = {
         type: 'Row',
         props: { justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: null, flex: null, wrap: null },
-        children: [`edu-${i}-degree`, `edu-${i}-year`],
+        children: [`edu-${i}-info`, `edu-${i}-year`],
+      };
+      elements[`edu-${i}-info`] = {
+        type: 'Column',
+        props: { gap: 1, alignItems: null, justifyContent: null, padding: null, flex: null },
+        children: [`edu-${i}-degree`, `edu-${i}-school`],
       };
       elements[`edu-${i}-degree`] = {
         type: 'Text',
-        props: { text: `${edu.degree ?? ''} – ${edu.school ?? ''}`, fontSize: 10, color: colors.text, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: 1.5 },
+        props: { text: edu.degree ?? '', fontSize: 9, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+        children: [],
+      };
+      elements[`edu-${i}-school`] = {
+        type: 'Text',
+        props: { text: edu.school ?? '', fontSize: 8, color: colors.text, fontWeight: null, fontStyle: 'italic', align: null, lineHeight: null },
         children: [],
       };
       elements[`edu-${i}-year`] = {
         type: 'Text',
-        props: { text: edu.year ?? '', fontSize: 9, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
+        props: { text: edu.year ?? '', fontSize: 8, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
         children: [],
       };
       pageChildren.push(`edu-${i}-row`);
+      elements[`edu-${i}-spacer`] = { type: 'Spacer', props: { height: 6 }, children: [] };
+      pageChildren.push(`edu-${i}-spacer`);
     });
 
-    elements['spacer-edu'] = { type: 'Spacer', props: { height: 18 }, children: [] };
+    elements['spacer-edu'] = { type: 'Spacer', props: { height: 14 }, children: [] };
     pageChildren.push('spacer-edu');
   },
 };
@@ -222,7 +259,7 @@ export function buildCvSpec(
   const pageChildren: string[] = [];
 
   // ═══════════════════════════════════════════════
-  // FIXED HEADER
+  // HEADER BAND — full-width dark band with logo
   // ═══════════════════════════════════════════════
   elements['header-band'] = {
     type: 'FixedView',
@@ -236,7 +273,7 @@ export function buildCvSpec(
   };
   elements['header-inner'] = {
     type: 'Row',
-    props: { justifyContent: 'flex-end', alignItems: 'center', gap: null, padding: 12, flex: null, wrap: null },
+    props: { justifyContent: 'flex-end', alignItems: 'center', gap: null, padding: 14, flex: null, wrap: null },
     children: ['header-logo'],
   };
   elements['header-logo'] = {
@@ -246,11 +283,11 @@ export function buildCvSpec(
   };
   pageChildren.push('header-band');
 
-  elements['spacer-after-header'] = { type: 'Spacer', props: { height: 16 }, children: [] };
+  elements['spacer-after-header'] = { type: 'Spacer', props: { height: 24 }, children: [] };
   pageChildren.push('spacer-after-header');
 
   // ═══════════════════════════════════════════════
-  // NAME & TITLE
+  // NAME & TITLE — large name, subtle title below
   // ═══════════════════════════════════════════════
   if (data.personalInfo) {
     const pi = data.personalInfo;
@@ -266,12 +303,21 @@ export function buildCvSpec(
     if (pi.title) {
       elements['title'] = {
         type: 'Text',
-        props: { text: pi.title, fontSize: 14, color: colors.text, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
+        props: { text: pi.title, fontSize: 13, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
         children: [],
       };
       pageChildren.push('title');
     }
-    elements['spacer-title'] = { type: 'Spacer', props: { height: 20 }, children: [] };
+
+    // Thin accent line under the name block
+    elements['name-accent'] = {
+      type: 'Divider',
+      props: { color: colors.secondary, thickness: 2, marginTop: 12, marginBottom: 0 },
+      children: [],
+    };
+    pageChildren.push('name-accent');
+
+    elements['spacer-title'] = { type: 'Spacer', props: { height: 24 }, children: [] };
     pageChildren.push('spacer-title');
   }
 
@@ -298,22 +344,22 @@ export function buildCvSpec(
   };
   elements['footer-divider'] = {
     type: 'Divider',
-    props: { color: colors.secondary, thickness: 1, marginTop: 0, marginBottom: 8 },
+    props: { color: colors.secondary, thickness: 0.5, marginTop: 0, marginBottom: 8 },
     children: [],
   };
   elements['footer-content'] = {
-    type: 'Column',
-    props: { gap: 2, alignItems: 'center', justifyContent: null, padding: null, flex: null },
+    type: 'Row',
+    props: { justifyContent: 'space-between', alignItems: 'center', gap: null, padding: null, flex: null, wrap: null },
     children: ['footer-line1', 'footer-line2'],
   };
   elements['footer-line1'] = {
     type: 'Text',
-    props: { text: footer.line1, fontSize: 8, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: 'center', lineHeight: null },
+    props: { text: footer.line1, fontSize: 7, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
     children: [],
   };
   elements['footer-line2'] = {
     type: 'Text',
-    props: { text: footer.line2, fontSize: 8, color: colors.lightText, fontWeight: null, fontStyle: null, align: 'center', lineHeight: null },
+    props: { text: footer.line2, fontSize: 7, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
     children: [],
   };
   pageChildren.push('footer-wrapper');
@@ -337,8 +383,8 @@ export function buildCvSpec(
       orientation: null,
       marginTop: 0,
       marginBottom: 40,
-      marginLeft: 40,
-      marginRight: 40,
+      marginLeft: 48,
+      marginRight: 48,
       backgroundColor: colors.background,
     },
     children: pageChildren,

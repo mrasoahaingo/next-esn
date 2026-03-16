@@ -18,6 +18,7 @@ import {
   Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 interface Candidate {
   id: string;
@@ -168,7 +169,7 @@ export function UnifiedSidebar() {
   return (
     <aside className="flex h-screen w-[280px] flex-col border-r border-border bg-panel">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-4">
+      <Link href="/" className="flex items-center gap-3 px-4 py-4">
         <svg
           aria-hidden="true"
           className="h-5 w-auto shrink-0"
@@ -183,7 +184,7 @@ export function UnifiedSidebar() {
           />
         </svg>
         <span className="text-sm font-semibold text-foreground tracking-wide">HIMEO</span>
-      </div>
+      </Link>
 
       <Separator />
 
