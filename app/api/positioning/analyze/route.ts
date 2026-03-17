@@ -1,7 +1,8 @@
 import { streamObject } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { model } from '@/lib/ai';
+import { model, modelName } from '@/lib/ai';
+import { logAiUsage } from '@/lib/services/ai-usage.service';
 import {
   positioningAnalysisSchema,
   POSITIONING_ANALYSIS_PROMPT,
@@ -36,16 +37,28 @@ export async function POST(req: NextRequest) {
       positioning.job_description,
     );
 
+    const startTime = Date.now();
     const result = streamObject({
       model,
       schema: positioningAnalysisSchema,
       system: POSITIONING_ANALYSIS_PROMPT,
       messages,
-      onFinish: async ({ object }) => {
+      onFinish: async ({ object, usage }) => {
+        const durationMs = Date.now() - startTime;
+
+        await logAiUsage(supabase, {
+          operation: 'analysis',
+          positioningId,
+          candidateId: positioning.candidate_id,
+          aiModel: modelName,
+          durationMs,
+          usage,
+        });
+
         if (object) {
           await supabase
             .from('positionings')
-            .update({ analysis: object, status: 'analyzed' })
+            .update({ analysis: object, status: 'analyzed', ai_analysis_duration_ms: durationMs })
             .eq('id', positioningId);
         }
       },

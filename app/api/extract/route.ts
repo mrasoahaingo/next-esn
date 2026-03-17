@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { extractionSchema, SYSTEM_PROMPT } from '@/lib/services/ai.service';
 import { model, modelName } from '@/lib/ai';
+import { logAiUsage } from '@/lib/services/ai-usage.service';
 import mammoth from 'mammoth';
 
 export async function POST(req: NextRequest) {
@@ -59,18 +60,30 @@ export async function POST(req: NextRequest) {
         })();
 
     // 5. Stream Object
+    const startTime = Date.now();
     const result = streamObject({
       model,
       schema: extractionSchema,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content }],
-      onFinish: async ({ object }) => {
+      onFinish: async ({ object, usage }) => {
+        const durationMs = Date.now() - startTime;
+
+        await logAiUsage(supabase, {
+          operation: 'extraction',
+          candidateId,
+          aiModel: modelName,
+          durationMs,
+          usage,
+        });
+
         if (object) {
           await supabase
             .from('candidates')
             .update({
               extracted_data: object,
               status: 'reviewing',
+              ai_extraction_duration_ms: durationMs,
             })
             .eq('id', candidateId);
 

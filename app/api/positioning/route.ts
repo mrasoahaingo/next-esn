@@ -7,7 +7,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('positionings')
-      .select('id, candidate_id, job_description, status, analysis, created_at, candidates(id, extracted_data)')
+      .select('id, candidate_id, mission_id, job_description, status, analysis, created_at, candidates(id, extracted_data), missions(id, title, company)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -19,14 +19,29 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { candidateId, jobDescription } = await req.json();
+    const { candidateId, jobDescription, missionId } = await req.json();
     const supabase = getSupabase();
+
+    let finalJobDescription = jobDescription;
+
+    // If missionId provided, fetch the job description from the mission
+    if (missionId) {
+      const { data: mission, error: missionError } = await supabase
+        .from('missions')
+        .select('job_description')
+        .eq('id', missionId)
+        .single();
+
+      if (missionError) throw missionError;
+      finalJobDescription = mission.job_description;
+    }
 
     const { data, error } = await supabase
       .from('positionings')
       .insert({
         candidate_id: candidateId,
-        job_description: jobDescription,
+        job_description: finalJobDescription,
+        mission_id: missionId || null,
         status: 'draft',
       })
       .select()

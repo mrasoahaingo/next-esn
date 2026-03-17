@@ -8,11 +8,17 @@ import { Loader2, Target, Clock, User } from 'lucide-react';
 interface Positioning {
   id: string;
   candidate_id: string;
+  mission_id: string | null;
   job_description: string;
   status: string;
   analysis: {
     matchScore?: number;
     matchSummary?: string;
+  } | null;
+  missions: {
+    id: string;
+    title: string;
+    company: string | null;
   } | null;
   created_at: string;
   candidates: {
@@ -61,8 +67,9 @@ export function PositioningListSidebar() {
     return 'Candidat';
   };
 
-  const getJobTitle = (jobDescription: string) => {
-    const firstLine = jobDescription.trim().split('\n')[0];
+  const getPositioningLabel = (p: Positioning) => {
+    if (p.missions?.title) return p.missions.title;
+    const firstLine = p.job_description.trim().split('\n')[0];
     return firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
   };
 
@@ -99,7 +106,7 @@ export function PositioningListSidebar() {
           <div className="space-y-0.5">
             {positionings.map((p) => {
               const candidateName = getCandidateName(p);
-              const jobTitle = getJobTitle(p.job_description);
+              const jobTitle = getPositioningLabel(p);
               const st = statusConfig[p.status] ?? statusConfig.draft;
               const matchScore = p.analysis?.matchScore;
               const isActive = p.id === activePositioningId;

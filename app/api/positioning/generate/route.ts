@@ -1,7 +1,8 @@
 import { streamObject } from 'ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { model } from '@/lib/ai';
+import { model, modelName } from '@/lib/ai';
+import { logAiUsage } from '@/lib/services/ai-usage.service';
 import {
   positioningOutputSchema,
   POSITIONING_GENERATE_PROMPT,
@@ -39,12 +40,24 @@ export async function POST(req: NextRequest) {
       answers ?? {},
     );
 
+    const startTime = Date.now();
     const result = streamObject({
       model,
       schema: positioningOutputSchema,
       system: POSITIONING_GENERATE_PROMPT,
       messages,
-      onFinish: async ({ object }) => {
+      onFinish: async ({ object, usage }) => {
+        const durationMs = Date.now() - startTime;
+
+        await logAiUsage(supabase, {
+          operation: 'generation',
+          positioningId,
+          candidateId: positioning.candidate_id,
+          aiModel: modelName,
+          durationMs,
+          usage,
+        });
+
         if (object) {
           await supabase
             .from('positionings')
@@ -53,6 +66,7 @@ export async function POST(req: NextRequest) {
               email: object.email,
               candidate_email: object.candidateEmail,
               status: 'generated',
+              ai_generation_duration_ms: durationMs,
             })
             .eq('id', positioningId);
         }

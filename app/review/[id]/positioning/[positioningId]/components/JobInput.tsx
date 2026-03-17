@@ -29,7 +29,7 @@ export function JobInput({
           value={jobDescription}
           onChange={(e) => onJobDescriptionChange(e.target.value)}
           placeholder="Collez ici la fiche de poste..."
-          className="min-h-[300px] text-sm"
+          className="min-h-[100px] text-sm max-h-[300px]"
           disabled={isAnalyzing || disabled}
         />
         <div className="mt-4 flex justify-end">

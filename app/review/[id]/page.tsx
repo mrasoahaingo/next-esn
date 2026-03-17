@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
+import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target } from 'lucide-react';
+import Link from 'next/link';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
 import { Strengths } from '../components/Strengths';
@@ -19,6 +22,21 @@ import { PdfPreview } from '../components/PdfPreview';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
 
+function formatDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
+function formatSeconds(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
 export default function ReviewPage() {
   const params = useParams();
   const {
@@ -27,7 +45,11 @@ export default function ReviewPage() {
     setCvData,
     updateField,
     setStreaming,
+    setPdfBlobUrl,
   } = useCvBuilderStore();
+
+  const [aiDurationMs, setAiDurationMs] = useState<number | null>(null);
+  const [userTimeSeconds, setUserTimeSeconds] = useState<number | null>(null);
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
@@ -37,15 +59,26 @@ export default function ReviewPage() {
   });
 
   usePdfPreview();
+  useSessionTimer({
+    endpoint: `/api/candidates/${params?.id}/time`,
+    enabled: !isLoading && !!cvData,
+  });
 
   useEffect(() => {
     if (params?.id) {
+      // Reset store so stale data and PDF from the previous CV are not visible
+      setCvData(null);
+      setPdfBlobUrl(null);
       fetch(`/api/candidates/${params.id}`)
         .then(res => res.json())
         .then(async (data) => {
           // Load template config (from candidate's template or default)
           const config = await fetchTemplateConfig(data.template_id);
           setTemplateConfig(config);
+
+          // Store time tracking data
+          if (data.ai_extraction_duration_ms) setAiDurationMs(data.ai_extraction_duration_ms);
+          if (data.user_review_time_seconds) setUserTimeSeconds(data.user_review_time_seconds);
 
           // Already extracted — load data without triggering AI
           if (data.extracted_data && ['reviewing', 'ready', 'generated'].includes(data.status)) {
@@ -125,13 +158,49 @@ export default function ReviewPage() {
                 </h1>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
+              {/* Time tracking indicators */}
+              {(aiDurationMs || userTimeSeconds) && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {formatDuration((aiDurationMs ?? 0) + (userTimeSeconds ?? 0) * 1000)}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    <div className="space-y-1">
+                      {aiDurationMs != null && aiDurationMs > 0 && (
+                        <p className="flex items-center gap-1.5">
+                          <Cpu className="h-3 w-3 text-accent" />
+                          Extraction IA : <span className="font-semibold">{formatDuration(aiDurationMs)}</span>
+                        </p>
+                      )}
+                      {userTimeSeconds != null && userTimeSeconds > 0 && (
+                        <p className="flex items-center gap-1.5">
+                          <Pencil className="h-3 w-3 text-violet" />
+                          Édition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
               <Button
                 onClick={handleSave}
                 disabled={isLoading || !cvData}
               >
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Sauvegarder
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href={`/review/${params.id}/positioning`} className="flex items-center gap-2">
+                  <Target className="mr-2 h-4 w-4" />
+                  Positionner le CV
+                </Link>
               </Button>
             </div>
           </div>

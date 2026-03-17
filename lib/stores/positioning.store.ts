@@ -13,6 +13,7 @@ interface PositioningState {
   isGenerating: boolean;
   pdfBlobUrl: string | null;
   isPdfLoading: boolean;
+  originalPdfBlobUrl: string | null;
 
   setPositioningId: (id: string | null) => void;
   setJobDescription: (text: string) => void;
@@ -25,6 +26,7 @@ interface PositioningState {
   setIsGenerating: (v: boolean) => void;
   setPdfBlobUrl: (url: string | null) => void;
   setIsPdfLoading: (loading: boolean) => void;
+  setOriginalPdfBlobUrl: (url: string | null) => void;
   updateAnswer: (type: 'candidate' | 'client', index: number, answer: string) => void;
   updateTailoredCvField: (field: keyof ExtractedCV, value: unknown) => void;
   reset: () => void;
@@ -42,6 +44,7 @@ const initialState = {
   isGenerating: false,
   pdfBlobUrl: null,
   isPdfLoading: false,
+  originalPdfBlobUrl: null,
 };
 
 export const usePositioningStore = create<PositioningState>((set, get) => ({
@@ -62,6 +65,11 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
     set({ pdfBlobUrl: url });
   },
   setIsPdfLoading: (loading) => set({ isPdfLoading: loading }),
+  setOriginalPdfBlobUrl: (url) => {
+    const prev = get().originalPdfBlobUrl;
+    if (prev) URL.revokeObjectURL(prev);
+    set({ originalPdfBlobUrl: url });
+  },
 
   updateAnswer: (type, index, answer) => {
     const analysis = get().analysis;
@@ -84,6 +92,8 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
   reset: () => {
     const prev = get().pdfBlobUrl;
     if (prev) URL.revokeObjectURL(prev);
+    const prevOriginal = get().originalPdfBlobUrl;
+    if (prevOriginal) URL.revokeObjectURL(prevOriginal);
     set(initialState);
   },
 }));

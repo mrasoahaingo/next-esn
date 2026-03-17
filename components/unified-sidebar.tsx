@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 
 interface Candidate {
   id: string;
@@ -34,11 +37,17 @@ interface Candidate {
 interface Positioning {
   id: string;
   candidate_id: string;
+  mission_id: string | null;
   job_description: string;
   status: string;
   analysis: {
     matchScore?: number;
     matchSummary?: string;
+  } | null;
+  missions: {
+    id: string;
+    title: string;
+    company: string | null;
   } | null;
   created_at: string;
 }
@@ -75,6 +84,7 @@ export function UnifiedSidebar() {
   const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
+  const { isDemoMode, toggleDemoMode } = useDemoModeStore();
 
   const activeCvId = params?.id as string | undefined;
   const activePositioningId = params?.positioningId as string | undefined;
@@ -88,6 +98,13 @@ export function UnifiedSidebar() {
 
   // Fetch data
   useEffect(() => {
+    if (isDemoMode) {
+      setCandidates([]);
+      setPositionings([]);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
     Promise.all([
       fetch('/api/candidates').then((r) => r.json()),
       fetch('/api/positioning').then((r) => r.json()),
@@ -98,7 +115,7 @@ export function UnifiedSidebar() {
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [isDemoMode]);
 
   // Group positionings by candidate
   const positioningsByCandidate = useMemo(() => {
@@ -150,8 +167,9 @@ export function UnifiedSidebar() {
   const getCandidateTitle = (c: Candidate) =>
     c.extracted_data?.personalInfo?.title ?? null;
 
-  const getJobTitle = (jobDescription: string) => {
-    const firstLine = jobDescription.trim().split('\n')[0];
+  const getPositioningLabel = (p: Positioning) => {
+    if (p.missions?.title) return p.missions.title;
+    const firstLine = p.job_description.trim().split('\n')[0];
     return firstLine.length > 40 ? firstLine.slice(0, 37) + '...' : firstLine;
   };
 
@@ -185,6 +203,19 @@ export function UnifiedSidebar() {
         </svg>
         <span className="text-sm font-semibold text-foreground tracking-wide">HIMEO</span>
       </Link>
+
+      {/* Demo mode toggle */}
+      <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
+        <Label htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
+          Mode démo
+        </Label>
+        <Switch
+          id="demo-mode"
+          checked={isDemoMode}
+          onCheckedChange={toggleDemoMode}
+          className="scale-75"
+        />
+      </div>
 
       <Separator />
 
@@ -244,9 +275,7 @@ export function UnifiedSidebar() {
                     {/* Expand toggle */}
                     <button
                       onClick={() => toggleExpand(c.id)}
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/50 transition hover:text-foreground ${
-                        !hasPositionings ? 'invisible' : ''
-                      }`}
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/50 transition hover:text-foreground"
                     >
                       <ChevronRight
                         className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
@@ -299,10 +328,10 @@ export function UnifiedSidebar() {
                   </div>
 
                   {/* Nested positionings */}
-                  {isExpanded && hasPositionings && (
+                  {isExpanded && (
                     <div className="ml-6 mt-0.5 mb-1 space-y-0.5 border-l border-white/[0.06] pl-2">
                       {cvPositionings.map((p) => {
-                        const jobTitle = getJobTitle(p.job_description);
+                        const label = getPositioningLabel(p);
                         const pst = posStatusConfig[p.status] ?? posStatusConfig.draft;
                         const matchScore = p.analysis?.matchScore;
                         const isPosActive = p.id === activePositioningId;
@@ -344,7 +373,7 @@ export function UnifiedSidebar() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5">
-                                <span className="truncate text-[11px]">{jobTitle}</span>
+                                <span className="truncate text-[11px]">{label}</span>
                                 <Badge
                                   variant={pst.variant}
                                   className="shrink-0 text-[8px] px-1 py-0 leading-tight"

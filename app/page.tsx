@@ -13,6 +13,8 @@ import {
   Zap,
   Users,
   ChevronRight,
+  Cpu,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -34,6 +36,7 @@ import {
   PieChart,
   Pie,
 } from 'recharts';
+import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -44,6 +47,8 @@ interface Candidate {
     personalInfo?: { firstName?: string; lastName?: string; title?: string };
   } | null;
   created_at: string;
+  ai_extraction_duration_ms?: number | null;
+  user_review_time_seconds?: number | null;
 }
 
 interface Positioning {
@@ -61,6 +66,9 @@ interface Positioning {
     }[];
   } | null;
   created_at: string;
+  ai_analysis_duration_ms?: number | null;
+  ai_generation_duration_ms?: number | null;
+  user_time_seconds?: number | null;
   candidates: {
     id: string;
     extracted_data: {
@@ -88,6 +96,16 @@ const skillCoverageConfig: ChartConfig = {
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
+function formatTimeSaved(minutes: number): string {
+  if (minutes < 60) return `${minutes}min`;
+  const hours = minutes / 60;
+  if (hours < 8) return `${hours % 1 === 0 ? hours : hours.toFixed(1)}h`;
+  const days = hours / 8;
+  if (days < 5) return `${days % 1 === 0 ? days : days.toFixed(1)}j`;
+  const weeks = days / 5;
+  return `${weeks % 1 === 0 ? weeks : weeks.toFixed(1)} sem`;
+}
+
 function getCandidateName(c: { extracted_data: Candidate['extracted_data'] }) {
   const pi = c.extracted_data?.personalInfo;
   if (pi?.firstName || pi?.lastName) {
@@ -113,6 +131,21 @@ function getScoreBg(score: number) {
   return 'bg-destructive/15';
 }
 
+function formatDurationMs(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (minutes < 60) return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
+function formatDurationSeconds(s: number): string {
+  return formatDurationMs(s * 1000);
+}
+
 function getBarColor(range: string) {
   if (range === '80-100') return '#b5ff40';
   if (range === '60-79') return '#8b5cf6';
@@ -129,14 +162,21 @@ export default function Dashboard() {
   const [isDragging, setIsDragging] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const isDemoMode = useDemoModeStore((s) => s.isDemoMode);
 
   useEffect(() => {
+    if (isDemoMode) {
+      setData({ candidates: [], positionings: [] });
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
     fetch('/api/dashboard')
       .then((r) => r.json())
       .then((d) => setData(d))
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [isDemoMode]);
 
   // ─── Derived stats ─────────────────────────────────────────────
 
@@ -162,9 +202,40 @@ export default function Dashboard() {
               analyzedPos.length
           )
         : 0;
-    const timeSaved = totalCvs * 40 + generatedPos * 90;
+    // Estimated manual time (baseline without Himeo)
+    const estimatedManualMinutes = totalCvs * 40 + generatedPos * 90;
 
-    return { totalCvs, readyCvs, totalPos, generatedPos, avgScore, timeSaved, analyzedPos };
+    // Actual time spent with Himeo
+    const aiExtractionMs = candidates.reduce((s, c) => s + (c.ai_extraction_duration_ms ?? 0), 0);
+    const aiAnalysisMs = positionings.reduce((s, p) => s + (p.ai_analysis_duration_ms ?? 0), 0);
+    const aiGenerationMs = positionings.reduce((s, p) => s + (p.ai_generation_duration_ms ?? 0), 0);
+    const aiMinutes = (aiExtractionMs + aiAnalysisMs + aiGenerationMs) / 60_000;
+    const userReviewSeconds = candidates.reduce((s, c) => s + (c.user_review_time_seconds ?? 0), 0);
+    const userPositioningSeconds = positionings.reduce((s, p) => s + (p.user_time_seconds ?? 0), 0);
+    const userMinutes = (userReviewSeconds + userPositioningSeconds) / 60;
+    const actualTotalMinutes = Math.round(aiMinutes + userMinutes);
+
+    // ROI = estimated manual time - actual time spent
+    const timeSaved = Math.max(0, estimatedManualMinutes - actualTotalMinutes);
+
+    return {
+      totalCvs,
+      readyCvs,
+      totalPos,
+      generatedPos,
+      avgScore,
+      timeSaved,
+      estimatedManualMinutes,
+      actualTotalMinutes,
+      aiMinutes: Math.round(aiMinutes),
+      userMinutes: Math.round(userMinutes),
+      aiExtractionMs,
+      aiAnalysisMs,
+      aiGenerationMs,
+      userReviewSeconds,
+      userPositioningSeconds,
+      analyzedPos,
+    };
   }, [data]);
 
   // ─── Score distribution ────────────────────────────────────────
@@ -373,12 +444,15 @@ export default function Dashboard() {
             {
               icon: Clock,
               label: 'Temps gagné',
-              value: stats?.timeSaved ? `${stats.timeSaved}min` : '0min',
+              value: stats?.timeSaved
+                ? formatTimeSaved(stats.timeSaved)
+                : '0min',
               accent: 'text-primary bg-primary/15',
+              isTimeSaved: true,
             },
           ].map((card) => {
             const Icon = card.icon;
-            return (
+            const inner = (
               <div key={card.label} className="rounded-xl glass-panel px-4 py-4">
                 <div className="flex items-center gap-3">
                   <div
@@ -393,6 +467,28 @@ export default function Dashboard() {
                 </div>
               </div>
             );
+
+            if ('isTimeSaved' in card && card.isTimeSaved && stats) {
+              return (
+                <Tooltip key={card.label}>
+                  <TooltipTrigger className="text-left">
+                    {inner}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    <div className="space-y-1">
+                      <p>Temps manuel estimé : <span className="font-semibold">{formatTimeSaved(stats.estimatedManualMinutes)}</span></p>
+                      <p>Temps réel avec Himeo : <span className="font-semibold">{formatTimeSaved(stats.actualTotalMinutes)}</span></p>
+                      <div className="border-t border-white/10 pt-1 mt-1 text-muted-foreground">
+                        <p>IA : {formatTimeSaved(stats.aiMinutes)}</p>
+                        <p>Édition : {formatTimeSaved(stats.userMinutes)}</p>
+                      </div>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return inner;
           })}
         </div>
 
@@ -548,6 +644,89 @@ export default function Dashboard() {
             </CardFooter>
           </Card>
         </div>
+
+        {/* ─── Time breakdown ───────────────────────────────────────── */}
+        {stats && stats.actualTotalMinutes > 0 && (
+          <Card className="mt-4 glass-panel border-0">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Temps par opération
+                </CardTitle>
+                <span className="text-[10px] text-muted-foreground/60">
+                  Total : {formatTimeSaved(stats.actualTotalMinutes)}
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-5 gap-3">
+                {[
+                  {
+                    label: 'Extraction IA',
+                    value: stats.aiExtractionMs,
+                    format: formatDurationMs,
+                    icon: Cpu,
+                    color: 'text-accent',
+                    bg: 'bg-accent/15',
+                  },
+                  {
+                    label: 'Analyse IA',
+                    value: stats.aiAnalysisMs,
+                    format: formatDurationMs,
+                    icon: Cpu,
+                    color: 'text-violet',
+                    bg: 'bg-violet/15',
+                  },
+                  {
+                    label: 'Génération IA',
+                    value: stats.aiGenerationMs,
+                    format: formatDurationMs,
+                    icon: Cpu,
+                    color: 'text-neon',
+                    bg: 'bg-neon/15',
+                  },
+                  {
+                    label: 'Édition CVs',
+                    value: stats.userReviewSeconds,
+                    format: formatDurationSeconds,
+                    icon: Pencil,
+                    color: 'text-amber-400',
+                    bg: 'bg-amber-400/15',
+                  },
+                  {
+                    label: 'Édition posit.',
+                    value: stats.userPositioningSeconds,
+                    format: formatDurationSeconds,
+                    icon: Pencil,
+                    color: 'text-primary',
+                    bg: 'bg-primary/15',
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-md ${item.bg}`}>
+                          <Icon className={`h-3 w-3 ${item.color}`} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{item.label}</span>
+                      </div>
+                      <p className={`text-lg font-bold ${item.color}`}>
+                        {item.value > 0 ? item.format(item.value) : '–'}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <p className="text-[10px] text-muted-foreground/60">
+                Répartition du temps entre les traitements IA (extraction, analyse, génération) et l&apos;édition manuelle par l&apos;utilisateur.
+              </p>
+            </CardFooter>
+          </Card>
+        )}
 
         {/* ─── Top Skills ─────────────────────────────────────────── */}
         <Card className="mt-4 glass-panel border-0">
@@ -740,6 +919,33 @@ export default function Dashboard() {
                               <span className="text-destructive">{skillStats.missing}</span> manquantes
                             </TooltipContent>
                           </Tooltip>
+
+                          {/* Time spent on this positioning */}
+                          {((p.ai_analysis_duration_ms ?? 0) + (p.ai_generation_duration_ms ?? 0) + (p.user_time_seconds ?? 0) * 1000) > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
+                                <Clock className="h-2.5 w-2.5" />
+                                {formatDurationMs(
+                                  (p.ai_analysis_duration_ms ?? 0) +
+                                  (p.ai_generation_duration_ms ?? 0) +
+                                  (p.user_time_seconds ?? 0) * 1000
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <div className="space-y-0.5">
+                                  {(p.ai_analysis_duration_ms ?? 0) > 0 && (
+                                    <p>Analyse : {formatDurationMs(p.ai_analysis_duration_ms!)}</p>
+                                  )}
+                                  {(p.ai_generation_duration_ms ?? 0) > 0 && (
+                                    <p>Génération : {formatDurationMs(p.ai_generation_duration_ms!)}</p>
+                                  )}
+                                  {(p.user_time_seconds ?? 0) > 0 && (
+                                    <p>Édition : {formatDurationSeconds(p.user_time_seconds!)}</p>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
 
                           <span className="text-[10px] text-muted-foreground/50">
                             {new Date(p.created_at).toLocaleDateString('fr-FR', {

@@ -8,14 +8,36 @@ import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePositioningPdfPreview } from '@/lib/hooks/usePositioningPdfPreview';
+import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { StepIndicator } from './components/StepIndicator';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
 import { AnalysisCharts } from './components/AnalysisCharts';
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { GenerationStep } from './components/GenerationStep';
+
+function formatDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
+function formatSeconds(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
 
 function useDebouncedSave(positioningId: string | null) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -50,6 +72,7 @@ export default function PositioningWizardPage() {
     isGenerating,
     pdfBlobUrl,
     isPdfLoading,
+    originalPdfBlobUrl,
     setPositioningId,
     setJobDescription,
     setAnalysis,
@@ -59,6 +82,7 @@ export default function PositioningWizardPage() {
     setCurrentStep,
     setIsAnalyzing,
     setIsGenerating,
+    setOriginalPdfBlobUrl,
     updateAnswer,
     reset,
   } = usePositioningStore();
@@ -67,6 +91,10 @@ export default function PositioningWizardPage() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [aiAnalysisDurationMs, setAiAnalysisDurationMs] = useState<number | null>(null);
+  const [aiGenerationDurationMs, setAiGenerationDurationMs] = useState<number | null>(null);
+  const [userTimeSeconds, setUserTimeSeconds] = useState<number | null>(null);
   // Track if we already auto-launched analysis on mount
   const autoAnalyzedRef = useRef(false);
 
@@ -92,6 +120,10 @@ export default function PositioningWizardPage() {
   });
 
   usePositioningPdfPreview();
+  useSessionTimer({
+    endpoint: `/api/positioning/${positioningIdParam}/time`,
+    enabled: isLoaded && !isAnalyzing && !isAnalysisLoading && !isGenerating && !isGenerateLoading,
+  });
 
   // Load positioning from DB on mount
   useEffect(() => {
@@ -105,6 +137,23 @@ export default function PositioningWizardPage() {
         const templateId = data.candidates?.template_id;
         const config = await fetchTemplateConfig(templateId);
         setTemplateConfig(config);
+
+        // Generate PDF from extracted_data (original CV before positioning)
+        const candidateRes = await fetch(`/api/candidates/${candidateId}`);
+        const candidate = await candidateRes.json();
+        if (candidate.extracted_data) {
+          fetch('/api/pdf-preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: candidate.extracted_data, templateConfig: config }),
+          })
+            .then((res) => res.blob())
+            .then((blob) => {
+              const url = URL.createObjectURL(blob);
+              setOriginalPdfBlobUrl(url);
+            })
+            .catch(console.error);
+        }
 
         setJobDescription(data.job_description ?? '');
         if (data.analysis) {
@@ -141,6 +190,11 @@ export default function PositioningWizardPage() {
           }
           setAnalysis(restored);
         }
+
+        // Store time tracking data
+        if (data.ai_analysis_duration_ms) setAiAnalysisDurationMs(data.ai_analysis_duration_ms);
+        if (data.ai_generation_duration_ms) setAiGenerationDurationMs(data.ai_generation_duration_ms);
+        if (data.user_time_seconds) setUserTimeSeconds(data.user_time_seconds);
 
         // Determine initial step
         if (data.tailored_cv || data.email) {
@@ -367,7 +421,47 @@ export default function PositioningWizardPage() {
               </div>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
+              {/* Time tracking */}
+              {(aiAnalysisDurationMs || aiGenerationDurationMs || userTimeSeconds) && (
+                <Tooltip>
+                  <TooltipTrigger>
+                    <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {formatDuration(
+                          (aiAnalysisDurationMs ?? 0) +
+                          (aiGenerationDurationMs ?? 0) +
+                          (userTimeSeconds ?? 0) * 1000
+                        )}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">
+                    <div className="space-y-1">
+                      {aiAnalysisDurationMs != null && aiAnalysisDurationMs > 0 && (
+                        <p className="flex items-center gap-1.5">
+                          <Cpu className="h-3 w-3 text-violet" />
+                          Analyse IA : <span className="font-semibold">{formatDuration(aiAnalysisDurationMs)}</span>
+                        </p>
+                      )}
+                      {aiGenerationDurationMs != null && aiGenerationDurationMs > 0 && (
+                        <p className="flex items-center gap-1.5">
+                          <Cpu className="h-3 w-3 text-accent" />
+                          Génération IA : <span className="font-semibold">{formatDuration(aiGenerationDurationMs)}</span>
+                        </p>
+                      )}
+                      {userTimeSeconds != null && userTimeSeconds > 0 && (
+                        <p className="flex items-center gap-1.5">
+                          <Pencil className="h-3 w-3 text-amber-400" />
+                          Édition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+
               <Button variant="ghost" size="sm" onClick={() => router.push(`/review/${candidateId}`)}>
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                 CV
@@ -439,23 +533,34 @@ export default function PositioningWizardPage() {
                       <FileText className="mr-2 h-4 w-4 text-accent" />
                       Aperçu CV retravaillé
                     </h2>
-                    {pdfBlobUrl && (
+                    <div className="flex items-center gap-1.5">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (!pdfBlobUrl) return;
-                          const a = document.createElement('a');
-                          a.href = pdfBlobUrl;
-                          a.download = 'HIMEO_CV_positioning.pdf';
-                          a.click();
-                        }}
-                        className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setFullscreen(true)}
+                        disabled={!pdfBlobUrl}
+                        className="text-muted-foreground hover:text-white hover:bg-white/10"
                       >
-                        <Download className="mr-1.5 h-3.5 w-3.5" />
-                        Télécharger
+                        <Maximize2 className="h-3.5 w-3.5" />
                       </Button>
-                    )}
+                      {pdfBlobUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (!pdfBlobUrl) return;
+                            const a = document.createElement('a');
+                            a.href = pdfBlobUrl;
+                            a.download = 'HIMEO_CV_positioning.pdf';
+                            a.click();
+                          }}
+                          className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                        >
+                          <Download className="mr-1.5 h-3.5 w-3.5" />
+                          Télécharger
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="relative flex-1 bg-[#0a0d16]">
                     {isPdfLoading && (
@@ -493,6 +598,98 @@ export default function PositioningWizardPage() {
           </div>
         </div>
       </div>
+
+      {/* Fullscreen comparison dialog */}
+      <Dialog open={fullscreen} onOpenChange={setFullscreen}>
+        <DialogContent
+          className="sm:max-w-[95vw] h-[92vh] flex flex-col gap-0 p-0 bg-[#0a0d16] border border-white/10"
+          showCloseButton={false}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+            <DialogTitle className="flex items-center text-sm font-semibold text-white">
+              <FileText className="mr-2 h-4 w-4 text-accent" />
+              Comparaison des CV
+            </DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!pdfBlobUrl) return;
+                  const a = document.createElement('a');
+                  a.href = pdfBlobUrl;
+                  a.download = 'HIMEO_CV_positioning.pdf';
+                  a.click();
+                }}
+                disabled={!pdfBlobUrl}
+                className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+              >
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                Télécharger
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFullscreen(false)}
+                className="text-muted-foreground hover:text-white hover:bg-white/10"
+              >
+                Fermer
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-1 min-h-0 gap-px bg-white/10">
+            {/* Original CV */}
+            <div className="flex flex-1 flex-col min-w-0">
+              <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-4 py-2">
+                <FileInput className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">CV extrait</span>
+              </div>
+              <div className="relative flex-1 bg-[#0a0d16]">
+                {originalPdfBlobUrl ? (
+                  <iframe
+                    src={originalPdfBlobUrl}
+                    className="h-full w-full"
+                    title="CV Original"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+                    <Loader2 className="mb-2 h-8 w-8 animate-spin" />
+                    <p className="text-sm">Génération du CV extrait...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tailored CV */}
+            <div className="flex flex-1 flex-col min-w-0">
+              <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-4 py-2">
+                <FileText className="h-3.5 w-3.5 text-accent" />
+                <span className="text-xs font-medium text-accent">CV retravaillé</span>
+              </div>
+              <div className="relative flex-1 bg-[#0a0d16]">
+                {isPdfLoading && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                )}
+                {pdfBlobUrl ? (
+                  <iframe
+                    src={pdfBlobUrl}
+                    className="h-full w-full"
+                    title="CV Retravaillé"
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+                    <FileText className="mb-2 h-10 w-10" />
+                    <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
