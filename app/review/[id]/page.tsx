@@ -8,6 +8,7 @@ import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
+import { useCandidate, useUpdateCandidate } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target } from 'lucide-react';
@@ -53,6 +54,10 @@ export default function ReviewPage() {
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
+  const candidateId = params?.id as string;
+  const { data: candidateData } = useCandidate(candidateId);
+  const updateCandidate = useUpdateCandidate();
+
   const { object, submit, isLoading, error } = useObject({
     api: '/api/extract',
     schema: extractionSchema,
@@ -65,35 +70,33 @@ export default function ReviewPage() {
   });
 
   useEffect(() => {
-    if (params?.id) {
+    if (candidateData) {
       // Reset store so stale data and PDF from the previous CV are not visible
       setCvData(null);
       setPdfBlobUrl(null);
-      fetch(`/api/candidates/${params.id}`)
-        .then(res => res.json())
-        .then(async (data) => {
-          // Load template config (from candidate's template or default)
-          const config = await fetchTemplateConfig(data.template_id);
-          setTemplateConfig(config);
 
-          // Store time tracking data
-          if (data.ai_extraction_duration_ms) setAiDurationMs(data.ai_extraction_duration_ms);
-          if (data.user_review_time_seconds) setUserTimeSeconds(data.user_review_time_seconds);
+      // Load template config (from candidate's template or default)
+      fetchTemplateConfig(candidateData.template_id).then((config) => {
+        setTemplateConfig(config);
+      });
 
-          // Already extracted — load data without triggering AI
-          if (data.extracted_data && ['reviewing', 'ready', 'generated'].includes(data.status)) {
-            setCvData(data.extracted_data);
-            return;
-          }
-          // Not yet extracted — start extraction
-          if (data.status === 'uploaded' || data.status === 'extracting') {
-            setStreaming(true);
-            submit({ candidateId: params.id });
-          }
-        });
+      // Store time tracking data
+      if (candidateData.ai_extraction_duration_ms) setAiDurationMs(candidateData.ai_extraction_duration_ms);
+      if (candidateData.user_review_time_seconds) setUserTimeSeconds(candidateData.user_review_time_seconds);
+
+      // Already extracted — load data without triggering AI
+      if (candidateData.extracted_data && ['reviewing', 'ready', 'generated'].includes(candidateData.status)) {
+        setCvData(candidateData.extracted_data);
+        return;
+      }
+      // Not yet extracted — start extraction
+      if (candidateData.status === 'uploaded' || candidateData.status === 'extracting') {
+        setStreaming(true);
+        submit({ candidateId: params?.id });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params?.id]);
+  }, [candidateData]);
 
   useEffect(() => {
     if (object) {
@@ -113,11 +116,7 @@ export default function ReviewPage() {
 
   const handleSave = async () => {
     if (!cvData) return;
-    await fetch(`/api/candidates/${params.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ extracted_data: cvData, status: 'ready' }),
-    });
+    updateCandidate.mutate({ id: candidateId, extracted_data: cvData, status: 'ready' });
   };
 
   const safeData = cvData as Partial<ExtractedCV> | undefined;
@@ -196,11 +195,9 @@ export default function ReviewPage() {
                 <BadgeCheck className="mr-2 h-4 w-4" />
                 Sauvegarder
               </Button>
-              <Button variant="outline" asChild>
-                <Link href={`/review/${params.id}/positioning`} className="flex items-center gap-2">
-                  <Target className="mr-2 h-4 w-4" />
-                  Positionner le CV
-                </Link>
+              <Button variant="outline" nativeButton={false} render={<Link href={`/review/${params.id}/positioning`} />}>
+                <Target className="mr-2 h-4 w-4" />
+                Positionner le CV
               </Button>
             </div>
           </div>

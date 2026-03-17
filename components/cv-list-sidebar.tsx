@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams, usePathname } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import {
   Upload,
   Loader2,
   FileText,
-  Clock,
   User,
   Briefcase,
   Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCandidates, useUploadCv } from '@/lib/queries';
 
 interface Candidate {
   id: string;
@@ -37,46 +36,30 @@ const statusConfig: Record<
 };
 
 export function CvListSidebar() {
-  const [isUploading, setIsUploading] = useState(false);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: candidatesData, isLoading } = useCandidates();
+  const candidates: Candidate[] = Array.isArray(candidatesData) ? candidatesData : [];
+  const uploadCv = useUploadCv();
+  const isUploading = uploadCv.isPending;
   const router = useRouter();
   const params = useParams();
-  const pathname = usePathname();
 
   const activeId = params?.id as string | undefined;
 
-  useEffect(() => {
-    fetch('/api/candidates')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setCandidates(data);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', e.target.files[0]);
-
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      toast.success('CV uploadé', {
-        description: 'Extraction automatique en cours...',
-      });
-      router.push(`/review/${data.id}`);
-    } catch (error) {
-      console.error(error);
-      toast.error('Erreur lors de l\'upload', {
-        description: 'Vérifie le fichier et réessaie.',
-      });
-      setIsUploading(false);
-    }
+    uploadCv.mutate(e.target.files[0], {
+      onSuccess: (data) => {
+        toast.success('CV uploadé', {
+          description: 'Extraction automatique en cours...',
+        });
+        router.push(`/review/${data.id}`);
+      },
+      onError: () => {
+        toast.error('Erreur lors de l\'upload', {
+          description: 'Vérifie le fichier et réessaie.',
+        });
+      },
+    });
   };
 
   const getCandidateName = (c: Candidate) => {

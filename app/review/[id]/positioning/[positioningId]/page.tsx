@@ -9,6 +9,7 @@ import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePositioningPdfPreview } from '@/lib/hooks/usePositioningPdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
+import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -89,7 +90,11 @@ export default function PositioningWizardPage() {
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
-  const [isExporting, setIsExporting] = useState(false);
+  const { data: positioningData } = usePositioning(positioningIdParam);
+  const { data: candidateData } = useCandidate(candidateId);
+  const updatePositioning = useUpdatePositioning();
+  const exportPositioning = useExportPositioning();
+
   const [isLoaded, setIsLoaded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [aiAnalysisDurationMs, setAiAnalysisDurationMs] = useState<number | null>(null);
@@ -125,90 +130,87 @@ export default function PositioningWizardPage() {
     enabled: isLoaded && !isAnalyzing && !isAnalysisLoading && !isGenerating && !isGenerateLoading,
   });
 
-  // Load positioning from DB on mount
+  // Load positioning from DB via React Query
   useEffect(() => {
-    if (!positioningIdParam) return;
+    if (!positioningData || !candidateData) return;
     setPositioningId(positioningIdParam);
 
-    fetch(`/api/positioning/${positioningIdParam}`)
-      .then((res) => res.json())
-      .then(async (data) => {
-        // Load template config from candidate
-        const templateId = data.candidates?.template_id;
-        const config = await fetchTemplateConfig(templateId);
-        setTemplateConfig(config);
+    const data = positioningData;
 
-        // Generate PDF from extracted_data (original CV before positioning)
-        const candidateRes = await fetch(`/api/candidates/${candidateId}`);
-        const candidate = await candidateRes.json();
-        if (candidate.extracted_data) {
-          fetch('/api/pdf-preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: candidate.extracted_data, templateConfig: config }),
+    // Load template config from candidate
+    const templateId = data.candidates?.template_id;
+    fetchTemplateConfig(templateId).then((config) => {
+      setTemplateConfig(config);
+
+      // Generate PDF from extracted_data (original CV before positioning)
+      if (candidateData.extracted_data) {
+        fetch('/api/pdf-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: candidateData.extracted_data, templateConfig: config }),
+        })
+          .then((res) => res.blob())
+          .then((blob) => {
+            const url = URL.createObjectURL(blob);
+            setOriginalPdfBlobUrl(url);
           })
-            .then((res) => res.blob())
-            .then((blob) => {
-              const url = URL.createObjectURL(blob);
-              setOriginalPdfBlobUrl(url);
-            })
-            .catch(console.error);
-        }
+          .catch(console.error);
+      }
+    });
 
-        setJobDescription(data.job_description ?? '');
-        if (data.analysis) {
-          setAnalysis(data.analysis);
-        }
-        if (data.tailored_cv) {
-          setTailoredCv(data.tailored_cv);
-        }
-        if (data.email) {
-          setEmail(data.email);
-        }
-        if (data.candidate_email) {
-          setCandidateEmail(data.candidate_email);
-        }
+    setJobDescription(data.job_description ?? '');
+    if (data.analysis) {
+      setAnalysis(data.analysis);
+    }
+    if (data.tailored_cv) {
+      setTailoredCv(data.tailored_cv);
+    }
+    if (data.email) {
+      setEmail(data.email);
+    }
+    if (data.candidate_email) {
+      setCandidateEmail(data.candidate_email);
+    }
 
-        // Restore answers into analysis questions if available
-        if (data.analysis && data.answers) {
-          const restored = { ...data.analysis };
-          if (restored.candidateQuestions) {
-            restored.candidateQuestions = restored.candidateQuestions.map(
-              (q: { question: string; context: string; answer?: string }) => ({
-                ...q,
-                answer: data.answers[`candidat:${q.question}`] ?? data.answers[q.question] ?? q.answer ?? '',
-              }),
-            );
-          }
-          if (restored.clientQuestions) {
-            restored.clientQuestions = restored.clientQuestions.map(
-              (q: { question: string; context: string; answer?: string }) => ({
-                ...q,
-                answer: data.answers[`client:${q.question}`] ?? data.answers[q.question] ?? q.answer ?? '',
-              }),
-            );
-          }
-          setAnalysis(restored);
-        }
+    // Restore answers into analysis questions if available
+    if (data.analysis && data.answers) {
+      const restored = { ...data.analysis };
+      if (restored.candidateQuestions) {
+        restored.candidateQuestions = restored.candidateQuestions.map(
+          (q: { question: string; context: string; answer?: string }) => ({
+            ...q,
+            answer: data.answers[`candidat:${q.question}`] ?? data.answers[q.question] ?? q.answer ?? '',
+          }),
+        );
+      }
+      if (restored.clientQuestions) {
+        restored.clientQuestions = restored.clientQuestions.map(
+          (q: { question: string; context: string; answer?: string }) => ({
+            ...q,
+            answer: data.answers[`client:${q.question}`] ?? data.answers[q.question] ?? q.answer ?? '',
+          }),
+        );
+      }
+      setAnalysis(restored);
+    }
 
-        // Store time tracking data
-        if (data.ai_analysis_duration_ms) setAiAnalysisDurationMs(data.ai_analysis_duration_ms);
-        if (data.ai_generation_duration_ms) setAiGenerationDurationMs(data.ai_generation_duration_ms);
-        if (data.user_time_seconds) setUserTimeSeconds(data.user_time_seconds);
+    // Store time tracking data
+    if (data.ai_analysis_duration_ms) setAiAnalysisDurationMs(data.ai_analysis_duration_ms);
+    if (data.ai_generation_duration_ms) setAiGenerationDurationMs(data.ai_generation_duration_ms);
+    if (data.user_time_seconds) setUserTimeSeconds(data.user_time_seconds);
 
-        // Determine initial step
-        if (data.tailored_cv || data.email) {
-          setCurrentStep(3);
-        } else if (data.analysis) {
-          setCurrentStep(2);
-        } else {
-          setCurrentStep(1);
-        }
+    // Determine initial step
+    if (data.tailored_cv || data.email) {
+      setCurrentStep(3);
+    } else if (data.analysis) {
+      setCurrentStep(2);
+    } else {
+      setCurrentStep(1);
+    }
 
-        setIsLoaded(true);
-      });
+    setIsLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positioningIdParam]);
+  }, [positioningData, candidateData]);
 
   // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning)
   useEffect(() => {
@@ -290,17 +292,18 @@ export default function PositioningWizardPage() {
   const handleReAnalyze = useCallback(async () => {
     if (!jobDescription.trim()) return;
 
-    await fetch(`/api/positioning/${positioningIdParam}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job_description: jobDescription }),
-    });
-
-    setCurrentStep(1);
-    setIsAnalyzing(true);
-    setAnalysis(null);
-    submitAnalysis({ positioningId: positioningIdParam });
-  }, [jobDescription, positioningIdParam, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis]);
+    updatePositioning.mutate(
+      { id: positioningIdParam, job_description: jobDescription },
+      {
+        onSuccess: () => {
+          setCurrentStep(1);
+          setIsAnalyzing(true);
+          setAnalysis(null);
+          submitAnalysis({ positioningId: positioningIdParam });
+        },
+      }
+    );
+  }, [jobDescription, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis]);
 
   const handleGenerate = useCallback(async () => {
     if (!positioningIdParam || !analysis) return;
@@ -313,40 +316,34 @@ export default function PositioningWizardPage() {
       if (q.answer) answers[`client:${q.question}`] = q.answer;
     }
 
-    await fetch(`/api/positioning/${positioningIdParam}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers }),
-    });
-
-    setIsGenerating(true);
-    setTailoredCv(null);
-    setEmail(null);
-    setCandidateEmail(null);
-    submitGenerate({ positioningId: positioningIdParam, answers });
-  }, [positioningIdParam, analysis, setCurrentStep, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate]);
+    updatePositioning.mutate(
+      { id: positioningIdParam, answers },
+      {
+        onSuccess: () => {
+          setIsGenerating(true);
+          setTailoredCv(null);
+          setEmail(null);
+          setCandidateEmail(null);
+          submitGenerate({ positioningId: positioningIdParam, answers });
+        },
+      }
+    );
+  }, [positioningIdParam, analysis, updatePositioning, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate]);
 
   const handleExport = useCallback(async () => {
     if (!positioningIdParam || !tailoredCv) return;
-    setIsExporting(true);
-    try {
-      const res = await fetch(`/api/positioning/${positioningIdParam}/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tailoredCv, email, candidateEmail }),
-      });
-      const data = await res.json();
-      if (data.fileUrl) {
-        const a = document.createElement('a');
-        a.href = data.fileUrl;
-        a.download = 'HIMEO_CV_positioning.pdf';
-        a.target = '_blank';
-        a.click();
-      }
-    } finally {
-      setIsExporting(false);
-    }
-  }, [positioningIdParam, tailoredCv, email, candidateEmail]);
+    exportPositioning.mutate({ id: positioningIdParam, tailoredCv, email, candidateEmail }, {
+      onSuccess: (data) => {
+        if (data.fileUrl) {
+          const a = document.createElement('a');
+          a.href = data.fileUrl;
+          a.download = 'HIMEO_CV_positioning.pdf';
+          a.target = '_blank';
+          a.click();
+        }
+      },
+    });
+  }, [positioningIdParam, tailoredCv, exportPositioning]);
 
   // Navigation
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
@@ -467,8 +464,8 @@ export default function PositioningWizardPage() {
                 CV
               </Button>
               {currentStep === 3 && (
-                <Button onClick={handleExport} disabled={isExporting || isStreaming || !tailoredCv}>
-                  {isExporting ? (
+                <Button onClick={handleExport} disabled={exportPositioning.isPending || isStreaming || !tailoredCv}>
+                  {exportPositioning.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="mr-2 h-4 w-4" />

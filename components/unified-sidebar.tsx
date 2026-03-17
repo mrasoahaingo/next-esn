@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useCandidates, usePositionings, useUploadCv } from '@/lib/queries';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -76,15 +77,20 @@ const posStatusConfig: Record<
 };
 
 export function UnifiedSidebar() {
-  const [isUploading, setIsUploading] = useState(false);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [positionings, setPositionings] = useState<Positioning[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [expandedCvs, setExpandedCvs] = useState<Set<string>>(new Set());
   const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
   const { isDemoMode, toggleDemoMode } = useDemoModeStore();
+
+  const { data: candidatesData, isLoading: isLoadingCandidates } = useCandidates();
+  const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
+  const uploadCv = useUploadCv();
+  const isUploading = uploadCv.isPending;
+
+  const candidates: Candidate[] = isDemoMode ? [] : (Array.isArray(candidatesData) ? candidatesData : []);
+  const positionings: Positioning[] = isDemoMode ? [] : (Array.isArray(positioningsData) ? positioningsData : []);
+  const isLoading = !isDemoMode && (isLoadingCandidates || isLoadingPositionings);
 
   const activeCvId = params?.id as string | undefined;
   const activePositioningId = params?.positioningId as string | undefined;
@@ -95,27 +101,6 @@ export function UnifiedSidebar() {
       setExpandedCvs((prev) => new Set(prev).add(activeCvId));
     }
   }, [activeCvId]);
-
-  // Fetch data
-  useEffect(() => {
-    if (isDemoMode) {
-      setCandidates([]);
-      setPositionings([]);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    Promise.all([
-      fetch('/api/candidates').then((r) => r.json()),
-      fetch('/api/positioning').then((r) => r.json()),
-    ])
-      .then(([candidatesData, positioningsData]) => {
-        if (Array.isArray(candidatesData)) setCandidates(candidatesData);
-        if (Array.isArray(positioningsData)) setPositionings(positioningsData);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [isDemoMode]);
 
   // Group positionings by candidate
   const positioningsByCandidate = useMemo(() => {
@@ -130,26 +115,19 @@ export function UnifiedSidebar() {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0]) return;
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', e.target.files[0]);
-
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const data = await res.json();
-      setCandidates((prev) => [data, ...prev]);
-      toast.success('CV uploadé', {
-        description: 'Extraction automatique en cours...',
-      });
-      router.push(`/review/${data.id}`);
-    } catch {
-      toast.error("Erreur lors de l'upload", {
-        description: 'Vérifie le fichier et réessaie.',
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    uploadCv.mutate(e.target.files[0], {
+      onSuccess: (data) => {
+        toast.success('CV uploadé', {
+          description: 'Extraction automatique en cours...',
+        });
+        router.push(`/review/${data.id}`);
+      },
+      onError: () => {
+        toast.error("Erreur lors de l'upload", {
+          description: 'Vérifie le fichier et réessaie.',
+        });
+      },
+    });
   };
 
   const getCandidateName = (c: Candidate) => {

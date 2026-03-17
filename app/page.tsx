@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FileText,
@@ -37,6 +37,7 @@ import {
   Pie,
 } from 'recharts';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
+import { useDashboard, useUploadCv } from '@/lib/queries';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -156,27 +157,18 @@ function getBarColor(range: string) {
 // ─── Component ─────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const isDemoMode = useDemoModeStore((s) => s.isDemoMode);
 
-  useEffect(() => {
-    if (isDemoMode) {
-      setData({ candidates: [], positionings: [] });
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    fetch('/api/dashboard')
-      .then((r) => r.json())
-      .then((d) => setData(d))
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, [isDemoMode]);
+  const { data: dashboardData, isLoading } = useDashboard();
+  const uploadCv = useUploadCv();
+  const isUploading = uploadCv.isPending;
+
+  const data: DashboardData | null = isDemoMode
+    ? { candidates: [], positionings: [] }
+    : dashboardData ?? null;
 
   // ─── Derived stats ─────────────────────────────────────────────
 
@@ -335,19 +327,15 @@ export default function Dashboard() {
   // ─── Upload handlers ──────────────────────────────────────────
 
   const handleUpload = async (file: File) => {
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed');
-      const d = await res.json();
-      toast.success('CV uploadé', { description: 'Extraction automatique en cours...' });
-      router.push(`/review/${d.id}`);
-    } catch {
-      toast.error("Erreur lors de l'upload", { description: 'Vérifie le fichier et réessaie.' });
-      setIsUploading(false);
-    }
+    uploadCv.mutate(file, {
+      onSuccess: (d) => {
+        toast.success('CV uploadé', { description: 'Extraction automatique en cours...' });
+        router.push(`/review/${d.id}`);
+      },
+      onError: () => {
+        toast.error("Erreur lors de l'upload", { description: 'Vérifie le fichier et réessaie.' });
+      },
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

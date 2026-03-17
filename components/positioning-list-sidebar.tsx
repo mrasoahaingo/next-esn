@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Target, Clock, User } from 'lucide-react';
+import { Loader2, Target } from 'lucide-react';
+import { usePositionings } from '@/lib/queries';
 
 interface Positioning {
   id: string;
@@ -42,22 +42,12 @@ const statusConfig: Record<
 };
 
 export function PositioningListSidebar() {
-  const [positionings, setPositionings] = useState<Positioning[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: positioningsData, isLoading } = usePositionings();
+  const positionings: Positioning[] = Array.isArray(positioningsData) ? positioningsData : [];
   const router = useRouter();
   const params = useParams();
 
   const activePositioningId = params?.positioningId as string | undefined;
-
-  useEffect(() => {
-    fetch('/api/positioning')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setPositionings(data);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
 
   const getCandidateName = (p: Positioning) => {
     const pi = p.candidates?.extracted_data?.personalInfo;
@@ -71,14 +61,6 @@ export function PositioningListSidebar() {
     if (p.missions?.title) return p.missions.title;
     const firstLine = p.job_description.trim().split('\n')[0];
     return firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
-  };
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-    });
   };
 
   return (

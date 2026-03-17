@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Users,
 } from 'lucide-react';
+import { useMissions, useCreateMission, useCreatePositioning } from '@/lib/queries';
 
 interface Mission {
   id: string;
@@ -39,71 +40,52 @@ export default function PositioningNewPage() {
   const router = useRouter();
   const candidateId = params?.id as string;
 
-  const [missions, setMissions] = useState<Mission[]>([]);
-  const [isLoadingMissions, setIsLoadingMissions] = useState(true);
+  const { data: missionsData, isLoading: isLoadingMissions } = useMissions();
+  const missions: Mission[] = Array.isArray(missionsData) ? missionsData : [];
+
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
 
   // New mission dialog
   const [showNewMission, setShowNewMission] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newCompany, setNewCompany] = useState('');
   const [newJobDescription, setNewJobDescription] = useState('');
-  const [isCreatingMission, setIsCreatingMission] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/missions')
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setMissions(data);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoadingMissions(false));
-  }, []);
+  const createMission = useCreateMission();
+  const createPositioning = useCreatePositioning();
+  const isCreatingMission = createMission.isPending;
+  const isCreating = createPositioning.isPending;
 
   const handleCreateMission = async () => {
     if (!newTitle.trim() || !newJobDescription.trim()) return;
-    setIsCreatingMission(true);
-    try {
-      const res = await fetch('/api/missions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTitle,
-          company: newCompany || null,
-          jobDescription: newJobDescription,
-        }),
-      });
-      const mission = await res.json();
-      if (mission.id) {
-        setMissions((prev) => [{ ...mission, positioning_count: 0 }, ...prev]);
-        setSelectedMissionId(mission.id);
-        setShowNewMission(false);
-        setNewTitle('');
-        setNewCompany('');
-        setNewJobDescription('');
+    createMission.mutate(
+      { title: newTitle, company: newCompany || null, jobDescription: newJobDescription },
+      {
+        onSuccess: (mission) => {
+          if (mission.id) {
+            setSelectedMissionId(mission.id);
+            setShowNewMission(false);
+            setNewTitle('');
+            setNewCompany('');
+            setNewJobDescription('');
+          }
+        },
       }
-    } finally {
-      setIsCreatingMission(false);
-    }
+    );
   };
 
   const handleStartPositioning = async () => {
     if (!selectedMissionId) return;
-    setIsCreating(true);
-    try {
-      const res = await fetch('/api/positioning', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidateId, missionId: selectedMissionId }),
-      });
-      const data = await res.json();
-      if (data.id) {
-        router.push(`/review/${candidateId}/positioning/${data.id}`);
+    createPositioning.mutate(
+      { candidateId, missionId: selectedMissionId },
+      {
+        onSuccess: (data) => {
+          if (data.id) {
+            router.push(`/review/${candidateId}/positioning/${data.id}`);
+          }
+        },
       }
-    } finally {
-      setIsCreating(false);
-    }
+    );
   };
 
   const selectedMission = missions.find((m) => m.id === selectedMissionId);
