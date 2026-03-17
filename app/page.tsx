@@ -838,14 +838,24 @@ export default function Dashboard() {
                   );
 
                   return (
-                    <button
+                    <div
                       key={p.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() =>
                         router.push(
                           `/review/${p.candidate_id}/positioning/${p.id}`
                         )
                       }
-                      className="group flex w-full items-center gap-4 rounded-lg px-3 py-3 text-left transition hover:bg-white/[0.03]"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          router.push(
+                            `/review/${p.candidate_id}/positioning/${p.id}`
+                          );
+                        }
+                      }}
+                      className="group flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-3 text-left transition hover:bg-white/[0.03]"
                     >
                       {/* Score badge */}
                       <div
@@ -964,7 +974,7 @@ export default function Dashboard() {
                         </Badge>
                         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 transition group-hover:text-muted-foreground" />
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
