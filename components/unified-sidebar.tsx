@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useCandidates, usePositionings, useUploadCv } from '@/lib/queries';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import {
   Upload,
   Loader2,
@@ -16,7 +14,6 @@ import {
   ChevronRight,
   Target,
   Palette,
-  Settings,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -95,12 +92,14 @@ export function UnifiedSidebar() {
   const activeCvId = params?.id as string | undefined;
   const activePositioningId = params?.positioningId as string | undefined;
 
-  // Auto-expand the active CV
-  useEffect(() => {
-    if (activeCvId) {
-      setExpandedCvs((prev) => new Set(prev).add(activeCvId));
-    }
-  }, [activeCvId]);
+  // Derive expanded set: always include the active CV
+  const effectiveExpandedCvs = useMemo(() => {
+    if (!activeCvId) return expandedCvs;
+    if (expandedCvs.has(activeCvId)) return expandedCvs;
+    const next = new Set(expandedCvs);
+    next.add(activeCvId);
+    return next;
+  }, [expandedCvs, activeCvId]);
 
   // Group positionings by candidate
   const positioningsByCandidate = useMemo(() => {
@@ -242,7 +241,7 @@ export function UnifiedSidebar() {
               const title = getCandidateTitle(c);
               const st = cvStatusConfig[c.status] ?? cvStatusConfig.uploaded;
               const isActive = c.id === activeCvId && !activePositioningId;
-              const isExpanded = expandedCvs.has(c.id);
+              const isExpanded = effectiveExpandedCvs.has(c.id);
               const cvPositionings = positioningsByCandidate.get(c.id) ?? [];
               const hasPositionings = cvPositionings.length > 0;
 

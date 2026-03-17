@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { extractionSchema, ExtractedCV } from '@/lib/schema';
@@ -9,6 +9,7 @@ import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.sto
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useCandidate, useUpdateCandidate } from '@/lib/queries';
+import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target } from 'lucide-react';
@@ -23,34 +24,15 @@ import { PdfPreview } from '../components/PdfPreview';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
 
-function formatDuration(ms: number): string {
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-}
-
-function formatSeconds(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-}
-
 export default function ReviewPage() {
   const params = useParams();
   const {
     cvData,
-    isStreaming,
     setCvData,
     updateField,
-    setStreaming,
     setPdfBlobUrl,
+    setIsPdfLoading,
   } = useCvBuilderStore();
-
-  const [aiDurationMs, setAiDurationMs] = useState<number | null>(null);
-  const [userTimeSeconds, setUserTimeSeconds] = useState<number | null>(null);
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
@@ -63,67 +45,89 @@ export default function ReviewPage() {
     schema: extractionSchema,
   });
 
-  usePdfPreview();
+  // Derive time tracking from candidateData during render (no useState + useEffect)
+  const aiDurationMs = candidateData?.ai_extraction_duration_ms ?? null;
+  const userTimeSeconds = candidateData?.user_review_time_seconds ?? null;
+
+  usePdfPreview({
+    data: cvData,
+    setPdfBlobUrl,
+    setIsPdfLoading,
+  });
+
   useSessionTimer({
     endpoint: `/api/candidates/${params?.id}/time`,
     enabled: !isLoading && !!cvData,
   });
 
+  // Load candidate data & trigger extraction if needed
   useEffect(() => {
-    if (candidateData) {
-      // Reset store so stale data and PDF from the previous CV are not visible
-      setCvData(null);
-      setPdfBlobUrl(null);
+    if (!candidateData) return;
 
-      // Load template config (from candidate's template or default)
-      fetchTemplateConfig(candidateData.template_id).then((config) => {
-        setTemplateConfig(config);
-      });
+    // Reset store so stale data and PDF from the previous CV are not visible
+    setCvData(null);
+    setPdfBlobUrl(null);
 
-      // Store time tracking data
-      if (candidateData.ai_extraction_duration_ms) setAiDurationMs(candidateData.ai_extraction_duration_ms);
-      if (candidateData.user_review_time_seconds) setUserTimeSeconds(candidateData.user_review_time_seconds);
+    // Load template config (from candidate's template or default)
+    fetchTemplateConfig(candidateData.template_id).then((config) => {
+      setTemplateConfig(config);
+    });
 
-      // Already extracted — load data without triggering AI
-      if (candidateData.extracted_data && ['reviewing', 'ready', 'generated'].includes(candidateData.status)) {
-        setCvData(candidateData.extracted_data);
-        return;
-      }
-      // Not yet extracted — start extraction
-      if (candidateData.status === 'uploaded' || candidateData.status === 'extracting') {
-        setStreaming(true);
-        submit({ candidateId: params?.id });
-      }
+    // Already extracted — load data without triggering AI
+    if (candidateData.extracted_data && ['reviewing', 'ready', 'generated'].includes(candidateData.status)) {
+      setCvData(candidateData.extracted_data);
+      return;
+    }
+    // Not yet extracted — start extraction
+    if (candidateData.status === 'uploaded' || candidateData.status === 'extracting') {
+      submit({ candidateId: params?.id });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidateData]);
+  }, [candidateData?.id]);
 
+  // Sync streaming object to store
   useEffect(() => {
     if (object) {
       setCvData(object as Partial<ExtractedCV>);
     }
   }, [object, setCvData]);
 
-  useEffect(() => {
-    if (!isLoading && isStreaming) {
-      setStreaming(false);
-    }
-  }, [isLoading, isStreaming, setStreaming]);
-
   const handleUpdate = useCallback((field: keyof ExtractedCV, value: unknown) => {
     updateField(field, value);
   }, [updateField]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(() => {
     if (!cvData) return;
     updateCandidate.mutate({ id: candidateId, extracted_data: cvData, status: 'ready' });
-  };
+  }, [cvData, candidateId, updateCandidate]);
 
   const safeData = cvData as Partial<ExtractedCV> | undefined;
-  const safeExperiences = (safeData?.experiences ?? []).filter(Boolean);
-  const safeEducation = (safeData?.education ?? []).filter(Boolean);
-  const safeSkills = (safeData?.skills ?? []).filter(Boolean);
-  const safeStrengths = (safeData?.strengths ?? []).filter(Boolean);
+
+  // Memoize filtered arrays to avoid unstable references on every render
+  const safeExperiences = useMemo(
+    () => (safeData?.experiences ?? []).filter(Boolean),
+    [safeData?.experiences],
+  );
+  const safeEducation = useMemo(
+    () => (safeData?.education ?? []).filter(Boolean),
+    [safeData?.education],
+  );
+  const safeSkills = useMemo(
+    () => (safeData?.skills ?? []).filter(Boolean),
+    [safeData?.skills],
+  );
+  const safeStrengths = useMemo(
+    () => (safeData?.strengths ?? []).filter(Boolean),
+    [safeData?.strengths],
+  );
+
+  // Stable per-field callbacks
+  const handlePersonalInfo = useCallback((val: unknown) => handleUpdate('personalInfo', val), [handleUpdate]);
+  const handleSummary = useCallback((val: unknown) => handleUpdate('summary', val), [handleUpdate]);
+  const handleSkills = useCallback((val: unknown) => handleUpdate('skills', val), [handleUpdate]);
+  const handleStrengths = useCallback((val: unknown) => handleUpdate('strengths', val), [handleUpdate]);
+  const handleExperiences = useCallback((val: unknown) => handleUpdate('experiences', val), [handleUpdate]);
+  const handleEducation = useCallback((val: unknown) => handleUpdate('education', val), [handleUpdate]);
 
   // Section status helper
   const status = (field: keyof ExtractedCV) =>
@@ -221,14 +225,14 @@ export default function ReviewPage() {
               <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
                 <PersonalInfo
                   data={safeData?.personalInfo}
-                  onChange={(val) => handleUpdate('personalInfo', val)}
+                  onChange={handlePersonalInfo}
                   readOnly={isLoading}
                 />
               </SectionShell>
               <SectionShell status={status('summary')} label="Rédaction du résumé...">
                 <Summary
                   data={safeData?.summary}
-                  onChange={(val) => handleUpdate('summary', val)}
+                  onChange={handleSummary}
                   readOnly={isLoading}
                 />
               </SectionShell>
@@ -237,14 +241,14 @@ export default function ReviewPage() {
               <SectionShell status={status('skills')} label="Analyse des compétences...">
                 <Skills
                   data={safeSkills}
-                  onChange={(val) => handleUpdate('skills', val)}
+                  onChange={handleSkills}
                   readOnly={isLoading}
                 />
               </SectionShell>
               <SectionShell status={status('strengths')} label="Génération des points forts...">
                 <Strengths
                   data={safeStrengths}
-                  onChange={(val) => handleUpdate('strengths', val)}
+                  onChange={handleStrengths}
                   readOnly={isLoading}
                 />
               </SectionShell>
@@ -252,14 +256,14 @@ export default function ReviewPage() {
             <SectionShell status={status('experiences')} label="Analyse des expériences...">
               <Experiences
                 data={safeExperiences}
-                onChange={(val) => handleUpdate('experiences', val)}
+                onChange={handleExperiences}
                 readOnly={isLoading}
               />
             </SectionShell>
             <SectionShell status={status('education')} label="Extraction des formations...">
               <Education
                 data={safeEducation}
-                onChange={(val) => handleUpdate('education', val)}
+                onChange={handleEducation}
                 readOnly={isLoading}
               />
             </SectionShell>

@@ -3,7 +3,6 @@
 import { useRouter, useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import {
-  Upload,
   Loader2,
   FileText,
   User,
@@ -77,13 +76,6 @@ export function CvListSidebar() {
   const getCandidateTitle = (c: Candidate) =>
     c.extracted_data?.personalInfo?.title ?? null;
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-    });
-  };
 
   return (
     <aside className="flex h-screen w-72 flex-col border-r border-border bg-panel">

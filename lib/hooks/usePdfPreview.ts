@@ -1,24 +1,35 @@
 import { useEffect, useRef } from 'react';
-import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore } from '@/lib/stores/template.store';
+import type { ExtractedCV, TemplateConfig } from '@/lib/schema';
 
-export function usePdfPreview() {
-  const cvData = useCvBuilderStore((s) => s.cvData);
-  const setPdfBlobUrl = useCvBuilderStore((s) => s.setPdfBlobUrl);
-  const setIsPdfLoading = useCvBuilderStore((s) => s.setIsPdfLoading);
-  const templateConfig = useTemplateStore((s) => s.templateConfig);
+interface PdfPreviewOptions {
+  data: Partial<ExtractedCV> | null;
+  setPdfBlobUrl: (url: string | null) => void;
+  setIsPdfLoading: (loading: boolean) => void;
+  /** Override the template config from the store (useful for template editor) */
+  templateConfigOverride?: Partial<TemplateConfig> | null;
+  debounceMs?: number;
+}
+
+export function usePdfPreview({
+  data,
+  setPdfBlobUrl,
+  setIsPdfLoading,
+  templateConfigOverride,
+  debounceMs = 600,
+}: PdfPreviewOptions) {
+  const storeConfig = useTemplateStore((s) => s.templateConfig);
+  const templateConfig = templateConfigOverride !== undefined ? templateConfigOverride : storeConfig;
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!cvData) return;
+    if (!data) return;
 
-    // Debounce 600ms
     if (timerRef.current) clearTimeout(timerRef.current);
 
     timerRef.current = setTimeout(async () => {
-      // Abort previous request
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -28,7 +39,7 @@ export function usePdfPreview() {
         const res = await fetch('/api/pdf-preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: cvData, templateConfig }),
+          body: JSON.stringify({ data, templateConfig }),
           signal: controller.signal,
         });
 
@@ -46,10 +57,10 @@ export function usePdfPreview() {
           setIsPdfLoading(false);
         }
       }
-    }, 600);
+    }, debounceMs);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [cvData, templateConfig, setPdfBlobUrl, setIsPdfLoading]);
+  }, [data, templateConfig, setPdfBlobUrl, setIsPdfLoading, debounceMs]);
 }

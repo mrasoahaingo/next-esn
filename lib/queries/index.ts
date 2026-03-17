@@ -3,3 +3,4 @@ export { useCandidates, useCandidate, useUpdateCandidate, useUploadCv } from './
 export { useMissions, useCreateMission } from './missions';
 export { usePositionings, usePositioning, useCreatePositioning, useUpdatePositioning, useExportPositioning } from './positionings';
 export { useDashboard } from './dashboard';
+export { useTemplate, useUpdateTemplate } from './templates';

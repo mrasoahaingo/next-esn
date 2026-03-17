@@ -7,9 +7,11 @@ import { positioningAnalysisSchema, positioningOutputSchema } from '@/lib/schema
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
-import { usePositioningPdfPreview } from '@/lib/hooks/usePositioningPdfPreview';
+import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
+import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning } from '@/lib/queries';
+import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,43 +20,17 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import dynamic from 'next/dynamic';
 import { StepIndicator } from './components/StepIndicator';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
-import { AnalysisCharts } from './components/AnalysisCharts';
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { GenerationStep } from './components/GenerationStep';
 
-function formatDuration(ms: number): string {
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-}
-
-function formatSeconds(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
-}
-
-function useDebouncedSave(positioningId: string | null) {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  return useCallback((data: Record<string, unknown>) => {
-    if (!positioningId) return;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      fetch(`/api/positioning/${positioningId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-    }, 1000);
-  }, [positioningId]);
-}
+const AnalysisCharts = dynamic(
+  () => import('./components/AnalysisCharts').then((m) => m.AnalysisCharts),
+  { loading: () => <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-violet" /></div> },
+);
 
 export default function PositioningWizardPage() {
   const params = useParams();
@@ -62,6 +38,7 @@ export default function PositioningWizardPage() {
   const candidateId = params?.id as string;
   const positioningIdParam = params?.positioningId as string;
 
+  const store = usePositioningStore();
   const {
     jobDescription,
     analysis,
@@ -84,9 +61,11 @@ export default function PositioningWizardPage() {
     setIsAnalyzing,
     setIsGenerating,
     setOriginalPdfBlobUrl,
+    setPdfBlobUrl,
+    setIsPdfLoading,
     updateAnswer,
     reset,
-  } = usePositioningStore();
+  } = store;
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
@@ -97,13 +76,16 @@ export default function PositioningWizardPage() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const [aiAnalysisDurationMs, setAiAnalysisDurationMs] = useState<number | null>(null);
-  const [aiGenerationDurationMs, setAiGenerationDurationMs] = useState<number | null>(null);
-  const [userTimeSeconds, setUserTimeSeconds] = useState<number | null>(null);
+
+  // Derive time tracking from server data (no useState + useEffect sync)
+  const aiAnalysisDurationMs = positioningData?.ai_analysis_duration_ms ?? null;
+  const aiGenerationDurationMs = positioningData?.ai_generation_duration_ms ?? null;
+  const userTimeSeconds = positioningData?.user_time_seconds ?? null;
+
   // Track if we already auto-launched analysis on mount
   const autoAnalyzedRef = useRef(false);
 
-  const debouncedSave = useDebouncedSave(positioningIdParam);
+  const debouncedSave = useAutoSave(positioningIdParam);
 
   // Streaming hooks
   const {
@@ -124,7 +106,12 @@ export default function PositioningWizardPage() {
     schema: positioningOutputSchema,
   });
 
-  usePositioningPdfPreview();
+  usePdfPreview({
+    data: tailoredCv,
+    setPdfBlobUrl,
+    setIsPdfLoading,
+  });
+
   useSessionTimer({
     endpoint: `/api/positioning/${positioningIdParam}/time`,
     enabled: isLoaded && !isAnalyzing && !isAnalysisLoading && !isGenerating && !isGenerateLoading,
@@ -159,18 +146,10 @@ export default function PositioningWizardPage() {
     });
 
     setJobDescription(data.job_description ?? '');
-    if (data.analysis) {
-      setAnalysis(data.analysis);
-    }
-    if (data.tailored_cv) {
-      setTailoredCv(data.tailored_cv);
-    }
-    if (data.email) {
-      setEmail(data.email);
-    }
-    if (data.candidate_email) {
-      setCandidateEmail(data.candidate_email);
-    }
+    if (data.analysis) setAnalysis(data.analysis);
+    if (data.tailored_cv) setTailoredCv(data.tailored_cv);
+    if (data.email) setEmail(data.email);
+    if (data.candidate_email) setCandidateEmail(data.candidate_email);
 
     // Restore answers into analysis questions if available
     if (data.analysis && data.answers) {
@@ -194,11 +173,6 @@ export default function PositioningWizardPage() {
       setAnalysis(restored);
     }
 
-    // Store time tracking data
-    if (data.ai_analysis_duration_ms) setAiAnalysisDurationMs(data.ai_analysis_duration_ms);
-    if (data.ai_generation_duration_ms) setAiGenerationDurationMs(data.ai_generation_duration_ms);
-    if (data.user_time_seconds) setUserTimeSeconds(data.user_time_seconds);
-
     // Determine initial step
     if (data.tailored_cv || data.email) {
       setCurrentStep(3);
@@ -210,7 +184,7 @@ export default function PositioningWizardPage() {
 
     setIsLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positioningData, candidateData]);
+  }, [positioningData?.id, candidateData?.id]);
 
   // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning)
   useEffect(() => {
@@ -229,6 +203,7 @@ export default function PositioningWizardPage() {
     }
   }, [analysisObject, setAnalysis]);
 
+  // Derive: when analysis loading finishes, clear isAnalyzing flag
   useEffect(() => {
     if (!isAnalysisLoading && isAnalyzing) {
       setIsAnalyzing(false);
@@ -289,7 +264,7 @@ export default function PositioningWizardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleReAnalyze = useCallback(async () => {
+  const handleReAnalyze = useCallback(() => {
     if (!jobDescription.trim()) return;
 
     updatePositioning.mutate(
@@ -305,7 +280,7 @@ export default function PositioningWizardPage() {
     );
   }, [jobDescription, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis]);
 
-  const handleGenerate = useCallback(async () => {
+  const handleGenerate = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
 
     const answers: Record<string, string> = {};
@@ -330,7 +305,7 @@ export default function PositioningWizardPage() {
     );
   }, [positioningIdParam, analysis, updatePositioning, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate]);
 
-  const handleExport = useCallback(async () => {
+  const handleExport = useCallback(() => {
     if (!positioningIdParam || !tailoredCv) return;
     exportPositioning.mutate({ id: positioningIdParam, tailoredCv, email, candidateEmail }, {
       onSuccess: (data) => {
@@ -343,7 +318,7 @@ export default function PositioningWizardPage() {
         }
       },
     });
-  }, [positioningIdParam, tailoredCv, exportPositioning]);
+  }, [positioningIdParam, tailoredCv, email, candidateEmail, exportPositioning]);
 
   // Navigation
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
@@ -353,7 +328,7 @@ export default function PositioningWizardPage() {
     if (isStreaming) return false;
     if (step === 1) return true;
     if (step === 2) return analysisComplete;
-    if (step === 3) return analysisComplete; // accessible once analysis is done
+    if (step === 3) return analysisComplete;
     return false;
   };
 
@@ -513,7 +488,6 @@ export default function PositioningWizardPage() {
 
             {currentStep === 3 && (
               <GenerationStep
-                positioningId={positioningIdParam}
                 isStreaming={isGenerating || isGenerateLoading}
                 onGenerate={handleGenerate}
               />

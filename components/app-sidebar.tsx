@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 import { useSidebarPanel } from './sidebar-context';
+import { useRouter } from 'next/navigation';
 
 const activeStyles = {
   cvs: 'bg-accent/15 text-accent hover:bg-accent/20 hover:text-accent',
@@ -12,8 +13,15 @@ const activeStyles = {
   templates: 'bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary',
 } as const;
 
+const panelRoutes = {
+  cvs: '/',
+  positionings: '/',
+  templates: '/templates',
+} as const;
+
 export function AppSidebar() {
-  const { activePanel, setActivePanel } = useSidebarPanel();
+  const { activePanel } = useSidebarPanel();
+  const router = useRouter();
 
   const navItems = [
     { icon: FileText, label: 'CVs', panel: 'cvs' as const },
@@ -52,7 +60,7 @@ export function AppSidebar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setActivePanel(item.panel)}
+                    onClick={() => router.push(panelRoutes[item.panel])}
                     className={isActive ? activeStyles[item.panel] : 'text-muted-foreground'}
                   />
                 }

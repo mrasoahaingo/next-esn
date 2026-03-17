@@ -1,24 +1,27 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
-import { EmailEditor } from './EmailEditor';
+import dynamic from 'next/dynamic';
 import { TailoredCvForm } from './TailoredCvForm';
 
+const EmailEditor = dynamic(
+  () => import('./EmailEditor').then((m) => m.EmailEditor),
+  { loading: () => <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-violet" /></div> },
+);
+
 interface GenerationStepProps {
-  positioningId: string;
   isStreaming: boolean;
   onGenerate: () => void;
 }
 
-export function GenerationStep({ positioningId, isStreaming, onGenerate }: GenerationStepProps) {
+export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps) {
   const {
     tailoredCv,
     email,
     candidateEmail,
-    isGenerating,
     setEmail,
     setCandidateEmail,
     updateTailoredCvField,

@@ -13,7 +13,10 @@ export function useSessionTimer(options: {
   const accumulatedRef = useRef(0);
   const lastTickRef = useRef<number | null>(null);
   const endpointRef = useRef(endpoint);
-  endpointRef.current = endpoint;
+
+  useEffect(() => {
+    endpointRef.current = endpoint;
+  }, [endpoint]);
 
   const flush = useCallback(() => {
     const seconds = accumulatedRef.current;

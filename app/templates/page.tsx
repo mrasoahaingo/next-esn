@@ -14,7 +14,7 @@ export default function TemplatesPage() {
             Sélectionne un template ou crée-en un nouveau
           </p>
           <p className="mt-0.5 text-xs">
-            Les templates définissent les couleurs, le pied de page et l'ordre des sections du CV
+            Les templates définissent les couleurs, le pied de page et l&apos;ordre des sections du CV
           </p>
         </div>
       </div>

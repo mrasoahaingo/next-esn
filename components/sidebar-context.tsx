@@ -1,36 +1,32 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 
 type SidebarPanel = 'cvs' | 'positionings' | 'templates';
 
 interface SidebarContextValue {
   activePanel: SidebarPanel;
-  setActivePanel: (panel: SidebarPanel) => void;
 }
 
 const SidebarContext = createContext<SidebarContextValue>({
   activePanel: 'cvs',
-  setActivePanel: () => {},
 });
 
-export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [activePanel, setActivePanel] = useState<SidebarPanel>('cvs');
-  const pathname = usePathname();
+function derivePanel(pathname: string): SidebarPanel {
+  if (pathname.startsWith('/templates')) return 'templates';
+  if (pathname.includes('/positioning/') && pathname.split('/positioning/')[1]) return 'positionings';
+  return 'cvs';
+}
 
-  useEffect(() => {
-    if (pathname.startsWith('/templates')) {
-      setActivePanel('templates');
-    } else if (pathname.includes('/positioning/') && pathname.split('/positioning/')[1]) {
-      setActivePanel('positionings');
-    } else {
-      setActivePanel('cvs');
-    }
-  }, [pathname]);
+export function SidebarProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const activePanel = derivePanel(pathname);
+
+  const value = useMemo(() => ({ activePanel }), [activePanel]);
 
   return (
-    <SidebarContext.Provider value={{ activePanel, setActivePanel }}>
+    <SidebarContext.Provider value={value}>
       {children}
     </SidebarContext.Provider>
   );

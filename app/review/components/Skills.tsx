@@ -59,7 +59,7 @@ export function Skills({ data, onChange, readOnly }: SkillsProps) {
       <div className="flex flex-wrap gap-2">
         {normalizedData.map((skill, i) => (
           <Badge
-            key={i}
+            key={`${skill}-${i}`}
             variant="outline"
             className="gap-1 border-accent/30 bg-accent/15 text-accent-foreground"
           >
