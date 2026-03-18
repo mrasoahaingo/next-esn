@@ -60,6 +60,16 @@
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",
       "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
+    },
+    "workflow": {
+      "source": "vercel/workflow",
+      "sourceType": "github",
+      "computedHash": "1b2310ae65a52ef542cb5070286fd51eeeee9fb36ba4e99a1a19bd3f50e88885"
+    },
+    "workflow-init": {
+      "source": "vercel/workflow",
+      "sourceType": "github",
+      "computedHash": "6daea9d2b91c25b924a868435da7b3ae0ad10691cd08ad39cff0060524cfaf2b"
     }
   }
 }

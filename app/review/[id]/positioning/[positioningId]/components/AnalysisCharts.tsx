@@ -52,7 +52,8 @@ function relevanceToScore(relevance: string): number {
   }
 }
 
-function truncateLabel(label: string, maxLen = 18): string {
+function truncateLabel(label: string | undefined, maxLen = 18): string {
+  if (!label) return '';
   return label.length > maxLen ? label.slice(0, maxLen) + '…' : label;
 }
 

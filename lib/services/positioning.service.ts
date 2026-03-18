@@ -57,7 +57,7 @@ export const POSITIONING_GENERATE_PROMPT = `Tu es un expert en recrutement techn
 - Si les réponses aux questions apportent des précisions (ex : années d'expérience sur une techno, certifications), intègre-les naturellement dans le résumé.
 
 ### Expériences (experiences)
-- Réordonne les expériences par pertinence pour le poste (les plus pertinentes en premier).
+- Garde l'ordre chronologique des expériences (de la plus récente à la plus ancienne). Ne réordonne JAMAIS les expériences.
 - Pour chaque expérience, RETRAVAILLE la description des missions :
   - Si le candidat a répondu à des questions qui précisent ou enrichissent une mission (ex : outils utilisés, volumétrie, méthodologie, résultats), intègre ces précisions dans la description.
   - Si aucune réponse ne concerne cette expérience, reformule la description originale pour mettre en avant les compétences et aptitudes attendues dans l'offre (ex : si le poste demande du leadership, souligne les aspects de pilotage/coordination dans les missions existantes).

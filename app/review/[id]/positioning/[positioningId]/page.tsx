@@ -2,15 +2,16 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { experimental_useObject as useObject } from '@ai-sdk/react';
-import { positioningAnalysisSchema, positioningOutputSchema } from '@/lib/schema';
+import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';
-import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning } from '@/lib/queries';
+import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
+import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning, useCancelWorkflow } from '@/lib/queries';
+import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,7 +19,7 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil, Square } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import dynamic from 'next/dynamic';
 import { StepIndicator } from './components/StepIndicator';
@@ -35,6 +36,7 @@ const AnalysisCharts = dynamic(
 export default function PositioningWizardPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const candidateId = params?.id as string;
   const positioningIdParam = params?.positioningId as string;
 
@@ -73,9 +75,41 @@ export default function PositioningWizardPage() {
   const { data: candidateData } = useCandidate(candidateId);
   const updatePositioning = useUpdatePositioning();
   const exportPositioning = useExportPositioning();
+  const cancelWorkflow = useCancelWorkflow();
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Workflow streams
+  const {
+    object: analysisObject,
+    submit: submitAnalysis,
+    isLoading: isAnalysisLoading,
+    stop: stopAnalysis,
+  } = useWorkflowStream<PositioningAnalysis>({
+    api: '/api/positioning/analyze',
+    runId: positioningData?.workflow_run_id,
+    runStatus: positioningData?.status,
+    activeStatuses: ['analyzing'],
+    onFinish: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
+    },
+  });
+
+  const {
+    object: generateObject,
+    submit: submitGenerate,
+    isLoading: isGenerateLoading,
+    stop: stopGenerate,
+  } = useWorkflowStream<PositioningOutput>({
+    api: '/api/positioning/generate',
+    runId: positioningData?.workflow_run_id,
+    runStatus: positioningData?.status,
+    activeStatuses: ['generating'],
+    onFinish: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
+    },
+  });
 
   // Derive time tracking from server data (no useState + useEffect sync)
   const aiAnalysisDurationMs = positioningData?.ai_analysis_duration_ms ?? null;
@@ -86,25 +120,6 @@ export default function PositioningWizardPage() {
   const autoAnalyzedRef = useRef(false);
 
   const debouncedSave = useAutoSave(positioningIdParam);
-
-  // Streaming hooks
-  const {
-    object: analysisObject,
-    submit: submitAnalysis,
-    isLoading: isAnalysisLoading,
-  } = useObject({
-    api: '/api/positioning/analyze',
-    schema: positioningAnalysisSchema,
-  });
-
-  const {
-    object: generateObject,
-    submit: submitGenerate,
-    isLoading: isGenerateLoading,
-  } = useObject({
-    api: '/api/positioning/generate',
-    schema: positioningOutputSchema,
-  });
 
   usePdfPreview({
     data: tailoredCv,
@@ -117,35 +132,59 @@ export default function PositioningWizardPage() {
     enabled: isLoaded && !isAnalyzing && !isAnalysisLoading && !isGenerating && !isGenerateLoading,
   });
 
+  // Track the last positioning id we initialized for
+  const initializedForId = useRef<string | null>(null);
+
   // Load positioning from DB via React Query
   useEffect(() => {
     if (!positioningData || !candidateData) return;
-    setPositioningId(positioningIdParam);
+
+    // Don't reset while we're actively streaming
+    if (isAnalysisLoading || isGenerateLoading) return;
+
+    const isNewPositioning = initializedForId.current !== positioningData.id;
+
+    if (isNewPositioning) {
+      initializedForId.current = positioningData.id;
+      setPositioningId(positioningIdParam);
+
+      // Load template config from candidate
+      const templateId = positioningData.candidates?.template_id;
+      fetchTemplateConfig(templateId).then((config) => {
+        setTemplateConfig(config);
+
+        // Generate PDF from extracted_data (original CV before positioning)
+        if (candidateData.extracted_data) {
+          fetch('/api/pdf-preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: candidateData.extracted_data, templateConfig: config }),
+          })
+            .then((res) => res.blob())
+            .then((blob) => {
+              const url = URL.createObjectURL(blob);
+              setOriginalPdfBlobUrl(url);
+            })
+            .catch(console.error);
+        }
+      });
+    }
 
     const data = positioningData;
 
-    // Load template config from candidate
-    const templateId = data.candidates?.template_id;
-    fetchTemplateConfig(templateId).then((config) => {
-      setTemplateConfig(config);
-
-      // Generate PDF from extracted_data (original CV before positioning)
-      if (candidateData.extracted_data) {
-        fetch('/api/pdf-preview', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: candidateData.extracted_data, templateConfig: config }),
-        })
-          .then((res) => res.blob())
-          .then((blob) => {
-            const url = URL.createObjectURL(blob);
-            setOriginalPdfBlobUrl(url);
-          })
-          .catch(console.error);
-      }
-    });
-
     setJobDescription(data.job_description ?? '');
+
+    // In-progress operations — reconnection is handled by useWorkflowStream
+    if (data.status === 'analyzing' || data.status === 'generating') {
+      if (data.status === 'analyzing') {
+        setCurrentStep(1);
+      } else {
+        setCurrentStep(3);
+      }
+      setIsLoaded(true);
+      return;
+    }
+
     if (data.analysis) setAnalysis(data.analysis);
     if (data.tailored_cv) setTailoredCv(data.tailored_cv);
     if (data.email) setEmail(data.email);
@@ -184,17 +223,18 @@ export default function PositioningWizardPage() {
 
     setIsLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positioningData?.id, candidateData?.id]);
+  }, [positioningData?.id, positioningData?.status, candidateData?.id]);
 
   // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning)
   useEffect(() => {
     if (!isLoaded || autoAnalyzedRef.current) return;
+    if (isAnalysisLoading) return; // Don't auto-launch if already streaming
     if (currentStep === 1 && !analysis && jobDescription.trim()) {
       autoAnalyzedRef.current = true;
       setIsAnalyzing(true);
       submitAnalysis({ positioningId: positioningIdParam });
     }
-  }, [isLoaded, currentStep, analysis, jobDescription, positioningIdParam, setIsAnalyzing, submitAnalysis]);
+  }, [isLoaded, currentStep, analysis, jobDescription, positioningIdParam, setIsAnalyzing, submitAnalysis, isAnalysisLoading]);
 
   // Sync streaming analysis to store
   useEffect(() => {
@@ -320,6 +360,25 @@ export default function PositioningWizardPage() {
     });
   }, [positioningIdParam, tailoredCv, email, candidateEmail, exportPositioning]);
 
+  const handleCancelWorkflow = useCallback(() => {
+    const runId = positioningData?.workflow_run_id;
+    if (!runId) return;
+    const isAnalyzingNow = isAnalyzing || isAnalysisLoading;
+    if (isAnalyzingNow) {
+      stopAnalysis();
+      setIsAnalyzing(false);
+    } else {
+      stopGenerate();
+      setIsGenerating(false);
+    }
+    cancelWorkflow.mutate({
+      runId,
+      table: 'positionings',
+      recordId: positioningIdParam,
+      resetStatus: isAnalyzingNow ? 'draft' : 'analyzed',
+    });
+  }, [positioningData?.workflow_run_id, positioningIdParam, isAnalyzing, isAnalysisLoading, stopAnalysis, stopGenerate, setIsAnalyzing, setIsGenerating, cancelWorkflow]);
+
   // Navigation
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
   const analysisComplete = !!analysis?.matchScore && !isAnalyzing && !isAnalysisLoading;
@@ -426,12 +485,40 @@ export default function PositioningWizardPage() {
                       {userTimeSeconds != null && userTimeSeconds > 0 && (
                         <p className="flex items-center gap-1.5">
                           <Pencil className="h-3 w-3 text-amber-400" />
-                          Édition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
+                          Edition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
                         </p>
                       )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
+              )}
+
+              {/* Streaming indicator + cancel */}
+              {isStreaming && (
+                <>
+                  <div className="flex items-center gap-2 rounded-lg border border-violet/20 bg-violet/10 px-3 py-1.5">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-violet" />
+                    <span className="text-xs font-medium text-violet">
+                      {isAnalyzing || isAnalysisLoading ? 'Analyse en cours...' : 'Génération en cours...'}
+                    </span>
+                  </div>
+                  {positioningData?.workflow_run_id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleCancelWorkflow}
+                      disabled={cancelWorkflow.isPending}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      {cancelWorkflow.isPending ? (
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Square className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      Annuler
+                    </Button>
+                  )}
+                </>
               )}
 
               <Button variant="ghost" size="sm" onClick={() => router.push(`/review/${candidateId}`)}>
@@ -469,7 +556,6 @@ export default function PositioningWizardPage() {
                   onJobDescriptionChange={setJobDescription}
                   onAnalyze={handleReAnalyze}
                   isAnalyzing={isAnalyzing || isAnalysisLoading}
-                  disabled={false}
                 />
                 <AnalysisView
                   analysis={analysis}

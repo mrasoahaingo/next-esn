@@ -1,18 +1,21 @@
 'use client';
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { experimental_useObject as useObject } from '@ai-sdk/react';
-import { extractionSchema, ExtractedCV } from '@/lib/schema';
+import { useQueryClient } from '@tanstack/react-query';
+import { ExtractedCV } from '@/lib/schema';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
-import { useCandidate, useUpdateCandidate } from '@/lib/queries';
+import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
+import { useCandidate, useUpdateCandidate, useCancelWorkflow } from '@/lib/queries';
+import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square } from 'lucide-react';
 import Link from 'next/link';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
@@ -25,23 +28,35 @@ import { ExtractionProgress, getSectionStatus } from '../components/ExtractionPr
 
 export default function ReviewPage() {
   const params = useParams();
+  const queryClient = useQueryClient();
   const {
     cvData,
     setCvData,
     updateField,
     setPdfBlobUrl,
     setIsPdfLoading,
+    isDirty,
+    setDirty,
   } = useCvBuilderStore();
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
   const candidateId = params?.id as string;
+
   const { data: candidateData } = useCandidate(candidateId);
   const updateCandidate = useUpdateCandidate();
 
-  const { object, submit, isLoading, error } = useObject({
+  const cancelWorkflow = useCancelWorkflow();
+
+  const { object, submit, isLoading, error, stop } = useWorkflowStream<ExtractedCV>({
     api: '/api/extract',
-    schema: extractionSchema,
+    runId: candidateData?.workflow_run_id,
+    runStatus: candidateData?.status,
+    activeStatuses: ['extracting'],
+    onFinish: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
+      setDirty(false);
+    },
   });
 
   // Derive time tracking from candidateData during render (no useState + useEffect)
@@ -59,30 +74,48 @@ export default function ReviewPage() {
     enabled: !isLoading && !!cvData,
   });
 
+  // Track the last candidate id we initialized for
+  const initializedForId = useRef<string | null>(null);
+
   // Load candidate data & trigger extraction if needed
   useEffect(() => {
     if (!candidateData) return;
 
-    // Reset store so stale data and PDF from the previous CV are not visible
-    setCvData(null);
-    setPdfBlobUrl(null);
+    // Don't reset while we're actively streaming
+    if (isLoading) return;
 
-    // Load template config (from candidate's template or default)
-    fetchTemplateConfig(candidateData.template_id).then((config) => {
-      setTemplateConfig(config);
-    });
+    const isNewCandidate = initializedForId.current !== candidateData.id;
+
+    if (isNewCandidate) {
+      // Reset store so stale data and PDF from the previous CV are not visible
+      setCvData(null);
+      setPdfBlobUrl(null);
+      setDirty(false);
+      initializedForId.current = candidateData.id;
+
+      // Load template config (from candidate's template or default)
+      fetchTemplateConfig(candidateData.template_id).then((config) => {
+        setTemplateConfig(config);
+      });
+    }
 
     // Already extracted — load data without triggering AI
     if (candidateData.extracted_data && ['reviewing', 'ready', 'generated'].includes(candidateData.status)) {
       setCvData(candidateData.extracted_data);
       return;
     }
+
+    // Extraction in progress — reconnection is handled by useWorkflowStream
+    if (candidateData.status === 'extracting') {
+      return;
+    }
+
     // Not yet extracted — start extraction
-    if (candidateData.status === 'uploaded' || candidateData.status === 'extracting') {
+    if (candidateData.status === 'uploaded' && isNewCandidate) {
       submit({ candidateId: params?.id });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [candidateData?.id]);
+  }, [candidateData?.id, candidateData?.status]);
 
   // Sync streaming object to store
   useEffect(() => {
@@ -97,8 +130,28 @@ export default function ReviewPage() {
 
   const handleSave = useCallback(() => {
     if (!cvData) return;
-    updateCandidate.mutate({ id: candidateId, extracted_data: cvData, status: 'ready' });
-  }, [cvData, candidateId, updateCandidate]);
+    updateCandidate.mutate(
+      { id: candidateId, extracted_data: cvData, status: 'ready' },
+      { onSuccess: () => setDirty(false) },
+    );
+  }, [cvData, candidateId, updateCandidate, setDirty]);
+
+  const handleRetryExtraction = useCallback(() => {
+    setCvData(null);
+    submit({ candidateId: params?.id });
+  }, [setCvData, submit, params?.id]);
+
+  const handleCancelExtraction = useCallback(() => {
+    const runId = candidateData?.workflow_run_id;
+    if (!runId) return;
+    stop();
+    cancelWorkflow.mutate({
+      runId,
+      table: 'candidates',
+      recordId: candidateId,
+      resetStatus: 'uploaded',
+    });
+  }, [candidateData?.workflow_run_id, candidateId, stop, cancelWorkflow]);
 
   const safeData = cvData as Partial<ExtractedCV> | undefined;
 
@@ -127,6 +180,12 @@ export default function ReviewPage() {
   const status = (field: keyof ExtractedCV) =>
     getSectionStatus(cvData, isLoading, field);
 
+  // Determine if save button should be enabled
+  const canSave = !isLoading && !!cvData && isDirty && !updateCandidate.isPending;
+
+  // Determine if positioning is available
+  const canPosition = !isLoading && !!cvData;
+
   if (!cvData && !isLoading) {
     return (
       <div className="flex justify-center items-center h-full bg-background text-foreground">
@@ -151,11 +210,29 @@ export default function ReviewPage() {
                   CV Builder
                 </div>
                 <h1 className="text-lg font-semibold title-gradient">
-                  {isLoading ? 'Extraction en cours...' : 'Édition du CV'}
+                  {isLoading ? 'Extraction en cours...' : 'Edition du CV'}
                 </h1>
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Cancel extraction */}
+              {isLoading && candidateData?.workflow_run_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelExtraction}
+                  disabled={cancelWorkflow.isPending}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  {cancelWorkflow.isPending ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Square className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Annuler
+                </Button>
+              )}
+
               {/* Time tracking indicators */}
               {(aiDurationMs || userTimeSeconds) && (
                 <Tooltip>
@@ -178,7 +255,7 @@ export default function ReviewPage() {
                       {userTimeSeconds != null && userTimeSeconds > 0 && (
                         <p className="flex items-center gap-1.5">
                           <Pencil className="h-3 w-3 text-violet" />
-                          Édition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
+                          Edition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
                         </p>
                       )}
                     </div>
@@ -186,17 +263,44 @@ export default function ReviewPage() {
                 </Tooltip>
               )}
 
+              {isDirty && !isLoading && (
+                <Badge variant="outline" className="border-amber-500/30 text-amber-400 text-xs">
+                  Modifications non sauvegardées
+                </Badge>
+              )}
+
               <Button
                 onClick={handleSave}
-                disabled={isLoading || !cvData}
+                disabled={!canSave}
               >
-                <BadgeCheck className="mr-2 h-4 w-4" />
+                {updateCandidate.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <BadgeCheck className="mr-2 h-4 w-4" />
+                )}
                 Sauvegarder
               </Button>
-              <Button variant="outline" nativeButton={false} render={<Link href={`/review/${params.id}/positioning`} />}>
-                <Target className="mr-2 h-4 w-4" />
-                Positionner le CV
-              </Button>
+
+              {canPosition ? (
+                <Button variant="outline" nativeButton={false} render={<Link href={`/review/${params.id}/positioning`} />}>
+                  <Target className="mr-2 h-4 w-4" />
+                  Positionner le CV
+                </Button>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button variant="outline" disabled>
+                        <Target className="mr-2 h-4 w-4" />
+                        Positionner le CV
+                      </Button>
+                    }
+                  />
+                  <TooltipContent side="bottom" className="text-xs">
+                    Attendez la fin de l&apos;extraction avant de positionner
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
 
@@ -208,6 +312,10 @@ export default function ReviewPage() {
           <div className="mb-4 flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
             <AlertCircle className="mr-2 h-5 w-5" />
             {error.message}
+            <Button variant="ghost" size="sm" onClick={handleRetryExtraction} className="ml-auto">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Réessayer
+            </Button>
           </div>
         )}
 

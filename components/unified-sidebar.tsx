@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useCandidates, usePositionings, useUploadCv } from '@/lib/queries';
+import { useCandidates, usePositionings, useUploadCv, useCancelWorkflow } from '@/lib/queries';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Target,
   Palette,
+  Square,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -24,6 +25,7 @@ import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 interface Candidate {
   id: string;
   status: string;
+  workflow_run_id: string | null;
   extracted_data: {
     personalInfo?: { firstName?: string; lastName?: string; title?: string };
     experiences?: { role?: string; company?: string }[];
@@ -38,6 +40,7 @@ interface Positioning {
   mission_id: string | null;
   job_description: string;
   status: string;
+  workflow_run_id: string | null;
   analysis: {
     matchScore?: number;
     matchSummary?: string;
@@ -84,6 +87,7 @@ export function UnifiedSidebar() {
   const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
   const uploadCv = useUploadCv();
   const isUploading = uploadCv.isPending;
+  const cancelWorkflow = useCancelWorkflow();
 
   const candidates: Candidate[] = isDemoMode ? [] : (Array.isArray(candidatesData) ? candidatesData : []);
   const positionings: Positioning[] = isDemoMode ? [] : (Array.isArray(positioningsData) ? positioningsData : []);
@@ -260,9 +264,14 @@ export function UnifiedSidebar() {
                     </button>
 
                     {/* CV button */}
-                    <button
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => router.push(`/review/${c.id}`)}
-                      className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-2 text-left transition ${
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') router.push(`/review/${c.id}`);
+                      }}
+                      className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-2 text-left transition cursor-pointer ${
                         isActive
                           ? 'bg-accent/10 text-foreground'
                           : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -295,13 +304,32 @@ export function UnifiedSidebar() {
                         )}
                       </div>
 
+                      {/* Cancel extraction button */}
+                      {c.status === 'extracting' && c.workflow_run_id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelWorkflow.mutate({
+                              runId: c.workflow_run_id!,
+                              table: 'candidates',
+                              recordId: c.id,
+                              resetStatus: 'uploaded',
+                            });
+                          }}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+                          title="Annuler l'extraction"
+                        >
+                          <Square className="h-3 w-3" />
+                        </button>
+                      )}
+
                       {/* Positioning count badge */}
                       {hasPositionings && (
                         <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-violet/15 px-1 text-[9px] font-semibold text-violet">
                           {cvPositionings.length}
                         </span>
                       )}
-                    </button>
+                    </div>
                   </div>
 
                   {/* Nested positionings */}
@@ -314,12 +342,17 @@ export function UnifiedSidebar() {
                         const isPosActive = p.id === activePositioningId;
 
                         return (
-                          <button
+                          <div
                             key={p.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() =>
                               router.push(`/review/${c.id}/positioning/${p.id}`)
                             }
-                            className={`group/pos flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition ${
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') router.push(`/review/${c.id}/positioning/${p.id}`);
+                            }}
+                            className={`group/pos flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition cursor-pointer ${
                               isPosActive
                                 ? 'bg-violet/10 text-foreground'
                                 : 'text-muted-foreground hover:bg-card/40 hover:text-foreground'
@@ -359,7 +392,25 @@ export function UnifiedSidebar() {
                                 </Badge>
                               </div>
                             </div>
-                          </button>
+                            {/* Cancel workflow button */}
+                            {(p.status === 'analyzing' || p.status === 'generating') && p.workflow_run_id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  cancelWorkflow.mutate({
+                                    runId: p.workflow_run_id!,
+                                    table: 'positionings',
+                                    recordId: p.id,
+                                    resetStatus: p.status === 'analyzing' ? 'draft' : 'analyzed',
+                                  });
+                                }}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+                                title="Annuler"
+                              >
+                                <Square className="h-2.5 w-2.5" />
+                              </button>
+                            )}
+                          </div>
                         );
                       })}
 
