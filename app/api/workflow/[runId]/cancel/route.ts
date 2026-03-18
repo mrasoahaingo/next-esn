@@ -16,7 +16,11 @@ export async function POST(
     };
 
     const world = getWorld();
-    await world.runs.cancel(runId);
+    const run = await world.runs.get(runId, { resolveData: 'none' });
+    await world.events.create(runId, {
+      eventType: 'run_cancelled',
+      specVersion: run.specVersion ?? 1,
+    });
 
     // Reset DB status if provided
     if (table && recordId && resetStatus) {
