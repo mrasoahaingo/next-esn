@@ -15,7 +15,7 @@ import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square, Save, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
@@ -131,6 +131,14 @@ export default function ReviewPage() {
   const handleSave = useCallback(() => {
     if (!cvData) return;
     updateCandidate.mutate(
+      { id: candidateId, extracted_data: cvData },
+      { onSuccess: () => setDirty(false) },
+    );
+  }, [cvData, candidateId, updateCandidate, setDirty]);
+
+  const handleMarkReady = useCallback(() => {
+    if (!cvData) return;
+    updateCandidate.mutate(
       { id: candidateId, extracted_data: cvData, status: 'ready' },
       { onSuccess: () => setDirty(false) },
     );
@@ -182,6 +190,10 @@ export default function ReviewPage() {
 
   // Determine if save button should be enabled
   const canSave = !isLoading && !!cvData && isDirty && !updateCandidate.isPending;
+
+  // Determine if "Valider" button should be enabled
+  const isReady = candidateData?.status === 'ready' || candidateData?.status === 'generated';
+  const canMarkReady = !isLoading && !!cvData && !updateCandidate.isPending && !isReady;
 
   // Determine if positioning is available
   const canPosition = !isLoading && !!cvData;
@@ -269,17 +281,39 @@ export default function ReviewPage() {
                 </Badge>
               )}
 
+              {isReady && !isDirty && (
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-xs">
+                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                  Prêt
+                </Badge>
+              )}
+
               <Button
+                variant="outline"
                 onClick={handleSave}
                 disabled={!canSave}
               >
-                {updateCandidate.isPending ? (
+                {updateCandidate.isPending && !canMarkReady ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <BadgeCheck className="mr-2 h-4 w-4" />
+                  <Save className="mr-2 h-4 w-4" />
                 )}
                 Sauvegarder
               </Button>
+
+              {canMarkReady ? (
+                <Button
+                  onClick={handleMarkReady}
+                  disabled={updateCandidate.isPending}
+                >
+                  {updateCandidate.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <BadgeCheck className="mr-2 h-4 w-4" />
+                  )}
+                  Valider le CV
+                </Button>
+              ) : null}
 
               {canPosition ? (
                 <Button variant="outline" nativeButton={false} render={<Link href={`/review/${params.id}/positioning`} />}>
