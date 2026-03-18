@@ -18,6 +18,12 @@ import {
   UserPlus,
   Sparkles,
   CheckCircle2,
+  GitCompare,
+  X,
+  TrendingUp,
+  AlertTriangle,
+  Clock,
+  Calendar,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -46,10 +52,40 @@ import {
 interface PositioningCandidate {
   id: string;
   extracted_data: {
-    personalInfo?: { firstName?: string; lastName?: string; title?: string };
+    personalInfo?: {
+      firstName?: string;
+      lastName?: string;
+      title?: string;
+      yearsOfExperience?: string;
+      availability?: string;
+      location?: string;
+    };
+    skills?: {
+      technologies?: Array<{ name: string; starred?: boolean; added?: boolean }>;
+      expertises?: Array<{ name: string; starred?: boolean; added?: boolean }>;
+      methodologies?: Array<{ name: string; starred?: boolean; added?: boolean }>;
+    };
   } | null;
   original_file_url: string;
   status: string;
+}
+
+interface SkillMatch {
+  skill: string;
+  category: string;
+  relevance: 'strong' | 'partial' | 'missing';
+  comment: string;
+}
+
+interface ExperienceRelevance {
+  experience: string;
+  relevance: 'high' | 'medium' | 'low';
+  comment: string;
+}
+
+interface Gap {
+  gap: string;
+  note: string;
 }
 
 interface MissionPositioning {
@@ -60,6 +96,9 @@ interface MissionPositioning {
   analysis: {
     matchScore?: number;
     matchSummary?: string;
+    skillMatches?: SkillMatch[];
+    experienceRelevance?: ExperienceRelevance[];
+    gaps?: Gap[];
   } | null;
   created_at: string;
   candidates: PositioningCandidate | null;
@@ -410,6 +449,462 @@ function PositionCvsModal({
 }
 
 // ---------------------------------------------------------------------------
+// Score Ring
+// ---------------------------------------------------------------------------
+
+function ScoreRing({ score, size = 56 }: { score: number; size?: number }) {
+  const r = size * 0.38;
+  const cx = size / 2;
+  const cy = size / 2;
+  const circumference = 2 * Math.PI * r;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+  const color = score >= 70 ? 'var(--color-neon, #39d353)' : score >= 40 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" style={{ display: 'block' }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={size * 0.07} />
+        <circle
+          cx={cx} cy={cy} r={r} fill="none"
+          stroke={color} strokeWidth={size * 0.07}
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.6s cubic-bezier(0.34,1.56,0.64,1)' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-bold leading-none" style={{ color, fontSize: size * 0.28 }}>{score}</span>
+        <span className="leading-none opacity-50" style={{ color, fontSize: size * 0.13 }}>/100</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Compare Modal — charts + full-screen layout
+// ---------------------------------------------------------------------------
+
+const MAX_COMPARE = 4;
+
+const CANDIDATE_COLORS = [
+  { stroke: '#8b5cf6', fill: 'rgba(139,92,246,0.14)', text: '#8b5cf6' },
+  { stroke: '#39d353', fill: 'rgba(57,211,83,0.14)',  text: '#39d353' },
+  { stroke: '#f59e0b', fill: 'rgba(245,158,11,0.14)', text: '#f59e0b' },
+  { stroke: '#38bdf8', fill: 'rgba(56,189,248,0.14)', text: '#38bdf8' },
+] as const;
+
+// ── Score horizontal bars ──────────────────────────────────────────────────
+
+function ScoreComparisonChart({ positionings }: { positionings: MissionPositioning[] }) {
+  const winner = positionings.reduce((best, p) =>
+    (p.analysis?.matchScore ?? 0) > (best.analysis?.matchScore ?? 0) ? p : best
+  , positionings[0]);
+
+  return (
+    <div className="flex flex-col h-full gap-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
+        Scores de matching
+      </p>
+      <div className="flex flex-col justify-around flex-1 gap-3">
+        {positionings.map((p, i) => {
+          const score = p.analysis?.matchScore ?? 0;
+          const name = getCandidateName(p.candidates);
+          const color = CANDIDATE_COLORS[i];
+          const isWinner = p.id === winner.id && positionings.length > 1;
+          return (
+            <div key={p.id} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color.stroke }} />
+                  <span className="text-xs truncate text-foreground/75">{name}</span>
+                  {isWinner && <span className="text-[10px] text-amber-400 shrink-0" title="Meilleur score">★</span>}
+                </div>
+                <span className="text-base font-bold shrink-0 tabular-nums" style={{ color: color.stroke }}>{score}</span>
+              </div>
+              <div className="relative h-3 rounded-full bg-white/5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${score}%`, backgroundColor: color.stroke, opacity: 0.8 }}
+                />
+                {/* Score ticks at 25/50/75 */}
+                {[25, 50, 75].map((t) => (
+                  <div key={t} className="absolute top-0 h-full w-px bg-white/10" style={{ left: `${t}%` }} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-4 text-[9px] text-muted-foreground/35 pt-1 border-t border-white/5">
+        <span>0</span>
+        <span className="ml-auto">50</span>
+        <span>100</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Per-column helpers ─────────────────────────────────────────────────────
+
+function SkillCategoryBar({ matches }: { matches: SkillMatch[] }) {
+  const strong = matches.filter((m) => m.relevance === 'strong').length;
+  const partial = matches.filter((m) => m.relevance === 'partial').length;
+  const missing = matches.filter((m) => m.relevance === 'missing').length;
+  const total = matches.length;
+  if (!total) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+        {strong  > 0 && <div className="h-full bg-neon/60"       style={{ width: `${(strong /total)*100}%` }} />}
+        {partial > 0 && <div className="h-full bg-amber-400/60" style={{ width: `${(partial/total)*100}%` }} />}
+        {missing > 0 && <div className="h-full bg-destructive/35" style={{ width: `${(missing/total)*100}%` }} />}
+      </div>
+      <span className="text-[9px] text-muted-foreground/40 shrink-0 w-12 text-right tabular-nums">
+        <span className="text-neon/70">{strong}</span>
+        <span className="text-muted-foreground/25 mx-0.5">·</span>
+        <span className="text-amber-400/70">{partial}</span>
+        <span className="text-muted-foreground/25 mx-0.5">·</span>
+        <span className="text-destructive/55">{missing}</span>
+      </span>
+    </div>
+  );
+}
+
+function RelevancePip({ level }: { level: 'strong' | 'partial' | 'missing' | 'high' | 'medium' | 'low' }) {
+  const map = {
+    strong:  { bg: 'bg-neon/10',        text: 'text-neon',        dot: 'bg-neon/70' },
+    high:    { bg: 'bg-neon/10',        text: 'text-neon',        dot: 'bg-neon/70' },
+    partial: { bg: 'bg-amber-400/10',   text: 'text-amber-400',   dot: 'bg-amber-400/70' },
+    medium:  { bg: 'bg-amber-400/10',   text: 'text-amber-400',   dot: 'bg-amber-400/70' },
+    missing: { bg: 'bg-destructive/10', text: 'text-destructive',  dot: 'bg-destructive/60' },
+    low:     { bg: 'bg-destructive/10', text: 'text-destructive',  dot: 'bg-destructive/60' },
+  }[level];
+  const labels = { strong: 'Fort', high: 'Élevé', partial: 'Partiel', medium: 'Moyen', missing: 'Absent', low: 'Faible' };
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-medium ${map.bg} ${map.text}`}>
+      <span className={`h-1 w-1 rounded-full ${map.dot}`} />
+      {labels[level]}
+    </span>
+  );
+}
+
+// ── Per-candidate column (full-screen version) ────────────────────────────
+
+function CandidateCompareColumn({
+  p,
+  colorIndex,
+  isWinner,
+}: {
+  p: MissionPositioning;
+  colorIndex: number;
+  isWinner: boolean;
+}) {
+  const candidate = p.candidates;
+  const name = getCandidateName(candidate);
+  const pi = candidate?.extracted_data?.personalInfo;
+  const score = p.analysis?.matchScore;
+  const rawSkillMatches = p.analysis?.skillMatches;
+  const rawExpRelevance = p.analysis?.experienceRelevance;
+  const rawGaps = p.analysis?.gaps;
+  const rawTechs = candidate?.extracted_data?.skills?.technologies;
+  const color = CANDIDATE_COLORS[colorIndex];
+
+  const byCategory = useMemo(() => {
+    const ms = rawSkillMatches ?? [];
+    const map = new Map<string, SkillMatch[]>();
+    ms.forEach((sm) => {
+      if (!map.has(sm.category)) map.set(sm.category, []);
+      map.get(sm.category)!.push(sm);
+    });
+    return Array.from(map.entries()).sort(
+      (a, b) => b[1].filter((m) => m.relevance === 'strong').length - a[1].filter((m) => m.relevance === 'strong').length
+    );
+  }, [rawSkillMatches]);
+
+  const starredTech = useMemo(() => (rawTechs ?? []).filter((t) => t.starred).slice(0, 8), [rawTechs]);
+
+  const skillMatches = rawSkillMatches ?? [];
+  const expRelevance = rawExpRelevance ?? [];
+  const gaps = rawGaps ?? [];
+  const strongMatches = skillMatches.filter((m) => m.relevance === 'strong');
+  const partialMatches = skillMatches.filter((m) => m.relevance === 'partial');
+  const sortedExps = [...expRelevance].sort(
+    (a, b) => (a.relevance === 'high' ? 0 : a.relevance === 'medium' ? 1 : 2) - (b.relevance === 'high' ? 0 : b.relevance === 'medium' ? 1 : 2)
+  );
+
+  return (
+    <div className="flex flex-col gap-3 min-w-0">
+
+      {/* ── Header card ── */}
+      <div
+        className="sticky top-0 z-10 rounded-2xl p-5 flex flex-col items-center gap-3 text-center relative overflow-hidden bg-shell"
+        style={{ backgroundImage: `linear-gradient(160deg, ${color.fill}, transparent)`, border: `1px solid ${color.stroke}28` }}
+      >
+        {/* Winner star */}
+        {isWinner && (
+          <div
+            className="absolute top-0 right-0 flex items-center gap-1 rounded-bl-xl rounded-tr-2xl px-2.5 py-1 text-[9px] font-semibold text-amber-400"
+            style={{ background: 'rgba(245,158,11,0.12)', borderLeft: '1px solid rgba(245,158,11,0.2)', borderBottom: '1px solid rgba(245,158,11,0.2)' }}
+          >
+            ★ Meilleur
+          </div>
+        )}
+
+        {/* Color indicator bar at top */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ background: color.stroke }} />
+
+        {score != null ? (
+          <ScoreRing score={score} size={96} />
+        ) : (
+          <div className="h-24 w-24 flex items-center justify-center rounded-full bg-white/5">
+            <User className="h-8 w-8 text-muted-foreground/30" />
+          </div>
+        )}
+        <div>
+          <p className="text-sm font-semibold text-foreground leading-tight">{name}</p>
+          {pi?.title && (
+            <p className="mt-1 text-xs text-muted-foreground/65 leading-snug">{pi.title}</p>
+          )}
+        </div>
+
+        {/* Meta pills */}
+        <div className="flex flex-wrap justify-center gap-1.5">
+          {pi?.yearsOfExperience && (
+            <span className="flex items-center gap-1 rounded-full bg-black/25 border border-white/8 px-2.5 py-1 text-[10px] text-muted-foreground">
+              <TrendingUp className="h-2.5 w-2.5" />
+              {pi.yearsOfExperience}
+            </span>
+          )}
+          {pi?.availability && (
+            <span className="flex items-center gap-1 rounded-full bg-black/25 border border-white/8 px-2.5 py-1 text-[10px] text-muted-foreground">
+              <Clock className="h-2.5 w-2.5" />
+              {pi.availability}
+            </span>
+          )}
+          {pi?.location && (
+            <span className="rounded-full bg-black/25 border border-white/8 px-2.5 py-1 text-[10px] text-muted-foreground">
+              {pi.location}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Skill categories ── */}
+      {byCategory.length > 0 && (
+        <div className="glass-panel rounded-xl p-4 space-y-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Compétences par catégorie
+          </p>
+          <div className="space-y-2.5">
+            {byCategory.sort((a, b) => a[0].localeCompare(b[0])).map(([cat, matches]) => (
+              <div key={cat}>
+                <span className="text-[11px] text-foreground/75 font-medium">{cat}</span>
+                <div className="mt-1">
+                  <SkillCategoryBar matches={matches} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-3 pt-1.5 border-t border-white/5 text-[9px] text-muted-foreground/30">
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-neon/60" />Fort</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-amber-400/60" />Partiel</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-destructive/40" />Absent</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Strong matches ── */}
+      {strongMatches.length > 0 && (
+        <div className="glass-panel rounded-xl p-4 space-y-2.5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <CheckCircle2 className="h-3 w-3 text-neon" />
+            Points forts
+            <span className="ml-auto text-[9px] text-neon/50 font-normal">{strongMatches.length}</span>
+          </p>
+          <div className="space-y-2">
+            {strongMatches.sort((a, b) => a.skill.localeCompare(b.skill)).map((m) => (
+              <div key={m.skill} className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-neon/65" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-foreground/85">{m.skill}</p>
+                  {m.comment && (
+                    <p className="mt-0.5 text-[10px] text-muted-foreground/45 leading-snug">{m.comment}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Partial matches ── */}
+      {partialMatches.length > 0 && (
+        <div className="glass-panel rounded-xl p-4 space-y-2.5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <span className="h-3 w-3 flex items-center justify-center shrink-0">
+              <span className="h-2 w-2 rounded-full bg-amber-400/65" />
+            </span>
+            Compétences partielles
+            <span className="ml-auto text-[9px] text-amber-400/50 font-normal">{partialMatches.length}</span>
+          </p>
+          <div className="space-y-1.5">
+            {partialMatches.sort((a, b) => a.skill.localeCompare(b.skill)).map((m) => (
+              <div key={m.skill} className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/55" />
+                <div className="min-w-0">
+                  <p className="text-[11px] text-foreground/70">{m.skill}</p>
+                  {m.comment && (
+                    <p className="text-[10px] text-muted-foreground/40 leading-snug">{m.comment}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Experiences ── */}
+      {sortedExps.length > 0 && (
+        <div className="glass-panel rounded-xl p-4 space-y-2.5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <Calendar className="h-3 w-3 text-violet" />
+            Expériences pertinentes
+          </p>
+          <div className="space-y-2">
+            {sortedExps.map((e, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <RelevancePip level={e.relevance} />
+                <p className="text-[11px] text-foreground/75 leading-snug flex-1">{e.experience}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Gaps ── */}
+      {gaps.length > 0 && (
+        <div className="glass-panel rounded-xl p-4 space-y-2.5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-amber-400" />
+            Points manquants
+            <span className="ml-auto text-[9px] text-amber-400/50 font-normal">{gaps.length}</span>
+          </p>
+          <div className="space-y-1.5">
+            {gaps.map((g, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400/45" />
+                <p className="text-[11px] text-muted-foreground/65 leading-snug">{g.gap}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Starred technologies ── */}
+      {starredTech.length > 0 && (
+        <div className="glass-panel rounded-xl p-4 space-y-2.5">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Technologies clés
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {starredTech.map((t) => (
+              <span
+                key={t.name}
+                className="rounded-md px-2 py-0.5 text-[10px] font-medium"
+                style={{ background: `${color.stroke}16`, color: color.stroke, border: `1px solid ${color.stroke}28` }}
+              >
+                {t.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Full-screen Compare modal ─────────────────────────────────────────────
+
+function CompareCvsModal({
+  open,
+  onOpenChange,
+  positionings,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  positionings: MissionPositioning[];
+}) {
+  const count = positionings.length;
+  const gridCols = count === 2 ? 'grid-cols-2' : count === 3 ? 'grid-cols-3' : 'grid-cols-4';
+
+  const winnerIndex = positionings.reduce((best, p, i) =>
+    (p.analysis?.matchScore ?? 0) > (positionings[best]?.analysis?.matchScore ?? 0) ? i : best
+  , 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        showCloseButton={false}
+        className="!fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !w-[calc(100vw-3rem)] !max-w-[1600px] !h-[calc(100dvh-3rem)] !max-h-[1000px] !rounded-2xl !p-0 !gap-0 !ring-1 !ring-white/[0.08] !border-0 bg-shell !flex !flex-col !overflow-hidden"
+      >
+        {/* ── Header ── */}
+        <div className="flex shrink-0 items-center justify-between px-6 py-3.5 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/15">
+              <GitCompare className="h-4 w-4 text-violet" />
+            </div>
+            <div>
+              <DialogTitle className="text-sm font-semibold">
+                Comparaison — {count} candidat{count > 1 ? 's' : ''}
+              </DialogTitle>
+              <DialogDescription className="text-[11px] text-muted-foreground/45">
+                Vue synthétique et détaillée des profils
+              </DialogDescription>
+            </div>
+            {/* Candidate color legend */}
+            <div className="flex items-center gap-4 ml-5 pl-5 border-l border-white/8">
+              {positionings.map((p, i) => (
+                <span key={p.id} className="flex items-center gap-1.5 text-[11px] text-foreground/55">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CANDIDATE_COLORS[i].stroke }} />
+                  {getCandidateName(p.candidates).split(' ')[0]}
+                </span>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground transition"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* ── Candidate columns ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+          {count === 0 ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <p className="text-sm">Aucun candidat sélectionné</p>
+            </div>
+          ) : (
+            <div className={`grid gap-4 items-start ${gridCols}`}>
+              {positionings.map((p, i) => (
+                <CandidateCompareColumn
+                  key={p.id}
+                  p={p}
+                  colorIndex={i}
+                  isWinner={i === winnerIndex && count > 1}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Positioning Row
 // ---------------------------------------------------------------------------
 
@@ -417,10 +912,16 @@ function PositioningRow({
   p,
   onNavigate,
   onCancel,
+  selectable,
+  isSelected,
+  onToggleSelect,
 }: {
   p: MissionPositioning;
   onNavigate: () => void;
   onCancel: () => void;
+  selectable?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const candidate = p.candidates;
   const name = getCandidateName(candidate);
@@ -440,8 +941,28 @@ function PositioningRow({
           onNavigate();
         }
       }}
-      className="group flex w-full cursor-pointer items-center gap-4 rounded-xl px-4 py-3.5 text-left transition hover:bg-white/[0.03]"
+      className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3.5 text-left transition ${
+        isSelected ? 'bg-violet/[0.08] ring-1 ring-violet/30' : 'hover:bg-white/[0.03]'
+      }`}
     >
+      {/* Checkbox (selectable mode only) */}
+      {selectable && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect?.(p.id);
+          }}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all ${
+            isSelected
+              ? 'border-violet bg-violet text-white'
+              : 'border-white/20 bg-white/[0.03] opacity-0 group-hover:opacity-100'
+          }`}
+          title={isSelected ? 'Retirer de la comparaison' : 'Ajouter à la comparaison'}
+        >
+          {isSelected && <Check className="h-3 w-3" />}
+        </button>
+      )}
+
       {/* Score or placeholder */}
       {score != null ? (
         <div
@@ -525,6 +1046,8 @@ export default function PositionDetailPage() {
   const router = useRouter();
   const missionId = params?.id as string;
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
 
   const { data: mission, isLoading } = useMission(missionId) as {
     data: MissionDetail | undefined;
@@ -543,6 +1066,27 @@ export default function PositionDetailPage() {
   const existingCandidateIds = useMemo(
     () => new Set(positionings.map((p) => p.candidate_id)),
     [positionings]
+  );
+
+  const toggleCompare = (id: string) => {
+    setCompareIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (next.size < MAX_COMPARE) {
+        next.add(id);
+      } else {
+        toast.info(`Maximum ${MAX_COMPARE} candidats à la fois`, {
+          description: 'Désélectionnez un candidat pour en ajouter un autre.',
+        });
+      }
+      return next;
+    });
+  };
+
+  const selectedPositionings = useMemo(
+    () => ready.filter((p) => compareIds.has(p.id)),
+    [ready, compareIds]
   );
 
   if (isLoading) {
@@ -683,6 +1227,11 @@ export default function PositionDetailPage() {
                   <Badge variant="default" className="text-[9px] px-1.5 py-0 ml-1">
                     {ready.length}
                   </Badge>
+                  {ready.length >= 2 && (
+                    <span className="ml-auto text-[10px] text-muted-foreground/50">
+                      Sélectionner pour comparer
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -694,6 +1243,9 @@ export default function PositionDetailPage() {
                         router.push(`/review/${p.candidate_id}/positioning/${p.id}`)
                       }
                       onCancel={() => {}}
+                      selectable={ready.length >= 2}
+                      isSelected={compareIds.has(p.id)}
+                      onToggleSelect={toggleCompare}
                     />
                   ))}
                 </div>
@@ -702,14 +1254,62 @@ export default function PositionDetailPage() {
           </div>
         )}
 
-        {/* Modal */}
+        {/* Modals */}
         <PositionCvsModal
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           missionId={missionId}
           existingCandidateIds={existingCandidateIds}
         />
+
+        <CompareCvsModal
+          open={isCompareOpen}
+          onOpenChange={(open) => {
+            setIsCompareOpen(open);
+            if (!open) setCompareIds(new Set());
+          }}
+          positionings={selectedPositionings}
+        />
       </div>
+
+      {/* Floating compare bar */}
+      {compareIds.size >= 2 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-2xl border border-violet/30 bg-shell/95 px-5 py-3 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center gap-2">
+            <div className="flex -space-x-1">
+              {selectedPositionings.slice(0, 4).map((p) => (
+                <div
+                  key={p.id}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-violet/40 bg-violet/20 text-[9px] font-bold text-violet"
+                >
+                  {getCandidateName(p.candidates).charAt(0).toUpperCase()}
+                </div>
+              ))}
+            </div>
+            <span className="text-sm font-medium text-foreground">
+              {compareIds.size} candidat{compareIds.size > 1 ? 's' : ''} sélectionné{compareIds.size > 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <div className="h-4 w-px bg-white/[0.08]" />
+
+          <button
+            onClick={() => setCompareIds(new Set())}
+            className="text-xs text-muted-foreground hover:text-foreground transition"
+          >
+            Effacer
+          </button>
+
+          <Button
+            onClick={() => setIsCompareOpen(true)}
+            size="sm"
+            className="bg-violet hover:bg-violet/90 text-white gap-2"
+          >
+            <GitCompare className="h-3.5 w-3.5" />
+            Comparer
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
