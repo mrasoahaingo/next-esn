@@ -70,6 +70,26 @@ export function PersonalInfo({ data, onChange, readOnly }: PersonalInfoProps) {
             disabled={readOnly}
           />
         </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Années d&apos;expérience</Label>
+            <Input
+              value={data?.yearsOfExperience ?? ''}
+              onChange={(e) => handleChange('yearsOfExperience', e.target.value)}
+              disabled={readOnly}
+              placeholder="Ex: 8 ans"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Disponibilité</Label>
+            <Input
+              value={data?.availability ?? ''}
+              onChange={(e) => handleChange('availability', e.target.value)}
+              disabled={readOnly}
+              placeholder="Ex: Immédiate"
+            />
+          </div>
+        </div>
       </div>
     </section>
   );

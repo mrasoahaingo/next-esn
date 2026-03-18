@@ -8,6 +8,11 @@ function FixedViewComponent({ element, children }: { element: { props: Record<st
     <View
       fixed
       style={{
+        position: (p.position as 'absolute' | 'relative') ?? undefined,
+        top: (p.top as number) ?? undefined,
+        bottom: (p.bottom as number) ?? undefined,
+        left: (p.left as number) ?? undefined,
+        right: (p.right as number) ?? undefined,
         padding: (p.padding as number) ?? undefined,
         paddingTop: (p.paddingTop as number) ?? undefined,
         paddingBottom: (p.paddingBottom as number) ?? undefined,
@@ -127,6 +132,34 @@ function FixedColumnComponent({ element, children }: { element: { props: Record<
   );
 }
 
+function RichTextComponent({ element }: { element: { props: Record<string, unknown> } }) {
+  const p = element.props;
+  const text = (p.text as string) ?? '';
+  const fontSize = (p.fontSize as number) ?? 9;
+  const color = (p.color as string) ?? '#000';
+  const lineHeight = (p.lineHeight as number) ?? undefined;
+
+  // Split on **bold** markers
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return (
+    <Text
+      style={{ fontSize, color, lineHeight, fontFamily: 'Helvetica' }}
+    >
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return (
+            <Text key={i} style={{ fontFamily: 'Helvetica-Bold' }}>
+              {part.slice(2, -2)}
+            </Text>
+          );
+        }
+        return part;
+      })}
+    </Text>
+  );
+}
+
 function HimeoLogoComponent({ element }: { element: { props: Record<string, unknown> } }) {
   const p = element.props;
   const width = (p.width as number) ?? 80;
@@ -146,7 +179,44 @@ function HimeoLogoComponent({ element }: { element: { props: Record<string, unkn
   );
 }
 
+function BadgeListComponent({ element }: { element: { props: Record<string, unknown> } }) {
+  const p = element.props;
+  const items = (p.items as string[]) ?? [];
+  const bgColor = (p.bgColor as string) ?? '#9bcaff';
+  const textColor = (p.textColor as string) ?? '#010557';
+  const fontSize = (p.fontSize as number) ?? 7;
+
+  if (items.length === 0) return null;
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+      {items.map((item, i) => (
+        <View
+          key={i}
+          style={{
+            backgroundColor: bgColor,
+            borderRadius: 3,
+            paddingHorizontal: 6,
+            paddingVertical: 2.5,
+          }}
+        >
+          <Text
+            style={{
+              fontSize,
+              color: textColor,
+              fontFamily: 'Helvetica-Bold',
+            }}
+          >
+            {item}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 export const fixedComponents: RenderComponentRegistry = {
+  BadgeList: BadgeListComponent,
   FixedView: FixedViewComponent,
   FixedRow: FixedRowComponent,
   FixedColumn: FixedColumnComponent,
@@ -155,4 +225,5 @@ export const fixedComponents: RenderComponentRegistry = {
   FixedDivider: FixedDividerComponent,
   FixedSpacer: FixedSpacerComponent,
   HimeoLogo: HimeoLogoComponent,
+  RichText: RichTextComponent,
 };

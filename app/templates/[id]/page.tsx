@@ -27,9 +27,11 @@ const SAMPLE_CV = {
     email: 'marie.dupont@email.com',
     phone: '06 12 34 56 78',
     location: 'Paris, France',
+    yearsOfExperience: '8 ans',
+    availability: 'Immédiate',
   },
   summary:
-    'Développeuse full stack avec 8 ans d\'expérience en conception et développement d\'applications web. Expertise en React, Node.js et architectures cloud. Passionnée par les bonnes pratiques et la qualité logicielle.',
+    'Développeuse full stack avec **8 ans d\'expérience** en conception et développement d\'applications web. Expertise en **React**, **Node.js** et **architectures cloud**. Passionnée par les bonnes pratiques et la qualité logicielle.',
   experiences: [
     {
       role: 'Lead Développeuse Full Stack',
@@ -61,21 +63,39 @@ const SAMPLE_CV = {
   education: [
     { degree: 'Master Informatique', school: 'Université Paris-Saclay', year: '2016' },
   ],
-  skills: ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'AWS', 'Docker', 'Git'],
-  strengths: [
-    'Leadership technique et mentorat d\'équipe',
-    'Expertise en architectures scalables et cloud-native',
-    'Forte capacité d\'analyse et résolution de problèmes complexes',
-    'Communication efficace avec les parties prenantes métier',
-  ],
+  skills: {
+    technologies: [
+      { name: 'React', source: 'extracted' as const, starred: true, added: true },
+      { name: 'TypeScript', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Node.js', source: 'extracted' as const, starred: true, added: true },
+      { name: 'PostgreSQL', source: 'extracted' as const, starred: true, added: true },
+      { name: 'AWS', source: 'inferred' as const, starred: true, added: true },
+      { name: 'Docker', source: 'inferred' as const, starred: false, added: false },
+      { name: 'Git', source: 'extracted' as const, starred: false, added: false },
+    ],
+    softSkills: [
+      { name: 'Leadership', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Communication', source: 'inferred' as const, starred: false, added: false },
+      { name: 'Esprit d\'équipe', source: 'inferred' as const, starred: false, added: false },
+    ],
+    expertises: [
+      { name: 'Architecture microservices', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Cloud-native', source: 'inferred' as const, starred: true, added: true },
+      { name: 'CI/CD', source: 'extracted' as const, starred: true, added: true },
+    ],
+    methodologies: [
+      { name: 'Agile', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Scrum', source: 'extracted' as const, starred: true, added: true },
+      { name: 'DevOps', source: 'inferred' as const, starred: false, added: false },
+    ],
+  },
 };
 
 const SECTION_LABELS: Record<string, string> = {
-  strengths: 'Synthèse',
-  summary: 'Résumé professionnel',
-  skills: 'Compétences techniques',
-  experiences: 'Expériences',
+  summary: 'Synthèse du profil',
+  skills: 'Compétences',
   education: 'Formations',
+  experiences: 'Expériences',
 };
 
 export default function TemplateEditorPage() {

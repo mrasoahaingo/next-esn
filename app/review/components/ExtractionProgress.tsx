@@ -1,6 +1,6 @@
 'use client';
 
-import { User, FileText, Briefcase, GraduationCap, Wrench, Zap } from 'lucide-react';
+import { User, FileText, Briefcase, GraduationCap, Wrench } from 'lucide-react';
 import type { ExtractedCV } from '@/lib/schema';
 
 interface Step {
@@ -9,6 +9,17 @@ interface Step {
   streamingLabel: string;
   icon: React.ElementType;
   check: (data: Partial<ExtractedCV> | null) => boolean;
+}
+
+function hasSkills(d: Partial<ExtractedCV> | null): boolean {
+  const s = d?.skills;
+  if (!s) return false;
+  return (
+    (s.technologies?.length ?? 0) > 0 ||
+    (s.softSkills?.length ?? 0) > 0 ||
+    (s.expertises?.length ?? 0) > 0 ||
+    (s.methodologies?.length ?? 0) > 0
+  );
 }
 
 const steps: Step[] = [
@@ -21,8 +32,8 @@ const steps: Step[] = [
   },
   {
     key: 'summary',
-    label: 'Résumé',
-    streamingLabel: 'Rédaction du résumé...',
+    label: 'Synthèse',
+    streamingLabel: 'Rédaction de la synthèse...',
     icon: FileText,
     check: (d) => !!d?.summary,
   },
@@ -31,14 +42,7 @@ const steps: Step[] = [
     label: 'Compétences',
     streamingLabel: 'Analyse des compétences...',
     icon: Wrench,
-    check: (d) => (d?.skills?.length ?? 0) > 0,
-  },
-  {
-    key: 'experiences',
-    label: 'Expériences',
-    streamingLabel: 'Analyse des expériences...',
-    icon: Briefcase,
-    check: (d) => (d?.experiences?.length ?? 0) > 0,
+    check: hasSkills,
   },
   {
     key: 'education',
@@ -48,11 +52,11 @@ const steps: Step[] = [
     check: (d) => (d?.education?.length ?? 0) > 0,
   },
   {
-    key: 'strengths',
-    label: 'Points forts',
-    streamingLabel: 'Génération des points forts...',
-    icon: Zap,
-    check: (d) => (d?.strengths?.length ?? 0) > 0,
+    key: 'experiences',
+    label: 'Expériences',
+    streamingLabel: 'Analyse des expériences...',
+    icon: Briefcase,
+    check: (d) => (d?.experiences?.length ?? 0) > 0,
   },
 ];
 

@@ -6,7 +6,6 @@ import { Summary } from '@/app/review/components/Summary';
 import { Experiences } from '@/app/review/components/Experiences';
 import { Education } from '@/app/review/components/Education';
 import { Skills } from '@/app/review/components/Skills';
-import { Strengths } from '@/app/review/components/Strengths';
 
 interface TailoredCvFormProps {
   data: Partial<ExtractedCV> | null;
@@ -19,8 +18,6 @@ export function TailoredCvForm({ data, onUpdateField, readOnly }: TailoredCvForm
 
   const safeExperiences = (data.experiences ?? []).filter(Boolean);
   const safeEducation = (data.education ?? []).filter(Boolean);
-  const safeSkills = (data.skills ?? []).filter(Boolean);
-  const safeStrengths = (data.strengths ?? []).filter(Boolean);
 
   return (
     <div className="space-y-4">
@@ -36,18 +33,11 @@ export function TailoredCvForm({ data, onUpdateField, readOnly }: TailoredCvForm
           readOnly={readOnly}
         />
       </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Skills
-          data={safeSkills}
-          onChange={(val) => onUpdateField('skills', val)}
-          readOnly={readOnly}
-        />
-        <Strengths
-          data={safeStrengths}
-          onChange={(val) => onUpdateField('strengths', val)}
-          readOnly={readOnly}
-        />
-      </div>
+      <Skills
+        data={data.skills}
+        onChange={(val) => onUpdateField('skills', val)}
+        readOnly={readOnly}
+      />
       <Experiences
         data={safeExperiences}
         onChange={(val) => onUpdateField('experiences', val)}

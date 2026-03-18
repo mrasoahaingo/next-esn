@@ -16,7 +16,6 @@ import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Penc
 import Link from 'next/link';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
-import { Strengths } from '../components/Strengths';
 import { Experiences } from '../components/Experiences';
 import { Education } from '../components/Education';
 import { Summary } from '../components/Summary';
@@ -113,19 +112,14 @@ export default function ReviewPage() {
     [safeData?.education],
   );
   const safeSkills = useMemo(
-    () => (safeData?.skills ?? []).filter(Boolean),
+    () => safeData?.skills,
     [safeData?.skills],
-  );
-  const safeStrengths = useMemo(
-    () => (safeData?.strengths ?? []).filter(Boolean),
-    [safeData?.strengths],
   );
 
   // Stable per-field callbacks
   const handlePersonalInfo = useCallback((val: unknown) => handleUpdate('personalInfo', val), [handleUpdate]);
   const handleSummary = useCallback((val: unknown) => handleUpdate('summary', val), [handleUpdate]);
   const handleSkills = useCallback((val: unknown) => handleUpdate('skills', val), [handleUpdate]);
-  const handleStrengths = useCallback((val: unknown) => handleUpdate('strengths', val), [handleUpdate]);
   const handleExperiences = useCallback((val: unknown) => handleUpdate('experiences', val), [handleUpdate]);
   const handleEducation = useCallback((val: unknown) => handleUpdate('education', val), [handleUpdate]);
 
@@ -237,22 +231,13 @@ export default function ReviewPage() {
                 />
               </SectionShell>
             </div>
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <SectionShell status={status('skills')} label="Analyse des compétences...">
-                <Skills
-                  data={safeSkills}
-                  onChange={handleSkills}
-                  readOnly={isLoading}
-                />
-              </SectionShell>
-              <SectionShell status={status('strengths')} label="Génération des points forts...">
-                <Strengths
-                  data={safeStrengths}
-                  onChange={handleStrengths}
-                  readOnly={isLoading}
-                />
-              </SectionShell>
-            </div>
+            <SectionShell status={status('skills')} label="Analyse des compétences...">
+              <Skills
+                data={safeSkills}
+                onChange={handleSkills}
+                readOnly={isLoading}
+              />
+            </SectionShell>
             <SectionShell status={status('experiences')} label="Analyse des expériences...">
               <Experiences
                 data={safeExperiences}

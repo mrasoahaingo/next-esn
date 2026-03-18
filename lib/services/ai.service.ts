@@ -16,7 +16,30 @@ Normalisation des termes :
 - Mappe systématiquement les abréviations vers les labels officiels de la taxonomie skills.sh.
 
 Format de sortie attendu : JSON structuré.
-Si une fiche de poste est fournie, génère 4-5 points forts (strengths) qui matchent le CV avec les besoins du poste. Sinon, génère des points forts généraux basés sur l'expertise du candidat.
+
+Pour les compétences (skills), classe-les en 4 catégories :
+- technologies : langages, frameworks, bases de données, outils techniques
+- softSkills : compétences humaines (leadership, communication, esprit d'équipe, etc.)
+- expertises : domaines d'expertise (architecture, cloud, data, sécurité, etc.)
+- methodologies : méthodologies (Agile, Scrum, DevOps, TDD, etc.)
+
+IMPORTANT pour chaque compétence, indique la source :
+- "extracted" : la compétence est explicitement mentionnée dans le CV (dans une section compétences, dans le titre, ou clairement citée dans une expérience)
+- "inferred" : la compétence est déduite par toi à partir du contexte (ex: si le candidat utilise React, tu déduis JavaScript ; s'il fait du Scrum Master, tu déduis Agile)
+Sois strict : ne marque "extracted" que pour les compétences réellement écrites dans le CV. Privilégie la qualité à la quantité pour les compétences inférées.
+
+IMPORTANT pour les champs "starred" et "added" :
+- starred=true pour les compétences les plus importantes, connues, modernes et recherchées. MAX 20 starred pour les technologies. Pour les autres catégories : star les plus valorisantes
+- starred=false pour les compétences secondaires ou obsolètes
+- added=true automatiquement pour toutes les compétences starred (elles apparaîtront dans le PDF)
+- added=false automatiquement pour les compétences non-starred (l'utilisateur pourra les ajouter manuellement)
+- Trie chaque catégorie : starred+added en premier, puis les autres
+
+Pour le résumé (summary), rédige 3-4 phrases de synthèse professionnelle. Utilise **double astérisques** autour des compétences clés, technologies et réalisations importantes pour les mettre en évidence.
+
+Pour les informations personnelles :
+- yearsOfExperience : calcule le nombre total d'années d'expérience à partir des dates des expériences (ex: "8 ans")
+- availability : indique "Immédiate" par défaut sauf si le CV mentionne un préavis
 
 Langue : Français.`;
 
