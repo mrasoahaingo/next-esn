@@ -9,13 +9,14 @@ import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.sto
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
-import { useCandidate, useUpdateCandidate, useCancelWorkflow } from '@/lib/queries';
+import { useCandidate, useUpdateCandidate, useDeleteCandidate, useCancelWorkflow } from '@/lib/queries';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square, Save, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square, Save, CheckCircle2, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
@@ -46,7 +47,9 @@ export default function ReviewPage() {
   const { data: candidateData } = useCandidate(candidateId);
   const updateCandidate = useUpdateCandidate();
 
+  const deleteCandidate = useDeleteCandidate();
   const cancelWorkflow = useCancelWorkflow();
+  const router = useRouter();
 
   const { object, submit, isLoading, error, stop } = useWorkflowStream<ExtractedCV>({
     api: '/api/extract',
@@ -161,6 +164,22 @@ export default function ReviewPage() {
     });
   }, [candidateData?.workflow_run_id, candidateId, stop, cancelWorkflow]);
 
+  const handleDelete = useCallback(() => {
+    const runId = candidateData?.workflow_run_id;
+    if (runId && isLoading) {
+      stop();
+      cancelWorkflow.mutate({
+        runId,
+        table: 'candidates',
+        recordId: candidateId,
+        resetStatus: 'uploaded',
+      });
+    }
+    deleteCandidate.mutate(candidateId, {
+      onSuccess: () => router.push('/'),
+    });
+  }, [candidateData?.workflow_run_id, candidateId, isLoading, stop, cancelWorkflow, deleteCandidate, router]);
+
   const safeData = cvData as Partial<ExtractedCV> | undefined;
 
   // Memoize filtered arrays to avoid unstable references on every render
@@ -200,8 +219,42 @@ export default function ReviewPage() {
 
   if (!cvData && !isLoading) {
     return (
-      <div className="flex justify-center items-center h-full bg-background text-foreground">
-        <Loader2 className="animate-spin mr-2" /> Chargement...
+      <div className="flex flex-col items-center justify-center gap-4 h-full bg-background text-foreground">
+        <div className="flex items-center text-muted-foreground">
+          <Loader2 className="animate-spin mr-2" /> Chargement...
+        </div>
+        <div className="flex items-center gap-2">
+          {candidateData?.status === 'extracting' && candidateData?.workflow_run_id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCancelExtraction}
+              disabled={cancelWorkflow.isPending}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              {cancelWorkflow.isPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Square className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Annuler l&apos;extraction
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleteCandidate.isPending}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            {deleteCandidate.isPending ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Supprimer
+          </Button>
+        </div>
       </div>
     );
   }
@@ -244,6 +297,30 @@ export default function ReviewPage() {
                   Annuler
                 </Button>
               )}
+
+              {/* Delete candidate */}
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDelete}
+                      disabled={deleteCandidate.isPending}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      {deleteCandidate.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  }
+                />
+                <TooltipContent side="bottom" className="text-xs">
+                  Supprimer ce CV
+                </TooltipContent>
+              </Tooltip>
 
               {/* Time tracking indicators */}
               {(aiDurationMs || userTimeSeconds) && (

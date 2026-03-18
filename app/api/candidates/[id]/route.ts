@@ -23,6 +23,33 @@ export async function GET(
   }
 }
 
+export async function DELETE(
+  req: NextRequest,
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await props.params;
+    const { id } = params;
+    const supabase = getSupabase();
+
+    // Delete related extraction_history first
+    await supabase.from('extraction_history').delete().eq('candidate_id', id);
+
+    // Delete related positionings
+    await supabase.from('positionings').delete().eq('candidate_id', id);
+
+    const { error } = await supabase
+      .from('candidates')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }

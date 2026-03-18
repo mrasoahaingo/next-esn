@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 
+const ACTIVE_CV_STATUSES = ['extracting'];
+
 export function useCandidates() {
   return useQuery({
     queryKey: queryKeys.candidates.list(),
@@ -8,6 +10,11 @@ export function useCandidates() {
       const res = await fetch('/api/candidates');
       if (!res.ok) throw new Error('Failed to fetch candidates');
       return res.json();
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data as { status: string }[] | undefined;
+      if (data?.some((c) => ACTIVE_CV_STATUSES.includes(c.status))) return 3000;
+      return false;
     },
   });
 }
@@ -39,6 +46,22 @@ export function useUpdateCandidate() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    },
+  });
+}
+
+export function useDeleteCandidate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/candidates/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete candidate');
+      return res.json();
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },

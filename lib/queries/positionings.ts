@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 
+const ACTIVE_POS_STATUSES = ['analyzing', 'generating'];
+
 export function usePositionings() {
   return useQuery({
     queryKey: queryKeys.positionings.list(),
@@ -8,6 +10,11 @@ export function usePositionings() {
       const res = await fetch('/api/positioning');
       if (!res.ok) throw new Error('Failed to fetch positionings');
       return res.json();
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data as { status: string }[] | undefined;
+      if (data?.some((p) => ACTIVE_POS_STATUSES.includes(p.status))) return 3000;
+      return false;
     },
   });
 }

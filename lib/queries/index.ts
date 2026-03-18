@@ -1,5 +1,5 @@
 export { queryKeys } from './keys';
-export { useCandidates, useCandidate, useUpdateCandidate, useUploadCv } from './candidates';
+export { useCandidates, useCandidate, useUpdateCandidate, useDeleteCandidate, useUploadCv } from './candidates';
 export { useMissions, useMission, useCreateMission, usePositionExistingCandidates, useUploadCvsForMission } from './missions';
 export { usePositionings, usePositioning, useCreatePositioning, useUpdatePositioning, useExportPositioning } from './positionings';
 export { useDashboard } from './dashboard';
