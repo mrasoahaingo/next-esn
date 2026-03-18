@@ -10,6 +10,7 @@ import {
   FileText,
   Target,
   User,
+  ArrowRight,
   ChevronRight,
   Plus,
   Square,
@@ -234,11 +235,25 @@ function PositionCvsModal({
       { missionId, files: fileArray },
       {
         onSuccess: (data) => {
-          const count = data.results?.length ?? 0;
-          toast.success(`${count} CV${count > 1 ? 's' : ''} importé${count > 1 ? 's' : ''}`, {
-            description: 'Positionnements créés en brouillon.',
-          });
-          onOpenChange(false);
+          const successCount = data.results?.length ?? 0;
+          const errorCount = data.errors?.length ?? 0;
+
+          if (successCount > 0) {
+            toast.success(`${successCount} CV${successCount > 1 ? 's' : ''} importé${successCount > 1 ? 's' : ''}`, {
+              description: errorCount > 0
+                ? `Positionnements créés, ${errorCount} fichier${errorCount > 1 ? 's' : ''} en échec.`
+                : 'Positionnements créés en brouillon.',
+            });
+            onOpenChange(false);
+          }
+
+          if (errorCount > 0) {
+            const firstError = data.errors?.[0];
+            toast.error(
+              `${errorCount} import${errorCount > 1 ? 's' : ''} en échec`,
+              { description: firstError ? `${firstError.fileName}: ${firstError.error}` : undefined },
+            );
+          }
         },
         onError: () => toast.error("Erreur lors de l'import"),
       }
@@ -929,6 +944,8 @@ function PositioningRow({
   const score = p.analysis?.matchScore;
   const pst = posStatusConfig[p.status] ?? posStatusConfig.draft;
   const isProcessing = p.status === 'analyzing' || p.status === 'generating';
+  const isCvExtracting = p.status === 'draft'
+    && ['uploaded', 'extracting'].includes(candidate?.status ?? '');
 
   return (
     <div
@@ -975,7 +992,7 @@ function PositioningRow({
         </div>
       ) : (
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/[0.04]">
-          {isProcessing ? (
+          {isProcessing || isCvExtracting ? (
             <Loader2 className="h-4 w-4 animate-spin text-violet/60" />
           ) : (
             <User className="h-4 w-4 text-muted-foreground/50" />
@@ -990,6 +1007,17 @@ function PositioningRow({
         </div>
         {title && (
           <p className="mt-0.5 text-xs text-muted-foreground truncate">{title}</p>
+        )}
+        {isCvExtracting && (
+          <div className="mt-1 flex items-center gap-1 text-[10px]">
+            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
+              CV en extraction
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
+              Génération en attente
+            </span>
+          </div>
         )}
         {p.analysis?.matchSummary && (
           <Tooltip>

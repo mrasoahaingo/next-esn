@@ -229,12 +229,26 @@ export default function PositioningWizardPage() {
   useEffect(() => {
     if (!isLoaded || autoAnalyzedRef.current) return;
     if (isAnalysisLoading) return; // Don't auto-launch if already streaming
-    if (currentStep === 1 && !analysis && jobDescription.trim()) {
+    const isCandidateReadyForAnalysis = !!candidateData?.extracted_data
+      && ['reviewing', 'ready', 'generated'].includes(candidateData.status ?? '');
+
+    if (currentStep === 1 && !analysis && jobDescription.trim() && isCandidateReadyForAnalysis) {
       autoAnalyzedRef.current = true;
       setIsAnalyzing(true);
       submitAnalysis({ positioningId: positioningIdParam });
     }
-  }, [isLoaded, currentStep, analysis, jobDescription, positioningIdParam, setIsAnalyzing, submitAnalysis, isAnalysisLoading]);
+  }, [
+    isLoaded,
+    currentStep,
+    analysis,
+    jobDescription,
+    positioningIdParam,
+    setIsAnalyzing,
+    submitAnalysis,
+    isAnalysisLoading,
+    candidateData?.status,
+    candidateData?.extracted_data,
+  ]);
 
   // Sync streaming analysis to store
   useEffect(() => {
