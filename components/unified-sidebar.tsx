@@ -114,9 +114,18 @@ export function UnifiedSidebar() {
   const cancelWorkflow = useCancelWorkflow();
   const createMission = useCreateMission();
 
-  const candidates: Candidate[] = isDemoMode ? [] : (Array.isArray(candidatesData) ? candidatesData : []);
-  const positionings: Positioning[] = isDemoMode ? [] : (Array.isArray(positioningsData) ? positioningsData : []);
-  const missions: Mission[] = isDemoMode ? [] : (Array.isArray(missionsData) ? missionsData : []);
+  const candidates: Candidate[] = useMemo(
+    () => (isDemoMode ? [] : (Array.isArray(candidatesData) ? candidatesData : [])),
+    [isDemoMode, candidatesData]
+  );
+  const positionings: Positioning[] = useMemo(
+    () => (isDemoMode ? [] : (Array.isArray(positioningsData) ? positioningsData : [])),
+    [isDemoMode, positioningsData]
+  );
+  const missions: Mission[] = useMemo(
+    () => (isDemoMode ? [] : (Array.isArray(missionsData) ? missionsData : [])),
+    [isDemoMode, missionsData]
+  );
   const isLoading = !isDemoMode && (isLoadingCandidates || isLoadingPositionings || isLoadingMissions);
 
   const activeCvId = params?.id as string | undefined;

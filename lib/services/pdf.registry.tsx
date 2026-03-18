@@ -81,6 +81,7 @@ function FixedTextComponent({ element }: { element: { props: Record<string, unkn
 function FixedImageComponent({ element }: { element: { props: Record<string, unknown> } }) {
   const p = element.props;
   return (
+    // eslint-disable-next-line jsx-a11y/alt-text
     <Image
       fixed
       src={p.src as string}

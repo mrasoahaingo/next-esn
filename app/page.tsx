@@ -166,9 +166,10 @@ export default function Dashboard() {
   const uploadCv = useUploadCv();
   const isUploading = uploadCv.isPending;
 
-  const data: DashboardData | null = isDemoMode
-    ? { candidates: [], positionings: [] }
-    : dashboardData ?? null;
+  const data: DashboardData | null = useMemo(
+    () => (isDemoMode ? { candidates: [], positionings: [] } : dashboardData ?? null),
+    [isDemoMode, dashboardData]
+  );
 
   // ─── Derived stats ─────────────────────────────────────────────
 

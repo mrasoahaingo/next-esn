@@ -532,13 +532,14 @@ export default function PositionDetailPage() {
   };
   const cancelWorkflow = useCancelWorkflow();
 
-  const positionings = mission?.positionings ?? [];
+  const positionings = useMemo(
+    () => mission?.positionings ?? [],
+    [mission?.positionings]
+  );
 
-  // Split positionings
   const drafts = positionings.filter((p) => DRAFT_STATUSES.has(p.status));
   const ready = positionings.filter((p) => READY_STATUSES.has(p.status));
 
-  // Set of candidate IDs already positioned on this mission
   const existingCandidateIds = useMemo(
     () => new Set(positionings.map((p) => p.candidate_id)),
     [positionings]
