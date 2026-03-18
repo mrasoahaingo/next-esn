@@ -12,6 +12,18 @@ export function useMissions() {
   });
 }
 
+export function useMission(id: string) {
+  return useQuery({
+    queryKey: queryKeys.missions.detail(id),
+    queryFn: async () => {
+      const res = await fetch(`/api/missions/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch mission');
+      return res.json();
+    },
+    enabled: !!id,
+  });
+}
+
 export function useCreateMission() {
   const queryClient = useQueryClient();
 
@@ -27,6 +39,60 @@ export function useCreateMission() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+    },
+  });
+}
+
+export function usePositionExistingCandidates() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ missionId, candidateIds }: { missionId: string; candidateIds: string[] }) => {
+      const results = await Promise.all(
+        candidateIds.map(candidateId =>
+          fetch('/api/positioning', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ candidateId, missionId }),
+          }).then(r => {
+            if (!r.ok) throw new Error('Failed to create positioning');
+            return r.json();
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    },
+  });
+}
+
+export function useUploadCvsForMission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ missionId, files }: { missionId: string; files: File[] }) => {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('files', file);
+      }
+      const res = await fetch(`/api/missions/${missionId}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
 }

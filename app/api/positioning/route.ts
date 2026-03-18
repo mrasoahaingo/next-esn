@@ -7,7 +7,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('positionings')
-      .select('id, candidate_id, mission_id, job_description, status, analysis, created_at, candidates(id, extracted_data), missions(id, title, company)')
+      .select('id, candidate_id, mission_id, job_description, status, analysis, workflow_run_id, created_at, candidates(id, extracted_data), missions(id, title, company)')
       .order('created_at', { ascending: false });
 
     if (error) throw error;

@@ -11,7 +11,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('missions')
-      .select('*')
+      .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, candidates(id, extracted_data, original_file_url, status))')
       .eq('id', id)
       .single();
 
