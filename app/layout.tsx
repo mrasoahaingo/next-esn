@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ClerkProvider } from "@clerk/nextjs";
+import { frFR } from "@clerk/localizations";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { UnifiedSidebar } from "@/components/unified-sidebar";
 import { Analytics } from "@vercel/analytics/next"
-
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,24 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ClerkProvider
+          localization={frFR}
+          appearance={{
+            variables: {
+              colorPrimary: '#8b5cf6',
+              colorBackground: '#0c0c0f',
+              colorInputBackground: '#18181b',
+              colorInputText: '#fafafa',
+              colorText: '#fafafa',
+              colorTextSecondary: '#a1a1aa',
+            },
+            elements: {
+              card: 'bg-panel border border-white/10 shadow-xl',
+              formButtonPrimary: 'bg-violet hover:bg-violet/90',
+              footerActionLink: 'text-violet hover:text-violet/80',
+            },
+          }}
+        >
         <QueryProvider>
         <ThemeProvider
           attribute="class"
@@ -52,6 +71,7 @@ export default function RootLayout({
           </TooltipProvider>
         </ThemeProvider>
         </QueryProvider>
+        </ClerkProvider>
         <Analytics />
       </body>
     </html>
