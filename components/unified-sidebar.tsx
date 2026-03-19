@@ -618,9 +618,11 @@ export function UnifiedSidebar() {
       <div className="flex items-center justify-between px-3 py-3">
         <OrganizationSwitcher
           hidePersonal
+          afterSelectOrganizationUrl="/"
+          afterCreateOrganizationUrl="/"
           appearance={{
             elements: {
-              rootBox: 'w-full',
+              rootBox: 'flex-1 min-w-0',
               organizationSwitcherTrigger:
                 'w-full justify-between rounded-lg px-2.5 py-2 text-xs text-muted-foreground hover:bg-card/60 hover:text-foreground border-0',
             },

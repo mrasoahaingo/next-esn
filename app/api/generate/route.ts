@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
 import { getTemplateConfig } from '@/lib/utils/template';
 
 export async function POST(req: NextRequest) {
   try {
+    const orgId = await requireOrgId();
     const { candidateId, data } = await req.json();
     const supabase = getSupabase();
 
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const templateConfig = await getTemplateConfig(candidate?.template_id);
     const pdfBuffer = await generateHimeoPdf(data, templateConfig);
-    const fileName = `HIMEO_CV_${data.personalInfo.lastName}_${Date.now()}.pdf`;
+    const fileName = `${orgId}/HIMEO_CV_${data.personalInfo.lastName}_${Date.now()}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from('cv-formatted')
@@ -54,6 +56,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(updatedCandidate);
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Generation error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

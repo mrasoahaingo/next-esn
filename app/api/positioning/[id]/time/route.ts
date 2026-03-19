@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 
 export async function POST(
   req: NextRequest,
   props: { params: Promise<{ id: string }> },
 ) {
   try {
+    await requireOrgId();
     const params = await props.params;
     const { id } = params;
     const { seconds } = await req.json();

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const orgId = await requireOrgId();
     const { id } = await params;
     const supabase = getSupabase();
 
@@ -13,12 +15,14 @@ export async function GET(
       .from('positionings')
       .select('*')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single();
 
     if (error) throw error;
 
     return NextResponse.json(data);
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Get positioning error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
@@ -29,6 +33,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const orgId = await requireOrgId();
     const { id } = await params;
     const body = await req.json();
     const supabase = getSupabase();
@@ -37,6 +42,7 @@ export async function PATCH(
       .from('positionings')
       .update({ ...body, updated_at: new Date().toISOString() })
       .eq('id', id)
+      .eq('org_id', orgId)
       .select()
       .single();
 
@@ -44,6 +50,7 @@ export async function PATCH(
 
     return NextResponse.json(data);
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Update positioning error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
