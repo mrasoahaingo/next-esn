@@ -28,6 +28,11 @@ export function useCandidate(id: string) {
       return res.json();
     },
     enabled: !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data as { status: string } | undefined;
+      if (data?.status && ACTIVE_CV_STATUSES.includes(data.status)) return 3000;
+      return false;
+    },
   });
 }
 

@@ -79,6 +79,9 @@ export default function PositioningWizardPage() {
 
   const [isLoaded, setIsLoaded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const refreshMissionCards = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.all });
+  }, [queryClient]);
 
   // Workflow streams
   const {
@@ -236,6 +239,7 @@ export default function PositioningWizardPage() {
       autoAnalyzedRef.current = true;
       setIsAnalyzing(true);
       submitAnalysis({ positioningId: positioningIdParam });
+      refreshMissionCards();
     }
   }, [
     isLoaded,
@@ -248,6 +252,7 @@ export default function PositioningWizardPage() {
     isAnalysisLoading,
     candidateData?.status,
     candidateData?.extracted_data,
+    refreshMissionCards,
   ]);
 
   // Sync streaming analysis to store
@@ -329,10 +334,11 @@ export default function PositioningWizardPage() {
           setIsAnalyzing(true);
           setAnalysis(null);
           submitAnalysis({ positioningId: positioningIdParam });
+          refreshMissionCards();
         },
       }
     );
-  }, [jobDescription, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis]);
+  }, [jobDescription, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis, refreshMissionCards]);
 
   const handleGenerate = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
@@ -354,10 +360,11 @@ export default function PositioningWizardPage() {
           setEmail(null);
           setCandidateEmail(null);
           submitGenerate({ positioningId: positioningIdParam, answers });
+          refreshMissionCards();
         },
       }
     );
-  }, [positioningIdParam, analysis, updatePositioning, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate]);
+  }, [positioningIdParam, analysis, updatePositioning, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate, refreshMissionCards]);
 
   const handleExport = useCallback(() => {
     if (!positioningIdParam || !tailoredCv) return;
@@ -539,6 +546,16 @@ export default function PositioningWizardPage() {
                 <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
                 CV
               </Button>
+              {positioningData?.mission_id && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/positions/${positioningData.mission_id}`)}
+                >
+                  <Target className="mr-1.5 h-3.5 w-3.5" />
+                  Position
+                </Button>
+              )}
               {currentStep === 3 && (
                 <Button onClick={handleExport} disabled={exportPositioning.isPending || isStreaming || !tailoredCv}>
                   {exportPositioning.isPending ? (

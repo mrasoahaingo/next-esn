@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from './keys';
 
-const ACTIVE_POSITIONING_STATUSES = ['draft', 'analyzing', 'generating'];
+const ACTIVE_POSITIONING_STATUSES = ['analyzing', 'generating'];
 const ACTIVE_CANDIDATE_STATUSES = ['uploaded', 'extracting'];
 
 export function useMissions() {

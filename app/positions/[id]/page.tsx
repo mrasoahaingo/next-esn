@@ -944,8 +944,15 @@ function PositioningRow({
   const score = p.analysis?.matchScore;
   const pst = posStatusConfig[p.status] ?? posStatusConfig.draft;
   const isProcessing = p.status === 'analyzing' || p.status === 'generating';
+  const candidateStatus = candidate?.status ?? '';
+  const isCandidateReady = ['reviewing', 'ready', 'generated'].includes(candidateStatus);
   const isCvExtracting = p.status === 'draft'
-    && ['uploaded', 'extracting'].includes(candidate?.status ?? '');
+    && ['uploaded', 'extracting'].includes(candidateStatus);
+  const isAnalysisWaiting = p.status === 'draft'
+    && isCandidateReady
+    && !p.workflow_run_id;
+  const isAnalysisRunning = p.status === 'analyzing';
+  const isGenerationWaiting = p.status === 'analyzed';
 
   return (
     <div
@@ -992,7 +999,7 @@ function PositioningRow({
         </div>
       ) : (
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/[0.04]">
-          {isProcessing || isCvExtracting ? (
+          {isProcessing || isCvExtracting || isAnalysisRunning ? (
             <Loader2 className="h-4 w-4 animate-spin text-violet/60" />
           ) : (
             <User className="h-4 w-4 text-muted-foreground/50" />
@@ -1012,6 +1019,55 @@ function PositioningRow({
           <div className="mt-1 flex items-center gap-1 text-[10px]">
             <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
               CV en extraction
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
+              Analyse en attente
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
+              Génération en attente
+            </span>
+          </div>
+        )}
+        {isAnalysisWaiting && (
+          <div className="mt-1 flex items-center gap-1 text-[10px]">
+            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
+              CV extrait
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
+              Analyse en attente
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
+              Génération en attente
+            </span>
+          </div>
+        )}
+        {isAnalysisRunning && (
+          <div className="mt-1 flex items-center gap-1 text-[10px]">
+            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
+              CV extrait
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
+              Analyse en cours
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
+              Génération en attente
+            </span>
+          </div>
+        )}
+        {isGenerationWaiting && (
+          <div className="mt-1 flex items-center gap-1 text-[10px]">
+            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
+              CV extrait
+            </span>
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
+            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
+              Analyse terminée
             </span>
             <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
             <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">

@@ -28,6 +28,11 @@ export function usePositioning(id: string) {
       return res.json();
     },
     enabled: !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data as { status: string } | undefined;
+      if (data?.status && ACTIVE_POS_STATUSES.includes(data.status)) return 3000;
+      return false;
+    },
   });
 }
 
