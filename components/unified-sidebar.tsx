@@ -110,8 +110,6 @@ export function UnifiedSidebar() {
   const pathname = usePathname();
   const { isDemoMode, toggleDemoMode } = useDemoModeStore();
 
-  if (!isLoaded || !isSignedIn) return null;
-
   const { data: candidatesData, isLoading: isLoadingCandidates } = useCandidates();
   const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
   const { data: missionsData, isLoading: isLoadingMissions } = useMissions();
@@ -219,6 +217,8 @@ export function UnifiedSidebar() {
   };
 
   const isOnTemplates = pathname.startsWith('/templates');
+
+  if (!isLoaded || !isSignedIn) return null;
 
   return (
     <aside className="flex h-screen w-[280px] flex-col border-r border-violet/10 bg-panel">
@@ -615,7 +615,7 @@ export function UnifiedSidebar() {
 
       {/* User & Organization */}
       <Separator />
-      <div className="px-3 py-3 space-y-3">
+      <div className="flex items-center justify-between px-3 py-3">
         <OrganizationSwitcher
           hidePersonal
           appearance={{
@@ -626,15 +626,13 @@ export function UnifiedSidebar() {
             },
           }}
         />
-        <div className="flex items-center gap-2 px-1">
-          <UserButton
-            appearance={{
-              elements: {
-                avatarBox: 'h-7 w-7',
-              },
-            }}
-          />
-        </div>
+        <UserButton
+          appearance={{
+            elements: {
+              avatarBox: 'h-7 w-7',
+            },
+          }}
+        />
       </div>
 
       {/* New mission dialog */}
