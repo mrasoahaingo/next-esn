@@ -23,6 +23,7 @@
     "@tiptap/pm": "3.20.1",
     "@tiptap/react": "3.20.1",
     "@tiptap/starter-kit": "3.20.1",
+    "@vercel/analytics": "2.0.1",
     "@workflow/ai": "4.0.1-beta.56",
     "@workflow/next": "4.0.1-beta.66",
     "ai": "6.0.116",

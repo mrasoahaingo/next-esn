@@ -6,6 +6,6 @@ interface DemoModeState {
 }
 
 export const useDemoModeStore = create<DemoModeState>((set) => ({
-  isDemoMode: true,
+  isDemoMode: false,
   toggleDemoMode: () => set((state) => ({ isDemoMode: !state.isDemoMode })),
 }));

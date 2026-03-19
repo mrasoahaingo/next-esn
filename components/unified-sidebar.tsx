@@ -32,6 +32,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label as SwitchLabel } from '@/components/ui/label';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 interface Candidate {
   id: string;
   status: string;
@@ -236,9 +238,11 @@ export function UnifiedSidebar() {
 
       {/* Demo mode toggle */}
       <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
-        <SwitchLabel htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
-          Mode démo
-        </SwitchLabel>
+        {!isProduction && (
+          <SwitchLabel htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
+            Mode démo
+          </SwitchLabel>
+        )}
         <Switch
           id="demo-mode"
           checked={isDemoMode}

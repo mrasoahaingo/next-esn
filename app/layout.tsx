@@ -6,6 +6,8 @@ import { QueryProvider } from "@/components/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { UnifiedSidebar } from "@/components/unified-sidebar";
+import { Analytics } from "@vercel/analytics/next"
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +52,7 @@ export default function RootLayout({
           </TooltipProvider>
         </ThemeProvider>
         </QueryProvider>
+        <Analytics />
       </body>
     </html>
   );
