@@ -20,3 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_templates_org_id ON templates(org_id);
 -- extraction_history (inherits org scope through candidate, but add for direct queries)
 ALTER TABLE extraction_history ADD COLUMN IF NOT EXISTS org_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_extraction_history_org_id ON extraction_history(org_id);
+
+-- ai_usage_log
+ALTER TABLE ai_usage_log ADD COLUMN IF NOT EXISTS org_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_ai_usage_log_org_id ON ai_usage_log(org_id);

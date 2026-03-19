@@ -19,12 +19,17 @@ async function fetchAndExtract(candidateId: string, jobDescription?: string) {
     .single();
 
   if (fetchError || !candidate) throw new Error('Candidate not found');
+  const orgId = candidate.org_id as string | null;
 
-  // 2. Download file
-  const fileName = candidate.original_file_url.split('/').pop()!;
+  // 2. Download file — extract storage path after bucket name
+  const bucketPrefix = '/cv-original/';
+  const bucketIndex = candidate.original_file_url.indexOf(bucketPrefix);
+  const storagePath = bucketIndex !== -1
+    ? candidate.original_file_url.slice(bucketIndex + bucketPrefix.length)
+    : candidate.original_file_url.split('/').pop()!;
   const { data: fileBlob, error: downloadError } = await supabase.storage
     .from('cv-original')
-    .download(fileName);
+    .download(storagePath);
 
   if (downloadError) {
     console.error('Download error:', downloadError);
@@ -33,7 +38,7 @@ async function fetchAndExtract(candidateId: string, jobDescription?: string) {
 
   const arrayBuffer = await fileBlob.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
-  const ext = fileName.split('.').pop()?.toLowerCase();
+  const ext = storagePath.split('.').pop()?.toLowerCase();
   const isPdf = ext === 'pdf';
 
   // 3. Build message content
@@ -83,12 +88,12 @@ async function fetchAndExtract(candidateId: string, jobDescription?: string) {
   const usage = await result.usage;
   const durationMs = Date.now() - startTime;
 
-  return { object: lastPartial, usage, durationMs };
+  return { object: lastPartial, usage, durationMs, orgId };
 }
 
 async function saveResult(
   candidateId: string,
-  result: { object: unknown; usage: LanguageModelUsage; durationMs: number },
+  result: { object: unknown; usage: LanguageModelUsage; durationMs: number; orgId: string | null },
 ) {
   "use step";
 
@@ -97,6 +102,7 @@ async function saveResult(
   await logAiUsage(supabase, {
     operation: 'extraction',
     candidateId,
+    orgId: result.orgId ?? undefined,
     aiModel: modelName,
     durationMs: result.durationMs,
     usage: result.usage,
@@ -116,6 +122,7 @@ async function saveResult(
       candidate_id: candidateId,
       extraction_result: result.object,
       ai_model: modelName,
+      org_id: result.orgId,
     });
   }
 

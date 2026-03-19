@@ -11,10 +11,17 @@ const isPublicRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, request) => {
   if (isPublicRoute(request)) return
 
-  const { orgId } = await auth.protect()
+  try {
+    const { orgId } = await auth.protect()
 
-  if (!orgId && !request.nextUrl.pathname.startsWith('/org-selection')) {
-    return NextResponse.redirect(new URL('/org-selection', request.url))
+    if (!orgId && !request.nextUrl.pathname.startsWith('/org-selection')) {
+      return NextResponse.redirect(new URL('/org-selection', request.url))
+    }
+  } catch (err) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(`[middleware] auth.protect() failed for ${request.method} ${request.nextUrl.pathname}:`, (err as Error).message ?? err)
+    }
+    throw err
   }
 })
 
