@@ -1,10 +1,12 @@
 import { start } from 'workflow/api';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 import { positioningAnalyzeWorkflow } from '@/workflows/positioning-analyze';
 
 export async function POST(req: NextRequest) {
   try {
+    await requireOrgId();
     const { positioningId } = await req.json();
     if (!positioningId) throw new Error('positioningId is required');
 
@@ -44,6 +46,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Positioning analysis error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

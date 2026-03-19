@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 
 export async function GET(
   req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const orgId = await requireOrgId();
     const params = await props.params;
     const { id } = params;
     const supabase = getSupabase();
@@ -14,11 +16,13 @@ export async function GET(
       .from('candidates')
       .select('*')
       .eq('id', id)
+      .eq('org_id', orgId)
       .single();
 
     if (error) throw error;
     return NextResponse.json(data);
   } catch (error) {
+    if (error instanceof NextResponse) return error;
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
@@ -28,24 +32,24 @@ export async function DELETE(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const orgId = await requireOrgId();
     const params = await props.params;
     const { id } = params;
     const supabase = getSupabase();
 
-    // Delete related extraction_history first
     await supabase.from('extraction_history').delete().eq('candidate_id', id);
-
-    // Delete related positionings
     await supabase.from('positionings').delete().eq('candidate_id', id);
 
     const { error } = await supabase
       .from('candidates')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('org_id', orgId);
 
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof NextResponse) return error;
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
@@ -55,6 +59,7 @@ export async function PATCH(
   props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const orgId = await requireOrgId();
     const params = await props.params;
     const { id } = params;
     const body = await req.json();
@@ -64,12 +69,14 @@ export async function PATCH(
       .from('candidates')
       .update(body)
       .eq('id', id)
+      .eq('org_id', orgId)
       .select()
       .single();
 
     if (error) throw error;
     return NextResponse.json(data);
   } catch (error) {
+    if (error instanceof NextResponse) return error;
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

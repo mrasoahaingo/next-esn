@@ -1,12 +1,14 @@
 import { getWorld } from 'workflow/runtime';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ runId: string }> },
 ) {
   try {
+    await requireOrgId();
     const { runId } = await params;
     const body = await request.json().catch(() => ({}));
     const { table, recordId, resetStatus } = body as {
@@ -33,6 +35,7 @@ export async function POST(
 
     return NextResponse.json({ status: 'cancelled' });
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Workflow cancel error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

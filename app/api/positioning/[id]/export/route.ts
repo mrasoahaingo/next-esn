@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
 import { getTemplateConfig } from '@/lib/utils/template';
 
@@ -8,6 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const orgId = await requireOrgId();
     const { id } = await params;
     const { tailoredCv, email, candidateEmail } = await req.json();
     const supabase = getSupabase();
@@ -26,7 +28,7 @@ export async function POST(
     const templateConfig = await getTemplateConfig(positioning.candidates?.template_id);
     const pdfBuffer = await generateHimeoPdf(cvData, templateConfig);
     const lastName = cvData.personalInfo?.lastName ?? 'candidat';
-    const fileName = `HIMEO_CV_${lastName}_positioning_${Date.now()}.pdf`;
+    const fileName = `${orgId}/HIMEO_CV_${lastName}_positioning_${Date.now()}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from('cv-formatted')
@@ -51,6 +53,7 @@ export async function POST(
 
     return NextResponse.json({ fileUrl });
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Positioning export error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

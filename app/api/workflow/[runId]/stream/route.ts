@@ -1,11 +1,13 @@
 import { getRun } from 'workflow/api';
 import { NextRequest, NextResponse } from 'next/server';
+import { requireOrgId } from '@/lib/utils/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ runId: string }> },
 ) {
   try {
+    await requireOrgId();
     const { runId } = await params;
     const { searchParams } = new URL(request.url);
 
@@ -33,6 +35,7 @@ export async function GET(
       },
     });
   } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
     console.error('Workflow stream error:', error);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }

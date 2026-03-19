@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { start } from 'workflow/api';
 import { extractCvWorkflow } from '@/workflows/extract-cv';
 import { getSupabase } from '@/lib/utils/supabase';
+import { requireOrgId } from '@/lib/utils/auth';
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const orgId = await requireOrgId();
     const { id: missionId } = await params;
     const supabase = getSupabase();
 
-    // Verify mission exists and get job_description
     const { data: mission, error: missionError } = await supabase
       .from('missions')
       .select('id, job_description')
       .eq('id', missionId)
+      .eq('org_id', orgId)
       .single();
 
     if (missionError) throw missionError;
@@ -32,7 +34,7 @@ export async function POST(
 
     for (const file of files) {
       const sanitizedName = file.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
-      const fileName = `${Date.now()}_${sanitizedName}`;
+        const fileName = `${orgId}/${Date.now()}_${sanitizedName}`;
 
       try {
         // 1. Upload file to storage
@@ -49,19 +51,18 @@ export async function POST(
           .from('cv-original')
           .getPublicUrl(fileName);
 
-        // 2. Create candidate
         const { data: candidate, error: candidateError } = await supabase
           .from('candidates')
           .insert({
             original_file_url: originalFileUrl,
             status: 'uploaded',
+            org_id: orgId,
           })
           .select()
           .single();
 
         if (candidateError) throw candidateError;
 
-        // 3. Create positioning linked to this mission
         const { data: positioning, error: positioningError } = await supabase
           .from('positionings')
           .insert({
@@ -69,6 +70,7 @@ export async function POST(
             mission_id: mission.id,
             job_description: mission.job_description,
             status: 'draft',
+            org_id: orgId,
           })
           .select()
           .single();
@@ -102,6 +104,7 @@ export async function POST(
     const status = results.length === 0 ? 500 : errors.length > 0 ? 207 : 200;
     return NextResponse.json({ results, errors }, { status });
   } catch (error) {
+    if (error instanceof NextResponse) return error;
     console.error('Mission upload error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },

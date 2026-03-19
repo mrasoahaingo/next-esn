@@ -56,12 +56,12 @@ async function fetchAndAnalyze(positioningId: string) {
   const usage = await result.usage;
   const durationMs = Date.now() - startTime;
 
-  return { object: lastPartial, usage, durationMs, candidateId: positioning.candidate_id };
+  return { object: lastPartial, usage, durationMs, candidateId: positioning.candidate_id, orgId: positioning.org_id as string | null };
 }
 
 async function saveAnalysis(
   positioningId: string,
-  result: { object: unknown; usage: LanguageModelUsage; durationMs: number; candidateId: string },
+  result: { object: unknown; usage: LanguageModelUsage; durationMs: number; candidateId: string; orgId: string | null },
 ) {
   "use step";
 
@@ -71,6 +71,7 @@ async function saveAnalysis(
     operation: 'analysis',
     positioningId,
     candidateId: result.candidateId,
+    orgId: result.orgId ?? undefined,
     aiModel: modelName,
     durationMs: result.durationMs,
     usage: result.usage,

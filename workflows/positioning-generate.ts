@@ -59,12 +59,12 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   const usage = await result.usage;
   const durationMs = Date.now() - startTime;
 
-  return { object: lastPartial as { tailoredCv: unknown; email: unknown; emailFirstContact: unknown; emailBulletPoints: unknown; candidateEmail: unknown }, usage, durationMs, candidateId: positioning.candidate_id };
+  return { object: lastPartial as { tailoredCv: unknown; email: unknown; emailFirstContact: unknown; emailBulletPoints: unknown; candidateEmail: unknown }, usage, durationMs, candidateId: positioning.candidate_id, orgId: positioning.org_id as string | null };
 }
 
 async function saveGeneration(
   positioningId: string,
-  result: { object: { tailoredCv: unknown; email: unknown; emailFirstContact: unknown; emailBulletPoints: unknown; candidateEmail: unknown }; usage: LanguageModelUsage; durationMs: number; candidateId: string },
+  result: { object: { tailoredCv: unknown; email: unknown; emailFirstContact: unknown; emailBulletPoints: unknown; candidateEmail: unknown }; usage: LanguageModelUsage; durationMs: number; candidateId: string; orgId: string | null },
 ) {
   "use step";
 
@@ -74,6 +74,7 @@ async function saveGeneration(
     operation: 'generation',
     positioningId,
     candidateId: result.candidateId,
+    orgId: result.orgId ?? undefined,
     aiModel: modelName,
     durationMs: result.durationMs,
     usage: result.usage,

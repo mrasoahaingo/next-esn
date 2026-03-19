@@ -23,6 +23,8 @@ Required in `.env`:
 - `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `AI_GATEWAY_API_KEY` (Vercel AI Gateway key — uses `google/gemini-2.5-flash` for OCR + structured extraction)
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
 
 ## Architecture
 
@@ -46,6 +48,15 @@ Required in `.env`:
 - **PDF template** (`lib/services/pdf.template.ts`) builds a json-render `Spec` from `Partial<ExtractedCV>`, handling missing sections gracefully during streaming
 - **PDF rendering** (`lib/services/pdf.service.ts`) uses `@json-render/react-pdf`'s `renderToBuffer` server-side
 - **Supabase client** (`lib/utils/supabase.ts`) uses service role key (server-side only, singleton pattern)
+- **Auth & RBAC** (`lib/utils/auth.ts`) — Clerk-based, 3 levels: `super_admin` (platform founders via `publicMetadata.role`), `org:admin` (org managers, Clerk built-in role), `org:member` (employees, default). Helpers: `requireOrgId()`, `requireSuperAdmin()`, `requireOrgAdmin()`, `getAuthContext()`
+- **Global type** (`types/clerk.d.ts`) augments Clerk's `CustomJwtSessionClaims` to include `metadata.role`
+
+### Clerk Dashboard Setup
+
+1. Enable **Organizations** in Clerk Dashboard
+2. **Session token**: Customize → add `{ "metadata": "{{user.public_metadata}}" }` so `publicMetadata.role` is available in session claims
+3. **Super admin**: Set `publicMetadata: { "role": "super_admin" }` on founder users via Clerk Dashboard (Users → user → Metadata)
+4. **Org roles**: Use built-in `org:admin` / `org:member` — no custom roles needed
 
 ### Supabase Tables
 

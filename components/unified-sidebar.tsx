@@ -26,12 +26,16 @@ import {
   Palette,
   Square,
   Building2,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
 import { Label as SwitchLabel } from '@/components/ui/label';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
+import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
+import { useOrgRole } from '@/lib/hooks/useOrgRole';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -109,6 +113,9 @@ export function UnifiedSidebar() {
   const params = useParams();
   const pathname = usePathname();
   const { isDemoMode, toggleDemoMode } = useDemoModeStore();
+  const { isSuperAdmin } = useSuperAdmin();
+  const { isOrgAdmin } = useOrgRole();
+  const canManageTeam = isOrgAdmin || isSuperAdmin;
 
   const { data: candidatesData, isLoading: isLoadingCandidates } = useCandidates();
   const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
@@ -597,9 +604,9 @@ export function UnifiedSidebar() {
         )}
       </div>
 
-      {/* Bottom: Templates */}
+      {/* Bottom: Templates + Team + Admin */}
       <Separator />
-      <div className="px-2 py-2">
+      <div className="px-2 py-2 space-y-0.5">
         <button
           onClick={() => router.push('/templates')}
           className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
@@ -611,6 +618,32 @@ export function UnifiedSidebar() {
           <Palette className="h-4 w-4" />
           <span className="font-medium">Templates</span>
         </button>
+        {canManageTeam && (
+          <button
+            onClick={() => router.push('/settings/team')}
+            className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+              pathname.startsWith('/settings/team')
+                ? 'bg-violet/10 text-violet'
+                : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            <span className="font-medium">Équipe</span>
+          </button>
+        )}
+        {isSuperAdmin && (
+          <button
+            onClick={() => router.push('/admin')}
+            className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+              pathname.startsWith('/admin')
+                ? 'bg-amber-500/10 text-amber-400'
+                : 'text-muted-foreground hover:bg-card/60 hover:text-amber-400'
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span className="font-medium">Administration</span>
+          </button>
+        )}
       </div>
 
       {/* User & Organization */}
@@ -618,9 +651,11 @@ export function UnifiedSidebar() {
       <div className="flex items-center justify-between px-3 py-3">
         <OrganizationSwitcher
           hidePersonal
+          afterSelectOrganizationUrl="/"
+          afterCreateOrganizationUrl="/"
           appearance={{
             elements: {
-              rootBox: 'w-full',
+              rootBox: 'flex-1 min-w-0',
               organizationSwitcherTrigger:
                 'w-full justify-between rounded-lg px-2.5 py-2 text-xs text-muted-foreground hover:bg-card/60 hover:text-foreground border-0',
             },
