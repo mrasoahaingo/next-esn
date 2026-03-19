@@ -27,6 +27,7 @@ import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { GenerationStep } from './components/GenerationStep';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AnalysisCharts = dynamic(
   () => import('./components/AnalysisCharts').then((m) => m.AnalysisCharts),
@@ -46,6 +47,8 @@ export default function PositioningWizardPage() {
     analysis,
     tailoredCv,
     email,
+    emailFirstContact,
+    emailBulletPoints,
     candidateEmail,
     currentStep,
     isAnalyzing,
@@ -58,6 +61,8 @@ export default function PositioningWizardPage() {
     setAnalysis,
     setTailoredCv,
     setEmail,
+    setEmailFirstContact,
+    setEmailBulletPoints,
     setCandidateEmail,
     setCurrentStep,
     setIsAnalyzing,
@@ -182,7 +187,7 @@ export default function PositioningWizardPage() {
       if (data.status === 'analyzing') {
         setCurrentStep(1);
       } else {
-        setCurrentStep(3);
+        setCurrentStep(2);
       }
       setIsLoaded(true);
       return;
@@ -191,6 +196,8 @@ export default function PositioningWizardPage() {
     if (data.analysis) setAnalysis(data.analysis);
     if (data.tailored_cv) setTailoredCv(data.tailored_cv);
     if (data.email) setEmail(data.email);
+    if (data.email_first_contact) setEmailFirstContact(data.email_first_contact);
+    if (data.email_bullet_points) setEmailBulletPoints(data.email_bullet_points);
     if (data.candidate_email) setCandidateEmail(data.candidate_email);
 
     // Restore answers into analysis questions if available
@@ -217,8 +224,6 @@ export default function PositioningWizardPage() {
 
     // Determine initial step
     if (data.tailored_cv || data.email) {
-      setCurrentStep(3);
-    } else if (data.analysis) {
       setCurrentStep(2);
     } else {
       setCurrentStep(1);
@@ -275,9 +280,11 @@ export default function PositioningWizardPage() {
       const obj = generateObject as Partial<PositioningOutput>;
       if (obj.tailoredCv) setTailoredCv(obj.tailoredCv as Partial<ExtractedCV>);
       if (obj.email) setEmail(obj.email);
+      if (obj.emailFirstContact) setEmailFirstContact(obj.emailFirstContact);
+      if (obj.emailBulletPoints) setEmailBulletPoints(obj.emailBulletPoints);
       if (obj.candidateEmail) setCandidateEmail(obj.candidateEmail);
     }
-  }, [generateObject, setTailoredCv, setEmail, setCandidateEmail]);
+  }, [generateObject, setTailoredCv, setEmail, setEmailFirstContact, setEmailBulletPoints, setCandidateEmail]);
 
   useEffect(() => {
     if (!isGenerateLoading && isGenerating) {
@@ -311,6 +318,18 @@ export default function PositioningWizardPage() {
     debouncedSave({ email });
   }, [isLoaded, email, isGenerating, isGenerateLoading, debouncedSave]);
 
+  // Persist emailFirstContact edits to DB (debounced)
+  useEffect(() => {
+    if (!isLoaded || !emailFirstContact || isGenerating || isGenerateLoading) return;
+    debouncedSave({ email_first_contact: emailFirstContact });
+  }, [isLoaded, emailFirstContact, isGenerating, isGenerateLoading, debouncedSave]);
+
+  // Persist emailBulletPoints edits to DB (debounced)
+  useEffect(() => {
+    if (!isLoaded || !emailBulletPoints || isGenerating || isGenerateLoading) return;
+    debouncedSave({ email_bullet_points: emailBulletPoints });
+  }, [isLoaded, emailBulletPoints, isGenerating, isGenerateLoading, debouncedSave]);
+
   // Persist candidate email edits to DB (debounced)
   useEffect(() => {
     if (!isLoaded || !candidateEmail || isGenerating || isGenerateLoading) return;
@@ -326,6 +345,15 @@ export default function PositioningWizardPage() {
   const handleReAnalyze = useCallback(() => {
     if (!jobDescription.trim()) return;
 
+    // Preserve current answers so the API can use them as context
+    const savedAnswers: Record<string, string> = {};
+    for (const q of analysis?.candidateQuestions ?? []) {
+      if (q.answer) savedAnswers[`candidat:${q.question}`] = q.answer;
+    }
+    for (const q of analysis?.clientQuestions ?? []) {
+      if (q.answer) savedAnswers[`client:${q.question}`] = q.answer;
+    }
+
     updatePositioning.mutate(
       { id: positioningIdParam, job_description: jobDescription },
       {
@@ -333,12 +361,12 @@ export default function PositioningWizardPage() {
           setCurrentStep(1);
           setIsAnalyzing(true);
           setAnalysis(null);
-          submitAnalysis({ positioningId: positioningIdParam });
+          submitAnalysis({ positioningId: positioningIdParam, answers: savedAnswers });
           refreshMissionCards();
         },
       }
     );
-  }, [jobDescription, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis, refreshMissionCards]);
+  }, [jobDescription, analysis, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis, refreshMissionCards]);
 
   const handleGenerate = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
@@ -358,6 +386,8 @@ export default function PositioningWizardPage() {
           setIsGenerating(true);
           setTailoredCv(null);
           setEmail(null);
+          setEmailFirstContact(null);
+          setEmailBulletPoints(null);
           setCandidateEmail(null);
           submitGenerate({ positioningId: positioningIdParam, answers });
           refreshMissionCards();
@@ -404,15 +434,14 @@ export default function PositioningWizardPage() {
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
   const analysisComplete = !!analysis?.matchScore && !isAnalyzing && !isAnalysisLoading;
 
-  const canGoToStep = (step: 1 | 2 | 3) => {
+  const canGoToStep = (step: 1 | 2) => {
     if (isStreaming) return false;
     if (step === 1) return true;
     if (step === 2) return analysisComplete;
-    if (step === 3) return analysisComplete;
     return false;
   };
 
-  const handleStepClick = (step: 1 | 2 | 3) => {
+  const handleStepClick = (step: 1 | 2) => {
     if (canGoToStep(step)) setCurrentStep(step);
   };
 
@@ -556,7 +585,7 @@ export default function PositioningWizardPage() {
                   Position
                 </Button>
               )}
-              {currentStep === 3 && (
+              {currentStep === 2 && (
                 <Button onClick={handleExport} disabled={exportPositioning.isPending || isStreaming || !tailoredCv}>
                   {exportPositioning.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -579,42 +608,84 @@ export default function PositioningWizardPage() {
         {/* Split layout */}
         <div className="flex min-h-0 flex-1 gap-4">
           {/* Left panel */}
-          <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
+          <div className="w-1/2 flex flex-col min-h-0">
             {currentStep === 1 && (
-              <>
-                <JobInput
-                  jobDescription={jobDescription}
-                  onJobDescriptionChange={setJobDescription}
-                  onAnalyze={handleReAnalyze}
-                  isAnalyzing={isAnalyzing || isAnalysisLoading}
-                />
-                <AnalysisView
-                  analysis={analysis}
-                  isAnalyzing={isAnalyzing || isAnalysisLoading}
-                />
-              </>
+              <div className="flex flex-col min-h-0 gap-3 h-full">
+                {/* Job description — editable before analysis, read-only after */}
+                {(isAnalyzing || isAnalysisLoading || analysisComplete) ? (
+                  <JobInput
+                    jobDescription={jobDescription}
+                    onJobDescriptionChange={setJobDescription}
+                    onAnalyze={handleReAnalyze}
+                    onReAnalyze={analysisComplete ? handleReAnalyze : undefined}
+                    isAnalyzing={isAnalyzing || isAnalysisLoading}
+                    readOnly
+                  />
+                ) : (
+                  <JobInput
+                    jobDescription={jobDescription}
+                    onJobDescriptionChange={setJobDescription}
+                    onAnalyze={handleReAnalyze}
+                    isAnalyzing={isAnalyzing || isAnalysisLoading}
+                  />
+                )}
+
+                {/* Analysis results during streaming — no tabs yet */}
+                {(isAnalyzing || isAnalysisLoading) && (
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <AnalysisView
+                      analysis={analysis}
+                      isAnalyzing={isAnalyzing || isAnalysisLoading}
+                    />
+                  </div>
+                )}
+
+                {/* Tabs: Résultats | Questions — once analysis complete */}
+                {analysisComplete && (
+                  <Tabs defaultValue="results" className="flex flex-col min-h-0 flex-1">
+                    <TabsList className="w-full shrink-0 bg-white/5 border border-white/10 rounded-xl p-1">
+                      <TabsTrigger value="results" className="flex-1 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg">
+                        Résultats
+                      </TabsTrigger>
+                      <TabsTrigger value="questions" className="flex-1 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg">
+                        Questions & Affinage
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="results" className="flex-1 overflow-y-auto mt-3 pr-2 space-y-4 data-[state=inactive]:hidden">
+                      <AnalysisView
+                        analysis={analysis}
+                        isAnalyzing={false}
+                        onReAnalyze={handleReAnalyze}
+                      />
+                    </TabsContent>
+                    <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 pr-2 data-[state=inactive]:hidden">
+                      <QuestionsPanel
+                        analysis={analysis}
+                        onUpdateAnswer={updateAnswer}
+                        onNext={() => setCurrentStep(2)}
+                        onReAnalyze={handleReAnalyze}
+                        isAnalyzing={false}
+                      />
+                    </TabsContent>
+                  </Tabs>
+                )}
+              </div>
             )}
 
             {currentStep === 2 && (
-              <QuestionsPanel
-                analysis={analysis}
-                onUpdateAnswer={updateAnswer}
-                onNext={() => setCurrentStep(3)}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <GenerationStep
-                isStreaming={isGenerating || isGenerateLoading}
-                onGenerate={handleGenerate}
-              />
+              <div className="flex-1 overflow-y-auto pr-2">
+                <GenerationStep
+                  isStreaming={isGenerating || isGenerateLoading}
+                  onGenerate={handleGenerate}
+                />
+              </div>
             )}
           </div>
 
           {/* Right panel */}
           <div className="w-1/2 sticky top-0">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
-              {currentStep === 3 ? (
+              {currentStep === 2 ? (
                 <>
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                     <h2 className="flex items-center text-sm font-semibold text-white">

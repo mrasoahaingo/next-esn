@@ -7,8 +7,10 @@ interface PositioningState {
   analysis: Partial<PositioningAnalysis> | null;
   tailoredCv: Partial<ExtractedCV> | null;
   email: Partial<PositioningEmail> | null;
+  emailFirstContact: Partial<PositioningEmail> | null;
+  emailBulletPoints: Partial<PositioningEmail> | null;
   candidateEmail: Partial<PositioningEmail> | null;
-  currentStep: 1 | 2 | 3;
+  currentStep: 1 | 2;
   isAnalyzing: boolean;
   isGenerating: boolean;
   pdfBlobUrl: string | null;
@@ -20,8 +22,10 @@ interface PositioningState {
   setAnalysis: (data: Partial<PositioningAnalysis> | null) => void;
   setTailoredCv: (data: Partial<ExtractedCV> | null) => void;
   setEmail: (data: Partial<PositioningEmail> | null) => void;
+  setEmailFirstContact: (data: Partial<PositioningEmail> | null) => void;
+  setEmailBulletPoints: (data: Partial<PositioningEmail> | null) => void;
   setCandidateEmail: (data: Partial<PositioningEmail> | null) => void;
-  setCurrentStep: (step: 1 | 2 | 3) => void;
+  setCurrentStep: (step: 1 | 2) => void;
   setIsAnalyzing: (v: boolean) => void;
   setIsGenerating: (v: boolean) => void;
   setPdfBlobUrl: (url: string | null) => void;
@@ -38,6 +42,8 @@ const initialState = {
   analysis: null,
   tailoredCv: null,
   email: null,
+  emailFirstContact: null,
+  emailBulletPoints: null,
   candidateEmail: null,
   currentStep: 1 as const,
   isAnalyzing: false,
@@ -55,6 +61,8 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
   setAnalysis: (data) => set({ analysis: data }),
   setTailoredCv: (data) => set({ tailoredCv: data }),
   setEmail: (data) => set({ email: data }),
+  setEmailFirstContact: (data) => set({ emailFirstContact: data }),
+  setEmailBulletPoints: (data) => set({ emailBulletPoints: data }),
   setCandidateEmail: (data) => set({ candidateEmail: data }),
   setCurrentStep: (step) => set({ currentStep: step }),
   setIsAnalyzing: (v) => set({ isAnalyzing: v }),

@@ -140,6 +140,8 @@ export type PositioningEmail = z.infer<typeof positioningEmailSchema>;
 export const positioningOutputSchema = z.object({
   tailoredCv: extractionSchema,
   email: positioningEmailSchema,
+  emailFirstContact: positioningEmailSchema,
+  emailBulletPoints: positioningEmailSchema,
   candidateEmail: positioningEmailSchema,
 });
 

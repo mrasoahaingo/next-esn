@@ -3,10 +3,13 @@
 import type { PositioningAnalysis } from '@/lib/schema';
 import { SectionShell } from '@/app/review/components/SectionShell';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 interface AnalysisViewProps {
   analysis: Partial<PositioningAnalysis> | null;
   isAnalyzing: boolean;
+  onReAnalyze?: () => void;
 }
 
 function getRelevanceBadge(relevance: string) {
@@ -45,7 +48,7 @@ function getSectionStatus(
   return allPrevDone ? 'streaming' : 'pending';
 }
 
-export function AnalysisView({ analysis, isAnalyzing }: AnalysisViewProps) {
+export function AnalysisView({ analysis, isAnalyzing, onReAnalyze }: AnalysisViewProps) {
   if (!analysis && !isAnalyzing) return null;
 
   const score = analysis?.matchScore;
@@ -63,9 +66,22 @@ export function AnalysisView({ analysis, isAnalyzing }: AnalysisViewProps) {
         <section className="glass-panel p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-white">Score de matching</h3>
-            <span className={`text-3xl font-bold ${scoreColor}`}>
-              {score != null ? `${score}%` : '—'}
-            </span>
+            <div className="flex items-center gap-3">
+              {onReAnalyze && !isAnalyzing && analysis && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onReAnalyze}
+                  className="text-violet hover:text-violet hover:bg-violet/10 text-xs h-7 px-2"
+                >
+                  <RefreshCw className="mr-1.5 h-3 w-3" />
+                  Relancer
+                </Button>
+              )}
+              <span className={`text-3xl font-bold ${scoreColor}`}>
+                {score != null ? `${score}%` : '—'}
+              </span>
+            </div>
           </div>
           {analysis?.matchSummary && (
             <p className="text-sm text-slate-300 leading-relaxed">{analysis.matchSummary}</p>

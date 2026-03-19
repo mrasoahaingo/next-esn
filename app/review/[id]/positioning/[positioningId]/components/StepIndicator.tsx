@@ -3,15 +3,14 @@
 import { Check } from 'lucide-react';
 
 interface StepIndicatorProps {
-  currentStep: 1 | 2 | 3;
-  onStepClick: (step: 1 | 2 | 3) => void;
-  canGoToStep: (step: 1 | 2 | 3) => boolean;
+  currentStep: 1 | 2;
+  onStepClick: (step: 1 | 2) => void;
+  canGoToStep: (step: 1 | 2) => boolean;
 }
 
 const steps = [
-  { num: 1 as const, label: 'Analyse du matching' },
-  { num: 2 as const, label: 'Questions & Affinage' },
-  { num: 3 as const, label: 'Email & CV retravaillé' },
+  { num: 1 as const, label: 'Analyse & Affinage' },
+  { num: 2 as const, label: 'Email & CV retravaillé' },
 ];
 
 export function StepIndicator({ currentStep, onStepClick, canGoToStep }: StepIndicatorProps) {
@@ -20,7 +19,6 @@ export function StepIndicator({ currentStep, onStepClick, canGoToStep }: StepInd
       {steps.map((step, i) => {
         const isActive = currentStep === step.num;
         const canClick = canGoToStep(step.num);
-        // "done" = step is accessible and not currently active
         const isDone = canClick && !isActive;
 
         return (

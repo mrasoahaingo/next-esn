@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, RefreshCw } from 'lucide-react';
+import { Loader2, Sparkles, RefreshCw, Mail, UserCheck, List } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { TailoredCvForm } from './TailoredCvForm';
 
@@ -11,6 +11,8 @@ const EmailEditor = dynamic(
   () => import('./EmailEditor').then((m) => m.EmailEditor),
   { loading: () => <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-violet" /></div> },
 );
+
+type EmailVariant = 'full' | 'firstContact' | 'bulletPoints';
 
 interface GenerationStepProps {
   isStreaming: boolean;
@@ -21,15 +23,20 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
   const {
     tailoredCv,
     email,
+    emailFirstContact,
+    emailBulletPoints,
     candidateEmail,
     setEmail,
+    setEmailFirstContact,
+    setEmailBulletPoints,
     setCandidateEmail,
     updateTailoredCvField,
   } = usePositioningStore();
 
   const [activeTab, setActiveTab] = useState<'email' | 'candidateEmail' | 'cv'>('email');
+  const [activeEmailVariant, setActiveEmailVariant] = useState<EmailVariant>('full');
 
-  const hasGenerated = !!tailoredCv || !!email || !!candidateEmail;
+  const hasGenerated = !!tailoredCv || !!email || !!emailFirstContact || !!emailBulletPoints || !!candidateEmail;
 
   return (
     <div className="space-y-4">
@@ -88,7 +95,7 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
       )}
 
       {/* Content tabs */}
-      {(tailoredCv || email) && (
+      {(tailoredCv || email || emailFirstContact || emailBulletPoints || candidateEmail) && (
         <>
           {isStreaming && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20">
@@ -134,12 +141,69 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
           </div>
 
           {activeTab === 'email' && (
-            <EmailEditor
-              email={email}
-              onChange={setEmail}
-              readOnly={isStreaming}
-              title="Email de positionnement client"
-            />
+            <div className="space-y-3">
+              {/* Email variant sub-tabs */}
+              <div className="flex gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
+                <button
+                  onClick={() => setActiveEmailVariant('full')}
+                  className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    activeEmailVariant === 'full'
+                      ? 'bg-violet/20 text-violet border border-violet/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <Mail className="h-3 w-3" />
+                  Complet
+                </button>
+                <button
+                  onClick={() => setActiveEmailVariant('firstContact')}
+                  className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    activeEmailVariant === 'firstContact'
+                      ? 'bg-violet/20 text-violet border border-violet/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <UserCheck className="h-3 w-3" />
+                  Première contact
+                </button>
+                <button
+                  onClick={() => setActiveEmailVariant('bulletPoints')}
+                  className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    activeEmailVariant === 'bulletPoints'
+                      ? 'bg-violet/20 text-violet border border-violet/30'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
+                  <List className="h-3 w-3" />
+                  Bullet points
+                </button>
+              </div>
+
+              {activeEmailVariant === 'full' && (
+                <EmailEditor
+                  email={email}
+                  onChange={setEmail}
+                  readOnly={isStreaming}
+                  title="Email complet de positionnement"
+                />
+              )}
+              {activeEmailVariant === 'firstContact' && (
+                <EmailEditor
+                  email={emailFirstContact}
+                  onChange={setEmailFirstContact}
+                  readOnly={isStreaming}
+                  title="Email de première prise de contact"
+                />
+              )}
+              {activeEmailVariant === 'bulletPoints' && (
+                <EmailEditor
+                  email={emailBulletPoints}
+                  onChange={setEmailBulletPoints}
+                  readOnly={isStreaming}
+                  title="Email en bullet points"
+                />
+              )}
+            </div>
           )}
 
           {activeTab === 'candidateEmail' && (
