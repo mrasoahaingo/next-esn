@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useCandidates, usePositionings, useMissions, useUploadCv, useCancelWorkflow, useCreateMission } from '@/lib/queries';
 import { useRouter, useParams, usePathname } from 'next/navigation';
+import { useAuth, UserButton, OrganizationSwitcher } from '@clerk/nextjs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,7 @@ const posStatusConfig: Record<
 };
 
 export function UnifiedSidebar() {
+  const { isSignedIn, isLoaded } = useAuth();
   const [activeTab, setActiveTab] = useState<'cvs' | 'positions'>('cvs');
   const [expandedCvs, setExpandedCvs] = useState<Set<string>>(new Set());
   const [showNewMission, setShowNewMission] = useState(false);
@@ -215,6 +217,8 @@ export function UnifiedSidebar() {
   };
 
   const isOnTemplates = pathname.startsWith('/templates');
+
+  if (!isLoaded || !isSignedIn) return null;
 
   return (
     <aside className="flex h-screen w-[280px] flex-col border-r border-violet/10 bg-panel">
@@ -607,6 +611,28 @@ export function UnifiedSidebar() {
           <Palette className="h-4 w-4" />
           <span className="font-medium">Templates</span>
         </button>
+      </div>
+
+      {/* User & Organization */}
+      <Separator />
+      <div className="flex items-center justify-between px-3 py-3">
+        <OrganizationSwitcher
+          hidePersonal
+          appearance={{
+            elements: {
+              rootBox: 'w-full',
+              organizationSwitcherTrigger:
+                'w-full justify-between rounded-lg px-2.5 py-2 text-xs text-muted-foreground hover:bg-card/60 hover:text-foreground border-0',
+            },
+          }}
+        />
+        <UserButton
+          appearance={{
+            elements: {
+              avatarBox: 'h-7 w-7',
+            },
+          }}
+        />
       </div>
 
       {/* New mission dialog */}
