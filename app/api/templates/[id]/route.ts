@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { requireOrgId } from '@/lib/utils/auth';
+import { requireOrgId, requireOrgAdmin } from '@/lib/utils/auth';
 
 export async function GET(
   _req: NextRequest,
@@ -30,7 +30,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const orgId = await requireOrgId();
+    const { orgId } = await requireOrgAdmin();
     const { id } = await params;
     const body = await req.json();
     const supabase = getSupabase();
@@ -56,7 +56,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const orgId = await requireOrgId();
+    const { orgId } = await requireOrgAdmin();
     const { id } = await params;
     const supabase = getSupabase();
     const { error } = await supabase

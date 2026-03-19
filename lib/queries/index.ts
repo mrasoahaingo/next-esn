@@ -5,3 +5,4 @@ export { usePositionings, usePositioning, useCreatePositioning, useUpdatePositio
 export { useDashboard } from './dashboard';
 export { useCancelWorkflow } from './workflow';
 export { useTemplate, useUpdateTemplate } from './templates';
+export { useAdminStats } from './admin';

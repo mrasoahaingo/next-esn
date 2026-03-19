@@ -26,12 +26,14 @@ import {
   Palette,
   Square,
   Building2,
+  ShieldCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { Switch } from '@/components/ui/switch';
 import { Label as SwitchLabel } from '@/components/ui/label';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
+import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -109,6 +111,7 @@ export function UnifiedSidebar() {
   const params = useParams();
   const pathname = usePathname();
   const { isDemoMode, toggleDemoMode } = useDemoModeStore();
+  const { isSuperAdmin } = useSuperAdmin();
 
   const { data: candidatesData, isLoading: isLoadingCandidates } = useCandidates();
   const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
@@ -597,9 +600,9 @@ export function UnifiedSidebar() {
         )}
       </div>
 
-      {/* Bottom: Templates */}
+      {/* Bottom: Templates + Admin */}
       <Separator />
-      <div className="px-2 py-2">
+      <div className="px-2 py-2 space-y-0.5">
         <button
           onClick={() => router.push('/templates')}
           className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
@@ -611,6 +614,19 @@ export function UnifiedSidebar() {
           <Palette className="h-4 w-4" />
           <span className="font-medium">Templates</span>
         </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => router.push('/admin')}
+            className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+              pathname.startsWith('/admin')
+                ? 'bg-amber-500/10 text-amber-400'
+                : 'text-muted-foreground hover:bg-card/60 hover:text-amber-400'
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            <span className="font-medium">Administration</span>
+          </button>
+        )}
       </div>
 
       {/* User & Organization */}

@@ -8,13 +8,27 @@ const isPublicRoute = createRouteMatcher([
   '/.well-known/(.*)',
 ])
 
+const isAdminRoute = createRouteMatcher(['/admin(.*)'])
+
 export default clerkMiddleware(async (auth, request) => {
   if (isPublicRoute(request)) return
 
   try {
-    const { orgId } = await auth.protect()
+    const session = await auth.protect()
+    const isSuperAdmin =
+      session.sessionClaims?.metadata?.role === 'super_admin'
 
-    if (!orgId && !request.nextUrl.pathname.startsWith('/org-selection')) {
+    if (isAdminRoute(request)) {
+      if (!isSuperAdmin) {
+        return NextResponse.redirect(new URL('/', request.url))
+      }
+      return
+    }
+
+    if (
+      !session.orgId &&
+      !request.nextUrl.pathname.startsWith('/org-selection')
+    ) {
       return NextResponse.redirect(new URL('/org-selection', request.url))
     }
   } catch (err) {

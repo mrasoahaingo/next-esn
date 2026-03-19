@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { requireOrgId } from '@/lib/utils/auth';
+import { requireOrgId, requireOrgAdmin } from '@/lib/utils/auth';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
 
 export async function GET() {
@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const orgId = await requireOrgId();
+    const { orgId } = await requireOrgAdmin();
     const body = await req.json();
     const supabase = getSupabase();
 
