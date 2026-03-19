@@ -237,19 +237,19 @@ export function UnifiedSidebar() {
       </Link>
 
       {/* Demo mode toggle */}
-      <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
-        {!isProduction && (
+      {!isProduction && (
+        <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
           <SwitchLabel htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
             Mode démo
           </SwitchLabel>
-        )}
-        <Switch
-          id="demo-mode"
-          checked={isDemoMode}
-          onCheckedChange={toggleDemoMode}
-          className="scale-75"
-        />
-      </div>
+          <Switch
+            id="demo-mode"
+            checked={isDemoMode}
+            onCheckedChange={toggleDemoMode}
+            className="scale-75"
+          />
+        </div>
+      )}
 
       <Separator />
 
