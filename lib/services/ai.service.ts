@@ -3,7 +3,7 @@ import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { model } from '@/lib/ai';
 import mammoth from 'mammoth';
 
-export const SYSTEM_PROMPT = `Tu es un expert en recrutement technique pour Himeo, une ESN française.
+export const SYSTEM_PROMPT = `Tu es un expert en recrutement technique une ESN française.
 Ton objectif est d'extraire les données d'un CV et de les normaliser.
 
 IMPORTANT : Tu dois impérativement utiliser la liste de référence de https://skills.sh/ pour mapper les compétences techniques.

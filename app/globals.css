@@ -24,7 +24,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Custom Himeo colors */
+  /* Custom Esneo colors */
   --color-shell: #08080f;
   --color-panel: #10101e;
   --color-panel-soft: #16162a;
@@ -62,7 +62,7 @@
   }
 
   .dark {
-    /* Himeo dark theme — deep purple-tinted dark */
+    /* Esneo dark theme — deep purple-tinted dark */
     --background: oklch(0.08 0.025 280);
     --foreground: oklch(0.95 0.01 280);
     --card: oklch(0.115 0.03 275);

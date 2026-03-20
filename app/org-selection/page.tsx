@@ -15,7 +15,7 @@ export default async function OrgSelectionPage() {
       <AuthBrandLogo />
       <div className="flex flex-col items-center gap-6">
         <div className="text-center">
-          <h1 className="text-xl font-bold text-foreground">Bienvenue sur Himeo</h1>
+          <h1 className="text-xl font-bold text-foreground">Bienvenue sur Esneo</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Sélectionnez ou créez une organisation pour continuer
           </p>

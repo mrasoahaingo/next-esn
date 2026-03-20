@@ -19,7 +19,7 @@ export function PdfPreview() {
     if (!pdfBlobUrl) return;
     const a = document.createElement('a');
     a.href = pdfBlobUrl;
-    a.download = 'HIMEO_CV.pdf';
+    a.download = 'ESNEO_CV.pdf';
     a.click();
   };
 

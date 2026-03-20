@@ -22,8 +22,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Himeo CV Automation",
-  description: "Automatisation de CVs et positionnement pour Himeo",
+  title: "Esneo",
+  description: "Automatisation de CVs et positionnement",
   icons: {
     icon: "/esneo-icon.svg",
   },

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Himeo CV Automation — a tool for French ESN (IT consulting firm) Himeo that automates CV reformatting. Users upload a CV (PDF/DOCX), AI extracts and normalizes the data, users review/edit in a split-screen builder with live PDF preview, then export as a branded Himeo PDF.
+Esneo CV Automation — a tool for French ESN (IT consulting firm) Esneo that automates CV reformatting. Users upload a CV (PDF/DOCX), AI extracts and normalizes the data, users review/edit in a split-screen builder with live PDF preview, then export as a branded Esneo PDF.
 
 The app is entirely in French (UI labels, AI prompts, generated documents).
 
@@ -66,7 +66,7 @@ Required in `.env`:
 ### Storage Buckets
 
 - `cv-original`: uploaded source CVs
-- `cv-formatted`: generated Himeo PDF files
+- `cv-formatted`: generated Esneo PDF files
 
 ### UI Components
 

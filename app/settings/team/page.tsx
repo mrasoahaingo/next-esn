@@ -258,7 +258,7 @@ export default function TeamSettingsPage() {
               <Input
                 id="invite-email"
                 type="email"
-                placeholder="prenom.nom@himeo.fr"
+                placeholder="prenom.nom@esneo.fr"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

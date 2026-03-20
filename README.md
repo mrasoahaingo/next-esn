@@ -1,13 +1,13 @@
-# Himeo CV Automation
+# Esneo CV Automation
 
-Outil d'automatisation de la mise sous trame des CV pour Himeo.
+Outil d'automatisation de la mise sous trame des CV pour Esneo.
 
 ## Features
 
 - **Upload CV**: Drag & Drop pour PDF/DOCX
 - **Extraction IA**: Extraction et normalisation des données via Claude 3.5 Sonnet
 - **Review**: Interface de validation et correction des données extraites
-- **Export**: Génération de CV au format DOCX respectant la charte Himeo
+- **Export**: Génération de CV au format DOCX respectant la charte Esneo
 
 ## Stack
 

@@ -200,7 +200,7 @@ C'est Himeo qui contacte le candidat pour lui proposer cette opportunité de mis
 - Les réponses aux questions sont ta source principale d'enrichissement : utilise-les systématiquement quand elles apportent de la valeur.
 
 ## Format des emails
-- Le champ "body" de chaque email (email, emailFirstContact, emailBulletPoints et candidateEmail) DOIT être en HTML valide pour un rendu riche.
+- Le champ "body" de chaque email (email et candidateEmail) DOIT être en HTML valide pour un rendu riche.
 - Utilise les balises HTML classiques : <p> pour les paragraphes, <strong> pour le gras, <em> pour l'italique, <u> pour le souligné, <ol>/<ul>/<li> pour les listes.
 - Ne PAS utiliser de Markdown dans le body. Uniquement du HTML.
 - Ne PAS inclure de balises <html>, <head>, <body> ou <style>. Uniquement le contenu inline.

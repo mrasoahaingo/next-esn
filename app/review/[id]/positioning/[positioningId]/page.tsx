@@ -403,7 +403,7 @@ export default function PositioningWizardPage() {
         if (data.fileUrl) {
           const a = document.createElement('a');
           a.href = data.fileUrl;
-          a.download = 'HIMEO_CV_positioning.pdf';
+          a.download = 'ESNEO_CV_positioning.pdf';
           a.target = '_blank';
           a.click();
         }
@@ -710,7 +710,7 @@ export default function PositioningWizardPage() {
                             if (!pdfBlobUrl) return;
                             const a = document.createElement('a');
                             a.href = pdfBlobUrl;
-                            a.download = 'HIMEO_CV_positioning.pdf';
+                            a.download = 'ESNEO_CV_positioning.pdf';
                             a.click();
                           }}
                           className="border-accent/30 text-accent-foreground hover:bg-accent/10"
@@ -777,7 +777,7 @@ export default function PositioningWizardPage() {
                   if (!pdfBlobUrl) return;
                   const a = document.createElement('a');
                   a.href = pdfBlobUrl;
-                  a.download = 'HIMEO_CV_positioning.pdf';
+                  a.download = 'ESNEO_CV_positioning.pdf';
                   a.click();
                 }}
                 disabled={!pdfBlobUrl}

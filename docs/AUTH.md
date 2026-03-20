@@ -38,7 +38,7 @@ Stack : **Clerk** (`@clerk/nextjs` v7) + Next.js 16 App Router
          └─── publicMetadata.role = "super_admin"  ← manuel via Dashboard
 ```
 
-Himeo utilise **deux niveaux d'accès indépendants** :
+Esneo utilise **deux niveaux d'accès indépendants** :
 
 | Niveau | Source | Portée |
 |--------|--------|--------|
@@ -312,7 +312,7 @@ const canManageTeam = isOrgAdmin || isSuperAdmin
 
 ### `/sign-in` — `app/sign-in/[[...sign-in]]/page.tsx`
 
-Composant `<SignIn />` de Clerk, stylisé avec le thème dark Himeo. La route catch-all `[[...sign-in]]` est requise pour que Clerk gère ses redirections internes (OAuth callbacks, MFA, etc.).
+Composant `<SignIn />` de Clerk, stylisé avec le thème dark Esneo. La route catch-all `[[...sign-in]]` est requise pour que Clerk gère ses redirections internes (OAuth callbacks, MFA, etc.).
 
 ### `/sign-up` — `app/sign-up/[[...sign-up]]/page.tsx`
 
@@ -338,7 +338,7 @@ Affiche `<OrganizationList>` de Clerk qui montre :
 
 Wrappe toute l'app, configuré avec :
 - `localization={frFR}` — UI Clerk en français
-- `appearance` — thème dark personnalisé (couleurs Himeo : violet, fond #0c0c0f)
+- `appearance` — thème dark personnalisé (couleurs Esneo : violet, fond #0c0c0f)
 
 ---
 
@@ -371,7 +371,7 @@ Envoie une invitation email via le Clerk Backend SDK.
 **Corps** :
 ```json
 {
-  "emailAddress": "prenom.nom@himeo.fr",
+  "emailAddress": "prenom.nom@Esneo.fr",
   "role": "org:member"
 }
 ```
