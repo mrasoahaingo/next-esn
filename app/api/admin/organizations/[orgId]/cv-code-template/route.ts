@@ -5,9 +5,13 @@ import { getSupabase } from '@/lib/utils/supabase';
 import { CV_CODE_TEMPLATE_IDS, isCvCodeTemplateId } from '@/templates/registry';
 
 const bodySchema = z.object({
-  cvCodeTemplate: z.string().min(1).refine(isCvCodeTemplateId, {
-    message: `Template inconnu. Valeurs autorisées : ${CV_CODE_TEMPLATE_IDS.join(', ')}`,
-  }),
+  cvCodeTemplate: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim())
+    .refine(isCvCodeTemplateId, {
+      message: `Template inconnu. Valeurs autorisées : ${CV_CODE_TEMPLATE_IDS.join(', ')}`,
+    }),
 });
 
 export async function PATCH(
