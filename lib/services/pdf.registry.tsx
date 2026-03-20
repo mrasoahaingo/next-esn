@@ -180,6 +180,21 @@ function HimeoLogoComponent({ element }: { element: { props: Record<string, unkn
   );
 }
 
+/** Barre verticale (gabarit Esneo) — le View standard json-render ne mappe pas borderLeftWidth. */
+function CvAccentBarComponent({ element }: { element: { props: Record<string, unknown> } }) {
+  const p = element.props;
+  return (
+    <View
+      style={{
+        width: (p.width as number) ?? 3,
+        alignSelf: 'stretch',
+        backgroundColor: (p.backgroundColor as string) ?? '#4ade80',
+        borderRadius: (p.borderRadius as number) ?? 0,
+      }}
+    />
+  );
+}
+
 function BadgeListComponent({ element }: { element: { props: Record<string, unknown> } }) {
   const p = element.props;
   const items = (p.items as string[]) ?? [];
@@ -217,6 +232,7 @@ function BadgeListComponent({ element }: { element: { props: Record<string, unkn
 }
 
 export const fixedComponents: RenderComponentRegistry = {
+  CvAccentBar: CvAccentBarComponent,
   BadgeList: BadgeListComponent,
   FixedView: FixedViewComponent,
   FixedRow: FixedRowComponent,

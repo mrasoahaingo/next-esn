@@ -2,27 +2,261 @@ import type { Spec } from '@json-render/core';
 import type { ExtractedCV, TemplateConfig } from '@/lib/schema';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
 
+// ─── Thème visuel (tous les choix hors `TemplateConfig.colors` de l’org) ───
+
+export type CvDossierResolvedTheme = {
+  headerBackground: string;
+  headerNameColor: string;
+  headerPadding: number;
+  headerFallbackWordmarkColor: string;
+
+  spacerAfterHeader: number;
+
+  docTitleFontSize: number;
+  docTitleColor: string;
+  docTitleRuleColor: string;
+  docTitleRuleThickness: number;
+  docTitleRuleMarginTop: number;
+  spacerAfterDocTitle: number;
+
+  infoTableBorderColor: string;
+  infoTableBorderWidth: number;
+  infoTableBorderRadius: number;
+  infoTableAlternateRowBg: string | null;
+  infoTableInnerDividerColor: string;
+  infoTableLabelFontSize: number;
+  infoTableValueFontSize: number;
+
+  sectionHeadingUppercase: boolean;
+  sectionHeadingFontSize: number;
+  sectionRuleColor: string;
+  sectionRuleThickness: number;
+  sectionRuleMarginTop: number;
+  sectionBlockPaddingBottom: number;
+
+  summaryFontSize: number;
+  summaryLineHeight: number;
+  spacerAfterSummary: number;
+
+  spacerAfterSkills: number;
+  spacerAfterEducationBlock: number;
+  spacerAfterEducationSection: number;
+
+  educationDegreeFontSize: number;
+  educationSchoolFontSize: number;
+  educationYearFontSize: number;
+  educationRowGapSpacer: number;
+
+  experiencePaddingLeft: number;
+  experienceLeftBorderWidth: number;
+  experienceLeftBorderColor: string;
+  experienceRoleFontSize: number;
+  experienceDateFontSize: number;
+  experienceBetweenBlockPaddingTop: number;
+  experienceHeaderPaddingBottom: number;
+  listFontSize: number;
+  listSpacing: number;
+  spacerAfterExperienceBlock: number;
+  spacerEndExperiences: number;
+
+  experienceBadgeBg: string;
+  experienceBadgeText: string;
+  experienceBadgeFontSize: number;
+
+  pageMarginTop: number;
+  pageMarginBottom: number;
+  pageMarginLeft: number;
+  pageMarginRight: number;
+
+  footerRuleColor: string;
+  footerRuleThickness: number;
+  footerRuleMarginBottom: number;
+  footerLine1FontSize: number;
+  footerLine2FontSize: number;
+};
+
+function resolveHimeoTheme(colors: TemplateConfig['colors']): CvDossierResolvedTheme {
+  return {
+    headerBackground: colors.primary,
+    headerNameColor: '#ffffff',
+    headerPadding: 14,
+    headerFallbackWordmarkColor: '#ffffff',
+
+    spacerAfterHeader: 47,
+
+    docTitleFontSize: 12,
+    docTitleColor: colors.primary,
+    docTitleRuleColor: colors.secondary,
+    docTitleRuleThickness: 2,
+    docTitleRuleMarginTop: 8,
+    spacerAfterDocTitle: 16,
+
+    infoTableBorderColor: '#E2E8F0',
+    infoTableBorderWidth: 0.5,
+    infoTableBorderRadius: 6,
+    infoTableAlternateRowBg: '#F8FAFC',
+    infoTableInnerDividerColor: '#E2E8F0',
+    infoTableLabelFontSize: 8,
+    infoTableValueFontSize: 9,
+
+    sectionHeadingUppercase: true,
+    sectionHeadingFontSize: 10,
+    sectionRuleColor: colors.secondary,
+    sectionRuleThickness: 1.5,
+    sectionRuleMarginTop: 4,
+    sectionBlockPaddingBottom: 8,
+
+    summaryFontSize: 9,
+    summaryLineHeight: 1.7,
+    spacerAfterSummary: 20,
+
+    spacerAfterSkills: 20,
+    spacerAfterEducationBlock: 6,
+    spacerAfterEducationSection: 14,
+    educationDegreeFontSize: 9,
+    educationSchoolFontSize: 8,
+    educationYearFontSize: 8,
+    educationRowGapSpacer: 6,
+
+    experiencePaddingLeft: 12,
+    experienceLeftBorderWidth: 0,
+    experienceLeftBorderColor: colors.secondary,
+    experienceRoleFontSize: 10,
+    experienceDateFontSize: 8,
+    experienceBetweenBlockPaddingTop: 30,
+    experienceHeaderPaddingBottom: 15,
+    listFontSize: 8,
+    listSpacing: 2,
+    spacerAfterExperienceBlock: 12,
+    spacerEndExperiences: 8,
+
+    experienceBadgeBg: '#deeeff',
+    experienceBadgeText: colors.primary,
+    experienceBadgeFontSize: 7,
+
+    pageMarginTop: 56,
+    pageMarginBottom: 45,
+    pageMarginLeft: 48,
+    pageMarginRight: 48,
+
+    footerRuleColor: colors.secondary,
+    footerRuleThickness: 0.5,
+    footerRuleMarginBottom: 8,
+    footerLine1FontSize: 7,
+    footerLine2FontSize: 7,
+  };
+}
+
+/** Esneo : surfaces claires façon shadcn — texte foncé sur fonds neutres / violet très léger. */
+function resolveEsneoTheme(colors: TemplateConfig['colors']): CvDossierResolvedTheme {
+  return {
+    headerBackground: '#f5f3ff',
+    headerNameColor: colors.text,
+    headerPadding: 16,
+    headerFallbackWordmarkColor: colors.primary,
+
+    spacerAfterHeader: 40,
+
+    docTitleFontSize: 13,
+    docTitleColor: colors.text,
+    docTitleRuleColor: colors.secondary,
+    docTitleRuleThickness: 2,
+    docTitleRuleMarginTop: 10,
+    spacerAfterDocTitle: 20,
+
+    infoTableBorderColor: '#e4e4e7',
+    infoTableBorderWidth: 1,
+    infoTableBorderRadius: 8,
+    infoTableAlternateRowBg: '#fafafa',
+    infoTableInnerDividerColor: '#e4e4e7',
+    infoTableLabelFontSize: 8,
+    infoTableValueFontSize: 9,
+
+    sectionHeadingUppercase: false,
+    sectionHeadingFontSize: 11,
+    sectionRuleColor: colors.secondary,
+    sectionRuleThickness: 2,
+    sectionRuleMarginTop: 6,
+    sectionBlockPaddingBottom: 10,
+
+    summaryFontSize: 9,
+    summaryLineHeight: 1.75,
+    spacerAfterSummary: 22,
+
+    spacerAfterSkills: 22,
+    spacerAfterEducationBlock: 8,
+    spacerAfterEducationSection: 16,
+    educationDegreeFontSize: 10,
+    educationSchoolFontSize: 8,
+    educationYearFontSize: 8,
+    educationRowGapSpacer: 8,
+
+    experiencePaddingLeft: 14,
+    experienceLeftBorderWidth: 3,
+    experienceLeftBorderColor: colors.secondary,
+    experienceRoleFontSize: 10,
+    experienceDateFontSize: 8,
+    experienceBetweenBlockPaddingTop: 28,
+    experienceHeaderPaddingBottom: 12,
+    listFontSize: 8,
+    listSpacing: 3,
+    spacerAfterExperienceBlock: 14,
+    spacerEndExperiences: 10,
+
+    experienceBadgeBg: '#d1fae5',
+    experienceBadgeText: '#047857',
+    experienceBadgeFontSize: 7,
+
+    pageMarginTop: 52,
+    pageMarginBottom: 48,
+    pageMarginLeft: 44,
+    pageMarginRight: 44,
+
+    footerRuleColor: '#e4e4e7',
+    footerRuleThickness: 1,
+    footerRuleMarginBottom: 10,
+    footerLine1FontSize: 7,
+    footerLine2FontSize: 7,
+  };
+}
+
 /** Variantes de marque pour la même trame « dossier de compétences » (Himeo vs Esneo). */
 export type CvDossierLayoutVariant = {
   docTitle: string;
   documentSubject: string;
-  experienceBadgeBgColor: string;
   /** Sans `logo.url` dans le template : composant Himeo SVG vs texte Esneo */
   headerLogoFallback: 'himeo' | 'esneo';
+  /**
+   * Couleurs par défaut pour ce gabarit (avant fusion avec `templateConfig.colors` de l’org).
+   * L’org peut toujours surcharger via le template en base.
+   */
+  defaultColorOverrides?: Partial<TemplateConfig['colors']>;
+  resolveTheme: (colors: TemplateConfig['colors']) => CvDossierResolvedTheme;
 };
 
 export const HIMEO_DOSSIER_VARIANT: CvDossierLayoutVariant = {
   docTitle: 'DOSSIER DE COMPÉTENCES TECHNIQUES',
   documentSubject: 'Dossier de compétences techniques',
-  experienceBadgeBgColor: '#deeeff',
   headerLogoFallback: 'himeo',
+  resolveTheme: resolveHimeoTheme,
 };
 
+/**
+ * Esneo : palette claire type shadcn (`background`, `border` zinc-200, `foreground` / `muted-foreground`),
+ * primary violet et secondary émeraude lisibles sur fond clair.
+ */
 export const ESNEO_DOSSIER_VARIANT: CvDossierLayoutVariant = {
-  docTitle: 'DOSSIER DE COMPÉTENCES TECHNIQUES',
-  documentSubject: 'Dossier de compétences techniques',
-  experienceBadgeBgColor: '#ede9fe',
+  docTitle: 'Dossier de compétences',
+  documentSubject: 'Dossier de compétences techniques — Esneo',
   headerLogoFallback: 'esneo',
+  defaultColorOverrides: {
+    primary: '#6d28d9',
+    secondary: '#10b981',
+    background: '#fafafa',
+    text: '#18181b',
+    lightText: '#71717a',
+  },
+  resolveTheme: resolveEsneoTheme,
 };
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -32,25 +266,35 @@ function addSectionHeading(
   id: string,
   text: string,
   children: string[],
-  primaryColor: string,
-  secondaryColor: string,
+  colors: TemplateConfig['colors'],
+  theme: CvDossierResolvedTheme,
 ) {
+  const label = theme.sectionHeadingUppercase ? text.toUpperCase() : text;
   elements[`${id}-container`] = {
     type: 'View',
     props: {
-      padding: null, paddingTop: null, paddingBottom: 8, paddingLeft: null, paddingRight: null,
-      margin: null, backgroundColor: null,
-      borderWidth: null, borderColor: null, borderRadius: null,
-      flex: null, alignItems: null, justifyContent: null,
+      padding: null,
+      paddingTop: null,
+      paddingBottom: theme.sectionBlockPaddingBottom,
+      paddingLeft: null,
+      paddingRight: null,
+      margin: null,
+      backgroundColor: null,
+      borderWidth: null,
+      borderColor: null,
+      borderRadius: null,
+      flex: null,
+      alignItems: null,
+      justifyContent: null,
     },
     children: [`${id}-heading`, `${id}-line`],
   };
   elements[`${id}-heading`] = {
     type: 'Text',
     props: {
-      text: text.toUpperCase(),
-      fontSize: 10,
-      color: primaryColor,
+      text: label,
+      fontSize: theme.sectionHeadingFontSize,
+      color: colors.primary,
       fontWeight: 'bold',
       fontStyle: null,
       align: null,
@@ -60,7 +304,12 @@ function addSectionHeading(
   };
   elements[`${id}-line`] = {
     type: 'Divider',
-    props: { color: secondaryColor, thickness: 1.5, marginTop: 4, marginBottom: 0 },
+    props: {
+      color: theme.sectionRuleColor,
+      thickness: theme.sectionRuleThickness,
+      marginTop: theme.sectionRuleMarginTop,
+      marginBottom: 0,
+    },
     children: [],
   };
   children.push(`${id}-container`);
@@ -72,6 +321,7 @@ function addInfoTable(
   rows: { label: string; value: string }[],
   children: string[],
   colors: TemplateConfig['colors'],
+  theme: CvDossierResolvedTheme,
 ) {
   if (rows.length === 0) return;
 
@@ -80,45 +330,81 @@ function addInfoTable(
     elements[`${id}-row-${i}`] = {
       type: 'Row',
       props: {
-        justifyContent: null, alignItems: 'flex-start',
-        gap: 12, padding: null, flex: null, wrap: null,
+        justifyContent: null,
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: null,
+        flex: null,
+        wrap: null,
       },
       children: [`${id}-labelcol-${i}`, `${id}-valuecol-${i}`],
     };
     elements[`${id}-labelcol-${i}`] = {
       type: 'Column',
       props: {
-        gap: null, alignItems: null, justifyContent: 'center',
-        padding: null, flex: 0.2,
+        gap: null,
+        alignItems: null,
+        justifyContent: 'center',
+        padding: null,
+        flex: 0.2,
       },
       children: [`${id}-label-${i}`],
     };
     elements[`${id}-valuecol-${i}`] = {
       type: 'Column',
       props: {
-        gap: null, alignItems: null, justifyContent: 'center',
-        padding: null, flex: 0.8,
+        gap: null,
+        alignItems: null,
+        justifyContent: 'center',
+        padding: null,
+        flex: 0.8,
       },
       children: [`${id}-value-${i}`],
     };
+    const altBg = theme.infoTableAlternateRowBg;
     elements[`${id}-rowwrap-${i}`] = {
       type: 'View',
       props: {
-        padding: null, paddingTop: 7, paddingBottom: 7, paddingLeft: 14, paddingRight: 14,
-        margin: null, backgroundColor: i % 2 === 0 ? '#F8FAFC' : null,
-        borderWidth: null, borderColor: null, borderRadius: null,
-        flex: null, alignItems: null, justifyContent: null,
+        padding: null,
+        paddingTop: 7,
+        paddingBottom: 7,
+        paddingLeft: 14,
+        paddingRight: 14,
+        margin: null,
+        backgroundColor: altBg != null && i % 2 === 0 ? altBg : null,
+        borderWidth: null,
+        borderColor: null,
+        borderRadius: null,
+        flex: null,
+        alignItems: null,
+        justifyContent: null,
       },
       children: [`${id}-row-${i}`],
     };
     elements[`${id}-label-${i}`] = {
       type: 'Text',
-      props: { text: row.label, fontSize: 8, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+      props: {
+        text: row.label,
+        fontSize: theme.infoTableLabelFontSize,
+        color: colors.primary,
+        fontWeight: 'bold',
+        fontStyle: null,
+        align: null,
+        lineHeight: null,
+      },
       children: [],
     };
     elements[`${id}-value-${i}`] = {
       type: 'Text',
-      props: { text: row.value, fontSize: 9, color: colors.text, fontWeight: null, fontStyle: null, align: null, lineHeight: 1.5 },
+      props: {
+        text: row.value,
+        fontSize: theme.infoTableValueFontSize,
+        color: colors.text,
+        fontWeight: null,
+        fontStyle: null,
+        align: null,
+        lineHeight: 1.5,
+      },
       children: [],
     };
     tableChildren.push(`${id}-rowwrap-${i}`);
@@ -126,7 +412,7 @@ function addInfoTable(
     if (i < rows.length - 1) {
       elements[`${id}-div-${i}`] = {
         type: 'Divider',
-        props: { color: '#E2E8F0', thickness: 0.5, marginTop: 0, marginBottom: 0 },
+        props: { color: theme.infoTableInnerDividerColor, thickness: 0.5, marginTop: 0, marginBottom: 0 },
         children: [],
       };
       tableChildren.push(`${id}-div-${i}`);
@@ -136,10 +422,19 @@ function addInfoTable(
   elements[`${id}-table`] = {
     type: 'View',
     props: {
-      padding: null, paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0,
-      margin: null, backgroundColor: null,
-      borderWidth: 0.5, borderColor: '#E2E8F0', borderRadius: 6,
-      flex: null, alignItems: null, justifyContent: null,
+      padding: null,
+      paddingTop: 0,
+      paddingBottom: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      margin: null,
+      backgroundColor: null,
+      borderWidth: theme.infoTableBorderWidth,
+      borderColor: theme.infoTableBorderColor,
+      borderRadius: theme.infoTableBorderRadius,
+      flex: null,
+      alignItems: null,
+      justifyContent: null,
     },
     children: tableChildren,
   };
@@ -151,24 +446,30 @@ type SectionBuilder = (
   pageChildren: string[],
   data: Partial<ExtractedCV>,
   colors: TemplateConfig['colors'],
+  theme: CvDossierResolvedTheme,
 ) => void;
 
-function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, SectionBuilder> {
+function createSectionBuilders(): Record<string, SectionBuilder> {
   return {
-    summary(elements, pageChildren, data, colors) {
+    summary(elements, pageChildren, data, colors, theme) {
       if (!data.summary) return;
-      addSectionHeading(elements, 'summary', 'Synthèse du profil', pageChildren, colors.primary, colors.secondary);
+      addSectionHeading(elements, 'summary', 'Synthèse du profil', pageChildren, colors, theme);
       elements['summary-text'] = {
         type: 'RichText',
-        props: { text: data.summary, fontSize: 9, color: colors.text, lineHeight: 1.7 },
+        props: {
+          text: data.summary,
+          fontSize: theme.summaryFontSize,
+          color: colors.text,
+          lineHeight: theme.summaryLineHeight,
+        },
         children: [],
       };
       pageChildren.push('summary-text');
-      elements['spacer-summary'] = { type: 'Spacer', props: { height: 20 }, children: [] };
+      elements['spacer-summary'] = { type: 'Spacer', props: { height: theme.spacerAfterSummary }, children: [] };
       pageChildren.push('spacer-summary');
     },
 
-    skills(elements, pageChildren, data, colors) {
+    skills(elements, pageChildren, data, colors, theme) {
       const skills = data.skills;
       if (!skills) return;
 
@@ -191,16 +492,16 @@ function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, 
       }
       if (categoryRows.length === 0) return;
 
-      addSectionHeading(elements, 'skills', 'Compétences', pageChildren, colors.primary, colors.secondary);
-      addInfoTable(elements, 'skills', categoryRows, pageChildren, colors);
-      elements['spacer-skills'] = { type: 'Spacer', props: { height: 20 }, children: [] };
+      addSectionHeading(elements, 'skills', 'Compétences', pageChildren, colors, theme);
+      addInfoTable(elements, 'skills', categoryRows, pageChildren, colors, theme);
+      elements['spacer-skills'] = { type: 'Spacer', props: { height: theme.spacerAfterSkills }, children: [] };
       pageChildren.push('spacer-skills');
     },
 
-    education(elements, pageChildren, data, colors) {
+    education(elements, pageChildren, data, colors, theme) {
       const education = (data.education ?? []).filter(Boolean);
       if (education.length === 0) return;
-      addSectionHeading(elements, 'edu', 'Formations', pageChildren, colors.primary, colors.secondary);
+      addSectionHeading(elements, 'edu', 'Formations', pageChildren, colors, theme);
 
       education.forEach((edu, i) => {
         elements[`edu-${i}-row`] = {
@@ -215,32 +516,56 @@ function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, 
         };
         elements[`edu-${i}-degree`] = {
           type: 'Text',
-          props: { text: edu.degree ?? '', fontSize: 9, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+          props: {
+            text: edu.degree ?? '',
+            fontSize: theme.educationDegreeFontSize,
+            color: colors.primary,
+            fontWeight: 'bold',
+            fontStyle: null,
+            align: null,
+            lineHeight: null,
+          },
           children: [],
         };
         elements[`edu-${i}-school`] = {
           type: 'Text',
-          props: { text: edu.school ?? '', fontSize: 8, color: colors.text, fontWeight: null, fontStyle: 'italic', align: null, lineHeight: null },
+          props: {
+            text: edu.school ?? '',
+            fontSize: theme.educationSchoolFontSize,
+            color: colors.text,
+            fontWeight: null,
+            fontStyle: 'italic',
+            align: null,
+            lineHeight: null,
+          },
           children: [],
         };
         elements[`edu-${i}-year`] = {
           type: 'Text',
-          props: { text: edu.year ?? '', fontSize: 8, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
+          props: {
+            text: edu.year ?? '',
+            fontSize: theme.educationYearFontSize,
+            color: colors.lightText,
+            fontWeight: null,
+            fontStyle: null,
+            align: null,
+            lineHeight: null,
+          },
           children: [],
         };
         pageChildren.push(`edu-${i}-row`);
-        elements[`edu-${i}-spacer`] = { type: 'Spacer', props: { height: 6 }, children: [] };
+        elements[`edu-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterEducationBlock }, children: [] };
         pageChildren.push(`edu-${i}-spacer`);
       });
 
-      elements['spacer-edu'] = { type: 'Spacer', props: { height: 14 }, children: [] };
+      elements['spacer-edu'] = { type: 'Spacer', props: { height: theme.spacerAfterEducationSection }, children: [] };
       pageChildren.push('spacer-edu');
     },
 
-    experiences(elements, pageChildren, data, colors) {
+    experiences(elements, pageChildren, data, colors, theme) {
       const experiences = (data.experiences ?? []).filter(Boolean);
       if (experiences.length === 0) return;
-      addSectionHeading(elements, 'exp', 'Expériences professionnelles', pageChildren, colors.primary, colors.secondary);
+      addSectionHeading(elements, 'exp', 'Expériences professionnelles', pageChildren, colors, theme);
 
       experiences.forEach((exp, i) => {
         const roleText = exp.role ?? '';
@@ -249,28 +574,83 @@ function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, 
         const companyDomain = exp.companyDomain?.trim();
         const expSkills = (exp.skills ?? []).filter(Boolean);
 
-        elements[`exp-${i}-wrapper`] = {
-          type: 'View',
-          props: {
-            padding: null, paddingTop: 0, paddingBottom: 0, paddingLeft: 12, paddingRight: 0,
-            margin: null, backgroundColor: null,
-            borderWidth: null, borderColor: colors.secondary, borderRadius: null,
-            flex: null, alignItems: null, justifyContent: null,
-          },
-          children: [
-            `exp-${i}-header-wrap`,
-            ...((exp.description ?? []).filter(Boolean).length > 0 ? [`exp-${i}-desc-spacer`, `exp-${i}-desc`] : []),
-            ...(expSkills.length > 0 ? [`exp-${i}-skills-spacer`, `exp-${i}-skills`] : []),
-          ],
-        };
+        const expInnerChildren = [
+          `exp-${i}-header-wrap`,
+          ...((exp.description ?? []).filter(Boolean).length > 0 ? [`exp-${i}-desc-spacer`, `exp-${i}-desc`] : []),
+          ...(expSkills.length > 0 ? [`exp-${i}-skills-spacer`, `exp-${i}-skills`] : []),
+        ];
+
+        if (theme.experienceLeftBorderWidth > 0) {
+          elements[`exp-${i}-wrapper`] = {
+            type: 'Row',
+            props: {
+              justifyContent: null,
+              alignItems: 'stretch',
+              gap: 10,
+              padding: null,
+              flex: null,
+              wrap: null,
+            },
+            children: [`exp-${i}-accent`, `exp-${i}-col`],
+          };
+          elements[`exp-${i}-accent`] = {
+            type: 'CvAccentBar',
+            props: {
+              width: theme.experienceLeftBorderWidth,
+              backgroundColor: theme.experienceLeftBorderColor,
+              borderRadius: 1,
+            },
+            children: [],
+          };
+          elements[`exp-${i}-col`] = {
+            type: 'Column',
+            props: {
+              gap: null,
+              flex: 1,
+              alignItems: null,
+              justifyContent: null,
+              padding: null,
+            },
+            children: expInnerChildren,
+          };
+        } else {
+          elements[`exp-${i}-wrapper`] = {
+            type: 'View',
+            props: {
+              padding: null,
+              paddingTop: 0,
+              paddingBottom: 0,
+              paddingLeft: theme.experiencePaddingLeft,
+              paddingRight: 0,
+              margin: null,
+              backgroundColor: null,
+              borderWidth: null,
+              borderColor: theme.experienceLeftBorderColor,
+              borderRadius: null,
+              flex: null,
+              alignItems: null,
+              justifyContent: null,
+            },
+            children: expInnerChildren,
+          };
+        }
 
         elements[`exp-${i}-header-wrap`] = {
           type: 'View',
           props: {
-            padding: null, paddingTop: i === 0 ? 0 : 30, paddingBottom: 15, paddingLeft: 0, paddingRight: 0,
-            margin: null, backgroundColor: null,
-            borderWidth: null, borderColor: null, borderRadius: null,
-            flex: null, alignItems: null, justifyContent: null,
+            padding: null,
+            paddingTop: i === 0 ? 0 : theme.experienceBetweenBlockPaddingTop,
+            paddingBottom: theme.experienceHeaderPaddingBottom,
+            paddingLeft: 0,
+            paddingRight: 0,
+            margin: null,
+            backgroundColor: null,
+            borderWidth: null,
+            borderColor: null,
+            borderRadius: null,
+            flex: null,
+            alignItems: null,
+            justifyContent: null,
           },
           children: [`exp-${i}-header`],
         };
@@ -301,12 +681,28 @@ function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, 
 
         elements[`exp-${i}-role`] = {
           type: 'Text',
-          props: { text: roleWithCompany, fontSize: 10, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+          props: {
+            text: roleWithCompany,
+            fontSize: theme.experienceRoleFontSize,
+            color: colors.primary,
+            fontWeight: 'bold',
+            fontStyle: null,
+            align: null,
+            lineHeight: null,
+          },
           children: [],
         };
         elements[`exp-${i}-date`] = {
           type: 'Text',
-          props: { text: dateText, fontSize: 8, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
+          props: {
+            text: dateText,
+            fontSize: theme.experienceDateFontSize,
+            color: colors.lightText,
+            fontWeight: null,
+            fontStyle: null,
+            align: null,
+            lineHeight: null,
+          },
           children: [],
         };
 
@@ -315,7 +711,13 @@ function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, 
           elements[`exp-${i}-desc-spacer`] = { type: 'Spacer', props: { height: 4 }, children: [] };
           elements[`exp-${i}-desc`] = {
             type: 'List',
-            props: { items: descItems, ordered: false, fontSize: 8, color: colors.text, spacing: 2 },
+            props: {
+              items: descItems,
+              ordered: false,
+              fontSize: theme.listFontSize,
+              color: colors.text,
+              spacing: theme.listSpacing,
+            },
             children: [],
           };
         }
@@ -324,21 +726,28 @@ function createSectionBuilders(variant: CvDossierLayoutVariant): Record<string, 
           elements[`exp-${i}-skills-spacer`] = { type: 'Spacer', props: { height: 6 }, children: [] };
           elements[`exp-${i}-skills`] = {
             type: 'BadgeList',
-            props: { items: expSkills, bgColor: variant.experienceBadgeBgColor, textColor: colors.primary, fontSize: 7 },
+            props: {
+              items: expSkills,
+              bgColor: theme.experienceBadgeBg,
+              textColor: theme.experienceBadgeText,
+              fontSize: theme.experienceBadgeFontSize,
+            },
             children: [],
           };
         }
 
         pageChildren.push(`exp-${i}-wrapper`);
-        elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: 12 }, children: [] };
+        elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterExperienceBlock }, children: [] };
         pageChildren.push(`exp-${i}-spacer`);
       });
 
-      elements['spacer-exp-end'] = { type: 'Spacer', props: { height: 8 }, children: [] };
+      elements['spacer-exp-end'] = { type: 'Spacer', props: { height: theme.spacerEndExperiences }, children: [] };
       pageChildren.push('spacer-exp-end');
     },
   };
 }
+
+const sectionBuilders = createSectionBuilders();
 
 export function buildCvDossierLayoutSpec(
   data: Partial<ExtractedCV>,
@@ -346,12 +755,15 @@ export function buildCvDossierLayoutSpec(
   variant: CvDossierLayoutVariant,
 ): Spec {
   const config = { ...DEFAULT_TEMPLATE_CONFIG, ...templateConfig };
-  const colors = { ...DEFAULT_TEMPLATE_CONFIG.colors, ...config.colors };
+  const colors = {
+    ...DEFAULT_TEMPLATE_CONFIG.colors,
+    ...(variant.defaultColorOverrides ?? {}),
+    ...(templateConfig?.colors ?? {}),
+  };
+  const theme = variant.resolveTheme(colors);
   const logo = { ...DEFAULT_TEMPLATE_CONFIG.logo, ...config.logo };
   const footer = { ...DEFAULT_TEMPLATE_CONFIG.footer, ...config.footer };
   const sections = config.sections ?? DEFAULT_TEMPLATE_CONFIG.sections;
-
-  const sectionBuilders = createSectionBuilders(variant);
 
   const elements: Spec['elements'] = {};
   const pageChildren: string[] = [];
@@ -359,11 +771,23 @@ export function buildCvDossierLayoutSpec(
   elements['header-band'] = {
     type: 'FixedView',
     props: {
-      position: 'absolute', top: 0, left: 0, right: 0,
-      padding: null, paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0,
-      margin: null, backgroundColor: colors.primary,
-      borderWidth: null, borderColor: null, borderRadius: null,
-      flex: null, alignItems: null, justifyContent: null,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      padding: null,
+      paddingTop: 0,
+      paddingBottom: 0,
+      paddingLeft: 0,
+      paddingRight: 0,
+      margin: null,
+      backgroundColor: theme.headerBackground,
+      borderWidth: null,
+      borderColor: null,
+      borderRadius: null,
+      flex: null,
+      alignItems: null,
+      justifyContent: null,
     },
     children: ['header-inner'],
   };
@@ -372,12 +796,27 @@ export function buildCvDossierLayoutSpec(
     : '';
   elements['header-inner'] = {
     type: 'Row',
-    props: { justifyContent: 'space-between', alignItems: 'center', gap: null, padding: 14, flex: null, wrap: null },
+    props: {
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: null,
+      padding: theme.headerPadding,
+      flex: null,
+      wrap: null,
+    },
     children: ['header-name', 'header-logo'],
   };
   elements['header-name'] = {
     type: 'Text',
-    props: { text: consultantName.toUpperCase(), fontSize: 10, color: '#ffffff', fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+    props: {
+      text: consultantName.toUpperCase(),
+      fontSize: 10,
+      color: theme.headerNameColor,
+      fontWeight: 'bold',
+      fontStyle: null,
+      align: null,
+      lineHeight: null,
+    },
     children: [],
   };
   if (logo.url) {
@@ -398,7 +837,7 @@ export function buildCvDossierLayoutSpec(
       props: {
         text: 'ESNEO',
         fontSize: 10,
-        color: '#ffffff',
+        color: theme.headerFallbackWordmarkColor,
         fontWeight: 'bold',
         fontStyle: null,
         align: 'right',
@@ -409,15 +848,15 @@ export function buildCvDossierLayoutSpec(
   }
   pageChildren.push('header-band');
 
-  elements['spacer-after-header'] = { type: 'Spacer', props: { height: 47 }, children: [] };
+  elements['spacer-after-header'] = { type: 'Spacer', props: { height: theme.spacerAfterHeader }, children: [] };
   pageChildren.push('spacer-after-header');
 
   elements['doc-title'] = {
     type: 'Text',
     props: {
       text: variant.docTitle,
-      fontSize: 12,
-      color: colors.primary,
+      fontSize: theme.docTitleFontSize,
+      color: theme.docTitleColor,
       fontWeight: 'bold',
       fontStyle: null,
       align: 'center',
@@ -429,12 +868,17 @@ export function buildCvDossierLayoutSpec(
 
   elements['doc-title-accent'] = {
     type: 'Divider',
-    props: { color: colors.secondary, thickness: 2, marginTop: 8, marginBottom: 0 },
+    props: {
+      color: theme.docTitleRuleColor,
+      thickness: theme.docTitleRuleThickness,
+      marginTop: theme.docTitleRuleMarginTop,
+      marginBottom: 0,
+    },
     children: [],
   };
   pageChildren.push('doc-title-accent');
 
-  elements['spacer-doc-title'] = { type: 'Spacer', props: { height: 16 }, children: [] };
+  elements['spacer-doc-title'] = { type: 'Spacer', props: { height: theme.spacerAfterDocTitle }, children: [] };
   pageChildren.push('spacer-doc-title');
 
   if (data.personalInfo) {
@@ -445,7 +889,7 @@ export function buildCvDossierLayoutSpec(
     if (pi.location) infoRows.push({ label: 'Localisation', value: pi.location });
     if (pi.availability) infoRows.push({ label: 'Disponibilité', value: pi.availability });
 
-    addInfoTable(elements, 'info', infoRows, pageChildren, colors);
+    addInfoTable(elements, 'info', infoRows, pageChildren, colors, theme);
 
     elements['spacer-info'] = { type: 'Spacer', props: { height: 20 }, children: [] };
     pageChildren.push('spacer-info');
@@ -453,23 +897,40 @@ export function buildCvDossierLayoutSpec(
 
   for (const section of sections) {
     const builder = sectionBuilders[section];
-    if (builder) builder(elements, pageChildren, data, colors);
+    if (builder) builder(elements, pageChildren, data, colors, theme);
   }
 
   elements['footer-wrapper'] = {
     type: 'FixedView',
     props: {
-      position: 'absolute', bottom: 0, left: 0, right: 0,
-      padding: null, paddingTop: 10, paddingBottom: 12, paddingLeft: 48, paddingRight: 48,
-      margin: null, backgroundColor: null,
-      borderWidth: null, borderColor: null, borderRadius: null,
-      flex: null, alignItems: null, justifyContent: null,
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: null,
+      paddingTop: 10,
+      paddingBottom: 12,
+      paddingLeft: theme.pageMarginLeft,
+      paddingRight: theme.pageMarginRight,
+      margin: null,
+      backgroundColor: null,
+      borderWidth: null,
+      borderColor: null,
+      borderRadius: null,
+      flex: null,
+      alignItems: null,
+      justifyContent: null,
     },
     children: ['footer-divider', 'footer-content'],
   };
   elements['footer-divider'] = {
     type: 'Divider',
-    props: { color: colors.secondary, thickness: 0.5, marginTop: 0, marginBottom: 8 },
+    props: {
+      color: theme.footerRuleColor,
+      thickness: theme.footerRuleThickness,
+      marginTop: 0,
+      marginBottom: theme.footerRuleMarginBottom,
+    },
     children: [],
   };
   elements['footer-content'] = {
@@ -479,12 +940,28 @@ export function buildCvDossierLayoutSpec(
   };
   elements['footer-line1'] = {
     type: 'Text',
-    props: { text: footer.line1, fontSize: 7, color: colors.primary, fontWeight: 'bold', fontStyle: null, align: null, lineHeight: null },
+    props: {
+      text: footer.line1,
+      fontSize: theme.footerLine1FontSize,
+      color: colors.primary,
+      fontWeight: 'bold',
+      fontStyle: null,
+      align: null,
+      lineHeight: null,
+    },
     children: [],
   };
   elements['footer-line2'] = {
     type: 'Text',
-    props: { text: footer.line2, fontSize: 7, color: colors.lightText, fontWeight: null, fontStyle: null, align: null, lineHeight: null },
+    props: {
+      text: footer.line2,
+      fontSize: theme.footerLine2FontSize,
+      color: colors.lightText,
+      fontWeight: null,
+      fontStyle: null,
+      align: null,
+      lineHeight: null,
+    },
     children: [],
   };
   pageChildren.push('footer-wrapper');
@@ -503,10 +980,10 @@ export function buildCvDossierLayoutSpec(
     props: {
       size: 'A4',
       orientation: null,
-      marginTop: 56,
-      marginBottom: 45,
-      marginLeft: 48,
-      marginRight: 48,
+      marginTop: theme.pageMarginTop,
+      marginBottom: theme.pageMarginBottom,
+      marginLeft: theme.pageMarginLeft,
+      marginRight: theme.pageMarginRight,
       backgroundColor: colors.background,
     },
     children: pageChildren,
