@@ -10,17 +10,19 @@ interface UseWorkflowStreamOptions {
   onFinish?: () => void;
 }
 
-interface UseWorkflowStreamReturn<T> {
+interface UseWorkflowStreamReturn<T, M = unknown> {
   object: Partial<T> | null;
+  /** Métadonnées optionnelles par ligne NDJSON (ex. phase d’extraction CV) */
+  streamMeta: M | null;
   isLoading: boolean;
   error: Error | null;
   submit: (body: Record<string, unknown>) => void;
   stop: () => void;
 }
 
-async function consumeNdjsonStream<T>(
+async function consumeNdjsonStream<T, M>(
   reader: ReadableStreamDefaultReader<Uint8Array>,
-  onChunk: (data: Partial<T>) => void,
+  onChunk: (chunk: { data?: Partial<T>; meta?: M }) => void,
   chunkIndexRef: { current: number },
   abortSignal: AbortSignal,
 ) {
@@ -40,13 +42,18 @@ async function consumeNdjsonStream<T>(
         const trimmed = line.trim();
         if (!trimmed) continue;
         try {
-          const chunk = JSON.parse(trimmed);
+          const chunk = JSON.parse(trimmed) as {
+            index?: number;
+            data?: Partial<T>;
+            meta?: M;
+          };
           if (chunk.index !== undefined) {
             chunkIndexRef.current = chunk.index;
           }
-          if (chunk.data !== undefined) {
-            onChunk(chunk.data as Partial<T>);
-          }
+          onChunk({
+            ...(chunk.data !== undefined ? { data: chunk.data } : {}),
+            ...(chunk.meta !== undefined ? { meta: chunk.meta } : {}),
+          });
         } catch {
           // Skip malformed lines
         }
@@ -57,10 +64,13 @@ async function consumeNdjsonStream<T>(
   }
 }
 
-export function useWorkflowStream<T>(options: UseWorkflowStreamOptions): UseWorkflowStreamReturn<T> {
+export function useWorkflowStream<T, M = unknown>(
+  options: UseWorkflowStreamOptions,
+): UseWorkflowStreamReturn<T, M> {
   const { api, runId, runStatus, activeStatuses, onFinish } = options;
 
   const [object, setObject] = useState<Partial<T> | null>(null);
+  const [streamMeta, setStreamMeta] = useState<M | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -80,9 +90,16 @@ export function useWorkflowStream<T>(options: UseWorkflowStreamOptions): UseWork
     if (!body) return;
 
     const reader = body.getReader();
-    await consumeNdjsonStream<T>(
+    await consumeNdjsonStream<T, M>(
       reader,
-      (data) => setObject(data),
+      (chunk) => {
+        if (chunk.data !== undefined) {
+          setObject(chunk.data as Partial<T>);
+        }
+        if (chunk.meta !== undefined) {
+          setStreamMeta(chunk.meta);
+        }
+      },
       chunkIndexRef,
       signal,
     );
@@ -98,6 +115,7 @@ export function useWorkflowStream<T>(options: UseWorkflowStreamOptions): UseWork
     setIsLoading(true);
     setError(null);
     setObject(null);
+    setStreamMeta(null);
     chunkIndexRef.current = 0;
 
     try {
@@ -138,6 +156,7 @@ export function useWorkflowStream<T>(options: UseWorkflowStreamOptions): UseWork
 
     setIsLoading(true);
     setError(null);
+    setStreamMeta(null);
 
     (async () => {
       try {
@@ -194,5 +213,5 @@ export function useWorkflowStream<T>(options: UseWorkflowStreamOptions): UseWork
     };
   }, []);
 
-  return { object, isLoading, error, submit, stop };
+  return { object, streamMeta, isLoading, error, submit, stop };
 }

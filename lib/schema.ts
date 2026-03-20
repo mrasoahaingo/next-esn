@@ -97,6 +97,25 @@ export const extractionSchema = z.object({
 
 export type ExtractedCV = z.infer<typeof extractionSchema>;
 
+/** Sous-schémas pour extraction parallèle (streamText + Output.object) */
+export const extractionIdentitySchema = extractionSchema.pick({
+  personalInfo: true,
+  summary: true,
+});
+export type ExtractionIdentity = z.infer<typeof extractionIdentitySchema>;
+
+export const extractionExperiencesSchema = extractionSchema.pick({ experiences: true });
+export type ExtractionExperiences = z.infer<typeof extractionExperiencesSchema>;
+
+export const extractionEducationSchema = extractionSchema.pick({ education: true });
+export type ExtractionEducation = z.infer<typeof extractionEducationSchema>;
+
+export const extractionSkillsStrengthsSchema = extractionSchema.pick({
+  skills: true,
+  strengths: true,
+});
+export type ExtractionSkillsStrengths = z.infer<typeof extractionSkillsStrengthsSchema>;
+
 // Positioning schemas
 
 export const positioningAnalysisSchema = z.object({

@@ -4,6 +4,7 @@ import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExtractedCV } from '@/lib/schema';
+import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
@@ -51,7 +52,10 @@ export default function ReviewPage() {
   const cancelWorkflow = useCancelWorkflow();
   const router = useRouter();
 
-  const { object, submit, isLoading, error, stop } = useWorkflowStream<ExtractedCV>({
+  const { object, streamMeta, submit, isLoading, error, stop } = useWorkflowStream<
+    ExtractedCV,
+    CvExtractionStreamMeta
+  >({
     api: '/api/extract',
     runId: candidateData?.workflow_run_id,
     runStatus: candidateData?.status,
@@ -210,7 +214,7 @@ export default function ReviewPage() {
 
   // Section status helper
   const status = (field: keyof ExtractedCV) =>
-    getSectionStatus(cvData, isLoading, field);
+    getSectionStatus(cvData, isLoading, field, streamMeta);
 
   // Determine if save button should be enabled
   const canSave = !isLoading && !!cvData && isDirty && !updateCandidate.isPending;
@@ -421,7 +425,7 @@ export default function ReviewPage() {
           </div>
 
           {/* Extraction progress */}
-          <ExtractionProgress data={cvData} isStreaming={isLoading} />
+          <ExtractionProgress data={cvData} isStreaming={isLoading} streamMeta={streamMeta} />
         </div>
 
         {error && (

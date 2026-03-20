@@ -3,45 +3,77 @@ import { extractionSchema, ExtractedCV } from '@/lib/schema';
 import { model } from '@/lib/ai';
 import mammoth from 'mammoth';
 
-export const SYSTEM_PROMPT = `Tu es un expert en recrutement technique une ESN française.
-Ton objectif est d'extraire les données d'un CV et de les normaliser.
+/** Règles communes à toutes les extractions segmentées */
+export const EXTRACTION_SYSTEM_COMMON = `Tu es un expert en recrutement technique pour une ESN française.
+Tu extrais et normalises les données à partir du texte du CV fourni.
+Langue : français pour tous les champs texte.`;
 
-IMPORTANT : Tu dois impérativement utiliser la liste de référence de https://skills.sh/ pour mapper les compétences techniques.
+/** Bloc compétences (skills.sh, catégories, source, starred) */
+export const EXTRACTION_SYSTEM_SKILLS = `IMPORTANT : utilise la liste de référence https://skills.sh/ pour mapper les compétences techniques.
 Normalisation des termes :
 - "Syfo" -> "Symfony"
 - "dev" -> "Développeur"
 - "Pio" -> "Pilotage de projet" (ou le terme officiel le plus proche dans skills.sh)
 - "DDD" -> "Domain Driven Design"
 - "TDD" -> "Test Driven Development"
-- Mappe systématiquement les abréviations vers les labels officiels de la taxonomie skills.sh.
+- Mappe les abréviations vers les labels officiels de la taxonomie skills.sh.
 
-Format de sortie attendu : JSON structuré.
-
-Pour les compétences (skills), classe-les en 4 catégories :
+Classe les compétences en 4 catégories :
 - technologies : langages, frameworks, bases de données, outils techniques
 - softSkills : compétences humaines (leadership, communication, esprit d'équipe, etc.)
 - expertises : domaines d'expertise (architecture, cloud, data, sécurité, etc.)
 - methodologies : méthodologies (Agile, Scrum, DevOps, TDD, etc.)
 
-IMPORTANT pour chaque compétence, indique la source :
-- "extracted" : la compétence est explicitement mentionnée dans le CV (dans une section compétences, dans le titre, ou clairement citée dans une expérience)
-- "inferred" : la compétence est déduite par toi à partir du contexte (ex: si le candidat utilise React, tu déduis JavaScript ; s'il fait du Scrum Master, tu déduis Agile)
-Sois strict : ne marque "extracted" que pour les compétences réellement écrites dans le CV. Privilégie la qualité à la quantité pour les compétences inférées.
+Pour chaque compétence, indique la source :
+- "extracted" : explicitement mentionnée dans le CV (section compétences, titre, ou citation claire dans une expérience)
+- "inferred" : déduite du contexte (ex. React -> JavaScript). Sois strict sur "extracted".
 
-IMPORTANT pour les champs "starred" et "added" :
-- starred=true pour les compétences les plus importantes, connues, modernes et recherchées. MAX 20 starred pour les technologies. Pour les autres catégories : star les plus valorisantes
-- starred=false pour les compétences secondaires ou obsolètes
-- added=true automatiquement pour toutes les compétences starred (elles apparaîtront dans le PDF)
-- added=false automatiquement pour les compétences non-starred (l'utilisateur pourra les ajouter manuellement)
-- Trie chaque catégorie : starred+added en premier, puis les autres
+Pour starred et added :
+- starred=true pour les compétences les plus importantes et recherchées. MAX 20 starred pour les technologies.
+- added=true pour toutes les compétences starred ; added=false pour les non-starred.
+- Trie chaque catégorie : starred+added en premier, puis les autres.`;
 
-Pour le résumé (summary), rédige 3-4 phrases de synthèse professionnelle. Utilise **double astérisques** autour des compétences clés, technologies et réalisations importantes pour les mettre en évidence.
+export const EXTRACTION_SYSTEM_IDENTITY = `${EXTRACTION_SYSTEM_COMMON}
+
+Extrais uniquement : informations personnelles (personalInfo) et synthèse professionnelle (summary).
+
+Pour personalInfo :
+- yearsOfExperience : total à partir des durées / dates du CV (ex. "8 ans")
+- availability : "Immédiate" par défaut sauf si préavis mentionné
+
+Pour summary : 3-4 phrases. Utilise **double astérisques** autour des compétences clés, technologies et réalisations importantes.`;
+
+export const EXTRACTION_SYSTEM_EXPERIENCES = `${EXTRACTION_SYSTEM_COMMON}
+
+Extrais la liste complète des expériences professionnelles (experiences) : rôle, entreprise, dates, lieu, missions (description en puces), compétences techniques par poste si visibles, domaine entreprise (companyDomain) si déductible pour le logo.`;
+
+export const EXTRACTION_SYSTEM_EDUCATION = `${EXTRACTION_SYSTEM_COMMON}
+
+Extrais la liste des formations (education) : diplôme, établissement, année ou période.`;
+
+export const EXTRACTION_SYSTEM_SKILLS_STRENGTHS = `${EXTRACTION_SYSTEM_COMMON}
+
+${EXTRACTION_SYSTEM_SKILLS}
+
+Extrais skills (toutes catégories) et strengths : 4-5 puces de forces alignées sur le CV et, si une fiche de poste est fournie, sur le matching.`;
+
+export const TRANSCRIPTION_SYSTEM = `Tu transcris un CV depuis le document PDF en texte structuré.
+Consigne : français, fidélité maximale au contenu, sans inventer d'information.
+Préserve la structure : titres de sections, puces, dates, noms d'entreprises et de formations.
+Ne produis pas de JSON ; uniquement du texte brut ou markdown léger (titres ##).`;
+
+/** Prompt legacy pour generateObject (extractCVData) */
+export const SYSTEM_PROMPT = `${EXTRACTION_SYSTEM_COMMON}
+
+${EXTRACTION_SYSTEM_SKILLS}
+
+Format de sortie : JSON structuré couvrant tout le CV (identité, synthèse, expériences, formations, compétences par catégorie, forces optionnelles).
+
+Pour le résumé (summary), rédige 3-4 phrases. Utilise **double astérisques** autour des compétences clés, technologies et réalisations importantes.
 
 Pour les informations personnelles :
-- yearsOfExperience : calcule le nombre total d'années d'expérience à partir des dates des expériences (ex: "8 ans")
-- availability : indique "Immédiate" par défaut sauf si le CV mentionne un préavis
-
-Langue : Français.`;
+- yearsOfExperience : calcule à partir des dates des expériences (ex. "8 ans")
+- availability : "Immédiate" par défaut sauf préavis mentionné`;
 
 export { extractionSchema, type ExtractedCV };
 
