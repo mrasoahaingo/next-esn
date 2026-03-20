@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
 import { requireOrgId } from '@/lib/utils/auth';
+import { getTemplateConfig, mergeTemplateWithDefaults } from '@/lib/utils/template';
 
 export async function POST(req: NextRequest) {
   try {
-    await requireOrgId();
-    const { data, templateConfig } = await req.json();
-    const buffer = await generateHimeoPdf(data, templateConfig);
+    const orgId = await requireOrgId();
+    const body = await req.json();
+    const { data, templateConfig } = body;
+
+    let resolvedTemplate = mergeTemplateWithDefaults(templateConfig);
+    if (Object.prototype.hasOwnProperty.call(body, 'templateId')) {
+      const fromDb = await getTemplateConfig(orgId, body.templateId ?? undefined);
+      resolvedTemplate = mergeTemplateWithDefaults(fromDb);
+    }
+
+    const buffer = await generateHimeoPdf(data, resolvedTemplate, orgId);
 
     return new Response(buffer, {
       headers: {

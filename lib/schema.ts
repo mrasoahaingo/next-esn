@@ -22,6 +22,8 @@ export const templateConfigSchema = z.object({
   sections: z.array(z.enum([
     'summary', 'skills', 'education', 'experiences',
   ])),
+  /** Préfixe des noms de fichier PDF exportés (CV / positionnement) pour les candidats utilisant ce gabarit */
+  exportFilePrefix: z.string().max(40).optional(),
 });
 
 export type TemplateConfig = z.infer<typeof templateConfigSchema>;
@@ -40,10 +42,11 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
     height: 20,
   },
   footer: {
-    line1: 'Himeo Group – Solutions humaines & digitales',
-    line2: 'contact@himeo.fr – www.himeo.fr',
+    line1: '',
+    line2: '',
   },
   sections: ['summary', 'skills', 'education', 'experiences'],
+  exportFilePrefix: 'CV',
 };
 
 export const skillSchema = z.object({

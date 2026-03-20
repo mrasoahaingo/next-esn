@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const adminKeys = {
   all: ['admin'] as const,
@@ -21,6 +21,7 @@ export interface AdminStats {
     positionings: number
     inputTokens: number
     outputTokens: number
+    cvCodeTemplate: string
   }[]
   recentCandidates: {
     id: string
@@ -43,6 +44,40 @@ export function useAdminStats() {
       const res = await fetch('/api/admin/stats')
       if (!res.ok) throw new Error('Failed to fetch admin stats')
       return res.json()
+    },
+  })
+}
+
+export function useUpdateOrgCvCodeTemplate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      orgId,
+      cvCodeTemplate,
+    }: {
+      orgId: string
+      cvCodeTemplate: string
+    }) => {
+      const res = await fetch(
+        `/api/admin/organizations/${encodeURIComponent(orgId)}/cv-code-template`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cvCodeTemplate }),
+        },
+      )
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        const msg =
+          typeof err.error === 'string'
+            ? err.error
+            : JSON.stringify(err.error ?? err)
+        throw new Error(msg || 'Mise à jour impossible')
+      }
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.stats() })
     },
   })
 }

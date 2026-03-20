@@ -5,9 +5,10 @@ import { model, modelName } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import {
   positioningOutputSchema,
-  POSITIONING_GENERATE_PROMPT,
+  buildPositioningGeneratePrompt,
   buildGenerateMessages,
 } from '@/lib/services/positioning.service';
+import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
 
 async function fetchAndGenerate(positioningId: string, answers: Record<string, string>) {
   "use step";
@@ -33,11 +34,15 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
     answers ?? {},
   );
 
+  const orgId = positioning.org_id as string | null | undefined;
+  const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
+  const systemPrompt = buildPositioningGeneratePrompt(toPositioningPromptBranding(orgSettings));
+
   const startTime = Date.now();
   const result = streamObject({
     model,
     schema: positioningOutputSchema,
-    system: POSITIONING_GENERATE_PROMPT,
+    system: systemPrompt,
     messages,
   });
 

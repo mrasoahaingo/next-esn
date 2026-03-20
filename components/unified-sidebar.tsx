@@ -37,6 +37,7 @@ import { Label as SwitchLabel } from '@/components/ui/label';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 import { useOrgRole } from '@/lib/hooks/useOrgRole';
+import { useOrgBranding } from '@/components/org-branding-provider';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -117,6 +118,7 @@ export function UnifiedSidebar() {
   const { isSuperAdmin } = useSuperAdmin();
   const { isOrgAdmin } = useOrgRole();
   const canManageTeam = isOrgAdmin || isSuperAdmin;
+  const { displayName, appLogoUrl } = useOrgBranding();
 
   const { data: candidatesData, isLoading: isLoadingCandidates } = useCandidates();
   const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
@@ -235,15 +237,24 @@ export function UnifiedSidebar() {
         href="/"
         className="flex items-center px-4 py-3.5 transition-opacity hover:opacity-90"
       >
-        <Image
-          src="/esneo-full.svg"
-          alt="Esneo"
-          width={120}
-          height={30}
-          className="max-w-full object-contain object-left"
-          priority
-          unoptimized
-        />
+        {appLogoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- URL dynamique (Supabase public)
+          <img
+            src={appLogoUrl}
+            alt={displayName}
+            className="max-h-8 max-w-[200px] object-contain object-left"
+          />
+        ) : (
+          <Image
+            src="/esneo-full.svg"
+            alt={displayName}
+            width={120}
+            height={30}
+            className="max-w-full object-contain object-left"
+            priority
+            unoptimized
+          />
+        )}
       </Link>
 
       {/* Demo mode toggle */}
@@ -618,17 +629,30 @@ export function UnifiedSidebar() {
           <span className="font-medium">Templates</span>
         </button>
         {canManageTeam && (
-          <button
-            onClick={() => router.push('/settings/team')}
-            className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
-              pathname.startsWith('/settings/team')
-                ? 'bg-violet/10 text-violet'
-                : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            <span className="font-medium">Équipe</span>
-          </button>
+          <>
+            <button
+              onClick={() => router.push('/settings/organization')}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+                pathname.startsWith('/settings/organization')
+                  ? 'bg-violet/10 text-violet'
+                  : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+              }`}
+            >
+              <Building2 className="h-4 w-4" />
+              <span className="font-medium">Organisation</span>
+            </button>
+            <button
+              onClick={() => router.push('/settings/team')}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+                pathname.startsWith('/settings/team')
+                  ? 'bg-violet/10 text-violet'
+                  : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span className="font-medium">Équipe</span>
+            </button>
+          </>
         )}
         {isSuperAdmin && (
           <button

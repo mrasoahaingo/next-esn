@@ -38,6 +38,7 @@ import {
 } from 'recharts';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useDashboard, useUploadCv } from '@/lib/queries';
+import { useOrgBranding } from '@/components/org-branding-provider';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -161,6 +162,7 @@ export default function Dashboard() {
   const dropRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const isDemoMode = useDemoModeStore((s) => s.isDemoMode);
+  const { displayName } = useOrgBranding();
 
   const { data: dashboardData, isLoading } = useDashboard();
   const uploadCv = useUploadCv();
@@ -195,10 +197,10 @@ export default function Dashboard() {
               analyzedPos.length
           )
         : 0;
-    // Estimated manual time (baseline without Himeo)
+    // Estimated manual time (baseline manuel)
     const estimatedManualMinutes = totalCvs * 40 + generatedPos * 90;
 
-    // Actual time spent with Himeo
+    // Temps réel avec l'outil
     const aiExtractionMs = candidates.reduce((s, c) => s + (c.ai_extraction_duration_ms ?? 0), 0);
     const aiAnalysisMs = positionings.reduce((s, p) => s + (p.ai_analysis_duration_ms ?? 0), 0);
     const aiGenerationMs = positionings.reduce((s, p) => s + (p.ai_generation_duration_ms ?? 0), 0);
@@ -369,7 +371,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold title-gradient inline-block">Dashboard</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Vue d&apos;ensemble de l&apos;activité Himeo
+              Vue d&apos;ensemble de l&apos;activité — {displayName}
             </p>
           </div>
 
@@ -466,7 +468,7 @@ export default function Dashboard() {
                   <TooltipContent side="bottom" className="text-xs">
                     <div className="space-y-1">
                       <p>Temps manuel estimé : <span className="font-semibold">{formatTimeSaved(stats.estimatedManualMinutes)}</span></p>
-                      <p>Temps réel avec Himeo : <span className="font-semibold">{formatTimeSaved(stats.actualTotalMinutes)}</span></p>
+                      <p>Temps réel ({displayName}) : <span className="font-semibold">{formatTimeSaved(stats.actualTotalMinutes)}</span></p>
                       <div className="border-t border-white/10 pt-1 mt-1 text-muted-foreground">
                         <p>IA : {formatTimeSaved(stats.aiMinutes)}</p>
                         <p>Édition : {formatTimeSaved(stats.userMinutes)}</p>
@@ -628,7 +630,7 @@ export default function Dashboard() {
             </CardContent>
             <CardFooter>
               <p className="text-[10px] text-muted-foreground/60">
-                Progression des CVs dans le workflow : de l&apos;upload initial jusqu&apos;à la génération du PDF Himeo final.
+                Progression des CVs dans le workflow : de l&apos;upload initial jusqu&apos;au PDF final.
               </p>
             </CardFooter>
           </Card>

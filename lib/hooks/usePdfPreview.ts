@@ -8,6 +8,11 @@ interface PdfPreviewOptions {
   setIsPdfLoading: (loading: boolean) => void;
   /** Override the template config from the store (useful for template editor) */
   templateConfigOverride?: Partial<TemplateConfig> | null;
+  /**
+   * Si défini (y compris `null`), le serveur résout le gabarit via la DB (évite un template Zustand obsolète).
+   * Ne pas passer sur l’éditeur de gabarit : le body n’inclut pas `templateId` et le config local est utilisé.
+   */
+  templateId?: string | null;
   debounceMs?: number;
 }
 
@@ -16,6 +21,7 @@ export function usePdfPreview({
   setPdfBlobUrl,
   setIsPdfLoading,
   templateConfigOverride,
+  templateId,
   debounceMs = 600,
 }: PdfPreviewOptions) {
   const storeConfig = useTemplateStore((s) => s.templateConfig);
@@ -36,10 +42,17 @@ export function usePdfPreview({
 
       setIsPdfLoading(true);
       try {
+        const body: Record<string, unknown> = { data };
+        if (templateId !== undefined) {
+          body.templateId = templateId;
+        } else {
+          body.templateConfig = templateConfig;
+        }
+
         const res = await fetch('/api/pdf-preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data, templateConfig }),
+          body: JSON.stringify(body),
           signal: controller.signal,
         });
 
@@ -62,5 +75,5 @@ export function usePdfPreview({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [data, templateConfig, setPdfBlobUrl, setIsPdfLoading, debounceMs]);
+  }, [data, templateConfig, templateId, setPdfBlobUrl, setIsPdfLoading, debounceMs]);
 }

@@ -15,6 +15,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TemplateConfig } from '@/lib/schema';
+import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
+
+function normalizeTemplateConfig(raw: Partial<TemplateConfig>): TemplateConfig {
+  return {
+    ...DEFAULT_TEMPLATE_CONFIG,
+    ...raw,
+    colors: { ...DEFAULT_TEMPLATE_CONFIG.colors, ...raw.colors },
+    logo: { ...DEFAULT_TEMPLATE_CONFIG.logo, ...raw.logo },
+    footer: { ...DEFAULT_TEMPLATE_CONFIG.footer, ...raw.footer },
+    sections: raw.sections ?? DEFAULT_TEMPLATE_CONFIG.sections,
+    exportFilePrefix: raw.exportFilePrefix ?? DEFAULT_TEMPLATE_CONFIG.exportFilePrefix,
+  };
+}
 import { useTemplate, useUpdateTemplate } from '@/lib/queries';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 
@@ -112,7 +125,8 @@ export default function TemplateEditorPage() {
 
   // Derive current values: local edits override server data
   const name = localName ?? template?.name ?? '';
-  const config = localConfig ?? template?.config ?? null;
+  const config =
+    localConfig ?? (template?.config ? normalizeTemplateConfig(template.config as Partial<TemplateConfig>) : null);
 
   // PDF preview state
   const [pdfBlobUrl, setPdfBlobUrlRaw] = useState<string | null>(null);
@@ -152,6 +166,13 @@ export default function TemplateEditorPage() {
     if (!config) return;
     updateConfig({
       footer: { ...config.footer, [key]: value },
+    });
+  };
+
+  const updateLogo = (key: string, value: string | number) => {
+    if (!config) return;
+    updateConfig({
+      logo: { ...config.logo, [key]: value },
     });
   };
 
@@ -295,6 +316,64 @@ export default function TemplateEditorPage() {
                     className="mt-1 text-xs"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Logo PDF */}
+            <div className="rounded-xl glass-panel p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Logo en-tête PDF</h3>
+              <p className="mb-2 text-[10px] text-muted-foreground">
+                URL publique (ex. fichier hébergé). Laisser vide pour le logo graphique par défaut.
+              </p>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">URL</Label>
+                  <Input
+                    value={config.logo.url}
+                    onChange={(e) => updateLogo('url', e.target.value)}
+                    placeholder="https://…"
+                    className="mt-1 font-mono text-[11px]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Largeur (px)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={config.logo.width}
+                      onChange={(e) => updateLogo('width', Number(e.target.value) || 90)}
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Hauteur (px)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={config.logo.height}
+                      onChange={(e) => updateLogo('height', Number(e.target.value) || 20)}
+                      className="mt-1 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Export filename */}
+            <div className="rounded-xl glass-panel p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Export PDF</h3>
+              <p className="mb-2 text-[10px] text-muted-foreground">
+                Préfixe des noms de fichier pour les CV générés avec ce gabarit (caractères spéciaux exclus côté serveur).
+              </p>
+              <div>
+                <Label className="text-xs">Préfixe</Label>
+                <Input
+                  value={config.exportFilePrefix ?? 'CV'}
+                  onChange={(e) => updateConfig({ exportFilePrefix: e.target.value })}
+                  placeholder="CV"
+                  className="mt-1 max-w-xs text-xs"
+                />
               </div>
             </div>
 

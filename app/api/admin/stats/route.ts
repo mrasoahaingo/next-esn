@@ -73,9 +73,23 @@ export async function GET() {
     orgMap.set(u.org_id, entry)
   }
 
+  const orgIdList = Array.from(orgMap.keys())
+  const { data: orgSettingsRows } =
+    orgIdList.length > 0
+      ? await supabase
+          .from('organization_settings')
+          .select('org_id, cv_code_template')
+          .in('org_id', orgIdList)
+      : { data: [] as { org_id: string; cv_code_template: string }[] }
+
+  const cvTemplateByOrg = new Map(
+    (orgSettingsRows ?? []).map((r) => [r.org_id, r.cv_code_template ?? 'himeo']),
+  )
+
   const organizations = Array.from(orgMap.entries()).map(([orgId, stats]) => ({
     orgId,
     ...stats,
+    cvCodeTemplate: cvTemplateByOrg.get(orgId) ?? 'himeo',
   }))
 
   return NextResponse.json({

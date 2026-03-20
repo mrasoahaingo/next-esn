@@ -66,10 +66,14 @@ export default function ReviewPage() {
   const aiDurationMs = candidateData?.ai_extraction_duration_ms ?? null;
   const userTimeSeconds = candidateData?.user_review_time_seconds ?? null;
 
+  const pdfTemplateId =
+    candidateData?.id !== undefined ? (candidateData.template_id ?? null) : undefined;
+
   usePdfPreview({
     data: cvData,
     setPdfBlobUrl,
     setIsPdfLoading,
+    templateId: pdfTemplateId,
   });
 
   useSessionTimer({
@@ -94,6 +98,7 @@ export default function ReviewPage() {
       setCvData(null);
       setPdfBlobUrl(null);
       setDirty(false);
+      setTemplateConfig(null);
       initializedForId.current = candidateData.id;
 
       // Load template config (from candidate's template or default)

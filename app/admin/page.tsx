@@ -1,6 +1,6 @@
 'use client'
 
-import { useAdminStats } from '@/lib/queries'
+import { useAdminStats, useUpdateOrgCvCodeTemplate } from '@/lib/queries'
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin'
 import { redirect } from 'next/navigation'
 import {
@@ -13,7 +13,13 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -22,6 +28,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { CV_CODE_TEMPLATE_IDS, CV_CODE_TEMPLATE_LABELS } from '@/templates/registry'
+import { toast } from 'sonner'
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -32,6 +40,7 @@ function formatTokens(n: number): string {
 export default function AdminPage() {
   const { isSuperAdmin, isLoaded } = useSuperAdmin()
   const { data, isLoading } = useAdminStats()
+  const updateCvTemplate = useUpdateOrgCvCodeTemplate()
 
   if (isLoaded && !isSuperAdmin) {
     redirect('/')
@@ -140,6 +149,7 @@ export default function AdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Organisation</TableHead>
+                    <TableHead>Template CV (code)</TableHead>
                     <TableHead className="text-right">CVs</TableHead>
                     <TableHead className="text-right">
                       Positionnements
@@ -164,6 +174,39 @@ export default function AdminPage() {
                             {org.orgId?.slice(0, 20) ?? '—'}…
                           </p>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={org.cvCodeTemplate ?? 'himeo'}
+                          onValueChange={(v) => {
+                            if (v == null || v === '') return
+                            const oid = org.orgId
+                            if (typeof oid !== 'string' || !oid) return
+                            updateCvTemplate.mutate(
+                              { orgId: oid, cvCodeTemplate: v },
+                              {
+                                onSuccess: () =>
+                                  toast.success('Template CV mis à jour'),
+                                onError: (e) =>
+                                  toast.error(
+                                    e instanceof Error ? e.message : 'Erreur',
+                                  ),
+                              },
+                            )
+                          }}
+                          disabled={updateCvTemplate.isPending}
+                        >
+                          <SelectTrigger className="h-8 w-[min(100%,220px)] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CV_CODE_TEMPLATE_IDS.map((id) => (
+                              <SelectItem key={id} value={id}>
+                                {CV_CODE_TEMPLATE_LABELS[id]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {org.candidates}

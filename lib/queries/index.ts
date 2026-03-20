@@ -5,6 +5,6 @@ export { usePositionings, usePositioning, useCreatePositioning, useUpdatePositio
 export { useDashboard } from './dashboard';
 export { useCancelWorkflow } from './workflow';
 export { useTemplate, useUpdateTemplate } from './templates';
-export { useAdminStats } from './admin';
+export { useAdminStats, useUpdateOrgCvCodeTemplate } from './admin';
 export { useMembers, useInvitations, useInviteMember, useRevokeInvitation, useUpdateMemberRole, useRemoveMember } from './team';
 export type { OrgMember, OrgInvitation } from './team';

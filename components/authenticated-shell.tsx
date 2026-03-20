@@ -3,6 +3,7 @@
 import { RedirectToSignIn, useAuth } from '@clerk/nextjs';
 import { usePathname } from 'next/navigation';
 import { UnifiedSidebar } from '@/components/unified-sidebar';
+import { OrgBrandingProvider } from '@/components/org-branding-provider';
 
 const PUBLIC_PREFIXES = ['/sign-in', '/sign-up', '/org-selection'] as const;
 
@@ -34,9 +35,11 @@ export function AuthenticatedShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <UnifiedSidebar />
-      <main className="flex-1 overflow-y-auto">{children}</main>
-    </div>
+    <OrgBrandingProvider>
+      <div className="flex h-screen overflow-hidden">
+        <UnifiedSidebar />
+        <main className="flex-1 overflow-y-auto">{children}</main>
+      </div>
+    </OrgBrandingProvider>
   );
 }

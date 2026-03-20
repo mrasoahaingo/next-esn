@@ -129,10 +129,14 @@ export default function PositioningWizardPage() {
 
   const debouncedSave = useAutoSave(positioningIdParam);
 
+  const pdfTemplateId =
+    candidateData?.id !== undefined ? (candidateData.template_id ?? null) : undefined;
+
   usePdfPreview({
     data: tailoredCv,
     setPdfBlobUrl,
     setIsPdfLoading,
+    templateId: pdfTemplateId,
   });
 
   useSessionTimer({
@@ -155,6 +159,7 @@ export default function PositioningWizardPage() {
     if (isNewPositioning) {
       initializedForId.current = positioningData.id;
       setPositioningId(positioningIdParam);
+      setTemplateConfig(null);
 
       // Load template config from candidate
       const templateId = positioningData.candidates?.template_id;
@@ -166,7 +171,10 @@ export default function PositioningWizardPage() {
           fetch('/api/pdf-preview', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: candidateData.extracted_data, templateConfig: config }),
+            body: JSON.stringify({
+              data: candidateData.extracted_data,
+              templateId: templateId ?? null,
+            }),
           })
             .then((res) => res.blob())
             .then((blob) => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
-import { getTemplateConfig } from '@/lib/utils/template';
+import { getTemplateConfig, sanitizePdfExportPrefix } from '@/lib/utils/template';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,21 +14,24 @@ export async function POST(req: NextRequest) {
       const { error: updateError } = await supabase
         .from('candidates')
         .update({ extracted_data: data })
-        .eq('id', candidateId);
+        .eq('id', candidateId)
+        .eq('org_id', orgId);
 
       if (updateError) throw updateError;
     }
 
-    // Fetch candidate to get template_id
     const { data: candidate } = await supabase
       .from('candidates')
       .select('template_id')
       .eq('id', candidateId)
+      .eq('org_id', orgId)
       .single();
 
-    const templateConfig = await getTemplateConfig(candidate?.template_id);
-    const pdfBuffer = await generateHimeoPdf(data, templateConfig);
-    const fileName = `${orgId}/HIMEO_CV_${data.personalInfo.lastName}_${Date.now()}.pdf`;
+    const templateConfig = await getTemplateConfig(orgId, candidate?.template_id);
+    const pdfBuffer = await generateHimeoPdf(data, templateConfig, orgId);
+    const prefix = sanitizePdfExportPrefix(templateConfig?.exportFilePrefix);
+    const safeLast = String(data.personalInfo?.lastName ?? 'cv').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const fileName = `${orgId}/${prefix}_${safeLast}_${Date.now()}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from('cv-formatted')
@@ -49,6 +52,7 @@ export async function POST(req: NextRequest) {
         status: 'generated',
       })
       .eq('id', candidateId)
+      .eq('org_id', orgId)
       .select()
       .single();
 

@@ -5,9 +5,10 @@ import { model, modelName } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import {
   positioningAnalysisSchema,
-  POSITIONING_ANALYSIS_PROMPT,
+  buildPositioningAnalysisPrompt,
   buildAnalysisMessages,
 } from '@/lib/services/positioning.service';
+import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
 
 async function fetchAndAnalyze(positioningId: string) {
   "use step";
@@ -30,11 +31,15 @@ async function fetchAndAnalyze(positioningId: string) {
     positioning.job_description,
   );
 
+  const orgId = positioning.org_id as string | null | undefined;
+  const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
+  const systemPrompt = buildPositioningAnalysisPrompt(toPositioningPromptBranding(orgSettings));
+
   const startTime = Date.now();
   const result = streamObject({
     model,
     schema: positioningAnalysisSchema,
-    system: POSITIONING_ANALYSIS_PROMPT,
+    system: systemPrompt,
     messages,
   });
 
