@@ -15,6 +15,8 @@ export interface AdminStats {
   }
   organizations: {
     orgId: string
+    name: string
+    slug: string | null
     candidates: number
     positionings: number
     inputTokens: number

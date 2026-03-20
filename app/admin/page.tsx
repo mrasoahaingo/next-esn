@@ -139,7 +139,7 @@ export default function AdminPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID Organisation</TableHead>
+                    <TableHead>Organisation</TableHead>
                     <TableHead className="text-right">CVs</TableHead>
                     <TableHead className="text-right">
                       Positionnements
@@ -155,10 +155,15 @@ export default function AdminPage() {
                 <TableBody>
                   {sortedOrgs.map((org) => (
                     <TableRow key={org.orgId}>
-                      <TableCell className="font-mono text-xs">
-                        <Badge variant="outline" className="font-mono">
-                          {org.orgId?.slice(0, 16) ?? '—'}…
-                        </Badge>
+                      <TableCell>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            {org.name ?? '—'}
+                          </p>
+                          <p className="font-mono text-[10px] text-muted-foreground">
+                            {org.orgId?.slice(0, 20) ?? '—'}…
+                          </p>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {org.candidates}
