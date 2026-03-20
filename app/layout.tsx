@@ -7,7 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/query-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
-import { UnifiedSidebar } from "@/components/unified-sidebar";
+import { AuthenticatedShell } from "@/components/authenticated-shell";
+import { AuthQuerySync } from "@/components/auth-query-sync";
 import { Analytics } from "@vercel/analytics/next"
 
 const geistSans = Geist({
@@ -36,6 +37,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClerkProvider
+          afterSignOutUrl="/sign-in"
           localization={frFR}
           appearance={{
             variables: {
@@ -54,6 +56,7 @@ export default function RootLayout({
           }}
         >
         <QueryProvider>
+        <AuthQuerySync />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -61,12 +64,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TooltipProvider>
-            <div className="flex h-screen overflow-hidden">
-              <UnifiedSidebar />
-              <main className="flex-1 overflow-y-auto">
-                {children}
-              </main>
-            </div>
+            <AuthenticatedShell>{children}</AuthenticatedShell>
             <Toaster position="bottom-right" />
           </TooltipProvider>
         </ThemeProvider>

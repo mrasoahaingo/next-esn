@@ -662,6 +662,7 @@ export function UnifiedSidebar() {
           }}
         />
         <UserButton
+          afterSwitchSessionUrl="/"
           appearance={{
             elements: {
               avatarBox: 'h-7 w-7',
