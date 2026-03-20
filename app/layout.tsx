@@ -24,6 +24,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Himeo CV Automation",
   description: "Automatisation de CVs et positionnement pour Himeo",
+  icons: {
+    icon: "/esneo-icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -34,7 +37,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} app-surface antialiased`}
       >
         <ClerkProvider
           afterSignOutUrl="/sign-in"

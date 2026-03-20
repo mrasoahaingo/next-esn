@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
 import { Label as SwitchLabel } from '@/components/ui/label';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
@@ -230,21 +231,19 @@ export function UnifiedSidebar() {
   return (
     <aside className="flex h-screen w-[280px] flex-col border-r border-violet/10 bg-panel">
       {/* Header */}
-      <Link href="/" className="flex items-center gap-3 px-4 py-4">
-        <svg
-          aria-hidden="true"
-          className="h-5 w-auto shrink-0"
-          viewBox="125 0 35 35"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path
-            d="M140.648 2.63184C148.825 2.63184 155.483 9.30948 155.484 17.582C155.484 25.8548 148.825 32.5332 140.648 32.5332C132.47 32.533 125.813 25.8547 125.813 17.582C125.813 9.30961 132.47 2.63204 140.648 2.63184Z"
-            stroke="white"
-            strokeWidth="5.03319"
-          />
-        </svg>
-        <span className="text-sm font-semibold text-foreground tracking-wide">HIMEO</span>
+      <Link
+        href="/"
+        className="flex items-center px-4 py-3.5 transition-opacity hover:opacity-90"
+      >
+        <Image
+          src="/esneo-full.svg"
+          alt="Esneo"
+          width={120}
+          height={30}
+          className="max-w-full object-contain object-left"
+          priority
+          unoptimized
+        />
       </Link>
 
       {/* Demo mode toggle */}

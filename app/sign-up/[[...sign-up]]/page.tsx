@@ -1,8 +1,10 @@
 import { SignUp } from '@clerk/nextjs'
+import { AuthBrandLogo } from '@/components/auth-brand-logo'
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-shell">
+    <div className="app-surface flex min-h-full flex-col items-center justify-center px-4 py-10">
+      <AuthBrandLogo />
       <SignUp />
     </div>
   )

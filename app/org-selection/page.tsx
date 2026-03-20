@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import { OrganizationList } from '@clerk/nextjs'
+import { AuthBrandLogo } from '@/components/auth-brand-logo'
 
 export default async function OrgSelectionPage() {
   const { orgId } = await auth()
@@ -10,7 +11,8 @@ export default async function OrgSelectionPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-shell">
+    <div className="app-surface flex min-h-full flex-col items-center justify-center px-4 py-10">
+      <AuthBrandLogo />
       <div className="flex flex-col items-center gap-6">
         <div className="text-center">
           <h1 className="text-xl font-bold text-foreground">Bienvenue sur Himeo</h1>
