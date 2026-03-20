@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
+import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
@@ -91,10 +92,11 @@ export default function PositioningWizardPage() {
   // Workflow streams
   const {
     object: analysisObject,
+    streamMeta: analysisStreamMeta,
     submit: submitAnalysis,
     isLoading: isAnalysisLoading,
     stop: stopAnalysis,
-  } = useWorkflowStream<PositioningAnalysis>({
+  } = useWorkflowStream<PositioningAnalysis, PositioningAnalysisStreamMeta>({
     api: '/api/positioning/analyze',
     runId: positioningData?.workflow_run_id,
     runStatus: positioningData?.status,
@@ -644,6 +646,7 @@ export default function PositioningWizardPage() {
                     <AnalysisView
                       analysis={analysis}
                       isAnalyzing={isAnalyzing || isAnalysisLoading}
+                      streamMeta={analysisStreamMeta}
                     />
                   </div>
                 )}

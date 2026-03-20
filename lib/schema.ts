@@ -152,6 +152,21 @@ export const positioningAnalysisSchema = z.object({
 
 export type PositioningAnalysis = z.infer<typeof positioningAnalysisSchema>;
 
+/** Sous-schémas pour analyse de positionnement parallèle (streamText + Output.object) */
+export const positioningSkillMatchesSchema = positioningAnalysisSchema.pick({ skillMatches: true });
+export const positioningExperienceRelevanceSchema = positioningAnalysisSchema.pick({
+  experienceRelevance: true,
+});
+export const positioningGapsSchema = positioningAnalysisSchema.pick({ gaps: true });
+export const positioningQuestionsSchema = positioningAnalysisSchema.pick({
+  candidateQuestions: true,
+  clientQuestions: true,
+});
+export const positioningSynthesisSchema = positioningAnalysisSchema.pick({
+  matchScore: true,
+  matchSummary: true,
+});
+
 export const positioningEmailSchema = z.object({
   subject: z.string(),
   body: z.string(),

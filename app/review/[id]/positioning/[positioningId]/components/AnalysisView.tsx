@@ -1,14 +1,16 @@
 'use client';
 
 import type { PositioningAnalysis } from '@/lib/schema';
+import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
 import { SectionShell } from '@/app/review/components/SectionShell';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react';
 
 interface AnalysisViewProps {
   analysis: Partial<PositioningAnalysis> | null;
   isAnalyzing: boolean;
+  streamMeta?: PositioningAnalysisStreamMeta | null;
   onReAnalyze?: () => void;
 }
 
@@ -36,19 +38,53 @@ function hasData(analysis: Partial<PositioningAnalysis> | null, key: string): bo
   return !!val;
 }
 
+function branchActiveForSection(
+  sectionKey: string,
+  meta: PositioningAnalysisStreamMeta | null | undefined,
+): boolean {
+  const b = meta?.activeBranches;
+  if (!b?.length) return false;
+  if (sectionKey === 'skillMatches') return b.includes('skills');
+  if (sectionKey === 'experienceRelevance') return b.includes('experiences');
+  if (sectionKey === 'gaps') return b.includes('gaps');
+  if (sectionKey === 'matchScore') return b.includes('synthesis');
+  return false;
+}
+
+/** Ordre logique d’affichage : compétences → expériences → lacunes → score (synthèse en dernier). */
 function getSectionStatus(
   analysis: Partial<PositioningAnalysis> | null,
   isAnalyzing: boolean,
   key: string,
   prevKeys: string[],
+  streamMeta?: PositioningAnalysisStreamMeta | null,
 ): 'pending' | 'streaming' | 'done' {
   if (!isAnalyzing) return hasData(analysis, key) ? 'done' : 'pending';
   if (hasData(analysis, key)) return 'done';
+
+  if (streamMeta?.activeBranches?.length && branchActiveForSection(key, streamMeta)) {
+    return 'streaming';
+  }
+
+  const parallelPhase =
+    streamMeta?.phase === 'extracting' && (streamMeta.activeBranches?.length ?? 0) > 0;
+  if (parallelPhase) {
+    return 'pending';
+  }
+
   const allPrevDone = prevKeys.every((k) => hasData(analysis, k));
   return allPrevDone ? 'streaming' : 'pending';
 }
 
-export function AnalysisView({ analysis, isAnalyzing, onReAnalyze }: AnalysisViewProps) {
+const BRANCH_LABELS: Record<string, string> = {
+  skills: 'Compétences',
+  experiences: 'Expériences',
+  gaps: 'Lacunes',
+  questions: 'Questions',
+  synthesis: 'Synthèse',
+};
+
+export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }: AnalysisViewProps) {
   if (!analysis && !isAnalyzing) return null;
 
   const score = analysis?.matchScore;
@@ -56,42 +92,28 @@ export function AnalysisView({ analysis, isAnalyzing, onReAnalyze }: AnalysisVie
     ? score >= 70 ? 'text-neon' : score >= 40 ? 'text-amber-400' : 'text-destructive'
     : 'text-slate-500';
 
+  const activeHint =
+    isAnalyzing && streamMeta?.activeBranches?.length
+      ? streamMeta.activeBranches.map((id) => BRANCH_LABELS[id] ?? id).join(' · ')
+      : null;
+
   return (
     <div className="space-y-4">
-      {/* Score */}
-      <SectionShell
-        status={getSectionStatus(analysis, isAnalyzing, 'matchScore', [])}
-        label="Calcul du score..."
-      >
-        <section className="glass-panel p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold text-white">Score de matching</h3>
-            <div className="flex items-center gap-3">
-              {onReAnalyze && !isAnalyzing && analysis && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onReAnalyze}
-                  className="text-violet hover:text-violet hover:bg-violet/10 text-xs h-7 px-2"
-                >
-                  <RefreshCw className="mr-1.5 h-3 w-3" />
-                  Relancer
-                </Button>
-              )}
-              <span className={`text-3xl font-bold ${scoreColor}`}>
-                {score != null ? `${score}%` : '—'}
-              </span>
-            </div>
-          </div>
-          {analysis?.matchSummary && (
-            <p className="text-sm text-slate-300 leading-relaxed">{analysis.matchSummary}</p>
-          )}
-        </section>
-      </SectionShell>
+      {activeHint && (
+        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-violet-100">
+          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          <span>
+            {streamMeta?.phase === 'synthesizing'
+              ? 'Synthèse du score…'
+              : 'Analyse en cours'}
+            <span className="ml-1.5 text-violet-200/90">({activeHint})</span>
+          </span>
+        </div>
+      )}
 
       {/* Skills */}
       <SectionShell
-        status={getSectionStatus(analysis, isAnalyzing, 'skillMatches', ['matchScore'])}
+        status={getSectionStatus(analysis, isAnalyzing, 'skillMatches', [], streamMeta)}
         label="Analyse des compétences..."
       >
         <section className="glass-panel p-6 rounded-2xl">
@@ -121,7 +143,13 @@ export function AnalysisView({ analysis, isAnalyzing, onReAnalyze }: AnalysisVie
 
       {/* Experiences */}
       <SectionShell
-        status={getSectionStatus(analysis, isAnalyzing, 'experienceRelevance', ['matchScore', 'skillMatches'])}
+        status={getSectionStatus(
+          analysis,
+          isAnalyzing,
+          'experienceRelevance',
+          ['skillMatches'],
+          streamMeta,
+        )}
         label="Analyse des expériences..."
       >
         <section className="glass-panel p-6 rounded-2xl">
@@ -151,7 +179,13 @@ export function AnalysisView({ analysis, isAnalyzing, onReAnalyze }: AnalysisVie
 
       {/* Gaps */}
       <SectionShell
-        status={getSectionStatus(analysis, isAnalyzing, 'gaps', ['matchScore', 'skillMatches', 'experienceRelevance'])}
+        status={getSectionStatus(
+          analysis,
+          isAnalyzing,
+          'gaps',
+          ['skillMatches', 'experienceRelevance'],
+          streamMeta,
+        )}
         label="Identification des lacunes..."
       >
         <section className="glass-panel p-6 rounded-2xl">
@@ -173,6 +207,43 @@ export function AnalysisView({ analysis, isAnalyzing, onReAnalyze }: AnalysisVie
               </div>
             ))}
           </div>
+        </section>
+      </SectionShell>
+
+      {/* Score — après le détail (synthèse streamée en dernier) */}
+      <SectionShell
+        status={getSectionStatus(
+          analysis,
+          isAnalyzing,
+          'matchScore',
+          ['skillMatches', 'experienceRelevance', 'gaps'],
+          streamMeta,
+        )}
+        label="Calcul du score..."
+      >
+        <section className="glass-panel p-6 rounded-2xl">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-white">Score de matching</h3>
+            <div className="flex items-center gap-3">
+              {onReAnalyze && !isAnalyzing && analysis && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onReAnalyze}
+                  className="text-violet hover:text-violet hover:bg-violet/10 text-xs h-7 px-2"
+                >
+                  <RefreshCw className="mr-1.5 h-3 w-3" />
+                  Relancer
+                </Button>
+              )}
+              <span className={`text-3xl font-bold ${scoreColor}`}>
+                {score != null ? `${score}%` : '—'}
+              </span>
+            </div>
+          </div>
+          {analysis?.matchSummary && (
+            <p className="text-sm text-slate-300 leading-relaxed">{analysis.matchSummary}</p>
+          )}
         </section>
       </SectionShell>
     </div>
