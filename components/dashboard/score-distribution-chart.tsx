@@ -14,16 +14,16 @@ const scoreDistributionConfig: ChartConfig = {
 };
 
 function getBarColor(range: string) {
-  if (range === '80-100') return '#b5ff40';
-  if (range === '60-79') return '#8b5cf6';
-  if (range === '40-59') return '#fbbf24';
-  return '#f87171';
+  if (range === '80-100') return 'var(--neon)';
+  if (range === '60-79') return 'var(--violet)';
+  if (range === '40-59') return '#d97706';
+  return 'var(--destructive)';
 }
 
 function EmptyChart({ label }: { label: string }) {
   return (
     <div className="flex h-[180px] flex-col items-center justify-center text-muted-foreground">
-      <div className="mb-2 h-16 w-16 rounded-xl bg-white/[0.03] grid-noise" />
+      <div className="mb-2 h-16 w-16 rounded-xl bg-overlay/[0.03] grid-noise" />
       <p className="text-[10px]">{label}</p>
     </div>
   );
@@ -50,7 +50,7 @@ export function ScoreDistributionChart({ scoreDistribution }: ScoreDistributionC
                 type="category"
                 dataKey="range"
                 width={50}
-                tick={{ fontSize: 11, fill: 'var(--color-muted-foreground)' }}
+                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
                 axisLine={false}
                 tickLine={false}
               />

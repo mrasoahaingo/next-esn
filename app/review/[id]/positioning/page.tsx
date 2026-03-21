@@ -170,7 +170,7 @@ export default function PositioningNewPage() {
                     className={`group w-full text-left rounded-xl p-4 transition-all duration-200 ${
                       isSelected
                         ? 'bg-violet/10 border border-violet/30 violet-ring'
-                        : 'bg-white/[0.03] border border-white/[0.06] hover:border-violet/20 hover:bg-white/[0.05]'
+                        : 'bg-overlay/[0.03] border border-overlay/[0.06] hover:border-violet/20 hover:bg-overlay/[0.05]'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -179,11 +179,11 @@ export default function PositioningNewPage() {
                         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
                           isSelected
                             ? 'border-violet bg-violet'
-                            : 'border-white/20 group-hover:border-violet/40'
+                            : 'border-border group-hover:border-violet/40'
                         }`}
                       >
                         {isSelected && (
-                          <div className="h-2 w-2 rounded-full bg-white" />
+                          <div className="h-2 w-2 rounded-full bg-background" />
                         )}
                       </div>
 
@@ -233,7 +233,7 @@ export default function PositioningNewPage() {
 
                     {/* Expanded job description preview */}
                     {isSelected && (
-                      <div className="mt-3 ml-8 rounded-lg bg-black/20 border border-white/[0.04] p-3">
+                      <div className="mt-3 ml-8 rounded-lg bg-foreground/[0.04] border border-border/60 p-3">
                         <div className="flex items-center gap-1.5 mb-2">
                           <FileText className="h-3 w-3 text-violet/60" />
                           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
@@ -253,7 +253,7 @@ export default function PositioningNewPage() {
 
           {/* Action bar */}
           {missions.length > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t border-white/[0.06] pt-5">
+            <div className="mt-6 flex items-center justify-between border-t border-overlay/[0.06] pt-5">
               <p className="text-xs text-muted-foreground">
                 {selectedMission
                   ? <>Mission sélectionnée : <span className="text-foreground font-medium">{selectedMission.title}</span></>
@@ -278,7 +278,7 @@ export default function PositioningNewPage() {
 
       {/* New mission dialog */}
       <Dialog open={showNewMission} onOpenChange={setShowNewMission}>
-        <DialogContent className="sm:max-w-2xl bg-panel border-white/10">
+        <DialogContent className="sm:max-w-2xl bg-panel border-overlay/10">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/20 text-violet">
               <Plus className="h-4 w-4" />

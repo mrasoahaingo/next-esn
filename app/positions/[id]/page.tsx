@@ -349,7 +349,7 @@ function PositionCvsModal({
         </DialogHeader>
 
         {/* Tab switcher */}
-        <div className="flex rounded-lg bg-black/20 border border-white/[0.06] p-0.5">
+        <div className="flex rounded-lg bg-muted/50 border border-border p-0.5">
           <button
             onClick={() => setTab('upload')}
             className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all ${
@@ -388,7 +388,7 @@ function PositionCvsModal({
             className={`rounded-xl border-2 border-dashed transition-all ${
               isDragging
                 ? 'border-violet bg-violet/5'
-                : 'border-white/10 hover:border-violet/30 hover:bg-white/[0.02]'
+                : 'border-overlay/10 hover:border-violet/30 hover:bg-overlay/[0.02]'
             }`}
           >
             <label className="flex cursor-pointer flex-col items-center gap-3 px-6 py-10">
@@ -407,7 +407,7 @@ function PositionCvsModal({
               {isUploading ? (
                 <Loader2 className="h-8 w-8 animate-spin text-violet" />
               ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-overlay/10 bg-overlay/[0.03]">
                   <Upload className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}
@@ -461,14 +461,14 @@ function PositionCvsModal({
                       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all ${
                         isSelected
                           ? 'bg-violet/10 ring-1 ring-violet/40'
-                          : 'hover:bg-white/[0.03]'
+                          : 'hover:bg-overlay/[0.03]'
                       }`}
                     >
                       <div
                         className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all ${
                           isSelected
                             ? 'border-violet bg-violet text-white'
-                            : 'border-white/20 bg-white/[0.03]'
+                            : 'border-overlay/20 bg-overlay/[0.03]'
                         }`}
                       >
                         {isSelected && <Check className="h-3 w-3" />}
@@ -491,7 +491,7 @@ function PositionCvsModal({
 
             {/* Action bar */}
             {selectedIds.size > 0 && (
-              <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+              <div className="flex items-center justify-between pt-2 border-t border-border">
                 <span className="text-xs text-muted-foreground">
                   {selectedIds.size} candidat{selectedIds.size > 1 ? 's' : ''} sélectionné{selectedIds.size > 1 ? 's' : ''}
                 </span>
@@ -527,12 +527,12 @@ function ScoreRing({ score, size = 56 }: { score: number; size?: number }) {
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
   const strokeDashoffset = circumference - (score / 100) * circumference;
-  const color = score >= 70 ? 'var(--color-neon, #39d353)' : score >= 40 ? '#f59e0b' : '#ef4444';
+  const color = score >= 70 ? 'var(--neon)' : score >= 40 ? '#d97706' : 'var(--destructive)';
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90" style={{ display: 'block' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={size * 0.07} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={size * 0.07} />
         <circle
           cx={cx} cy={cy} r={r} fill="none"
           stroke={color} strokeWidth={size * 0.07}
@@ -557,10 +557,10 @@ function ScoreRing({ score, size = 56 }: { score: number; size?: number }) {
 const MAX_COMPARE = 4;
 
 const CANDIDATE_COLORS = [
-  { stroke: '#8b5cf6', fill: 'rgba(139,92,246,0.14)', text: '#8b5cf6' },
-  { stroke: '#39d353', fill: 'rgba(57,211,83,0.14)',  text: '#39d353' },
-  { stroke: '#f59e0b', fill: 'rgba(245,158,11,0.14)', text: '#f59e0b' },
-  { stroke: '#38bdf8', fill: 'rgba(56,189,248,0.14)', text: '#38bdf8' },
+  { stroke: 'var(--violet)', fill: 'color-mix(in oklch, var(--violet) 18%, transparent)', text: 'var(--violet)' },
+  { stroke: 'var(--neon)', fill: 'color-mix(in oklch, var(--neon) 18%, transparent)', text: 'var(--neon)' },
+  { stroke: '#d97706', fill: 'color-mix(in oklch, #d97706 18%, transparent)', text: '#d97706' },
+  { stroke: '#38bdf8', fill: 'color-mix(in oklch, #38bdf8 18%, transparent)', text: '#38bdf8' },
 ] as const;
 
 // ── Per-column helpers ─────────────────────────────────────────────────────
@@ -573,15 +573,15 @@ function SkillCategoryBar({ matches }: { matches: SkillMatch[] }) {
   if (!total) return null;
   return (
     <div className="flex items-center gap-2">
-      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-white/5">
+      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-overlay/[0.08]">
         {strong  > 0 && <div className="h-full bg-neon/60"       style={{ width: `${(strong /total)*100}%` }} />}
-        {partial > 0 && <div className="h-full bg-amber-400/60" style={{ width: `${(partial/total)*100}%` }} />}
+        {partial > 0 && <div className="h-full bg-amber-600/60 dark:bg-amber-400/60" style={{ width: `${(partial/total)*100}%` }} />}
         {missing > 0 && <div className="h-full bg-destructive/35" style={{ width: `${(missing/total)*100}%` }} />}
       </div>
       <span className="text-[9px] text-muted-foreground/40 shrink-0 w-12 text-right tabular-nums">
         <span className="text-neon/70">{strong}</span>
         <span className="text-muted-foreground/25 mx-0.5">·</span>
-        <span className="text-amber-400/70">{partial}</span>
+        <span className="text-amber-700/80 dark:text-amber-400/70">{partial}</span>
         <span className="text-muted-foreground/25 mx-0.5">·</span>
         <span className="text-destructive/55">{missing}</span>
       </span>
@@ -593,8 +593,8 @@ function RelevancePip({ level }: { level: 'strong' | 'partial' | 'missing' | 'hi
   const map = {
     strong:  { bg: 'bg-neon/10',        text: 'text-neon',        dot: 'bg-neon/70' },
     high:    { bg: 'bg-neon/10',        text: 'text-neon',        dot: 'bg-neon/70' },
-    partial: { bg: 'bg-amber-400/10',   text: 'text-amber-400',   dot: 'bg-amber-400/70' },
-    medium:  { bg: 'bg-amber-400/10',   text: 'text-amber-400',   dot: 'bg-amber-400/70' },
+    partial: { bg: 'bg-amber-500/15 dark:bg-amber-400/10',   text: 'text-amber-800 dark:text-amber-300',   dot: 'bg-amber-600/70 dark:bg-amber-400/70' },
+    medium:  { bg: 'bg-amber-500/15 dark:bg-amber-400/10',   text: 'text-amber-800 dark:text-amber-300',   dot: 'bg-amber-600/70 dark:bg-amber-400/70' },
     missing: { bg: 'bg-destructive/10', text: 'text-destructive',  dot: 'bg-destructive/60' },
     low:     { bg: 'bg-destructive/10', text: 'text-destructive',  dot: 'bg-destructive/60' },
   }[level];
@@ -656,8 +656,8 @@ function CandidateCompareColumn({
 
         {/* ── Header card ── */}
       <div
-        className="sticky top-0 z-10 rounded-2xl border border-white/10 bg-shell p-4 flex flex-col items-center gap-2.5 text-center overflow-hidden shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)]"
-        style={{ backgroundImage: `linear-gradient(160deg, ${color.fill}, #08080f)` }}
+        className="sticky top-0 z-10 rounded-2xl border border-overlay/10 bg-shell p-4 flex flex-col items-center gap-2.5 text-center overflow-hidden shadow-[0_10px_28px_-14px_var(--scrim)]"
+        style={{ backgroundImage: `linear-gradient(160deg, ${color.fill}, var(--shell))` }}
       >
         {/* Winner star */}
         {isWinner && (
@@ -675,7 +675,7 @@ function CandidateCompareColumn({
         {score != null ? (
           <ScoreRing score={score} size={80} />
         ) : (
-          <div className="h-20 w-20 flex items-center justify-center rounded-full bg-white/5">
+          <div className="h-20 w-20 flex items-center justify-center rounded-full bg-overlay/[0.08]">
             <User className="h-7 w-7 text-muted-foreground/30" />
           </div>
         )}
@@ -689,19 +689,19 @@ function CandidateCompareColumn({
         {/* Meta pills */}
         <div className="flex flex-wrap justify-center gap-1.5">
           {pi?.yearsOfExperience && (
-            <span className="flex items-center gap-1 rounded-full bg-black/25 border border-white/8 px-2.5 py-1 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1 rounded-full bg-foreground/[0.06] border border-border px-2.5 py-1 text-[10px] text-muted-foreground">
               <TrendingUp className="h-2.5 w-2.5" />
               {pi.yearsOfExperience}
             </span>
           )}
           {pi?.availability && (
-            <span className="flex items-center gap-1 rounded-full bg-black/25 border border-white/8 px-2.5 py-1 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1 rounded-full bg-foreground/[0.06] border border-border px-2.5 py-1 text-[10px] text-muted-foreground">
               <Clock className="h-2.5 w-2.5" />
               {pi.availability}
             </span>
           )}
           {pi?.location && (
-            <span className="rounded-full bg-black/25 border border-white/8 px-2.5 py-1 text-[10px] text-muted-foreground">
+            <span className="rounded-full bg-foreground/[0.06] border border-border px-2.5 py-1 text-[10px] text-muted-foreground">
               {pi.location}
             </span>
           )}
@@ -724,9 +724,9 @@ function CandidateCompareColumn({
               </div>
             ))}
           </div>
-          <div className="flex gap-3 pt-1.5 border-t border-white/5 text-[9px] text-muted-foreground/30">
+          <div className="flex gap-3 pt-1.5 border-t border-border/60 text-[9px] text-muted-foreground/30">
             <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-neon/60" />Fort</span>
-            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-amber-400/60" />Partiel</span>
+            <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-amber-600/60 dark:bg-amber-400/60" />Partiel</span>
             <span className="flex items-center gap-1"><span className="h-1.5 w-1.5 rounded bg-destructive/40" />Absent</span>
           </div>
         </div>
@@ -864,10 +864,10 @@ function CompareCvsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="!fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !w-[calc(100vw-3rem)] !max-w-[1600px] !h-[calc(100dvh-3rem)] !max-h-[1000px] !rounded-2xl !p-0 !gap-0 !ring-1 !ring-white/[0.08] !border-0 bg-shell !flex !flex-col !overflow-hidden"
+        className="!fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !w-[calc(100vw-3rem)] !max-w-[1600px] !h-[calc(100dvh-3rem)] !max-h-[1000px] !rounded-2xl !p-0 !gap-0 !ring-1 !ring-border !border-0 bg-shell !flex !flex-col !overflow-hidden"
       >
         {/* ── Header ── */}
-        <div className="flex shrink-0 flex-col gap-3 border-b border-white/5 bg-panel/80 px-6 py-3.5 backdrop-blur-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex shrink-0 flex-col gap-3 border-b border-border bg-panel/80 px-6 py-3.5 backdrop-blur-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-6">
             <div className="flex items-start gap-3">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet/15">
@@ -883,7 +883,7 @@ function CompareCvsModal({
               </div>
             </div>
             {/* Candidate color legend */}
-            <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-white/8 pt-3 md:border-t-0 md:border-l md:border-white/10 md:pl-6 md:pt-0">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 md:border-t-0 md:border-l md:border-overlay/10 md:pl-6 md:pt-0">
               {positionings.map((p, i) => (
                 <span key={p.id} className="flex items-center gap-1.5 text-[11px] text-foreground/55">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: CANDIDATE_COLORS[i].stroke }} />
@@ -895,7 +895,7 @@ function CompareCvsModal({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg text-muted-foreground transition hover:bg-white/5 hover:text-foreground sm:self-start"
+            className="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg text-muted-foreground transition hover:bg-overlay/10 hover:text-foreground sm:self-start"
           >
             <X className="h-4 w-4" />
           </button>
@@ -1062,7 +1062,7 @@ function PositioningRow({
       }}
       className={`group flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition ${
         canNavigate
-          ? `cursor-pointer ${isSelected ? 'bg-violet/[0.08] ring-1 ring-violet/30' : 'hover:bg-white/[0.03]'}`
+          ? `cursor-pointer ${isSelected ? 'bg-violet/[0.08] ring-1 ring-violet/30' : 'hover:bg-overlay/[0.03]'}`
           : 'cursor-not-allowed opacity-80'
       }`}
     >
@@ -1075,7 +1075,7 @@ function PositioningRow({
           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all ${
             isSelected
               ? 'border-violet bg-violet text-white'
-              : 'border-white/20 bg-white/[0.03] opacity-0 group-hover:opacity-100'
+              : 'border-overlay/20 bg-overlay/[0.03] opacity-0 group-hover:opacity-100'
           }`}
           title={isSelected ? 'Retirer de la comparaison' : 'Ajouter à la comparaison'}
         >
@@ -1091,7 +1091,7 @@ function PositioningRow({
           <span className={`text-[7px] font-medium ${getScoreColor(score)} opacity-70`}>/ 100</span>
         </div>
       ) : (
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/[0.04]">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-overlay/[0.04]">
           {showBusy ? (
             <Loader2 className="h-4 w-4 animate-spin text-violet/60" />
           ) : (
@@ -1112,7 +1112,7 @@ function PositioningRow({
               className={`rounded-md px-1.5 py-0.5 ${
                 !extractionPhaseDone
                   ? 'bg-violet/20 text-violet ring-1 ring-violet/30'
-                  : 'bg-white/10 text-muted-foreground'
+                  : 'bg-overlay/10 text-muted-foreground'
               }`}
             >
               {!extractionPhaseDone ? '1. Extraction du CV' : '1. CV extrait'}
@@ -1123,7 +1123,7 @@ function PositioningRow({
                 p.status === 'analyzing'
                   ? 'bg-sky-400/20 text-sky-200 ring-1 ring-sky-400/30'
                   : analysisComplete
-                    ? 'bg-white/10 text-muted-foreground'
+                    ? 'bg-overlay/10 text-muted-foreground'
                     : 'bg-sky-400/10 text-sky-300/90'
               }`}
             >
@@ -1139,7 +1139,7 @@ function PositioningRow({
                 p.status === 'analyzing'
                   ? 'bg-sky-400/20 text-sky-200 ring-1 ring-sky-400/30'
                   : analysisComplete
-                    ? 'bg-white/10 text-muted-foreground'
+                    ? 'bg-overlay/10 text-muted-foreground'
                     : 'bg-sky-400/10 text-sky-300/90'
               }`}
             >
@@ -1425,7 +1425,7 @@ export default function PositionDetailPage() {
                           {drafts.length}
                         </Badge>
                       </div>
-                      <div className="space-y-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
+                      <div className="space-y-1 rounded-xl border border-border bg-muted/40 p-1">
                         {drafts.map((p) => (
                           <PositioningRow
                             key={p.id}
@@ -1442,7 +1442,7 @@ export default function PositionDetailPage() {
                   {ready.length > 0 && (
                     <section
                       aria-labelledby="positionings-ready"
-                      className={drafts.length > 0 ? 'border-t border-white/[0.06] pt-8' : ''}
+                      className={drafts.length > 0 ? 'border-t border-border pt-8' : ''}
                     >
                       <div className="flex flex-wrap items-center gap-2 mb-3">
                         <CheckCircle2 className="h-4 w-4 text-neon shrink-0" />
@@ -1456,7 +1456,7 @@ export default function PositionDetailPage() {
                           {ready.length}
                         </Badge>
                       </div>
-                      <div className="space-y-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
+                      <div className="space-y-1 rounded-xl border border-border bg-muted/40 p-1">
                         {ready.map((p) => (
                           <PositioningRow
                             key={p.id}
@@ -1521,7 +1521,7 @@ export default function PositionDetailPage() {
             </span>
           </div>
 
-          <div className="h-4 w-px bg-white/[0.08]" />
+          <div className="h-4 w-px bg-overlay/[0.08]" />
 
           <button
             onClick={() => setCompareIds(new Set())}

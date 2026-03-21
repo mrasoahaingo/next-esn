@@ -17,7 +17,7 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
 
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
+      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Personal Info
       </h2>
       <div className="space-y-4">

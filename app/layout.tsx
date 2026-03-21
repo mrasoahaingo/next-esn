@@ -43,18 +43,19 @@ export default function RootLayout({
           afterSignOutUrl="/sign-in"
           localization={frFR}
           appearance={{
-            variables: {
-              colorPrimary: '#8b5cf6',
-              colorBackground: '#0c0c0f',
-              colorInputBackground: '#18181b',
-              colorInputText: '#fafafa',
-              colorText: '#fafafa',
-              colorTextSecondary: '#a1a1aa',
-            },
             elements: {
-              card: 'bg-panel border border-white/10 shadow-xl',
-              formButtonPrimary: 'bg-violet hover:bg-violet/90',
-              footerActionLink: 'text-violet hover:text-violet/80',
+              card: 'bg-card border border-border shadow-xl',
+              formButtonPrimary: 'bg-accent text-accent-foreground hover:bg-accent/90',
+              footerActionLink: 'text-accent hover:text-accent/80',
+              formFieldInput: 'bg-secondary text-foreground border-border',
+              formFieldLabel: 'text-foreground',
+              headerTitle: 'text-foreground',
+              headerSubtitle: 'text-muted-foreground',
+              socialButtonsBlockButton: 'bg-secondary text-foreground border-border',
+              dividerLine: 'bg-border',
+              dividerText: 'text-muted-foreground',
+              rootBox: 'text-foreground',
+              internal: 'text-foreground',
             },
           }}
         >

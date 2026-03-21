@@ -24,13 +24,18 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Custom Esneo colors */
-  --color-shell: #08080f;
-  --color-panel: #10101e;
-  --color-panel-soft: #16162a;
-  --color-line: #23233d;
-  --color-neon: #b5ff40;
-  --color-violet: #8b5cf6;
+  /* Custom Esneo brand colors — resolved via CSS vars for theme switching */
+  --color-shell: var(--shell);
+  --color-panel: var(--panel);
+  --color-panel-soft: var(--panel-soft);
+  --color-line: var(--line);
+  --color-neon: var(--neon);
+  --color-violet: var(--violet);
+
+  /* Overlay colors — white in dark mode, black in light mode */
+  --color-overlay: var(--overlay);
+  /* Modal / drawer scrim — dark wash in both themes */
+  --color-scrim: var(--scrim);
 
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
@@ -41,24 +46,61 @@
   :root {
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
+    --card: oklch(0.985 0.002 280);
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.91 0.22 130);
-    --primary-foreground: oklch(0.145 0 0);
-    --secondary: oklch(0.97 0 0);
+    --primary: oklch(0.55 0.22 130);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0.005 280);
     --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.69 0.15 290);
-    --accent-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.96 0.005 280);
+    --muted-foreground: oklch(0.45 0.02 280);
+    --accent: oklch(0.55 0.18 290);
+    --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.91 0.22 130);
+    --border: oklch(0.90 0.01 280);
+    --input: oklch(0.90 0.01 280);
+    --ring: oklch(0.55 0.22 130);
     --radius: 0.625rem;
+
+    /* Esneo brand — light mode surfaces */
+    --shell: oklch(0.97 0.005 280);
+    --panel: oklch(1 0 0);
+    --panel-soft: oklch(0.975 0.005 280);
+    --line: oklch(0.90 0.01 280);
+    --neon: oklch(0.55 0.22 130);
+    --violet: oklch(0.55 0.18 290);
+
+    /* Overlay: use dark color in light mode for subtle layering */
+    --overlay: oklch(0.145 0 0);
+    --scrim: oklch(0.145 0 0 / 45%);
+
+    /* Glass panel vars */
+    --glass-bg-from: oklch(0.97 0.005 280 / 88%);
+    --glass-bg-to: oklch(0.985 0 0 / 88%);
+    --glass-border: oklch(0.55 0.18 290 / 8%);
+    --glass-shadow: oklch(0.145 0 0 / 10%);
+
+    /* Glow effects */
+    --neon-glow: oklch(0.55 0.22 130 / 25%);
+    --neon-glow-spread: oklch(0.55 0.22 130 / 15%);
+    --violet-glow: oklch(0.55 0.18 290 / 20%);
+    --violet-glow-spread: oklch(0.55 0.18 290 / 10%);
+
+    /* Surface gradients */
+    --surface-glow-1: oklch(0.55 0.18 290 / 6%);
+    --surface-glow-2: oklch(0.60 0.18 295 / 5%);
+    --surface-glow-3: oklch(0.50 0.20 280 / 6%);
+
+    /* Grid noise */
+    --grid-line: oklch(0.145 0 0 / 4%);
+
+    /* Title gradient */
+    --title-gradient-start: oklch(0.35 0.08 290);
+    --title-gradient-mid: oklch(0.55 0.22 130);
+    --title-gradient-end: oklch(0.55 0.18 290);
   }
 
   .dark {
@@ -82,6 +124,43 @@
     --border: oklch(0.75 0.05 280 / 12%);
     --input: oklch(0.75 0.05 280 / 15%);
     --ring: oklch(0.62 0.18 290);
+
+    /* Esneo brand — dark mode surfaces */
+    --shell: #08080f;
+    --panel: #10101e;
+    --panel-soft: #16162a;
+    --line: #23233d;
+    --neon: #b5ff40;
+    --violet: #8b5cf6;
+
+    /* Overlay: use white in dark mode for subtle layering */
+    --overlay: oklch(0.985 0 0);
+    --scrim: oklch(0.02 0.02 280 / 72%);
+
+    /* Glass panel vars */
+    --glass-bg-from: rgba(22, 22, 42, 0.88);
+    --glass-bg-to: rgba(12, 12, 22, 0.88);
+    --glass-border: rgba(139, 92, 246, 0.08);
+    --glass-shadow: rgba(0, 0, 0, 0.5);
+
+    /* Glow effects */
+    --neon-glow: rgba(181, 255, 64, 0.25);
+    --neon-glow-spread: rgba(181, 255, 64, 0.28);
+    --violet-glow: rgba(139, 92, 246, 0.35);
+    --violet-glow-spread: rgba(139, 92, 246, 0.2);
+
+    /* Surface gradients */
+    --surface-glow-1: rgba(139, 92, 246, 0.12);
+    --surface-glow-2: rgba(168, 85, 247, 0.1);
+    --surface-glow-3: rgba(99, 72, 241, 0.12);
+
+    /* Grid noise */
+    --grid-line: rgba(255, 255, 255, 0.04);
+
+    /* Title gradient */
+    --title-gradient-start: #e8e0ff;
+    --title-gradient-mid: #b5ff40;
+    --title-gradient-end: #8b5cf6;
   }
 
   * {
@@ -93,47 +172,42 @@
   }
 }
 
-:root {
-  --surface: #10101e;
-  --surface-soft: #16162a;
-}
-
 body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
 @utility glass-panel {
-  background: linear-gradient(160deg, rgba(22, 22, 42, 0.88), rgba(12, 12, 22, 0.88));
-  border: 1px solid rgba(139, 92, 246, 0.08);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(160deg, var(--glass-bg-from), var(--glass-bg-to));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 20px 60px var(--glass-shadow);
   backdrop-filter: blur(14px);
 }
 
 @utility neon-ring {
   box-shadow:
-    0 0 0 1px rgba(181, 255, 64, 0.25),
-    0 0 22px rgba(181, 255, 64, 0.28);
+    0 0 0 1px var(--neon-glow),
+    0 0 22px var(--neon-glow-spread);
 }
 
 @utility violet-ring {
   box-shadow:
-    0 0 0 1px rgba(139, 92, 246, 0.35),
-    0 0 24px rgba(139, 92, 246, 0.2);
+    0 0 0 1px var(--violet-glow),
+    0 0 24px var(--violet-glow-spread);
 }
 
 /** Same colored radial “glow” backdrop as the main app (body uses this via layout). */
 @utility app-surface {
   background-color: var(--background);
   background-image:
-    radial-gradient(circle at 15% 5%, rgba(139, 92, 246, 0.12), transparent 40%),
-    radial-gradient(circle at 85% 15%, rgba(168, 85, 247, 0.1), transparent 35%),
-    radial-gradient(circle at 50% 85%, rgba(99, 72, 241, 0.12), transparent 40%);
+    radial-gradient(circle at 15% 5%, var(--surface-glow-1), transparent 40%),
+    radial-gradient(circle at 85% 15%, var(--surface-glow-2), transparent 35%),
+    radial-gradient(circle at 50% 85%, var(--surface-glow-3), transparent 40%);
 }
 
 @utility grid-noise {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 
@@ -142,7 +216,7 @@ body {
 }
 
 @utility title-gradient {
-  background: linear-gradient(90deg, #e8e0ff 0%, #b5ff40 45%, #8b5cf6 100%);
+  background: linear-gradient(90deg, var(--title-gradient-start) 0%, var(--title-gradient-mid) 45%, var(--title-gradient-end) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

@@ -39,8 +39,8 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
 
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
-        <h2 className="text-lg font-semibold text-white">
+      <div className="flex justify-between items-center mb-4 border-b border-overlay/10 pb-2">
+        <h2 className="text-lg font-semibold text-foreground">
           Education
         </h2>
         {!readOnly && (
@@ -52,16 +52,16 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
 
       <div className="space-y-4">
         {Array.isArray(data) && data.map((edu, i) => edu ? (
-          <div key={i} className="flex justify-between items-start group border-b border-white/10 pb-4 last:border-0 last:pb-0">
+          <div key={i} className="flex justify-between items-start group border-b border-overlay/10 pb-4 last:border-0 last:pb-0">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
               {readOnly ? (
                 <>
                   <div className="col-span-2">
-                    <div className="font-bold text-white">{edu.degree}</div>
-                    <div className="text-slate-300">{edu.school}</div>
+                    <div className="font-bold text-foreground">{edu.degree}</div>
+                    <div className="text-muted-foreground">{edu.school}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-slate-300 bg-white/10 px-2 py-1 rounded inline-block">{edu.year}</div>
+                    <div className="text-sm font-medium text-muted-foreground bg-overlay/10 px-2 py-1 rounded inline-block">{edu.year}</div>
                   </div>
                 </>
               ) : (

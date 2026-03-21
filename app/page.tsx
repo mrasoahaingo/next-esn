@@ -37,7 +37,7 @@ const SkillCoverageChart = dynamic(
 function ChartSkeleton() {
   return (
     <div className="col-span-1 glass-panel border-0 rounded-xl p-6">
-      <div className="h-[180px] animate-pulse rounded-lg bg-white/[0.03]" />
+      <div className="h-[180px] animate-pulse rounded-lg bg-overlay/[0.03]" />
     </div>
   );
 }
@@ -564,7 +564,7 @@ export default function Dashboard() {
                       </div>
                       <Progress
                         value={stage.pct}
-                        className="h-1.5 bg-white/[0.06]"
+                        className="h-1.5 bg-overlay/[0.06]"
                       />
                     </div>
                   ))}
@@ -641,7 +641,7 @@ export default function Dashboard() {
                 ].map((item) => {
                   const Icon = item.icon;
                   return (
-                    <div key={item.label} className="rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+                    <div key={item.label} className="rounded-xl bg-overlay/[0.03] border border-overlay/[0.06] px-4 py-3">
                       <div className="flex items-center gap-2 mb-2">
                         <div className={`flex h-6 w-6 items-center justify-center rounded-md ${item.bg}`}>
                           <Icon className={`h-3 w-3 ${item.color}`} />
@@ -689,7 +689,7 @@ export default function Dashboard() {
                       <span className="w-[140px] shrink-0 truncate text-xs text-foreground">
                         {s.skill}
                       </span>
-                      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                      <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-overlay/[0.06]">
                         {s.strong > 0 && (
                           <div
                             className="h-full bg-neon transition-all"
@@ -803,7 +803,7 @@ export default function Dashboard() {
                           );
                         }
                       }}
-                      className="group flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-3 text-left transition hover:bg-white/[0.03]"
+                      className="group flex w-full cursor-pointer items-center gap-4 rounded-lg px-3 py-3 text-left transition hover:bg-overlay/[0.03]"
                     >
                       {/* Score badge */}
                       <div
@@ -832,7 +832,7 @@ export default function Dashboard() {
                           {/* Skill mini-bars */}
                           <Tooltip>
                             <TooltipTrigger className="flex items-center gap-1">
-                              <div className="flex h-1.5 w-20 overflow-hidden rounded-full bg-white/[0.06]">
+                              <div className="flex h-1.5 w-20 overflow-hidden rounded-full bg-overlay/[0.06]">
                                 {skillStats.strong > 0 && (
                                   <div
                                     className="h-full bg-neon"
@@ -960,7 +960,7 @@ export default function Dashboard() {
 function EmptyChart({ label }: { label: string }) {
   return (
     <div className="flex h-[180px] flex-col items-center justify-center text-muted-foreground">
-      <div className="mb-2 h-16 w-16 rounded-xl bg-white/[0.03] grid-noise" />
+      <div className="mb-2 h-16 w-16 rounded-xl bg-overlay/[0.03] grid-noise" />
       <p className="text-[10px]">{label}</p>
     </div>
   );

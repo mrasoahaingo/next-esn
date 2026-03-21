@@ -188,7 +188,7 @@ export function MissionJobAnalysis({
             {showAnalyzeCta && (
               <Button
                 size="sm"
-                className="bg-neon text-black hover:bg-neon/90"
+                className="bg-neon text-neutral-950 hover:bg-neon/90"
                 disabled={stream.isLoading}
                 onClick={() => stream.submit({})}
               >
@@ -239,7 +239,7 @@ export function MissionJobAnalysis({
       {hasDescription && (
       <AnalysisScrollBody>
       {effectiveAnalysis?.executiveSummary && (
-        <div className="rounded-xl bg-black/20 border border-white/6 p-4 mb-4">
+        <div className="rounded-xl bg-overlay/20 border border-overlay/6 p-4 mb-4">
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
             Synthèse
           </p>
@@ -280,10 +280,10 @@ export function MissionJobAnalysis({
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             Points clés par catégories
           </p>
-          <div className="space-y-5 rounded-xl border border-white/6 bg-black/10 p-3">
+          <div className="space-y-5 rounded-xl border border-overlay/6 bg-overlay/10 p-3">
             {keyPointsByCategory.map(([category, points]) => (
             <div key={category} className="space-y-2">
-              <h3 className="text-xs font-semibold text-foreground tracking-tight border-b border-white/10 pb-2">
+              <h3 className="text-xs font-semibold text-foreground tracking-tight border-b border-overlay/10 pb-2">
                 {category}
               </h3>
               <div className="space-y-2">
@@ -301,7 +301,7 @@ export function MissionJobAnalysis({
                   return (
                     <div
                       key={kp.id}
-                      className="flex flex-col sm:flex-row sm:items-start gap-3 rounded-xl border border-white/6 bg-black/15 px-3 py-3"
+                      className="flex flex-col sm:flex-row sm:items-start gap-3 rounded-xl border border-overlay/6 bg-overlay/15 px-3 py-3"
                     >
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">

@@ -41,8 +41,8 @@ function ToolbarButton({
       disabled={disabled}
       className={`p-1.5 rounded transition-colors ${
         active
-          ? 'bg-white/15 text-white'
-          : 'text-slate-400 hover:bg-white/10 hover:text-slate-200'
+          ? 'bg-overlay/15 text-foreground'
+          : 'text-muted-foreground hover:bg-overlay/10 hover:text-foreground'
       } disabled:opacity-30 disabled:cursor-not-allowed`}
     >
       {children}
@@ -73,7 +73,7 @@ export function EmailEditor({
     editorProps: {
       attributes: {
         class:
-          'prose prose-invert prose-sm max-w-none min-h-[300px] px-3 py-2 focus:outline-none [&_p]:my-1 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5',
+          'prose prose-sm max-w-none min-h-[300px] px-3 py-2 text-foreground focus:outline-none dark:prose-invert [&_p]:my-1 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5',
       },
     },
   });
@@ -96,7 +96,7 @@ export function EmailEditor({
 
   return (
     <section className="glass-panel p-6 rounded-2xl">
-      <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
+      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         {title}
       </h2>
       <div className="space-y-4">
@@ -117,7 +117,7 @@ export function EmailEditor({
           </Label>
           <div className="rounded-md border border-input bg-background overflow-hidden">
             {!readOnly && editor && (
-              <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-overlay/10 bg-overlay/[0.02]">
                 <ToolbarButton
                   active={editor.isActive('bold')}
                   disabled={readOnly}
@@ -139,7 +139,7 @@ export function EmailEditor({
                 >
                   <UnderlineIcon className="h-4 w-4" />
                 </ToolbarButton>
-                <div className="w-px h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-border mx-1" />
                 <ToolbarButton
                   active={editor.isActive('bulletList')}
                   disabled={readOnly}

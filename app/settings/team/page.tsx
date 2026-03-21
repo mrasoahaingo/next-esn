@@ -286,7 +286,7 @@ export default function TeamSettingsPage() {
             <Button
               type="submit"
               disabled={inviteMember.isPending || !email.trim()}
-              className="h-9 bg-neon text-black hover:bg-neon/90"
+              className="h-9 bg-neon text-neutral-950 hover:bg-neon/90"
             >
               {inviteMember.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -382,7 +382,7 @@ export default function TeamSettingsPage() {
                                   </Button>
                                 }
                               />
-                              <AlertDialogContent className="bg-panel border-white/10">
+                              <AlertDialogContent className="bg-panel border-overlay/10">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>
                                     Retirer ce membre ?
@@ -477,7 +477,7 @@ export default function TeamSettingsPage() {
                               </Button>
                             }
                           />
-                          <AlertDialogContent className="bg-panel border-white/10">
+                          <AlertDialogContent className="bg-panel border-overlay/10">
                             <AlertDialogHeader>
                               <AlertDialogTitle>
                                 Révoquer cette invitation ?

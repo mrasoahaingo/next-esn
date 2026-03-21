@@ -34,7 +34,7 @@ export function QuestionsPanel({
         <div className="flex items-center justify-between rounded-xl border border-violet/20 bg-violet/5 px-4 py-3">
           <div className="flex items-center gap-2.5">
             <Sparkles className="h-4 w-4 shrink-0 text-violet" />
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-foreground/90">
               {hasAnswers
                 ? 'Vos réponses enrichissent le contexte — relancez pour améliorer le score'
                 : 'Répondez aux questions pour affiner l\'analyse et améliorer le score'}
@@ -55,15 +55,15 @@ export function QuestionsPanel({
 
       {/* Candidate questions */}
       <section className="glass-panel p-6 rounded-2xl">
-        <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2 flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-neon" />
           Questions candidat
         </h3>
         <div className="space-y-4">
           {candidateQuestions.map((q, i) => (
-            <div key={i} className="space-y-2 pb-4 border-b border-white/5 last:border-0">
-              <p className="text-sm font-medium text-white">{q.question}</p>
-              <p className="text-xs text-slate-400">{q.context}</p>
+            <div key={i} className="space-y-2 pb-4 border-b border-border/60 last:border-0">
+              <p className="text-sm font-medium text-foreground">{q.question}</p>
+              <p className="text-xs text-muted-foreground">{q.context}</p>
               <Textarea
                 value={q.answer ?? ''}
                 onChange={(e) => onUpdateAnswer('candidate', i, e.target.value)}
@@ -77,15 +77,15 @@ export function QuestionsPanel({
 
       {/* Client questions */}
       <section className="glass-panel p-6 rounded-2xl">
-        <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2 flex items-center gap-2">
           <Building2 className="h-4 w-4 text-violet" />
           Questions client
         </h3>
         <div className="space-y-4">
           {clientQuestions.map((q, i) => (
-            <div key={i} className="space-y-2 pb-4 border-b border-white/5 last:border-0">
-              <p className="text-sm font-medium text-white">{q.question}</p>
-              <p className="text-xs text-slate-400">{q.context}</p>
+            <div key={i} className="space-y-2 pb-4 border-b border-border/60 last:border-0">
+              <p className="text-sm font-medium text-foreground">{q.question}</p>
+              <p className="text-xs text-muted-foreground">{q.context}</p>
               <Textarea
                 value={q.answer ?? ''}
                 onChange={(e) => onUpdateAnswer('client', i, e.target.value)}
@@ -100,10 +100,10 @@ export function QuestionsPanel({
       {/* Match summary */}
       {analysis?.matchSummary && (
         <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
             Synthèse du matching
           </h3>
-          <p className="text-sm text-slate-300 leading-relaxed">{analysis.matchSummary}</p>
+          <p className="text-sm text-foreground/90 leading-relaxed">{analysis.matchSummary}</p>
         </section>
       )}
 

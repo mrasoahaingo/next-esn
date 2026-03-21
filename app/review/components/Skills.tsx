@@ -33,9 +33,9 @@ function SkillBadge({ skill }: { skill: Skill }) {
       className={`gap-1 cursor-pointer transition-all ${
         isAdded
           ? isInferred
-            ? 'border-violet-500/30 bg-violet-500/10 text-violet-300'
+            ? 'border-accent/30 bg-accent/10 text-accent'
             : 'border-accent/30 bg-accent/15 text-accent-foreground'
-          : 'border-white/10 bg-white/5 text-muted-foreground opacity-60'
+          : 'border-overlay/10 bg-overlay/[0.06] text-muted-foreground opacity-60'
       }`}
     >
       {skill.starred && (
@@ -193,7 +193,7 @@ export const Skills = memo(function Skills({ data, onChange, readOnly }: SkillsP
 
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
+      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Compétences
       </h2>
       <div className="space-y-4">

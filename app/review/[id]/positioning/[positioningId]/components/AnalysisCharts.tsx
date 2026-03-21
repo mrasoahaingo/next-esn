@@ -25,10 +25,11 @@ interface AnalysisChartsProps {
   isAnalyzing: boolean;
 }
 
-const NEON = '#b5ff40';
-const VIOLET = '#8b5cf6';
-const AMBER = '#fbbf24';
-const DESTRUCTIVE = '#ef4444';
+/** Brand-driven strokes/fills — align with globals.css theme tokens */
+const NEON = 'var(--neon)';
+const VIOLET = 'var(--violet)';
+const AMBER = '#f59e0b';
+const DESTRUCTIVE = 'var(--destructive)';
 
 const PALETTE = [NEON, VIOLET, '#38bdf8', AMBER, '#f472b6', '#34d399', '#fb923c', '#94a3b8'];
 
@@ -87,23 +88,21 @@ function SkillRadar({ category, skills, color }: { category: string; skills: Par
       <div className="glass-panel rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-          <h4 className="text-sm font-semibold text-white">{category}</h4>
-          <span className="text-xs text-slate-400 ml-auto">{strongCount}/{total} fort</span>
+          <h4 className="text-sm font-semibold text-foreground">{category}</h4>
+          <span className="text-xs text-muted-foreground ml-auto">{strongCount}/{total} fort</span>
         </div>
         <div className="space-y-2">
           {skills.map((s, i) => (
             <div key={i} className="flex items-center justify-between text-xs">
-              <span className="text-slate-300">{s.skill}</span>
+              <span className="text-foreground/90">{s.skill}</span>
               <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                style={{
-                  backgroundColor:
-                    s.relevance === 'strong' ? NEON + '22' :
-                    s.relevance === 'partial' ? AMBER + '22' : DESTRUCTIVE + '22',
-                  color:
-                    s.relevance === 'strong' ? NEON :
-                    s.relevance === 'partial' ? AMBER : DESTRUCTIVE,
-                }}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                  s.relevance === 'strong'
+                    ? 'bg-neon/20 text-neon'
+                    : s.relevance === 'partial'
+                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
+                      : 'bg-destructive/20 text-destructive'
+                }`}
               >
                 {s.relevance === 'strong' ? 'Fort' : s.relevance === 'partial' ? 'Partiel' : 'Manquant'}
               </span>
@@ -118,15 +117,15 @@ function SkillRadar({ category, skills, color }: { category: string; skills: Par
     <div className="glass-panel rounded-2xl p-4">
       <div className="flex items-center gap-2 mb-2">
         <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-        <h4 className="text-sm font-semibold text-white">{category}</h4>
-        <span className="text-xs text-slate-400 ml-auto">{strongCount}/{total} fort</span>
+        <h4 className="text-sm font-semibold text-foreground">{category}</h4>
+        <span className="text-xs text-muted-foreground ml-auto">{strongCount}/{total} fort</span>
       </div>
       <ChartContainer config={chartConfig} className="mx-auto h-[200px] w-full">
         <RadarChart data={data}>
-          <PolarGrid stroke="rgba(255,255,255,0.1)" />
+          <PolarGrid stroke="var(--border)" />
           <PolarAngleAxis
             dataKey="skill"
-            tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 10 }}
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }}
           />
           <ChartTooltip content={<ChartTooltipContent />} />
           <Radar
@@ -198,16 +197,16 @@ export function AnalysisCharts({ analysis, isAnalyzing }: AnalysisChartsProps) {
       {/* Bar chart - Experience relevance */}
       {barData.length > 0 && (
         <section className="glass-panel rounded-2xl p-4">
-          <h3 className="text-sm font-semibold text-white mb-3">Pertinence des expériences</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Pertinence des expériences</h3>
           <ChartContainer config={experienceChartConfig} className="h-[200px] w-full">
             <BarChart data={barData} layout="vertical" margin={{ left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis type="number" domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 10 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis type="number" domain={[0, 100]} tick={{ fill: 'var(--muted-foreground)', fontSize: 10 }} />
               <YAxis
                 dataKey="name"
                 type="category"
                 width={120}
-                tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }}
+                tick={{ fill: 'var(--muted-foreground)', fontSize: 11 }}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
               <Bar dataKey="score" radius={[0, 4, 4, 0]} />
@@ -219,13 +218,13 @@ export function AnalysisCharts({ analysis, isAnalyzing }: AnalysisChartsProps) {
       {/* Gaps summary */}
       {gaps.length > 0 && (
         <section className="glass-panel rounded-2xl p-4">
-          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive" />
             Lacunes ({gaps.length})
           </h3>
           <ul className="space-y-2">
             {gaps.map((g, i) => (
-              <li key={i} className="text-xs text-slate-300 flex items-start gap-2">
+              <li key={i} className="text-xs text-foreground/90 flex items-start gap-2">
                 <span className="text-destructive mt-0.5 shrink-0">!</span>
                 <span>{typeof g === 'string' ? g : g.gap}</span>
               </li>

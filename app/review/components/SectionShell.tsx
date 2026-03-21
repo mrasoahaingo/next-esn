@@ -15,21 +15,21 @@ export function SectionShell({ status, label, children }: SectionShellProps) {
   if (status === 'pending') {
     return (
       <section className="glass-panel rounded-2xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-shimmer" />
-        <div className="flex items-center gap-3 text-slate-500">
-          <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center">
-            <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-overlay/[0.06] to-transparent animate-shimmer" />
+        <div className="flex items-center gap-3 text-muted-foreground">
+          <div className="h-8 w-8 rounded-lg bg-overlay/[0.06] flex items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-400">En attente</p>
-            <p className="text-xs text-slate-600">{label}</p>
+            <p className="text-sm font-medium text-muted-foreground">En attente</p>
+            <p className="text-xs text-muted-foreground/80">{label}</p>
           </div>
         </div>
         {/* Skeleton lines */}
         <div className="mt-4 space-y-3">
-          <div className="h-3 w-3/4 rounded bg-white/5 animate-pulse" />
-          <div className="h-3 w-1/2 rounded bg-white/5 animate-pulse" />
-          <div className="h-3 w-2/3 rounded bg-white/5 animate-pulse" />
+          <div className="h-3 w-3/4 rounded bg-overlay/[0.06] animate-pulse" />
+          <div className="h-3 w-1/2 rounded bg-overlay/[0.06] animate-pulse" />
+          <div className="h-3 w-2/3 rounded bg-overlay/[0.06] animate-pulse" />
         </div>
       </section>
     );
@@ -54,7 +54,7 @@ export function SectionShell({ status, label, children }: SectionShellProps) {
   // done
   return (
     <section className="relative">
-      <div className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-neon text-black">
+      <div className="absolute -top-1 -right-1 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-neon text-neutral-950">
         <Check className="h-3 w-3" strokeWidth={3} />
       </div>
       {children}

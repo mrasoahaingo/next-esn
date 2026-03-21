@@ -10,15 +10,15 @@ import {
 import { PieChart, Pie } from 'recharts';
 
 const skillCoverageConfig: ChartConfig = {
-  strong: { label: 'Maîtrisé', color: '#b5ff40' },
-  partial: { label: 'Partiel', color: '#fbbf24' },
-  missing: { label: 'Manquant', color: '#f87171' },
+  strong: { label: 'Maîtrisé', color: 'var(--neon)' },
+  partial: { label: 'Partiel', color: '#d97706' },
+  missing: { label: 'Manquant', color: 'var(--destructive)' },
 };
 
 function EmptyChart({ label }: { label: string }) {
   return (
     <div className="flex h-[180px] flex-col items-center justify-center text-muted-foreground">
-      <div className="mb-2 h-16 w-16 rounded-xl bg-white/[0.03] grid-noise" />
+      <div className="mb-2 h-16 w-16 rounded-xl bg-overlay/[0.03] grid-noise" />
       <p className="text-[10px]">{label}</p>
     </div>
   );
@@ -44,16 +44,16 @@ export function SkillCoverageChart({ skillCoverage }: SkillCoverageChartProps) {
                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                 <Pie
                   data={[
-                    { name: 'strong', value: skillCoverage.strong, fill: '#b5ff40' },
-                    { name: 'partial', value: skillCoverage.partial, fill: '#fbbf24' },
-                    { name: 'missing', value: skillCoverage.missing, fill: '#f87171' },
+                    { name: 'strong', value: skillCoverage.strong, fill: 'var(--neon)' },
+                    { name: 'partial', value: skillCoverage.partial, fill: '#d97706' },
+                    { name: 'missing', value: skillCoverage.missing, fill: 'var(--destructive)' },
                   ]}
                   dataKey="value"
                   nameKey="name"
                   innerRadius={48}
                   outerRadius={72}
                   strokeWidth={2}
-                  stroke="rgba(0,0,0,0.3)"
+                  stroke="var(--background)"
                 />
                 <text
                   x="50%"
@@ -82,7 +82,7 @@ export function SkillCoverageChart({ skillCoverage }: SkillCoverageChartProps) {
             <div className="mt-1 flex justify-center gap-4">
               {[
                 { label: 'Maîtrisé', count: skillCoverage.strong, color: 'bg-neon' },
-                { label: 'Partiel', count: skillCoverage.partial, color: 'bg-amber-400' },
+                { label: 'Partiel', count: skillCoverage.partial, color: 'bg-amber-600 dark:bg-amber-400' },
                 { label: 'Manquant', count: skillCoverage.missing, color: 'bg-destructive' },
               ].map((item) => (
                 <div key={item.label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">

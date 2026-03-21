@@ -11,11 +11,11 @@ interface SummaryProps {
 export const Summary = memo(function Summary({ data, onChange, readOnly }: SummaryProps) {
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
+      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Professional Summary
       </h2>
       {readOnly ? (
-        <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+        <p className="text-foreground leading-relaxed whitespace-pre-wrap">
           {data}
         </p>
       ) : (

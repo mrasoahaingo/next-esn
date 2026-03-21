@@ -506,27 +506,27 @@ export default function PositioningWizardPage() {
             {/* Key metrics */}
             {analysis?.matchScore != null && !isAnalyzing && !isAnalysisLoading && (
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
-                  <TrendingUp className={`h-4 w-4 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-400' : 'text-destructive'}`} />
-                  <span className={`text-lg font-bold ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-400' : 'text-destructive'}`}>
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
+                  <TrendingUp className={`h-4 w-4 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`} />
+                  <span className={`text-lg font-bold ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}>
                     {analysis.matchScore}%
                   </span>
-                  <span className="text-xs text-slate-400">Score</span>
+                  <span className="text-xs text-muted-foreground">Score</span>
                 </div>
                 {analysis.skillMatches && (
-                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
                     <CheckCircle2 className="h-4 w-4 text-neon" />
-                    <span className="text-sm font-semibold text-white">
+                    <span className="text-sm font-semibold text-foreground">
                       {analysis.skillMatches.filter((s) => s.relevance === 'strong').length}/{analysis.skillMatches.length}
                     </span>
-                    <span className="text-xs text-slate-400">Compétences</span>
+                    <span className="text-xs text-muted-foreground">Compétences</span>
                   </div>
                 )}
                 {analysis.gaps && analysis.gaps.length > 0 && (
-                  <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <span className="text-sm font-semibold text-white">{analysis.gaps.length}</span>
-                    <span className="text-xs text-slate-400">Lacunes</span>
+                    <span className="text-sm font-semibold text-foreground">{analysis.gaps.length}</span>
+                    <span className="text-xs text-muted-foreground">Lacunes</span>
                   </div>
                 )}
               </div>
@@ -537,7 +537,7 @@ export default function PositioningWizardPage() {
               {(aiAnalysisDurationMs || aiGenerationDurationMs || userTimeSeconds) && (
                 <Tooltip>
                   <TooltipTrigger>
-                    <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-xs font-medium text-muted-foreground">
                         {formatDuration(
@@ -674,11 +674,11 @@ export default function PositioningWizardPage() {
                 {/* Tabs: Résultats | Questions — once analysis complete */}
                 {analysisComplete && (
                   <Tabs defaultValue="results" className="flex flex-col min-h-0 flex-1">
-                    <TabsList className="w-full shrink-0 bg-white/5 border border-white/10 rounded-xl p-1">
-                      <TabsTrigger value="results" className="flex-1 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg">
+                    <TabsList className="w-full shrink-0 bg-muted/40 border border-border rounded-xl p-1">
+                      <TabsTrigger value="results" className="flex-1 text-xs data-[state=active]:bg-overlay/10 data-[state=active]:text-foreground rounded-lg">
                         Résultats
                       </TabsTrigger>
-                      <TabsTrigger value="questions" className="flex-1 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-white rounded-lg">
+                      <TabsTrigger value="questions" className="flex-1 text-xs data-[state=active]:bg-overlay/10 data-[state=active]:text-foreground rounded-lg">
                         Questions & Affinage
                       </TabsTrigger>
                     </TabsList>
@@ -719,8 +719,8 @@ export default function PositioningWizardPage() {
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
               {currentStep === 2 ? (
                 <>
-                  <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                    <h2 className="flex items-center text-sm font-semibold text-white">
+                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                    <h2 className="flex items-center text-sm font-semibold text-foreground">
                       <FileText className="mr-2 h-4 w-4 text-accent" />
                       Aperçu CV retravaillé
                     </h2>
@@ -730,7 +730,7 @@ export default function PositioningWizardPage() {
                         size="icon-sm"
                         onClick={() => setFullscreen(true)}
                         disabled={!pdfBlobUrl}
-                        className="text-muted-foreground hover:text-white hover:bg-white/10"
+                        className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
                       >
                         <Maximize2 className="h-3.5 w-3.5" />
                       </Button>
@@ -753,9 +753,9 @@ export default function PositioningWizardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="relative flex-1 bg-[#0a0d16]">
+                  <div className="relative flex-1 bg-shell">
                     {isPdfLoading && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       </div>
                     )}
@@ -771,13 +771,13 @@ export default function PositioningWizardPage() {
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                    <h2 className="flex items-center text-sm font-semibold text-white">
+                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                    <h2 className="flex items-center text-sm font-semibold text-foreground">
                       <Target className="mr-2 h-4 w-4 text-violet" />
                       Visualisation de l&apos;analyse
                     </h2>
                   </div>
-                  <div className="relative overflow-y-auto flex-1 bg-[#0a0d16]">
+                  <div className="relative overflow-y-auto flex-1 bg-shell">
                     <AnalysisCharts
                       analysis={analysis}
                       isAnalyzing={isAnalyzing || isAnalysisLoading}
@@ -793,11 +793,11 @@ export default function PositioningWizardPage() {
       {/* Fullscreen comparison dialog */}
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <DialogContent
-          className="sm:max-w-[95vw] h-[92vh] flex flex-col gap-0 p-0 bg-[#0a0d16] border border-white/10"
+          className="sm:max-w-[95vw] h-[92vh] flex flex-col gap-0 p-0 bg-shell border border-border"
           showCloseButton={false}
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-            <DialogTitle className="flex items-center text-sm font-semibold text-white">
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <DialogTitle className="flex items-center text-sm font-semibold text-foreground">
               <FileText className="mr-2 h-4 w-4 text-accent" />
               Comparaison des CV
             </DialogTitle>
@@ -822,21 +822,21 @@ export default function PositioningWizardPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setFullscreen(false)}
-                className="text-muted-foreground hover:text-white hover:bg-white/10"
+                className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
               >
                 Fermer
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-1 min-h-0 gap-px bg-white/10">
+          <div className="flex flex-1 min-h-0 gap-px bg-border">
             {/* Original CV */}
             <div className="flex flex-1 flex-col min-w-0">
-              <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-4 py-2">
+              <div className="flex items-center gap-2 border-b border-border bg-overlay/[0.06] px-4 py-2">
                 <FileInput className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">CV extrait</span>
               </div>
-              <div className="relative flex-1 bg-[#0a0d16]">
+              <div className="relative flex-1 bg-shell">
                 {originalPdfBlobUrl ? (
                   <iframe
                     src={originalPdfBlobUrl}
@@ -854,13 +854,13 @@ export default function PositioningWizardPage() {
 
             {/* Tailored CV */}
             <div className="flex flex-1 flex-col min-w-0">
-              <div className="flex items-center gap-2 border-b border-white/10 bg-white/5 px-4 py-2">
+              <div className="flex items-center gap-2 border-b border-border bg-overlay/[0.06] px-4 py-2">
                 <FileText className="h-3.5 w-3.5 text-accent" />
                 <span className="text-xs font-medium text-accent">CV retravaillé</span>
               </div>
-              <div className="relative flex-1 bg-[#0a0d16]">
+              <div className="relative flex-1 bg-shell">
                 {isPdfLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 )}

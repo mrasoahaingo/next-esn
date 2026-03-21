@@ -88,12 +88,12 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
   return (
     <div className="space-y-3" aria-live="polite" aria-atomic="false">
       {isStreaming && streamMeta?.phase === 'transcription' && (
-        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-violet-100">
+        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-accent-foreground">
           <ScanText className="h-3.5 w-3.5 shrink-0 animate-pulse" />
           <span>
             Transcription du PDF…
             {streamMeta.transcriptionChars != null && streamMeta.transcriptionChars > 0 && (
-              <span className="ml-1.5 tabular-nums text-violet-200/80">
+              <span className="ml-1.5 tabular-nums text-accent/80">
                 {streamMeta.transcriptionChars.toLocaleString('fr-FR')} caractères
               </span>
             )}
@@ -102,7 +102,7 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
       )}
 
       {isStreaming && streamMeta?.phase === 'reading' && (
-        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300">
+        <div className="flex items-center gap-2 rounded-lg border border-overlay/10 bg-overlay/[0.06] px-3 py-2 text-xs text-foreground/90">
           <FileSearch className="h-3.5 w-3.5 shrink-0 animate-pulse" />
           <span>Lecture du document Word…</span>
         </div>
@@ -110,13 +110,13 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
 
       {/* Progress bar */}
       <div className="flex items-center gap-3">
-        <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div className="flex-1 h-1.5 rounded-full bg-overlay/10 overflow-hidden">
           <div
             className="h-full rounded-full bg-neon transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <span className="text-xs font-medium text-slate-400 tabular-nums">
+        <span className="text-xs font-medium text-muted-foreground tabular-nums">
           {completedCount}/{steps.length}
         </span>
       </div>
@@ -137,8 +137,8 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
                 done
                   ? 'bg-neon/15 text-neon border border-neon/25'
                   : active
-                    ? 'bg-violet/15 text-violet-200 border border-violet/30 animate-pulse'
-                    : 'bg-white/5 text-slate-500 border border-white/5'
+                    ? 'bg-violet/15 text-violet dark:text-violet-200 border border-violet/30 animate-pulse'
+                    : 'bg-overlay/[0.04] text-muted-foreground border border-border'
               }`}
             >
               <Icon className="h-3 w-3" />

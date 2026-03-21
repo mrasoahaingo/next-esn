@@ -36,7 +36,7 @@ export function Strengths({ data, onChange, readOnly }: StrengthsProps) {
 
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
+      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Strengths
       </h2>
 
@@ -57,7 +57,7 @@ export function Strengths({ data, onChange, readOnly }: StrengthsProps) {
 
       <ul className="space-y-2">
         {normalizedData.map((strength, i) => (
-          <li key={i} className="flex items-start justify-between text-sm text-slate-200 group">
+          <li key={i} className="flex items-start justify-between text-sm text-foreground group">
             <div className="flex items-start">
               <span className="mr-2 text-primary mt-1">•</span>
               {strength}

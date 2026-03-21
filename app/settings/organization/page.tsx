@@ -259,7 +259,7 @@ export default function OrganizationSettingsPage() {
             <Button
               type="submit"
               disabled={saving}
-              className="bg-neon text-black hover:bg-neon/90"
+              className="bg-neon text-neutral-950 hover:bg-neon/90"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enregistrer'}
             </Button>

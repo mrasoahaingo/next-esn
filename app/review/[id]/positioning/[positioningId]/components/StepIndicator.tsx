@@ -24,7 +24,7 @@ export function StepIndicator({ currentStep, onStepClick, canGoToStep }: StepInd
         return (
           <div key={step.num} className="flex items-center gap-2">
             {i > 0 && (
-              <div className={`h-px w-8 ${canClick || isActive ? 'bg-neon/50' : 'bg-white/10'}`} />
+              <div className={`h-px w-8 ${canClick || isActive ? 'bg-neon/50' : 'bg-border'}`} />
             )}
             <button
               onClick={() => canClick && onStepClick(step.num)}
@@ -33,14 +33,14 @@ export function StepIndicator({ currentStep, onStepClick, canGoToStep }: StepInd
                 isActive
                   ? 'bg-neon/15 text-neon border border-neon/30'
                   : isDone
-                    ? 'bg-neon/10 text-neon/70 border border-neon/20 cursor-pointer hover:bg-white/10'
-                    : 'bg-white/5 text-slate-500 border border-white/5 cursor-not-allowed'
+                    ? 'bg-neon/10 text-neon/70 border border-neon/20 cursor-pointer hover:bg-overlay/10'
+                    : 'bg-overlay/[0.04] text-muted-foreground border border-border cursor-not-allowed'
               }`}
             >
               {isDone ? (
                 <Check className="h-3 w-3" />
               ) : (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/10 text-[10px]">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-overlay/10 text-[10px]">
                   {step.num}
                 </span>
               )}

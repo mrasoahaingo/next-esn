@@ -26,8 +26,8 @@ export function PdfPreview() {
   return (
     <>
       <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <h2 className="flex items-center text-sm font-semibold text-white">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="flex items-center text-sm font-semibold text-foreground">
             <FileText className="mr-2 h-4 w-4 text-accent" />
             Aperçu PDF
           </h2>
@@ -37,7 +37,7 @@ export function PdfPreview() {
               size="icon-sm"
               onClick={() => setFullscreen(true)}
               disabled={!pdfBlobUrl}
-              className="text-muted-foreground hover:text-white hover:bg-white/10"
+              className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </Button>
@@ -54,9 +54,9 @@ export function PdfPreview() {
           </div>
         </div>
 
-        <div className="relative flex-1 bg-[#0a0d16]">
+        <div className="relative flex-1 bg-shell">
           {isPdfLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
@@ -78,11 +78,11 @@ export function PdfPreview() {
 
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <DialogContent
-          className="sm:max-w-[90vw] h-[90vh] flex flex-col gap-0 p-0 bg-[#0a0d16] border border-white/10"
+          className="sm:max-w-[90vw] h-[90vh] flex flex-col gap-0 p-0 bg-shell border border-border"
           showCloseButton={false}
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
-            <DialogTitle className="flex items-center text-sm font-semibold text-white">
+          <div className="flex items-center justify-between border-b border-border px-5 py-3">
+            <DialogTitle className="flex items-center text-sm font-semibold text-foreground">
               <FileText className="mr-2 h-4 w-4 text-accent" />
               Aperçu PDF
             </DialogTitle>
@@ -101,7 +101,7 @@ export function PdfPreview() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setFullscreen(false)}
-                className="text-muted-foreground hover:text-white hover:bg-white/10"
+                className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
               >
                 Fermer
               </Button>
@@ -110,7 +110,7 @@ export function PdfPreview() {
 
           <div className="relative flex-1 min-h-0">
             {isPdfLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             )}

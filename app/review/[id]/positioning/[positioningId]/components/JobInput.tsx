@@ -35,16 +35,16 @@ export function JobInput({
       : jobDescription;
 
     return (
-      <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+      <div className="flex items-start gap-3 rounded-xl border border-overlay/10 bg-overlay/[0.06] px-4 py-3">
         <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap wrap-break-word">
+          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap wrap-break-word">
             {displayText}
           </p>
           {isTruncated && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="mt-1 flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+              className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {expanded ? (
                 <><ChevronUp className="h-3 w-3" /> Réduire</>
@@ -77,7 +77,7 @@ export function JobInput({
 
   return (
     <section className="glass-panel p-6 rounded-2xl">
-      <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
+      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Fiche de poste
       </h2>
       <Textarea

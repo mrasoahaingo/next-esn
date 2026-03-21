@@ -332,7 +332,7 @@ export default function ReviewPage() {
               {(aiDurationMs || userTimeSeconds) && (
                 <Tooltip>
                   <TooltipTrigger>
-                    <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-overlay/10 bg-overlay/[0.06] px-3 py-1.5">
                       <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="text-xs font-medium text-muted-foreground">
                         {formatDuration((aiDurationMs ?? 0) + (userTimeSeconds ?? 0) * 1000)}

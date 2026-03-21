@@ -21,7 +21,7 @@ function getRelevanceBadge(relevance: string) {
       return <Badge className="bg-neon/15 text-neon border-neon/25 shrink-0">Fort</Badge>;
     case 'partial':
     case 'medium':
-      return <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/25 shrink-0">Partiel</Badge>;
+      return <Badge className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/25 shrink-0">Partiel</Badge>;
     case 'missing':
     case 'low':
       return <Badge className="bg-destructive/15 text-destructive border-destructive/25 shrink-0">Manquant</Badge>;
@@ -95,8 +95,8 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
 
   const score = analysis?.matchScore;
   const scoreColor = score != null
-    ? score >= 70 ? 'text-neon' : score >= 40 ? 'text-amber-400' : 'text-destructive'
-    : 'text-slate-500';
+    ? score >= 70 ? 'text-neon' : score >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'
+    : 'text-muted-foreground';
 
   const activeHint =
     isAnalyzing && streamMeta?.activeBranches?.length
@@ -106,13 +106,13 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
   return (
     <div className="space-y-4">
       {activeHint && (
-        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-violet-100">
+        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-accent-foreground">
           <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
           <span>
             {streamMeta?.phase === 'synthesizing'
               ? 'Synthèse du score…'
               : 'Analyse en cours'}
-            <span className="ml-1.5 text-violet-200/90">({activeHint})</span>
+            <span className="ml-1.5 text-violet dark:text-violet-200/90">({activeHint})</span>
           </span>
         </div>
       )}
@@ -123,21 +123,21 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
         label="Analyse des compétences..."
       >
         <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
             Compétences
           </h3>
           <div className="space-y-3">
             {(analysis?.skillMatches ?? []).map((sm, i) => (
-              <div key={i} className="py-2 border-b border-white/5 last:border-0">
+              <div key={i} className="py-2 border-b border-border/60 last:border-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-white">{sm.skill}</span>
-                    <p className="text-xs text-slate-400 mt-0.5">{sm.comment}</p>
+                    <span className="text-sm font-medium text-foreground">{sm.skill}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">{sm.comment}</p>
                   </div>
                   {getRelevanceBadge(sm.relevance)}
                 </div>
                 {sm.note && (
-                  <p className="mt-1.5 text-xs text-slate-500 italic pl-3 border-l-2 border-white/10">
+                  <p className="mt-1.5 text-xs text-muted-foreground italic pl-3 border-l-2 border-overlay/10">
                     {sm.note}
                   </p>
                 )}
@@ -159,21 +159,21 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
         label="Analyse des expériences..."
       >
         <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
             Pertinence des expériences
           </h3>
           <div className="space-y-3">
             {(analysis?.experienceRelevance ?? []).map((er, i) => (
-              <div key={i} className="py-2 border-b border-white/5 last:border-0">
+              <div key={i} className="py-2 border-b border-border/60 last:border-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-white">{er.experience}</span>
-                    <p className="text-xs text-slate-400 mt-0.5">{er.comment}</p>
+                    <span className="text-sm font-medium text-foreground">{er.experience}</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">{er.comment}</p>
                   </div>
                   {getRelevanceBadge(er.relevance)}
                 </div>
                 {er.note && (
-                  <p className="mt-1.5 text-xs text-slate-500 italic pl-3 border-l-2 border-white/10">
+                  <p className="mt-1.5 text-xs text-muted-foreground italic pl-3 border-l-2 border-overlay/10">
                     {er.note}
                   </p>
                 )}
@@ -195,18 +195,18 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
         label="Identification des lacunes..."
       >
         <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2">
+          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
             Lacunes identifiées
           </h3>
           <div className="space-y-3">
             {(analysis?.gaps ?? []).map((gapItem, i) => (
-              <div key={i} className="py-2 border-b border-white/5 last:border-0">
-                <div className="flex items-start text-sm text-slate-300">
+              <div key={i} className="py-2 border-b border-border/60 last:border-0">
+                <div className="flex items-start text-sm text-foreground">
                   <span className="mr-2 text-destructive mt-0.5 shrink-0">!</span>
                   {typeof gapItem === 'string' ? gapItem : gapItem.gap}
                 </div>
                 {typeof gapItem !== 'string' && gapItem.note && (
-                  <p className="mt-1.5 text-xs text-slate-500 italic pl-3 border-l-2 border-white/10 ml-4">
+                  <p className="mt-1.5 text-xs text-muted-foreground italic pl-3 border-l-2 border-overlay/10 ml-4">
                     {gapItem.note}
                   </p>
                 )}
@@ -229,7 +229,7 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
       >
         <section className="glass-panel p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold text-white">Score de matching</h3>
+            <h3 className="text-lg font-semibold text-foreground">Score de matching</h3>
             <div className="flex items-center gap-3">
               {onReAnalyze && !isAnalyzing && analysis && (
                 <Button
@@ -248,7 +248,7 @@ export function AnalysisView({ analysis, isAnalyzing, streamMeta, onReAnalyze }:
             </div>
           </div>
           {analysis?.matchSummary && (
-            <p className="text-sm text-slate-300 leading-relaxed">{analysis.matchSummary}</p>
+            <p className="text-sm text-foreground/90 leading-relaxed">{analysis.matchSummary}</p>
           )}
         </section>
       </SectionShell>

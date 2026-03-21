@@ -235,7 +235,7 @@ function EditModelDialog({
   const [notes, setNotes] = useState(model.notes ?? '')
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-panel p-4 shadow-xl">
         <h3 className="mb-3 text-sm font-medium">Modifier le modèle</h3>
         <div className="space-y-2">
@@ -473,7 +473,7 @@ function EditTaskDialog({
   const [useJ, setUseJ] = useState(task.use_extract_json_middleware)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-panel p-4 shadow-xl">
         <h3 className="mb-3 font-mono text-xs text-muted-foreground">{task.task_key}</h3>
         <div className="space-y-2">

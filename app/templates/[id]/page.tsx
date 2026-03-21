@@ -404,15 +404,15 @@ export default function TemplateEditorPage() {
           {/* Right: PDF preview */}
           <div className="w-1/2 sticky top-0">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <h2 className="flex items-center text-sm font-semibold text-white">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <h2 className="flex items-center text-sm font-semibold text-foreground">
                   <FileText className="mr-2 h-4 w-4 text-primary" />
                   Aperçu avec données d&apos;exemple
                 </h2>
               </div>
-              <div className="relative flex-1 bg-[#0a0d16]">
+              <div className="relative flex-1 bg-shell">
                 {isPdfLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#0a0d16]/70">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 )}

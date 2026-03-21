@@ -68,8 +68,8 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
 
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
-        <h2 className="text-lg font-semibold text-white">
+      <div className="flex justify-between items-center mb-4 border-b border-overlay/10 pb-2">
+        <h2 className="text-lg font-semibold text-foreground">
           Experiences
         </h2>
         {!readOnly && (
@@ -81,13 +81,13 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
 
       <div className="space-y-6">
         {Array.isArray(data) && data.map((exp, i) => exp ? (
-          <div key={`${exp.role}-${exp.company}-${exp.startDate}-${i}`} className="relative pl-4 border-l-2 border-white/15 hover:border-accent transition-colors group">
+          <div key={`${exp.role}-${exp.company}-${exp.startDate}-${i}`} className="relative pl-4 border-l-2 border-border hover:border-accent transition-colors group">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 {readOnly ? (
                   <>
-                    <h3 className="font-bold text-white text-lg">{exp.role}</h3>
-                    <div className="text-violet-200 font-medium">{exp.company} {exp.location && `• ${exp.location}`}</div>
+                    <h3 className="font-bold text-foreground text-lg">{exp.role}</h3>
+                    <div className="text-accent font-medium">{exp.company} {exp.location && `• ${exp.location}`}</div>
                   </>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
@@ -129,7 +129,7 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
                     />
                   </div>
                 ) : (
-                  <span className="text-sm font-medium text-slate-300 bg-white/10 px-2 py-1 rounded whitespace-nowrap">
+                  <span className="text-sm font-medium text-muted-foreground bg-overlay/10 px-2 py-1 rounded whitespace-nowrap">
                     {exp.startDate} - {exp.endDate || 'Present'}
                   </span>
                 )}
@@ -158,7 +158,7 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
             <div className={`mt-2 ${expandedIndex !== i && !readOnly ? 'hidden' : 'block'}`}>
               <ul className="space-y-2">
                 {Array.isArray(exp.description) && exp.description.map((desc, j) => desc ? (
-                  <li key={`${desc.slice(0, 30)}-${j}`} className="text-slate-200 text-sm flex items-start group/item">
+                  <li key={`${desc.slice(0, 30)}-${j}`} className="text-foreground text-sm flex items-start group/item">
                     <span className="mr-2 text-primary mt-1">•</span>
                     {readOnly ? (
                       <span>{desc}</span>

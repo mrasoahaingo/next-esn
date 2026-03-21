@@ -245,7 +245,7 @@ export function UnifiedSidebar() {
         aria-label="Fermer le menu"
         aria-hidden={!mobileNavOpen}
         className={cn(
-          'fixed inset-0 z-40 bg-black/45 transition-opacity md:hidden',
+          'fixed inset-0 z-40 bg-scrim transition-opacity md:hidden',
           mobileNavOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
         onClick={() => setMobileNavOpen(false)}
@@ -284,7 +284,7 @@ export function UnifiedSidebar() {
 
       {/* Demo mode toggle */}
       {!isProduction && (
-        <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
+        <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-overlay/[0.03] px-3 py-2">
           <Label htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
             Mode démo
           </Label>
@@ -300,7 +300,7 @@ export function UnifiedSidebar() {
       <Separator />
 
       {/* Tab switcher */}
-      <div className="mx-3 mt-3 mb-2 flex rounded-lg bg-white/[0.03] p-0.5">
+      <div className="mx-3 mt-3 mb-2 flex rounded-lg bg-overlay/[0.03] p-0.5">
         <button
           type="button"
           onClick={() => router.push('/')}
@@ -342,7 +342,7 @@ export function UnifiedSidebar() {
                   accept=".pdf,.docx,.doc"
                   disabled={isUploading}
                 />
-                <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-white/12 bg-white/[0.03] px-3 py-2 text-sm text-muted-foreground transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent">
+                <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-overlay/12 bg-overlay/[0.03] px-3 py-2 text-sm text-muted-foreground transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent">
                   {isUploading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -464,7 +464,7 @@ export function UnifiedSidebar() {
 
                       {/* Nested positionings */}
                       {isExpanded && (
-                        <div className="ml-6 mt-0.5 mb-1 space-y-0.5 border-l border-white/[0.06] pl-2">
+                        <div className="ml-6 mt-0.5 mb-1 space-y-0.5 border-l border-border/60 pl-2">
                           {cvPositionings.map((p) => {
                             const label = p.missions?.title ?? p.job_description.trim().split('\n')[0].slice(0, 40);
                             const pst = posStatusConfig[p.status] ?? { label: 'Brouillon', variant: 'secondary' as const };
@@ -567,7 +567,7 @@ export function UnifiedSidebar() {
             <div className="px-1 py-2">
               <button
                 onClick={() => setShowNewMission(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/12 bg-white/[0.03] px-3 py-2 text-sm text-muted-foreground transition hover:border-violet/40 hover:bg-violet/5 hover:text-violet"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-overlay/12 bg-overlay/[0.03] px-3 py-2 text-sm text-muted-foreground transition hover:border-violet/40 hover:bg-violet/5 hover:text-violet"
               >
                 <Plus className="h-4 w-4" />
                 <span className="text-xs font-medium">Nouvelle position</span>
@@ -745,7 +745,7 @@ export function UnifiedSidebar() {
 
       {/* New mission dialog */}
       <Dialog open={showNewMission} onOpenChange={setShowNewMission}>
-        <DialogContent className="sm:max-w-2xl bg-panel border-white/10">
+        <DialogContent className="sm:max-w-2xl bg-panel border-overlay/10">
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/20 text-violet">
               <Plus className="h-4 w-4" />

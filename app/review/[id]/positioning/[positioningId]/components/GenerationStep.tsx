@@ -90,7 +90,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
         !emailBulletPoints &&
         !candidateEmail && (
         <section className="glass-panel rounded-2xl p-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-shimmer" />
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-overlay/[0.06] to-transparent animate-shimmer" />
           <div className="flex flex-col items-center gap-4 text-center">
             <div className="relative">
               <div className="h-12 w-12 rounded-xl bg-violet/20 flex items-center justify-center">
@@ -102,8 +102,8 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-white">Génération en cours...</p>
-              <p className="text-xs text-slate-400 mt-1 max-w-md">
+              <p className="text-sm font-medium text-foreground">Génération en cours...</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-md">
                 Cinq blocs sont produits en parallèle : CV retravaillé et quatre variantes d&apos;emails (les onglets se rempliront au fil du stream).
               </p>
             </div>
@@ -116,13 +116,13 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
                     className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
                       busy
                         ? 'border-violet/40 bg-violet/10 text-violet'
-                        : 'border-white/10 bg-white/[0.02] text-slate-500'
+                        : 'border-overlay/10 bg-overlay/[0.02] text-muted-foreground'
                     }`}
                   >
                     {busy ? (
                       <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
                     ) : (
-                      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/20" />
+                      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-border" />
                     )}
                     <span className={busy ? 'font-medium' : ''}>{GENERATION_BRANCH_LABELS[branch]}</span>
                   </li>
@@ -146,7 +146,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
                 <span className="text-xs font-medium text-violet">Génération en cours...</span>
               </div>
               {activeBranches.length > 0 && (
-                <p className="text-[11px] text-slate-400 pl-4">
+                <p className="text-[11px] text-muted-foreground pl-4">
                   En cours :{' '}
                   {activeBranches.map((b) => GENERATION_BRANCH_LABELS[b]).join(' · ')}
                 </p>
@@ -160,7 +160,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'email'
                   ? 'bg-violet/15 text-violet border border-violet/30'
-                  : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
+                  : 'bg-overlay/[0.04] text-muted-foreground border border-border hover:bg-overlay/[0.08]'
               }`}
             >
               Email client
@@ -170,7 +170,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'candidateEmail'
                   ? 'bg-neon/15 text-neon border border-neon/30'
-                  : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
+                  : 'bg-overlay/[0.04] text-muted-foreground border border-border hover:bg-overlay/[0.08]'
               }`}
             >
               Email candidat
@@ -180,7 +180,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === 'cv'
                   ? 'bg-violet/15 text-violet border border-violet/30'
-                  : 'bg-white/5 text-slate-400 border border-white/5 hover:bg-white/10'
+                  : 'bg-overlay/[0.04] text-muted-foreground border border-border hover:bg-overlay/[0.08]'
               }`}
             >
               CV retravaillé
@@ -190,13 +190,13 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
           {activeTab === 'email' && (
             <div className="space-y-3">
               {/* Email variant sub-tabs */}
-              <div className="flex gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
+              <div className="flex gap-1.5 p-1 rounded-xl bg-overlay/[0.04] border border-overlay/10">
                 <button
                   onClick={() => setActiveEmailVariant('full')}
                   className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     activeEmailVariant === 'full'
                       ? 'bg-violet/20 text-violet border border-violet/30'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-overlay/[0.06]'
                   }`}
                 >
                   <Mail className="h-3 w-3" />
@@ -207,7 +207,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
                   className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     activeEmailVariant === 'firstContact'
                       ? 'bg-violet/20 text-violet border border-violet/30'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-overlay/[0.06]'
                   }`}
                 >
                   <UserCheck className="h-3 w-3" />
@@ -218,7 +218,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
                   className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     activeEmailVariant === 'bulletPoints'
                       ? 'bg-violet/20 text-violet border border-violet/30'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-overlay/[0.06]'
                   }`}
                 >
                   <List className="h-3 w-3" />
