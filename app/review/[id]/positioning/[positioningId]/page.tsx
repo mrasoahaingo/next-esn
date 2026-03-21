@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
+import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
@@ -108,10 +109,11 @@ export default function PositioningWizardPage() {
 
   const {
     object: generateObject,
+    streamMeta: generateStreamMeta,
     submit: submitGenerate,
     isLoading: isGenerateLoading,
     stop: stopGenerate,
-  } = useWorkflowStream<PositioningOutput>({
+  } = useWorkflowStream<PositioningOutput, PositioningGenerateStreamMeta>({
     api: '/api/positioning/generate',
     runId: positioningData?.workflow_run_id,
     runStatus: positioningData?.status,
@@ -404,7 +406,19 @@ export default function PositioningWizardPage() {
         },
       }
     );
-  }, [positioningIdParam, analysis, updatePositioning, setIsGenerating, setTailoredCv, setEmail, setCandidateEmail, submitGenerate, refreshMissionCards]);
+  }, [
+    positioningIdParam,
+    analysis,
+    updatePositioning,
+    setIsGenerating,
+    setTailoredCv,
+    setEmail,
+    setEmailFirstContact,
+    setEmailBulletPoints,
+    setCandidateEmail,
+    submitGenerate,
+    refreshMissionCards,
+  ]);
 
   const handleExport = useCallback(() => {
     if (!positioningIdParam || !tailoredCv) return;
@@ -687,6 +701,7 @@ export default function PositioningWizardPage() {
               <div className="flex-1 overflow-y-auto pr-2">
                 <GenerationStep
                   isStreaming={isGenerating || isGenerateLoading}
+                  streamMeta={generateStreamMeta}
                   onGenerate={handleGenerate}
                 />
               </div>

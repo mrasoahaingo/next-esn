@@ -183,3 +183,16 @@ export const positioningOutputSchema = z.object({
 });
 
 export type PositioningOutput = z.infer<typeof positioningOutputSchema>;
+
+/** Sous-schémas pour génération positionnement parallèle (streamText + Output.object) */
+export const positioningTailoredCvPartSchema = positioningOutputSchema.pick({ tailoredCv: true });
+export const positioningEmailPartSchema = positioningOutputSchema.pick({ email: true });
+export const positioningEmailFirstContactPartSchema = positioningOutputSchema.pick({
+  emailFirstContact: true,
+});
+export const positioningEmailBulletPointsPartSchema = positioningOutputSchema.pick({
+  emailBulletPoints: true,
+});
+export const positioningCandidateEmailPartSchema = positioningOutputSchema.pick({
+  candidateEmail: true,
+});

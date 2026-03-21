@@ -1,17 +1,40 @@
 import { getWritable } from 'workflow';
-import { streamObject, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { model, modelName } from '@/lib/ai';
+import { extractionModel, modelName } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
+import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
+import {
+  mergePositioningOutputPartial,
+  type PositioningGenerateAccumulator,
+} from '@/lib/services/positioning-generate-merge';
 import {
   positioningOutputSchema,
-  buildPositioningGeneratePrompt,
-  buildGenerateMessages,
+  type ExtractedCV,
+  type PositioningAnalysis,
+  type PositioningOutput,
+  positioningTailoredCvPartSchema,
+  positioningEmailPartSchema,
+  positioningEmailFirstContactPartSchema,
+  positioningEmailBulletPointsPartSchema,
+  positioningCandidateEmailPartSchema,
+} from '@/lib/schema';
+import {
+  buildPositioningGenerateTailoredCvSystemPrompt,
+  buildPositioningGenerateEmailSystemPrompt,
+  buildPositioningGenerateEmailFirstContactSystemPrompt,
+  buildPositioningGenerateEmailBulletPointsSystemPrompt,
+  buildPositioningGenerateCandidateEmailSystemPrompt,
+  buildGenerateUserContent,
 } from '@/lib/services/positioning.service';
 import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
+import type {
+  PositioningGenerateBranch,
+  PositioningGenerateStreamMeta,
+} from '@/lib/types/positioning-generate-stream';
 
 async function fetchAndGenerate(positioningId: string, answers: Record<string, string>) {
-  "use step";
+  'use step';
 
   const supabase = getSupabase();
 
@@ -27,51 +50,152 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   if (!candidate?.extracted_data) throw new Error('CV not extracted yet');
   if (!positioning.analysis) throw new Error('Analysis not done yet');
 
-  const messages = buildGenerateMessages(
-    candidate.extracted_data,
-    positioning.job_description,
-    positioning.analysis,
-    answers ?? {},
-  );
+  const cv = candidate.extracted_data as ExtractedCV;
+  const jobDescription = positioning.job_description as string;
+  const analysis = positioning.analysis as PositioningAnalysis;
 
   const orgId = positioning.org_id as string | null | undefined;
   const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
-  const systemPrompt = buildPositioningGeneratePrompt(toPositioningPromptBranding(orgSettings));
+  const branding = toPositioningPromptBranding(orgSettings);
+
+  const userContent = buildGenerateUserContent(cv, jobDescription, analysis, answers ?? {});
 
   const startTime = Date.now();
-  const result = streamObject({
-    model,
-    schema: positioningOutputSchema,
-    system: systemPrompt,
-    messages,
-  });
-
   const encoder = new TextEncoder();
   const writable = getWritable<Uint8Array>();
   const writer = writable.getWriter();
   let chunkIndex = 0;
-  let lastPartial: unknown = null;
+
+  const acc: PositioningGenerateAccumulator = {};
+  const activeBranches = new Set<PositioningGenerateBranch>();
+
+  let lock = Promise.resolve();
+  const runLocked = (fn: () => Promise<void>) => {
+    const next = lock.then(fn, fn);
+    lock = next.catch(() => {});
+    return next;
+  };
+
+  const emit = async () => {
+    const snapshot = { ...acc };
+    const meta: PositioningGenerateStreamMeta = {
+      phase: 'generating',
+      activeBranches: [...activeBranches],
+    };
+    await writer.write(
+      encoder.encode(JSON.stringify({ index: chunkIndex++, data: snapshot, meta }) + '\n'),
+    );
+  };
+
+  async function consumeBranch<T>(
+    system: string,
+    schema: FlexibleSchema<T>,
+    outputName: string,
+    branch: PositioningGenerateBranch,
+  ): Promise<LanguageModelUsage> {
+    const result = streamText({
+      model: extractionModel,
+      system,
+      messages: [{ role: 'user', content: userContent }],
+      output: Output.object({ schema, name: outputName }),
+    });
+
+    let branchStarted = false;
+
+    for await (const partial of result.partialOutputStream) {
+      await runLocked(async () => {
+        if (!branchStarted) {
+          branchStarted = true;
+          activeBranches.add(branch);
+        }
+        mergePositioningOutputPartial(acc, partial as Partial<PositioningOutput>);
+        await emit();
+      });
+    }
+
+    await runLocked(async () => {
+      activeBranches.delete(branch);
+      await emit();
+    });
+
+    return await result.usage;
+  }
+
+  const usages: LanguageModelUsage[] = [];
 
   try {
-    for await (const partial of result.partialObjectStream) {
-      lastPartial = partial;
-      await writer.write(encoder.encode(JSON.stringify({ index: chunkIndex++, data: partial }) + '\n'));
+    const parallelUsages = await Promise.all([
+      consumeBranch(
+        buildPositioningGenerateTailoredCvSystemPrompt(branding),
+        positioningTailoredCvPartSchema,
+        'positioning_tailored_cv',
+        'tailoredCv',
+      ),
+      consumeBranch(
+        buildPositioningGenerateEmailSystemPrompt(branding),
+        positioningEmailPartSchema,
+        'positioning_email',
+        'email',
+      ),
+      consumeBranch(
+        buildPositioningGenerateEmailFirstContactSystemPrompt(branding),
+        positioningEmailFirstContactPartSchema,
+        'positioning_email_first_contact',
+        'emailFirstContact',
+      ),
+      consumeBranch(
+        buildPositioningGenerateEmailBulletPointsSystemPrompt(branding),
+        positioningEmailBulletPointsPartSchema,
+        'positioning_email_bullet_points',
+        'emailBulletPoints',
+      ),
+      consumeBranch(
+        buildPositioningGenerateCandidateEmailSystemPrompt(branding),
+        positioningCandidateEmailPartSchema,
+        'positioning_candidate_email',
+        'candidateEmail',
+      ),
+    ]);
+    usages.push(...parallelUsages);
+
+    const parsed = positioningOutputSchema.safeParse(acc);
+    const object = parsed.success ? parsed.data : acc;
+
+    if (!parsed.success) {
+      console.warn('Positioning output schema validation warning:', parsed.error.flatten());
     }
+
+    const durationMs = Date.now() - startTime;
+
+    return {
+      object,
+      usage: aggregateLanguageModelUsage(usages),
+      durationMs,
+      candidateId: positioning.candidate_id,
+      orgId: positioning.org_id as string | null,
+    };
   } finally {
     writer.releaseLock();
   }
-
-  const usage = await result.usage;
-  const durationMs = Date.now() - startTime;
-
-  return { object: lastPartial as { tailoredCv: unknown; email: unknown; emailFirstContact: unknown; emailBulletPoints: unknown; candidateEmail: unknown }, usage, durationMs, candidateId: positioning.candidate_id, orgId: positioning.org_id as string | null };
 }
 
 async function saveGeneration(
   positioningId: string,
-  result: { object: { tailoredCv: unknown; email: unknown; emailFirstContact: unknown; emailBulletPoints: unknown; candidateEmail: unknown }; usage: LanguageModelUsage; durationMs: number; candidateId: string; orgId: string | null },
+  result: {
+    object: {
+      tailoredCv?: unknown;
+      email?: unknown;
+      emailFirstContact?: unknown;
+      emailBulletPoints?: unknown;
+      candidateEmail?: unknown;
+    };
+    usage: LanguageModelUsage;
+    durationMs: number;
+    candidateId: string;
+    orgId: string | null;
+  },
 ) {
-  "use step";
+  'use step';
 
   const supabase = getSupabase();
 
@@ -105,7 +229,7 @@ async function saveGeneration(
 }
 
 export async function positioningGenerateWorkflow(positioningId: string, answers: Record<string, string>) {
-  "use workflow";
+  'use workflow';
 
   const result = await fetchAndGenerate(positioningId, answers);
   await saveGeneration(positioningId, result);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, RefreshCw, Mail, UserCheck, List } from 'lucide-react';
@@ -14,12 +15,29 @@ const EmailEditor = dynamic(
 
 type EmailVariant = 'full' | 'firstContact' | 'bulletPoints';
 
+const GENERATION_BRANCH_ORDER = [
+  'tailoredCv',
+  'email',
+  'emailFirstContact',
+  'emailBulletPoints',
+  'candidateEmail',
+] as const;
+
+const GENERATION_BRANCH_LABELS: Record<(typeof GENERATION_BRANCH_ORDER)[number], string> = {
+  tailoredCv: 'CV retravaillé',
+  email: 'Email client (complet)',
+  emailFirstContact: 'Premier contact',
+  emailBulletPoints: 'Bullet points',
+  candidateEmail: 'Email candidat',
+};
+
 interface GenerationStepProps {
   isStreaming: boolean;
+  streamMeta?: PositioningGenerateStreamMeta | null;
   onGenerate: () => void;
 }
 
-export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps) {
+export function GenerationStep({ isStreaming, streamMeta, onGenerate }: GenerationStepProps) {
   const {
     tailoredCv,
     email,
@@ -37,6 +55,7 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
   const [activeEmailVariant, setActiveEmailVariant] = useState<EmailVariant>('full');
 
   const hasGenerated = !!tailoredCv || !!email || !!emailFirstContact || !!emailBulletPoints || !!candidateEmail;
+  const activeBranches = streamMeta?.activeBranches ?? [];
 
   return (
     <div className="space-y-4">
@@ -64,7 +83,12 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
       )}
 
       {/* Loading state before content arrives */}
-      {isStreaming && !tailoredCv && !email && (
+      {isStreaming &&
+        !tailoredCv &&
+        !email &&
+        !emailFirstContact &&
+        !emailBulletPoints &&
+        !candidateEmail && (
         <section className="glass-panel rounded-2xl p-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.03] to-transparent animate-shimmer" />
           <div className="flex flex-col items-center gap-4 text-center">
@@ -79,17 +103,32 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
             </div>
             <div>
               <p className="text-sm font-medium text-white">Génération en cours...</p>
-              <p className="text-xs text-slate-400 mt-1">L&apos;IA retravaille le CV et rédige l&apos;email de positionnement</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-md">
+                Cinq blocs sont produits en parallèle : CV retravaillé et quatre variantes d&apos;emails (les onglets se rempliront au fil du stream).
+              </p>
             </div>
-            <div className="w-full max-w-xs space-y-3 mt-2">
-              <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-                <div className="h-full rounded-full bg-violet/40 animate-pulse" style={{ width: '60%' }} />
-              </div>
-              <div className="flex justify-between text-[10px] text-slate-500">
-                <span>CV retravaillé</span>
-                <span>Email</span>
-              </div>
-            </div>
+            <ul className="w-full max-w-md space-y-2 mt-2 text-left">
+              {GENERATION_BRANCH_ORDER.map((branch) => {
+                const busy = activeBranches.includes(branch);
+                return (
+                  <li
+                    key={branch}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
+                      busy
+                        ? 'border-violet/40 bg-violet/10 text-violet'
+                        : 'border-white/10 bg-white/[0.02] text-slate-500'
+                    }`}
+                  >
+                    {busy ? (
+                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                    ) : (
+                      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-white/20" />
+                    )}
+                    <span className={busy ? 'font-medium' : ''}>{GENERATION_BRANCH_LABELS[branch]}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
         </section>
       )}
@@ -98,12 +137,20 @@ export function GenerationStep({ isStreaming, onGenerate }: GenerationStepProps)
       {(tailoredCv || email || emailFirstContact || emailBulletPoints || candidateEmail) && (
         <>
           {isStreaming && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-violet" />
-              </span>
-              <span className="text-xs font-medium text-violet">Génération en cours...</span>
+            <div className="space-y-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-violet" />
+                </span>
+                <span className="text-xs font-medium text-violet">Génération en cours...</span>
+              </div>
+              {activeBranches.length > 0 && (
+                <p className="text-[11px] text-slate-400 pl-4">
+                  En cours :{' '}
+                  {activeBranches.map((b) => GENERATION_BRANCH_LABELS[b]).join(' · ')}
+                </p>
+              )}
             </div>
           )}
 
