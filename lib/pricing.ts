@@ -29,6 +29,24 @@ export function getModelPricing(aiModel: string): ModelPricingUsd | undefined {
   return MODEL_PRICING_USD[aiModel];
 }
 
+/** Tarifs DB à 0 = ligne « non renseignée » (DEFAULT) ; on retombe sur le barème fichier si présent. */
+function isDbPricingUnset(p: ModelPricingUsd): boolean {
+  return p.inputUsdPer1M === 0 && p.outputUsdPer1M === 0;
+}
+
+function resolvePricingForUsage(
+  aiModel: string,
+  dbPricingByGateway?: Map<string, ModelPricingUsd>,
+): ModelPricingUsd | undefined {
+  const fromDb = dbPricingByGateway?.get(aiModel);
+  const fromFile = getModelPricing(aiModel);
+  if (fromDb) {
+    if (isDbPricingUnset(fromDb) && fromFile) return fromFile;
+    return fromDb;
+  }
+  return fromFile;
+}
+
 export type UsageRowForPricing = {
   ai_model: string;
   input_tokens: number | null;
@@ -56,7 +74,7 @@ export function estimateUsageCostUsd(
   row: UsageRowForPricing,
   dbPricingByGateway?: Map<string, ModelPricingUsd>,
 ): number | null {
-  const p = dbPricingByGateway?.get(row.ai_model) ?? getModelPricing(row.ai_model);
+  const p = resolvePricingForUsage(row.ai_model, dbPricingByGateway);
   if (!p) return null;
   return computeUsd(row, p);
 }
