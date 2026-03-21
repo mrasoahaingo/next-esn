@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, startTransition } from 'react';
+import { useMobileNav } from '@/components/mobile-nav-context';
+import { cn } from '@/lib/utils';
 import { useCandidates, usePositionings, useMissions, useUploadCv, useCancelWorkflow, useCreateMission } from '@/lib/queries';
 import { useRouter, useParams, usePathname } from 'next/navigation';
 import { useAuth, UserButton, OrganizationSwitcher } from '@clerk/nextjs';
@@ -107,7 +109,7 @@ const posStatusConfig: Record<
 
 export function UnifiedSidebar() {
   const { isSignedIn, isLoaded } = useAuth();
-  const [activeTab, setActiveTab] = useState<'cvs' | 'positions'>('cvs');
+  const { mobileNavOpen, setMobileNavOpen } = useMobileNav();
   const [expandedCvs, setExpandedCvs] = useState<Set<string>>(new Set());
   const [showNewMission, setShowNewMission] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -116,6 +118,10 @@ export function UnifiedSidebar() {
   const router = useRouter();
   const params = useParams();
   const pathname = usePathname();
+
+  useEffect(() => {
+    startTransition(() => setMobileNavOpen(false));
+  }, [pathname, setMobileNavOpen]);
   const { isDemoMode, toggleDemoMode } = useDemoModeStore();
   const { isSuperAdmin } = useSuperAdmin();
   const { isOrgAdmin } = useOrgRole();
@@ -229,11 +235,29 @@ export function UnifiedSidebar() {
   };
 
   const isOnTemplates = pathname.startsWith('/templates');
+  const activeTab = pathname.startsWith('/positions') ? 'positions' : 'cvs';
 
   if (!isLoaded || !isSignedIn) return null;
 
   return (
-    <aside className="flex h-screen w-[280px] flex-col border-r border-violet/10 bg-panel">
+    <>
+      <button
+        type="button"
+        aria-label="Fermer le menu"
+        aria-hidden={!mobileNavOpen}
+        className={cn(
+          'fixed inset-0 z-40 bg-black/45 transition-opacity md:hidden',
+          mobileNavOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        )}
+        onClick={() => setMobileNavOpen(false)}
+      />
+      <aside
+        className={cn(
+          'flex h-screen w-[280px] shrink-0 flex-col border-r border-violet/10 bg-panel',
+          'fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out md:relative md:z-0 md:translate-x-0',
+          mobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        )}
+      >
       {/* Header */}
       <Link
         href="/"
@@ -279,8 +303,9 @@ export function UnifiedSidebar() {
       {/* Tab switcher */}
       <div className="mx-3 mt-3 mb-2 flex rounded-lg bg-white/[0.03] p-0.5">
         <button
-          onClick={() => setActiveTab('cvs')}
-          className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+          type="button"
+          onClick={() => router.push('/')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
             activeTab === 'cvs'
               ? 'bg-accent/15 text-accent'
               : 'text-muted-foreground hover:text-foreground'
@@ -290,8 +315,9 @@ export function UnifiedSidebar() {
           CVs
         </button>
         <button
-          onClick={() => setActiveTab('positions')}
-          className={`flex-1 flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+          type="button"
+          onClick={() => router.push('/positions')}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
             activeTab === 'positions'
               ? 'bg-violet/15 text-violet'
               : 'text-muted-foreground hover:text-foreground'
@@ -785,5 +811,6 @@ export function UnifiedSidebar() {
         </DialogContent>
       </Dialog>
     </aside>
+    </>
   );
 }
