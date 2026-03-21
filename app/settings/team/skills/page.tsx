@@ -34,13 +34,14 @@ export default function TeamRecruiterSkillsPage() {
   const { data: members = [] } = useMembers();
   const { data: aggregates, isLoading } = useOrgRecruiterSkills(canManage && roleLoaded);
 
+  const byUser = aggregates?.byUser;
   const byUserWithNames = useMemo(() => {
-    if (!aggregates?.byUser) return [];
-    return aggregates.byUser.map((row) => ({
+    if (!byUser) return [];
+    return byUser.map((row) => ({
       ...row,
       name: memberName(members, row.user_id),
     }));
-  }, [aggregates?.byUser, members]);
+  }, [byUser, members]);
 
   if (!isLoaded || !roleLoaded) {
     return (

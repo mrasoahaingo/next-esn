@@ -79,6 +79,7 @@ function MemberAvatar({
 
   if (member.imageUrl) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- External Clerk avatar URL, not optimizable via next/image
       <img
         src={member.imageUrl}
         alt={initials}
@@ -387,8 +388,8 @@ export default function TeamSettingsPage() {
                                     Retirer ce membre ?
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    <strong>{member.identifier}</strong> n'aura
-                                    plus accès à l'organisation. Cette action
+                                    <strong>{member.identifier}</strong> n&apos;aura
+                                    plus accès à l&apos;organisation. Cette action
                                     est réversible via une nouvelle invitation.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
@@ -482,7 +483,7 @@ export default function TeamSettingsPage() {
                                 Révoquer cette invitation ?
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                L'invitation envoyée à{' '}
+                                L&apos;invitation envoyée à{' '}
                                 <strong>{inv.emailAddress}</strong> sera
                                 annulée. Le lien reçu par email ne fonctionnera
                                 plus.
@@ -511,8 +512,8 @@ export default function TeamSettingsPage() {
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-neon" />
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Les membres invités recevront un email avec un lien pour
-                rejoindre l'organisation. Ils devront créer un compte s'ils
-                n'en ont pas encore. Seuls les <strong className="text-foreground">admins</strong> peuvent inviter, changer les rôles ou retirer des membres.
+                rejoindre l&apos;organisation. Ils devront créer un compte s&apos;ils
+                n&apos;en ont pas encore. Seuls les <strong className="text-foreground">admins</strong> peuvent inviter, changer les rôles ou retirer des membres.
               </p>
             </div>
           </>
