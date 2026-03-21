@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { triggerMissionPositioningAnalysis } from '@/lib/services/positioning-analyze-trigger';
 
 export async function GET() {
   try {
@@ -49,11 +50,22 @@ export async function POST(req: NextRequest) {
         mission_id: missionId || null,
         status: 'draft',
         org_id: orgId,
+        added_via: missionId ? 'existing_candidate' : null,
       })
       .select()
       .single();
 
     if (error) throw error;
+
+    if (missionId) {
+      await triggerMissionPositioningAnalysis(supabase, data.id);
+      const { data: refreshed } = await supabase
+        .from('positionings')
+        .select()
+        .eq('id', data.id)
+        .single();
+      return NextResponse.json(refreshed ?? data);
+    }
 
     return NextResponse.json(data);
   } catch (error: unknown) {

@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, type MouseEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { ExtractedCV, PositioningAnalysis } from '@/lib/schema';
+import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
+import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
+import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
+import { queryKeys } from '@/lib/queries/keys';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Briefcase,
@@ -52,6 +58,7 @@ import {
 
 interface PositioningCandidate {
   id: string;
+  workflow_run_id?: string | null;
   extracted_data: {
     personalInfo?: {
       firstName?: string;
@@ -94,6 +101,7 @@ interface MissionPositioning {
   candidate_id: string;
   status: string;
   workflow_run_id: string | null;
+  added_via?: 'cv_upload' | 'existing_candidate' | null;
   analysis: {
     matchScore?: number;
     matchSummary?: string;
@@ -127,20 +135,57 @@ interface CandidateItem {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const DRAFT_STATUSES = new Set(['draft', 'analyzing', 'analyzed', 'generating']);
-const READY_STATUSES = new Set(['generated', 'exported']);
+/** En cours sur la mission : jusqu’à la fin de l’analyse (extract éventuel + analyse). */
+const IN_PROGRESS_STATUSES = new Set(['draft', 'analyzing']);
+/** Prêts : analyse terminée ; génération manuelle depuis le wizard. */
+const READY_STATUSES = new Set(['analyzed', 'generating', 'generated', 'exported']);
 
 const posStatusConfig: Record<
   string,
   { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }
 > = {
-  draft: { label: 'Brouillon', variant: 'secondary' },
-  analyzing: { label: 'Analyse...', variant: 'outline' },
-  analyzed: { label: 'Analysé', variant: 'outline' },
-  generating: { label: 'Génération...', variant: 'outline' },
+  draft: { label: 'En traitement', variant: 'secondary' },
+  analyzing: { label: 'Analyse…', variant: 'outline' },
+  analyzed: { label: 'Analyse terminée', variant: 'outline' },
+  generating: { label: 'Génération…', variant: 'outline' },
   generated: { label: 'Prêt', variant: 'default' },
   exported: { label: 'Exporté', variant: 'default' },
 };
+
+function formatCvExtractionHint(meta: CvExtractionStreamMeta | null): string | null {
+  if (!meta?.phase) return null;
+  if (meta.phase === 'transcription') {
+    const n = meta.transcriptionChars;
+    return n != null ? `Transcription du PDF (${n} caractères)` : 'Transcription du PDF';
+  }
+  if (meta.phase === 'reading') return 'Lecture du document';
+  if (meta.phase === 'extracting' && meta.activeBranches?.length) {
+    const labels: Record<string, string> = {
+      identity: 'Identité',
+      experiences: 'Expériences',
+      education: 'Formation',
+      skills: 'Compétences',
+    };
+    return `Extraction : ${meta.activeBranches.map((b) => labels[b] ?? b).join(' · ')}`;
+  }
+  return 'Extraction du CV';
+}
+
+function formatAnalysisStreamHint(meta: PositioningAnalysisStreamMeta | null): string | null {
+  if (!meta) return null;
+  if (meta.phase === 'synthesizing') return 'Synthèse du score…';
+  if (meta.activeBranches?.length) {
+    const labels: Record<string, string> = {
+      skills: 'Compétences',
+      experiences: 'Expériences',
+      gaps: 'Lacunes',
+      questions: 'Questions',
+      synthesis: 'Synthèse',
+    };
+    return `Analyse : ${meta.activeBranches.map((b) => labels[b] ?? b).join(' · ')}`;
+  }
+  return 'Analyse en cours';
+}
 
 function getCandidateName(c: PositioningCandidate | CandidateItem | null) {
   if (!c) return 'Candidat';
@@ -651,10 +696,10 @@ function CandidateCompareColumn({
   return (
     <div className="flex flex-col gap-3 min-w-0">
 
-      {/* ── Header card ── */}
+        {/* ── Header card ── */}
       <div
-        className="sticky top-0 z-10 rounded-2xl p-5 flex flex-col items-center gap-3 text-center relative overflow-hidden bg-shell"
-        style={{ backgroundImage: `linear-gradient(160deg, ${color.fill}, transparent)`, border: `1px solid ${color.stroke}28` }}
+        className="sticky top-0 z-10 rounded-2xl border border-white/10 bg-shell p-4 flex flex-col items-center gap-2.5 text-center overflow-hidden shadow-[0_10px_28px_-14px_rgba(0,0,0,0.65)]"
+        style={{ backgroundImage: `linear-gradient(160deg, ${color.fill}, #08080f)` }}
       >
         {/* Winner star */}
         {isWinner && (
@@ -670,10 +715,10 @@ function CandidateCompareColumn({
         <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ background: color.stroke }} />
 
         {score != null ? (
-          <ScoreRing score={score} size={96} />
+          <ScoreRing score={score} size={80} />
         ) : (
-          <div className="h-24 w-24 flex items-center justify-center rounded-full bg-white/5">
-            <User className="h-8 w-8 text-muted-foreground/30" />
+          <div className="h-20 w-20 flex items-center justify-center rounded-full bg-white/5">
+            <User className="h-7 w-7 text-muted-foreground/30" />
           </div>
         )}
         <div>
@@ -864,45 +909,48 @@ function CompareCvsModal({
         className="!fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !w-[calc(100vw-3rem)] !max-w-[1600px] !h-[calc(100dvh-3rem)] !max-h-[1000px] !rounded-2xl !p-0 !gap-0 !ring-1 !ring-white/[0.08] !border-0 bg-shell !flex !flex-col !overflow-hidden"
       >
         {/* ── Header ── */}
-        <div className="flex shrink-0 items-center justify-between px-6 py-3.5 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/15">
-              <GitCompare className="h-4 w-4 text-violet" />
-            </div>
-            <div>
-              <DialogTitle className="text-sm font-semibold">
-                Comparaison — {count} candidat{count > 1 ? 's' : ''}
-              </DialogTitle>
-              <DialogDescription className="text-[11px] text-muted-foreground/45">
-                Vue synthétique et détaillée des profils
-              </DialogDescription>
+        <div className="flex shrink-0 flex-col gap-3 border-b border-white/5 bg-panel/80 px-6 py-3.5 backdrop-blur-sm sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:items-center md:gap-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet/15">
+                <GitCompare className="h-4 w-4 text-violet" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-sm font-semibold">
+                  Comparaison — {count} candidat{count > 1 ? 's' : ''}
+                </DialogTitle>
+                <DialogDescription className="mt-0.5 text-[11px] text-muted-foreground/45">
+                  Vue synthétique et détaillée des profils
+                </DialogDescription>
+              </div>
             </div>
             {/* Candidate color legend */}
-            <div className="flex items-center gap-4 ml-5 pl-5 border-l border-white/8">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-white/8 pt-3 md:border-t-0 md:border-l md:border-white/10 md:pl-6 md:pt-0">
               {positionings.map((p, i) => (
                 <span key={p.id} className="flex items-center gap-1.5 text-[11px] text-foreground/55">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CANDIDATE_COLORS[i].stroke }} />
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: CANDIDATE_COLORS[i].stroke }} />
                   {getCandidateName(p.candidates).split(' ')[0]}
                 </span>
               ))}
             </div>
           </div>
           <button
+            type="button"
             onClick={() => onOpenChange(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground transition"
+            className="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg text-muted-foreground transition hover:bg-white/5 hover:text-foreground sm:self-start"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* ── Candidate columns ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+        <div className="flex-1 min-h-0 overflow-y-auto scroll-pt-0 px-6 pb-5">
           {count === 0 ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <p className="text-sm">Aucun candidat sélectionné</p>
             </div>
           ) : (
-            <div className={`grid gap-4 items-start ${gridCols}`}>
+            <div className={`grid gap-4 items-start pt-4 ${gridCols}`}>
               {positionings.map((p, i) => (
                 <CandidateCompareColumn
                   key={p.id}
@@ -925,51 +973,141 @@ function CompareCvsModal({
 
 function PositioningRow({
   p,
+  missionId,
   onNavigate,
-  onCancel,
+  onCancelWorkflow,
   selectable,
   isSelected,
   onToggleSelect,
 }: {
   p: MissionPositioning;
-  onNavigate: () => void;
-  onCancel: () => void;
+  missionId: string;
+  /** Cible absolue (ex. /review/id ou /review/id/positioning/pid) */
+  onNavigate: (href: string) => void;
+  onCancelWorkflow: (args: {
+    runId: string;
+    table: 'candidates' | 'positionings';
+    recordId: string;
+    resetStatus: string;
+    missionId?: string;
+  }) => void;
   selectable?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
+  const queryClient = useQueryClient();
   const candidate = p.candidates;
   const name = getCandidateName(candidate);
   const title = candidate?.extracted_data?.personalInfo?.title;
   const score = p.analysis?.matchScore;
   const pst = posStatusConfig[p.status] ?? posStatusConfig.draft;
-  const isProcessing = p.status === 'analyzing' || p.status === 'generating';
+  const addedVia = p.added_via ?? 'existing_candidate';
   const candidateStatus = candidate?.status ?? '';
+
+  const extractActive =
+    addedVia === 'cv_upload' &&
+    !!candidate?.workflow_run_id &&
+    ['uploaded', 'extracting'].includes(candidateStatus);
+
+  const analyzeActive = p.status === 'analyzing' && !!p.workflow_run_id;
+
+  const invalidateMission = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(missionId) });
+  };
+
+  const extractStream = useWorkflowStream<Partial<ExtractedCV>, CvExtractionStreamMeta>({
+    api: '/api/extract',
+    runId: extractActive ? (candidate?.workflow_run_id ?? undefined) : undefined,
+    runStatus: extractActive ? 'extracting' : undefined,
+    activeStatuses: ['extracting'],
+    onFinish: invalidateMission,
+  });
+
+  const analysisStream = useWorkflowStream<Partial<PositioningAnalysis>, PositioningAnalysisStreamMeta>({
+    api: '/api/positioning/analyze',
+    runId: analyzeActive ? (p.workflow_run_id ?? undefined) : undefined,
+    runStatus: analyzeActive ? 'analyzing' : undefined,
+    activeStatuses: ['analyzing'],
+    onFinish: invalidateMission,
+  });
+
+  const analysisComplete = READY_STATUSES.has(p.status);
   const isCandidateReady = ['reviewing', 'ready', 'generated'].includes(candidateStatus);
-  const isCvExtracting = p.status === 'draft'
-    && ['uploaded', 'extracting'].includes(candidateStatus);
-  const isAnalysisWaiting = p.status === 'draft'
-    && isCandidateReady
-    && !p.workflow_run_id;
-  const isAnalysisRunning = p.status === 'analyzing';
-  const isGenerationWaiting = p.status === 'analyzed';
+  const extractionPhaseDone = addedVia === 'existing_candidate' || isCandidateReady;
+  /** Extraction fichier en cours → détail sur la fiche CV ; sinon → wizard positionnement */
+  const navigateToReviewOnly =
+    addedVia === 'cv_upload' && ['uploaded', 'extracting'].includes(candidateStatus);
+  const candidateId = p.candidate_id;
+  const canNavigate = !!candidateId;
+
+  const extractStepActive = extractActive || extractStream.isLoading;
+  const analyzeStepActive =
+    p.status === 'analyzing' || analysisStream.isLoading || (p.status === 'draft' && extractionPhaseDone && !analysisComplete);
+
+  const streamHint =
+    formatCvExtractionHint(extractStream.streamMeta) ?? formatAnalysisStreamHint(analysisStream.streamMeta);
+
+  const showBusy =
+    !analysisComplete ||
+    extractStepActive ||
+    analyzeStepActive ||
+    (p.status === 'draft' && addedVia === 'cv_upload' && !isCandidateReady);
+
+  const showCancelExtract =
+    extractActive && candidate?.workflow_run_id && candidate?.id;
+  const showCancelPositioning =
+    p.workflow_run_id && (p.status === 'analyzing' || p.status === 'generating');
+
+  const handleCancel = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (showCancelExtract && candidate?.workflow_run_id && candidate?.id) {
+      onCancelWorkflow({
+        runId: candidate.workflow_run_id,
+        table: 'candidates',
+        recordId: candidate.id,
+        resetStatus: 'uploaded',
+        missionId,
+      });
+      return;
+    }
+    if (showCancelPositioning && p.workflow_run_id) {
+      onCancelWorkflow({
+        runId: p.workflow_run_id,
+        table: 'positionings',
+        recordId: p.id,
+        resetStatus: p.status === 'analyzing' ? 'draft' : 'analyzed',
+        missionId,
+      });
+    }
+  };
+
+  const go = () => {
+    if (!canNavigate) return;
+    if (navigateToReviewOnly) {
+      onNavigate(`/review/${candidateId}`);
+    } else {
+      onNavigate(`/review/${candidateId}/positioning/${p.id}`);
+    }
+  };
 
   return (
     <div
       role="button"
-      tabIndex={0}
-      onClick={onNavigate}
+      tabIndex={canNavigate ? 0 : -1}
+      onClick={go}
       onKeyDown={(e) => {
+        if (!canNavigate) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          onNavigate();
+          go();
         }
       }}
-      className={`group flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3.5 text-left transition ${
-        isSelected ? 'bg-violet/[0.08] ring-1 ring-violet/30' : 'hover:bg-white/[0.03]'
+      className={`group flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left transition ${
+        canNavigate
+          ? `cursor-pointer ${isSelected ? 'bg-violet/[0.08] ring-1 ring-violet/30' : 'hover:bg-white/[0.03]'}`
+          : 'cursor-not-allowed opacity-80'
       }`}
     >
-      {/* Checkbox (selectable mode only) */}
       {selectable && (
         <button
           onClick={(e) => {
@@ -987,19 +1125,16 @@ function PositioningRow({
         </button>
       )}
 
-      {/* Score or placeholder */}
       {score != null ? (
         <div
           className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-lg ${getScoreBg(score)}`}
         >
           <span className={`text-base font-bold ${getScoreColor(score)}`}>{score}</span>
-          <span className={`text-[7px] font-medium ${getScoreColor(score)} opacity-70`}>
-            / 100
-          </span>
+          <span className={`text-[7px] font-medium ${getScoreColor(score)} opacity-70`}>/ 100</span>
         </div>
       ) : (
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/[0.04]">
-          {isProcessing || isCvExtracting || isAnalysisRunning ? (
+          {showBusy ? (
             <Loader2 className="h-4 w-4 animate-spin text-violet/60" />
           ) : (
             <User className="h-4 w-4 text-muted-foreground/50" />
@@ -1007,75 +1142,73 @@ function PositioningRow({
         </div>
       )}
 
-      {/* Candidate info */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-foreground truncate">{name}</span>
         </div>
-        {title && (
-          <p className="mt-0.5 text-xs text-muted-foreground truncate">{title}</p>
-        )}
-        {isCvExtracting && (
-          <div className="mt-1 flex items-center gap-1 text-[10px]">
-            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
-              CV en extraction
+        {title && <p className="mt-0.5 text-xs text-muted-foreground truncate">{title}</p>}
+
+        {addedVia === 'cv_upload' && (
+          <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+            <span
+              className={`rounded-md px-1.5 py-0.5 ${
+                !extractionPhaseDone
+                  ? 'bg-violet/20 text-violet ring-1 ring-violet/30'
+                  : 'bg-white/10 text-muted-foreground'
+              }`}
+            >
+              {!extractionPhaseDone ? '1. Extraction du CV' : '1. CV extrait'}
             </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
-              Analyse en attente
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
-              Génération en attente
-            </span>
-          </div>
-        )}
-        {isAnalysisWaiting && (
-          <div className="mt-1 flex items-center gap-1 text-[10px]">
-            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
-              CV extrait
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
-              Analyse en attente
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
-              Génération en attente
+            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/40 shrink-0" />
+            <span
+              className={`rounded-md px-1.5 py-0.5 ${
+                p.status === 'analyzing'
+                  ? 'bg-sky-400/20 text-sky-200 ring-1 ring-sky-400/30'
+                  : analysisComplete
+                    ? 'bg-white/10 text-muted-foreground'
+                    : 'bg-sky-400/10 text-sky-300/90'
+              }`}
+            >
+              {analysisComplete ? '2. Analyse terminée' : p.status === 'analyzing' ? '2. Analyse…' : '2. Analyse de matching'}
             </span>
           </div>
         )}
-        {isAnalysisRunning && (
-          <div className="mt-1 flex items-center gap-1 text-[10px]">
-            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
-              CV extrait
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
-              Analyse en cours
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
-              Génération en attente
-            </span>
-          </div>
-        )}
-        {isGenerationWaiting && (
-          <div className="mt-1 flex items-center gap-1 text-[10px]">
-            <span className="rounded-md bg-violet/15 px-1.5 py-0.5 text-violet/90">
-              CV extrait
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-sky-400/15 px-1.5 py-0.5 text-sky-300">
-              Analyse terminée
-            </span>
-            <ArrowRight className="h-2.5 w-2.5 text-muted-foreground/50" />
-            <span className="rounded-md bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
-              Génération en attente
+
+        {addedVia === 'existing_candidate' && (
+          <div className="mt-1 flex flex-wrap items-center gap-1 text-[10px]">
+            <span
+              className={`rounded-md px-1.5 py-0.5 ${
+                p.status === 'analyzing'
+                  ? 'bg-sky-400/20 text-sky-200 ring-1 ring-sky-400/30'
+                  : analysisComplete
+                    ? 'bg-white/10 text-muted-foreground'
+                    : 'bg-sky-400/10 text-sky-300/90'
+              }`}
+            >
+              {analysisComplete ? 'Analyse terminée' : p.status === 'analyzing' ? 'Analyse…' : 'Analyse de matching'}
             </span>
           </div>
         )}
-        {p.analysis?.matchSummary && (
+
+        {streamHint && (extractStepActive || analyzeStepActive) && (
+          <p className="mt-1 text-[10px] text-violet/80 truncate">{streamHint}</p>
+        )}
+
+        {canNavigate && !analysisComplete && (
+          <p className="mt-1 text-[10px] text-muted-foreground/70">
+            {navigateToReviewOnly
+              ? 'Cliquez pour ouvrir la fiche CV — annuler l’extraction ou supprimer le candidat depuis cette page.'
+              : 'Cliquez pour ouvrir le positionnement — annuler l’analyse ou agir sur le dossier depuis le détail.'}
+          </p>
+        )}
+
+        {p.status === 'analyzed' && (
+          <p className="mt-1 text-[10px] text-muted-foreground/60">
+            La génération e-mail / CV retravaillé se lance depuis le positionnement.
+          </p>
+        )}
+
+        {p.analysis?.matchSummary && analysisComplete && (
           <Tooltip>
             <TooltipTrigger className="w-full">
               <p className="mt-1 text-[11px] text-muted-foreground/60 w-full truncate cursor-help text-left">
@@ -1089,7 +1222,6 @@ function PositioningRow({
         )}
       </div>
 
-      {/* Status + date */}
       <div className="flex shrink-0 items-center gap-3">
         <span className="text-[10px] text-muted-foreground/50">
           {new Date(p.created_at).toLocaleDateString('fr-FR', {
@@ -1101,13 +1233,10 @@ function PositioningRow({
           {pst.label}
         </Badge>
 
-        {/* Cancel button for in-progress workflows */}
-        {isProcessing && p.workflow_run_id && (
+        {(showCancelExtract || showCancelPositioning) && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCancel();
-            }}
+            type="button"
+            onClick={handleCancel}
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
             title="Annuler"
           >
@@ -1115,7 +1244,9 @@ function PositioningRow({
           </button>
         )}
 
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 transition group-hover:text-muted-foreground" />
+        {canNavigate && (
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 transition group-hover:text-muted-foreground" />
+        )}
       </div>
     </div>
   );
@@ -1144,7 +1275,7 @@ export default function PositionDetailPage() {
     [mission?.positionings]
   );
 
-  const drafts = positionings.filter((p) => DRAFT_STATUSES.has(p.status));
+  const drafts = positionings.filter((p) => IN_PROGRESS_STATUSES.has(p.status));
   const ready = positionings.filter((p) => READY_STATUSES.has(p.status));
 
   const existingCandidateIds = useMemo(
@@ -1285,17 +1416,9 @@ export default function PositionDetailPage() {
                     <PositioningRow
                       key={p.id}
                       p={p}
-                      onNavigate={() =>
-                        router.push(`/review/${p.candidate_id}/positioning/${p.id}`)
-                      }
-                      onCancel={() =>
-                        cancelWorkflow.mutate({
-                          runId: p.workflow_run_id!,
-                          table: 'positionings',
-                          recordId: p.id,
-                          resetStatus: p.status === 'analyzing' ? 'draft' : 'analyzed',
-                        })
-                      }
+                      missionId={missionId}
+                      onNavigate={(href) => router.push(href)}
+                      onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
                     />
                   ))}
                 </div>
@@ -1323,10 +1446,9 @@ export default function PositionDetailPage() {
                     <PositioningRow
                       key={p.id}
                       p={p}
-                      onNavigate={() =>
-                        router.push(`/review/${p.candidate_id}/positioning/${p.id}`)
-                      }
-                      onCancel={() => {}}
+                      missionId={missionId}
+                      onNavigate={(href) => router.push(href)}
+                      onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
                       selectable={ready.length >= 2}
                       isSelected={compareIds.has(p.id)}
                       onToggleSelect={toggleCompare}

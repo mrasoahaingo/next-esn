@@ -220,6 +220,7 @@ async function saveGeneration(
         candidate_email: result.object.candidateEmail,
         status: 'generated',
         ai_generation_duration_ms: result.durationMs,
+        workflow_run_id: null,
       })
       .eq('id', positioningId);
   }

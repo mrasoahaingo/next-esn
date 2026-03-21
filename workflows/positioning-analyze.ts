@@ -224,6 +224,7 @@ async function saveAnalysis(
         analysis: result.object,
         status: 'analyzed',
         ai_analysis_duration_ms: result.durationMs,
+        workflow_run_id: null,
       })
       .eq('id', positioningId);
   }

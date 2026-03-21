@@ -71,6 +71,7 @@ export async function POST(
             job_description: mission.job_description,
             status: 'draft',
             org_id: orgId,
+            added_via: 'cv_upload',
           })
           .select()
           .single();

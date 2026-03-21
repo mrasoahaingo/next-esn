@@ -1,6 +1,7 @@
 import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
+import { triggerMissionAnalysesAfterExtract } from '@/lib/services/positioning-analyze-trigger';
 import {
   TRANSCRIPTION_SYSTEM,
   EXTRACTION_SYSTEM_IDENTITY,
@@ -283,6 +284,7 @@ async function saveResult(
         extracted_data: result.object,
         status: 'reviewing',
         ai_extraction_duration_ms: result.durationMs,
+        workflow_run_id: null,
       })
       .eq('id', candidateId);
 
@@ -296,6 +298,13 @@ async function saveResult(
 
   const writable = getWritable<Uint8Array>();
   await writable.close();
+}
+
+async function runMissionAnalysesAfterExtract(candidateId: string) {
+  'use step';
+
+  const supabase = getSupabase();
+  await triggerMissionAnalysesAfterExtract(supabase, candidateId);
 }
 
 export async function extractCvWorkflow(candidateId: string, jobDescription?: string) {
@@ -318,5 +327,6 @@ export async function extractCvWorkflow(candidateId: string, jobDescription?: st
   };
 
   await saveResult(candidateId, result);
+  await runMissionAnalysesAfterExtract(candidateId);
   return result.object;
 }

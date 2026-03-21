@@ -13,7 +13,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('missions')
-      .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, candidates(id, extracted_data, original_file_url, status))')
+      .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, added_via, candidates(id, extracted_data, original_file_url, status, workflow_run_id))')
       .eq('id', id)
       .eq('org_id', orgId)
       .single();

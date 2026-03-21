@@ -245,10 +245,14 @@ export default function PositioningWizardPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [positioningData?.id, positioningData?.status, candidateData?.id]);
 
-  // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning)
+  // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning).
+  // Si l’analyse a déjà été lancée depuis la mission (stream en cours), on ne refait pas un POST.
   useEffect(() => {
     if (!isLoaded || autoAnalyzedRef.current) return;
-    if (isAnalysisLoading) return; // Don't auto-launch if already streaming
+    if (isAnalysisLoading) return;
+    if (positioningData?.status === 'analyzing') return;
+    if (positioningData?.status === 'analyzed' || positioningData?.analysis) return;
+
     const isCandidateReadyForAnalysis = !!candidateData?.extracted_data
       && ['reviewing', 'ready', 'generated'].includes(candidateData.status ?? '');
 
@@ -267,6 +271,8 @@ export default function PositioningWizardPage() {
     setIsAnalyzing,
     submitAnalysis,
     isAnalysisLoading,
+    positioningData?.status,
+    positioningData?.analysis,
     candidateData?.status,
     candidateData?.extracted_data,
     refreshMissionCards,

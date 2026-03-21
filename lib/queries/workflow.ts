@@ -6,13 +6,15 @@ interface CancelWorkflowParams {
   table: 'candidates' | 'positionings';
   recordId: string;
   resetStatus: string;
+  /** Invalider le détail mission après annulation (page position) */
+  missionId?: string;
 }
 
 export function useCancelWorkflow() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ runId, table, recordId, resetStatus }: CancelWorkflowParams) => {
+    mutationFn: async ({ runId, table, recordId, resetStatus, missionId }: CancelWorkflowParams) => {
       const res = await fetch(`/api/workflow/${runId}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -28,6 +30,9 @@ export function useCancelWorkflow() {
       } else {
         queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.recordId) });
         queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      }
+      if (variables.missionId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
