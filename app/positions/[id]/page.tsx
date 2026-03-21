@@ -2,7 +2,8 @@
 
 import { useState, useRef, useMemo, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { ExtractedCV, PositioningAnalysis } from '@/lib/schema';
+import type { ExtractedCV, PositioningAnalysis, JobPostingAnalysis } from '@/lib/schema';
+import { MissionJobAnalysis } from '@/components/mission-job-analysis';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
@@ -120,6 +121,12 @@ interface MissionDetail {
   job_description: string;
   created_at: string;
   positionings: MissionPositioning[];
+  job_analysis?: JobPostingAnalysis | null;
+  job_analysis_input_hash?: string | null;
+  job_analysis_workflow_run_id?: string | null;
+  job_analysis_stale?: boolean;
+  understood_point_ids?: string[];
+  global_skill_keys_understood?: string[];
 }
 
 interface CandidateItem {
@@ -1370,6 +1377,16 @@ export default function PositionDetailPage() {
             </p>
           </div>
         </div>
+
+        <MissionJobAnalysis
+          missionId={missionId}
+          jobDescription={mission.job_description}
+          job_analysis={mission.job_analysis ?? null}
+          job_analysis_workflow_run_id={mission.job_analysis_workflow_run_id ?? null}
+          job_analysis_stale={mission.job_analysis_stale ?? false}
+          understood_point_ids={mission.understood_point_ids ?? []}
+          global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
+        />
 
         {/* Empty state */}
         {positionings.length === 0 ? (

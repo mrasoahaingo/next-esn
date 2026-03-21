@@ -196,3 +196,83 @@ export const positioningEmailBulletPointsPartSchema = positioningOutputSchema.pi
 export const positioningCandidateEmailPartSchema = positioningOutputSchema.pick({
   candidateEmail: true,
 });
+
+// ─── Analyse fiche de poste (mission) — recruteur ─────────────────
+
+export const jobPostingKeyPointAspectSchema = z.enum([
+  'technical',
+  'methodology',
+  'soft_skills',
+  'context_client',
+  'constraints',
+  'delivery',
+  'other',
+]);
+
+export type JobPostingKeyPointAspect = z.infer<typeof jobPostingKeyPointAspectSchema>;
+
+export const jobPostingKeyPointSchema = z
+  .object({
+    id: z
+      .string()
+      .describe(
+        "Identifiant stable pour cette mission / réanalyse (slug ASCII). Pour le technique, préférer aligner id sur canonicalSkillKey quand c'est une techno.",
+      ),
+    label: z.string(),
+    aspect: jobPostingKeyPointAspectSchema,
+    /** Obligatoire si aspect = technical : clé canonique cross-missions (ex. react, nodejs, graphql, aws). Minuscules, tirets. */
+    canonicalSkillKey: z
+      .string()
+      .optional()
+      .describe(
+        'Pour aspect technical uniquement : identifiant stable partagé entre toutes les missions (stats, « compris » global). Ex. react, nodejs, kubernetes.',
+      ),
+    category: z.string().describe('Libellé court FR pour regroupement visuel (ex. Backend, Contexte client)'),
+    importanceRank: z.number().int().min(1).describe('1 = le plus critique pour répondre au besoin mission'),
+    roleInMission: z.string().describe('Ce que ce point change concrètement pour le recruteur ou le candidat'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.aspect === 'technical') {
+      const k = data.canonicalSkillKey?.trim();
+      if (!k) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'canonicalSkillKey est requis pour les points techniques',
+          path: ['canonicalSkillKey'],
+        });
+      }
+    }
+  });
+
+export const jobPostingAnalysisSchema = z.object({
+  executiveSummary: z
+    .string()
+    .describe('3 à 5 phrases : besoin, contexte, enjeux, non-négociable vs secondaire'),
+  keyPoints: z
+    .array(jobPostingKeyPointSchema)
+    .describe('Points clés triés par importanceRank croissant (rang 1 en premier)'),
+  openQuestions: z.array(z.string()).optional().describe('Zones floues ou à clarifier avec le client'),
+  redFlags: z.array(z.string()).optional().describe('Ambiguïtés ou risques pour le discours commercial'),
+});
+
+export type JobPostingAnalysis = z.infer<typeof jobPostingAnalysisSchema>;
+
+export const jobPostingExecutiveSchema = jobPostingAnalysisSchema.pick({ executiveSummary: true });
+export const jobPostingKeyPointsBlockSchema = jobPostingAnalysisSchema.pick({
+  keyPoints: true,
+  openQuestions: true,
+  redFlags: true,
+});
+
+export const jobPostingKeyPointExplainSchema = z.object({
+  definition: z.string().describe('Définition accessible pour un recruteur'),
+  usageInMission: z.string().describe('En quoi c’est central dans cette mission'),
+  candidateQuestions: z.array(z.string()).describe('Questions pertinentes en entretien'),
+  expectedAnswers: z.object({
+    debutant: z.string(),
+    confirme: z.string(),
+    senior: z.string(),
+  }),
+});
+
+export type JobPostingKeyPointExplain = z.infer<typeof jobPostingKeyPointExplainSchema>;

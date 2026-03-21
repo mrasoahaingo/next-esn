@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
-import { requireOrgId } from '@/lib/utils/auth';
+import { requireOrgContext, requireOrgId } from '@/lib/utils/auth';
+import { hashJobDescription } from '@/lib/utils/job-description-hash';
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const orgId = await requireOrgId();
+    const { orgId, userId } = await requireOrgContext();
     const { id } = await params;
     const supabase = getSupabase();
 
@@ -19,7 +20,34 @@ export async function GET(
       .single();
 
     if (error) throw error;
-    return NextResponse.json(data);
+
+    const { data: understoodRows } = await supabase
+      .from('mission_skill_understood')
+      .select('point_id')
+      .eq('mission_id', id)
+      .eq('user_id', userId);
+
+    const understood_point_ids = (understoodRows ?? []).map((r) => r.point_id as string);
+
+    const { data: globalSkillRows } = await supabase
+      .from('recruiter_skill_understood')
+      .select('skill_key')
+      .eq('org_id', orgId)
+      .eq('user_id', userId);
+
+    const global_skill_keys_understood = (globalSkillRows ?? []).map((r) => r.skill_key as string);
+
+    const job_analysis_stale =
+      data.job_description &&
+      data.job_analysis_input_hash &&
+      hashJobDescription(data.job_description as string) !== data.job_analysis_input_hash;
+
+    return NextResponse.json({
+      ...data,
+      understood_point_ids,
+      global_skill_keys_understood,
+      job_analysis_stale: !!job_analysis_stale,
+    });
   } catch (error: unknown) {
     if (error instanceof NextResponse) return error;
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });

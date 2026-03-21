@@ -3,9 +3,10 @@ import { queryKeys } from './keys';
 
 interface CancelWorkflowParams {
   runId: string;
-  table: 'candidates' | 'positionings';
+  table: 'candidates' | 'positionings' | 'missions';
   recordId: string;
-  resetStatus: string;
+  /** Ignoré pour table missions */
+  resetStatus?: string;
   /** Invalider le détail mission après annulation (page position) */
   missionId?: string;
 }
@@ -14,7 +15,7 @@ export function useCancelWorkflow() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ runId, table, recordId, resetStatus, missionId }: CancelWorkflowParams) => {
+    mutationFn: async ({ runId, table, recordId, resetStatus }: CancelWorkflowParams) => {
       const res = await fetch(`/api/workflow/${runId}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -27,9 +28,12 @@ export function useCancelWorkflow() {
       if (variables.table === 'candidates') {
         queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(variables.recordId) });
         queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
-      } else {
+      } else if (variables.table === 'positionings') {
         queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.recordId) });
         queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      } else if (variables.table === 'missions') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.recordId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
       }
       if (variables.missionId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });

@@ -24,9 +24,15 @@ export async function POST(
       specVersion: run.specVersion ?? 1,
     });
 
-    // Reset DB status if provided
-    if (table && recordId && resetStatus) {
-      const supabase = getSupabase();
+    const supabase = getSupabase();
+
+    // Analyse fiche de poste (mission) : pas de colonne status
+    if (table === 'missions' && recordId) {
+      await supabase
+        .from('missions')
+        .update({ job_analysis_workflow_run_id: null })
+        .eq('id', recordId);
+    } else if (table && recordId && resetStatus) {
       await supabase
         .from(table)
         .update({ status: resetStatus, workflow_run_id: null })

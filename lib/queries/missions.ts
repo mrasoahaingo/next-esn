@@ -26,9 +26,13 @@ export function useMission(id: string) {
     enabled: !!id,
     refetchInterval: (query) => {
       const data = query.state.data as
-        | { positionings?: Array<{ status?: string; candidates?: { status?: string } | null }> }
+        | {
+            job_analysis_workflow_run_id?: string | null;
+            positionings?: Array<{ status?: string; candidates?: { status?: string } | null }>;
+          }
         | undefined;
 
+      const hasActiveJobAnalysis = !!data?.job_analysis_workflow_run_id;
       const hasActivePositioning = data?.positionings?.some((p) =>
         ACTIVE_POSITIONING_STATUSES.includes(p.status ?? ''),
       );
@@ -36,7 +40,7 @@ export function useMission(id: string) {
         ACTIVE_CANDIDATE_STATUSES.includes(p.candidates?.status ?? ''),
       );
 
-      if (hasActivePositioning || hasActiveCandidate) return 3000;
+      if (hasActiveJobAnalysis || hasActivePositioning || hasActiveCandidate) return 3000;
       return false;
     },
   });

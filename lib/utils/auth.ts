@@ -42,6 +42,21 @@ export async function requireOrgId(): Promise<string> {
   return ctx.orgId
 }
 
+/** Contexte auth + org (pour routes qui ont besoin de userId + orgId). */
+export async function requireOrgContext(): Promise<{ orgId: string; userId: string }> {
+  const ctx = await requireAuth()
+
+  if (!ctx.orgId) {
+    throw NextResponse.json({ error: 'No active organization' }, { status: 403 })
+  }
+
+  if (!ctx.userId) {
+    throw NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  return { orgId: ctx.orgId, userId: ctx.userId }
+}
+
 export async function requireSuperAdmin() {
   const ctx = await requireAuth()
 

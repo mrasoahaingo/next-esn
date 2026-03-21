@@ -9,17 +9,19 @@ export async function logAiUsage(
     operation: AiOperation;
     candidateId?: string;
     positioningId?: string;
+    missionId?: string;
     orgId?: string;
     aiModel: string;
     durationMs: number;
     usage: LanguageModelUsage;
   },
 ) {
-  const { operation, candidateId, positioningId, orgId, aiModel, durationMs, usage } = params;
+  const { operation, candidateId, positioningId, missionId, orgId, aiModel, durationMs, usage } = params;
 
   await supabase.from('ai_usage_log').insert({
     candidate_id: candidateId ?? null,
     positioning_id: positioningId ?? null,
+    mission_id: missionId ?? null,
     org_id: orgId ?? null,
     operation,
     ai_model: aiModel,
