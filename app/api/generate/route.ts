@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { generateHimeoPdf } from '@/lib/services/pdf.service';
 import { getTemplateConfig, sanitizePdfExportPrefix } from '@/lib/utils/template';
 
+const generateSchema = z.object({
+  candidateId: z.string().uuid(),
+  data: z.record(z.string(), z.unknown()),
+});
+
 export async function POST(req: NextRequest) {
   try {
     const orgId = await requireOrgId();
-    const { candidateId, data } = await req.json();
+    const parsed = generateSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+    const { candidateId, data } = parsed.data;
     const supabase = getSupabase();
 
     if (data) {
@@ -30,7 +40,8 @@ export async function POST(req: NextRequest) {
     const templateConfig = await getTemplateConfig(orgId, candidate?.template_id);
     const pdfBuffer = await generateHimeoPdf(data, templateConfig, orgId);
     const prefix = sanitizePdfExportPrefix(templateConfig?.exportFilePrefix);
-    const safeLast = String(data.personalInfo?.lastName ?? 'cv').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const personalInfo = data.personalInfo as Record<string, unknown> | undefined;
+    const safeLast = String(personalInfo?.lastName ?? 'cv').replace(/[^a-zA-Z0-9_-]+/g, '_');
     const fileName = `${orgId}/${prefix}_${safeLast}_${Date.now()}.pdf`;
 
     const { error: uploadError } = await supabase.storage

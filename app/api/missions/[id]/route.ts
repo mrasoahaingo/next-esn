@@ -12,30 +12,32 @@ export async function GET(
     const { id } = await params;
     const supabase = getSupabase();
 
-    const { data, error } = await supabase
-      .from('missions')
-      .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, added_via, candidates(id, extracted_data, original_file_url, status, workflow_run_id))')
-      .eq('id', id)
-      .eq('org_id', orgId)
-      .single();
+    const [missionResult, understoodResult, globalSkillResult] = await Promise.all([
+      supabase
+        .from('missions')
+        .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, added_via, candidates(id, extracted_data, original_file_url, status, workflow_run_id))')
+        .eq('id', id)
+        .eq('org_id', orgId)
+        .single(),
+      supabase
+        .from('mission_skill_understood')
+        .select('point_id')
+        .eq('mission_id', id)
+        .eq('user_id', userId),
+      supabase
+        .from('recruiter_skill_understood')
+        .select('skill_key')
+        .eq('org_id', orgId)
+        .eq('user_id', userId),
+    ]);
 
-    if (error) throw error;
+    const { data, error } = missionResult;
+    if (error || !data) {
+      return NextResponse.json({ error: 'Mission not found' }, { status: 404 });
+    }
 
-    const { data: understoodRows } = await supabase
-      .from('mission_skill_understood')
-      .select('point_id')
-      .eq('mission_id', id)
-      .eq('user_id', userId);
-
-    const understood_point_ids = (understoodRows ?? []).map((r) => r.point_id as string);
-
-    const { data: globalSkillRows } = await supabase
-      .from('recruiter_skill_understood')
-      .select('skill_key')
-      .eq('org_id', orgId)
-      .eq('user_id', userId);
-
-    const global_skill_keys_understood = (globalSkillRows ?? []).map((r) => r.skill_key as string);
+    const understood_point_ids = (understoodResult.data ?? []).map((r) => r.point_id as string);
+    const global_skill_keys_understood = (globalSkillResult.data ?? []).map((r) => r.skill_key as string);
 
     const job_analysis_stale =
       data.job_description &&

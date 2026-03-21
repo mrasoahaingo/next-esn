@@ -12,7 +12,7 @@ export async function GET() {
     const [candidatesRes, positioningsRes, skillsCountRes, skillsItemsRes] = await Promise.all([
       supabase
         .from('candidates')
-        .select('id, status, extracted_data, created_at, ai_extraction_duration_ms, user_review_time_seconds')
+        .select('id, status, created_at, ai_extraction_duration_ms, user_review_time_seconds')
         .eq('org_id', orgId)
         .order('created_at', { ascending: false }),
       supabase

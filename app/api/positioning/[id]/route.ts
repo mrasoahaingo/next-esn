@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+
+const updatePositioningSchema = z.object({
+  job_description: z.string().max(50000).optional(),
+  status: z.enum(['draft', 'analyzing', 'analyzed', 'generating', 'generated', 'exported']).optional(),
+  analysis: z.record(z.string(), z.unknown()).nullable().optional(),
+  tailored_cv: z.record(z.string(), z.unknown()).nullable().optional(),
+  cover_letter: z.string().nullable().optional(),
+  email_body: z.string().nullable().optional(),
+}).passthrough();
 
 export async function GET(
   _req: NextRequest,
@@ -18,7 +28,9 @@ export async function GET(
       .eq('org_id', orgId)
       .single();
 
-    if (error) throw error;
+    if (error || !data) {
+      return NextResponse.json({ error: 'Positioning not found' }, { status: 404 });
+    }
 
     return NextResponse.json(data);
   } catch (error: unknown) {
@@ -35,12 +47,15 @@ export async function PATCH(
   try {
     const orgId = await requireOrgId();
     const { id } = await params;
-    const body = await req.json();
+    const parsed = updatePositioningSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
     const supabase = getSupabase();
 
     const { data, error } = await supabase
       .from('positionings')
-      .update({ ...body, updated_at: new Date().toISOString() })
+      .update({ ...parsed.data, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('org_id', orgId)
       .select()

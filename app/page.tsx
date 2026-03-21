@@ -23,21 +23,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
-import {
-  Bar,
-  BarChart,
-  XAxis,
-  YAxis,
-  Cell,
-  PieChart,
-  Pie,
-} from 'recharts';
+import dynamic from 'next/dynamic';
+
+const ScoreDistributionChart = dynamic(
+  () => import('@/components/dashboard/score-distribution-chart').then((m) => m.ScoreDistributionChart),
+  { ssr: false, loading: () => <ChartSkeleton /> },
+);
+const SkillCoverageChart = dynamic(
+  () => import('@/components/dashboard/skill-coverage-chart').then((m) => m.SkillCoverageChart),
+  { ssr: false, loading: () => <ChartSkeleton /> },
+);
+
+function ChartSkeleton() {
+  return (
+    <div className="col-span-1 glass-panel border-0 rounded-xl p-6">
+      <div className="h-[180px] animate-pulse rounded-lg bg-white/[0.03]" />
+    </div>
+  );
+}
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useDashboard, useUploadCv } from '@/lib/queries';
 import { useOrgBranding } from '@/components/org-branding-provider';
@@ -93,15 +96,6 @@ interface DashboardData {
 
 // ─── Chart configs ─────────────────────────────────────────────────
 
-const scoreDistributionConfig: ChartConfig = {
-  count: { label: 'Positionnements' },
-};
-
-const skillCoverageConfig: ChartConfig = {
-  strong: { label: 'Maîtrisé', color: '#b5ff40' },
-  partial: { label: 'Partiel', color: '#fbbf24' },
-  missing: { label: 'Manquant', color: '#f87171' },
-};
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -153,13 +147,6 @@ function formatDurationMs(ms: number): string {
 
 function formatDurationSeconds(s: number): string {
   return formatDurationMs(s * 1000);
-}
-
-function getBarColor(range: string) {
-  if (range === '80-100') return '#b5ff40';
-  if (range === '60-79') return '#8b5cf6';
-  if (range === '40-59') return '#fbbf24';
-  return '#f87171';
 }
 
 // ─── Component ─────────────────────────────────────────────────────
@@ -551,117 +538,10 @@ export default function Dashboard() {
         {/* Main grid: charts + matching list */}
         <div className="grid grid-cols-3 gap-4">
           {/* ─── Score distribution (bar chart) ─────────────────────── */}
-          <Card className="col-span-1 glass-panel border-0">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Distribution des scores
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {scoreDistribution.some((d) => d.count > 0) ? (
-                <ChartContainer config={scoreDistributionConfig} className="h-[180px] w-full">
-                  <BarChart data={scoreDistribution} layout="vertical" margin={{ left: 10, right: 10 }}>
-                    <XAxis type="number" hide />
-                    <YAxis
-                      type="category"
-                      dataKey="range"
-                      width={50}
-                      tick={{ fontSize: 11, fill: 'var(--color-muted-foreground)' }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={20}>
-                      {scoreDistribution.map((entry) => (
-                        <Cell key={entry.range} fill={getBarColor(entry.range)} fillOpacity={0.8} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-              ) : (
-                <EmptyChart label="Aucun positionnement analysé" />
-              )}
-            </CardContent>
-            <CardFooter>
-              <p className="text-[10px] text-muted-foreground/60">
-                Répartition des scores de matching candidat/poste sur l&apos;ensemble des positionnements analysés par l&apos;IA.
-              </p>
-            </CardFooter>
-          </Card>
+          <ScoreDistributionChart scoreDistribution={scoreDistribution} />
 
           {/* ─── Skill coverage (radial gauge) ──────────────────────── */}
-          <Card className="col-span-1 glass-panel border-0">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Couverture compétences
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {skillCoverage.total > 0 ? (
-                <div>
-                  <ChartContainer config={skillCoverageConfig} className="mx-auto aspect-square h-[160px]">
-                    <PieChart>
-                      <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                      <Pie
-                        data={[
-                          { name: 'strong', value: skillCoverage.strong, fill: '#b5ff40' },
-                          { name: 'partial', value: skillCoverage.partial, fill: '#fbbf24' },
-                          { name: 'missing', value: skillCoverage.missing, fill: '#f87171' },
-                        ]}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={48}
-                        outerRadius={72}
-                        strokeWidth={2}
-                        stroke="rgba(0,0,0,0.3)"
-                      />
-                      <text
-                        x="50%"
-                        y="47%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="fill-foreground text-2xl font-bold"
-                      >
-                        {Math.round(
-                          ((skillCoverage.strong + skillCoverage.partial * 0.5) /
-                            skillCoverage.total) *
-                            100
-                        )}%
-                      </text>
-                      <text
-                        x="50%"
-                        y="58%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="fill-muted-foreground text-[10px]"
-                      >
-                        couverture
-                      </text>
-                    </PieChart>
-                  </ChartContainer>
-                  <div className="mt-1 flex justify-center gap-4">
-                    {[
-                      { label: 'Maîtrisé', count: skillCoverage.strong, color: 'bg-neon' },
-                      { label: 'Partiel', count: skillCoverage.partial, color: 'bg-amber-400' },
-                      { label: 'Manquant', count: skillCoverage.missing, color: 'bg-destructive' },
-                    ].map((item) => (
-                      <div key={item.label} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <div className={`h-2 w-2 rounded-full ${item.color}`} />
-                        <span>{item.count} {item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <EmptyChart label="Aucune compétence analysée" />
-              )}
-            </CardContent>
-            <CardFooter>
-              <p className="text-[10px] text-muted-foreground/60">
-                Taux de couverture global des compétences demandées. Les compétences partielles comptent pour 50%.
-              </p>
-            </CardFooter>
-          </Card>
+          <SkillCoverageChart skillCoverage={skillCoverage} />
 
           {/* ─── Pipeline CVs ───────────────────────────────────────── */}
           <Card className="col-span-1 glass-panel border-0">

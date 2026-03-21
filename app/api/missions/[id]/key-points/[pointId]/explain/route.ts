@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
@@ -68,14 +69,18 @@ export async function POST(
       ],
     });
 
-    await logAiUsage(supabase, {
-      operation: 'analysis',
-      missionId,
-      orgId,
-      aiModel: resolved.gatewayModelId,
-      taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
-      durationMs: Date.now() - start,
-      usage,
+    const durationMs = Date.now() - start;
+
+    after(async () => {
+      await logAiUsage(supabase, {
+        operation: 'analysis',
+        missionId,
+        orgId,
+        aiModel: resolved.gatewayModelId,
+        taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
+        durationMs,
+        usage,
+      });
     });
 
     return NextResponse.json(object);

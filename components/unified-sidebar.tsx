@@ -37,7 +37,6 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Switch } from '@/components/ui/switch';
-import { Label as SwitchLabel } from '@/components/ui/label';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 import { useOrgRole } from '@/lib/hooks/useOrgRole';
@@ -286,9 +285,9 @@ export function UnifiedSidebar() {
       {/* Demo mode toggle */}
       {!isProduction && (
         <div className="mx-3 mb-2 flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2">
-          <SwitchLabel htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
+          <Label htmlFor="demo-mode" className="text-[11px] font-medium text-muted-foreground cursor-pointer">
             Mode démo
-          </SwitchLabel>
+          </Label>
           <Switch
             id="demo-mode"
             checked={isDemoMode}

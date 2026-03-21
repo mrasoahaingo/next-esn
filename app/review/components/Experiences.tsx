@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 
 type ExperienceItem = ExtractedCV['experiences'][number];
 
@@ -14,7 +14,7 @@ interface ExperiencesProps {
   readOnly?: boolean;
 }
 
-export function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
+export const Experiences = memo(function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[]) => {
@@ -198,4 +198,4 @@ export function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
       </div>
     </section>
   );
-}
+});

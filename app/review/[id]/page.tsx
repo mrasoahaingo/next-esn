@@ -200,10 +200,7 @@ export default function ReviewPage() {
     () => (safeData?.education ?? []).filter(Boolean),
     [safeData?.education],
   );
-  const safeSkills = useMemo(
-    () => safeData?.skills,
-    [safeData?.skills],
-  );
+  const safeSkills = safeData?.skills;
 
   // Stable per-field callbacks
   const handlePersonalInfo = useCallback((val: unknown) => handleUpdate('personalInfo', val), [handleUpdate]);
@@ -440,9 +437,9 @@ export default function ReviewPage() {
         )}
 
         {/* Split layout: form left, PDF right */}
-        <div className="flex min-h-0 flex-1 gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
           {/* Left: Form */}
-          <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
+          <div className="w-full overflow-y-auto pr-2 space-y-4 lg:w-1/2">
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
                 <PersonalInfo
@@ -483,7 +480,7 @@ export default function ReviewPage() {
           </div>
 
           {/* Right: PDF Preview */}
-          <div className="w-1/2 sticky top-0">
+          <div className="w-full sticky top-0 lg:w-1/2">
             <PdfPreview />
           </div>
         </div>

@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 
+const ALLOWED_TABLES = ['candidates', 'positionings', 'missions'] as const;
+type AllowedTable = (typeof ALLOWED_TABLES)[number];
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ runId: string }> },
@@ -16,6 +19,10 @@ export async function POST(
       recordId?: string;
       resetStatus?: string;
     };
+
+    if (table && !ALLOWED_TABLES.includes(table as AllowedTable)) {
+      return NextResponse.json({ error: 'Invalid table' }, { status: 400 });
+    }
 
     const world = getWorld();
     const run = await world.runs.get(runId, { resolveData: 'none' });

@@ -1,4 +1,5 @@
 
+import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +10,7 @@ interface PersonalInfoProps {
   readOnly?: boolean;
 }
 
-export function PersonalInfo({ data, onChange, readOnly }: PersonalInfoProps) {
+export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnly }: PersonalInfoProps) {
   const handleChange = (field: keyof ExtractedCV['personalInfo'], value: string) => {
     onChange({ ...data, [field]: value });
   };
@@ -93,4 +94,4 @@ export function PersonalInfo({ data, onChange, readOnly }: PersonalInfoProps) {
       </div>
     </section>
   );
-}
+});

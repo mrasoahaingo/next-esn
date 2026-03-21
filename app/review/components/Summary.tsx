@@ -1,4 +1,5 @@
 
+import { memo } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 
 interface SummaryProps {
@@ -7,7 +8,7 @@ interface SummaryProps {
   readOnly?: boolean;
 }
 
-export function Summary({ data, onChange, readOnly }: SummaryProps) {
+export const Summary = memo(function Summary({ data, onChange, readOnly }: SummaryProps) {
   return (
     <section className="glass-panel p-6 rounded-2xl transition-colors">
       <h2 className="text-lg font-semibold mb-4 text-white border-b border-white/10 pb-2">
@@ -27,4 +28,4 @@ export function Summary({ data, onChange, readOnly }: SummaryProps) {
       )}
     </section>
   );
-}
+});

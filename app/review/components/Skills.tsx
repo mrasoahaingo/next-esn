@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Sparkles, Star, ChevronDown, ChevronUp } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { ExtractedCV, Skill } from '@/lib/schema';
 
 type SkillsData = Partial<ExtractedCV['skills']>;
@@ -170,7 +170,7 @@ function CategorySection({
   );
 }
 
-export function Skills({ data, onChange, readOnly }: SkillsProps) {
+export const Skills = memo(function Skills({ data, onChange, readOnly }: SkillsProps) {
   const safeData = data ?? {};
 
   const normalizeItems = (items: (Skill | string)[] | undefined): Skill[] =>
@@ -210,4 +210,4 @@ export function Skills({ data, onChange, readOnly }: SkillsProps) {
       </div>
     </section>
   );
-}
+});

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+
+const updateCandidateSchema = z.object({
+  extracted_data: z.record(z.string(), z.unknown()).optional(),
+  status: z.enum(['uploaded', 'extracting', 'reviewing', 'ready', 'generated']).optional(),
+  template_id: z.string().uuid().nullable().optional(),
+}).strict();
 
 export async function GET(
   req: NextRequest,
@@ -19,7 +26,9 @@ export async function GET(
       .eq('org_id', orgId)
       .single();
 
-    if (error) throw error;
+    if (error || !data) {
+      return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
+    }
     return NextResponse.json(data);
   } catch (error) {
     if (error instanceof NextResponse) return error;
@@ -62,12 +71,15 @@ export async function PATCH(
     const orgId = await requireOrgId();
     const params = await props.params;
     const { id } = params;
-    const body = await req.json();
+    const parsed = updateCandidateSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
     const supabase = getSupabase();
 
     const { data, error } = await supabase
       .from('candidates')
-      .update(body)
+      .update(parsed.data)
       .eq('id', id)
       .eq('org_id', orgId)
       .select()

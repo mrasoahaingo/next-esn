@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+
+const createMissionSchema = z.object({
+  title: z.string().min(1).max(500),
+  company: z.string().max(500).optional(),
+  jobDescription: z.string().min(1).max(50000),
+});
 
 export async function GET() {
   try {
@@ -31,7 +38,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const orgId = await requireOrgId();
-    const { title, company, jobDescription } = await req.json();
+    const parsed = createMissionSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+    const { title, company, jobDescription } = parsed.data;
     const supabase = getSupabase();
 
     const { data, error } = await supabase

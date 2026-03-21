@@ -1,4 +1,5 @@
 
+import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ interface EducationProps {
   readOnly?: boolean;
 }
 
-export function Education({ data, onChange, readOnly }: EducationProps) {
+export const Education = memo(function Education({ data, onChange, readOnly }: EducationProps) {
   const handleUpdate = (index: number, field: keyof EducationItem, value: string) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
@@ -102,4 +103,4 @@ export function Education({ data, onChange, readOnly }: EducationProps) {
       </div>
     </section>
   );
-}
+});

@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { triggerMissionPositioningAnalysis } from '@/lib/services/positioning-analyze-trigger';
+
+const createPositioningSchema = z.object({
+  candidateId: z.string().uuid(),
+  jobDescription: z.string().min(1).max(50000).optional(),
+  missionId: z.string().uuid().optional(),
+});
 
 export async function GET() {
   try {
@@ -25,7 +32,11 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const orgId = await requireOrgId();
-    const { candidateId, jobDescription, missionId } = await req.json();
+    const parsed = createPositioningSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+    const { candidateId, jobDescription, missionId } = parsed.data;
     const supabase = getSupabase();
 
     let finalJobDescription = jobDescription;

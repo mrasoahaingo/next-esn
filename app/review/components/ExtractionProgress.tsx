@@ -86,7 +86,7 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
     isStreaming && streamMeta?.phase === 'extracting' && (streamMeta.activeBranches?.length ?? 0) > 0;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" aria-live="polite" aria-atomic="false">
       {isStreaming && streamMeta?.phase === 'transcription' && (
         <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-violet-100">
           <ScanText className="h-3.5 w-3.5 shrink-0 animate-pulse" />
