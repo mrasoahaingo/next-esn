@@ -56,7 +56,7 @@ Required in `.env`:
 Every call to the language model must be accounted for in Supabase table `ai_usage_log`:
 
 - Use `logAiUsage` from `lib/services/ai-usage.service.ts` after the call (or once per workflow after aggregating usages).
-- Pass `modelName` from `lib/ai.ts` as `ai_model`.
+- Pass `aiModel` from `usageModelIds` in `lib/ai.ts` (same string as the gateway model id). Keys must exist in `MODEL_PRICING_USD` in `lib/pricing.ts` for admin cost estimates.
 - Extend the `AiOperation` union in `ai-usage.service.ts` if you add a new class of operation (today: `extraction`, `analysis`, `generation`).
 - For workflows that run several LLM calls in parallel or sequence, merge usages with `aggregateLanguageModelUsage` in `lib/services/extraction-merge.ts`, then call `logAiUsage` once in the corresponding `save*` step.
 

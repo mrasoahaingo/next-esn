@@ -8,6 +8,7 @@ import {
   FileText,
   Target,
   Cpu,
+  DollarSign,
   Loader2,
   TrendingUp,
   ShieldCheck,
@@ -35,6 +36,15 @@ function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
   return String(n)
+}
+
+function formatUsd(n: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)
 }
 
 export default function AdminPage() {
@@ -79,7 +89,7 @@ export default function AdminPage() {
         </div>
 
         {/* Global stats */}
-        <div className="mb-6 grid grid-cols-5 gap-3">
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[
             {
               icon: Building2,
@@ -111,6 +121,12 @@ export default function AdminPage() {
               value: formatTokens(totals.outputTokens),
               accent: 'text-primary bg-primary/15',
             },
+            {
+              icon: DollarSign,
+              label: 'Coût estimé (USD)',
+              value: formatUsd(totals.estimatedCostUsd),
+              accent: 'text-emerald-400 bg-emerald-400/15',
+            },
           ].map((card) => {
             const Icon = card.icon
             return (
@@ -134,6 +150,18 @@ export default function AdminPage() {
             )
           })}
         </div>
+        {totals.pricingUnknownModels.length > 0 ? (
+          <p className="mb-6 text-xs text-amber-400/90">
+            Modèles sans entrée dans{' '}
+            <span className="font-mono">lib/pricing.ts</span> (coût non compté) :{' '}
+            {totals.pricingUnknownModels.join(', ')}
+          </p>
+        ) : (
+          <p className="mb-6 text-[11px] text-muted-foreground">
+            Coût basé sur le barème <span className="font-mono">lib/pricing.ts</span> (à
+            aligner sur la grille fournisseur).
+          </p>
+        )}
 
         {/* Organizations table */}
         <Card className="glass-panel border-0">
@@ -160,6 +188,7 @@ export default function AdminPage() {
                     <TableHead className="text-right">
                       Tokens sortie
                     </TableHead>
+                    <TableHead className="text-right">Coût estimé</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -219,6 +248,9 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">
                         {formatTokens(org.outputTokens)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-emerald-400/90">
+                        {formatUsd(org.estimatedCostUsd)}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -5,7 +5,21 @@ const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY ?? '',
 });
 
+/** Identifiant gateway / facturation ; doit exister dans `lib/pricing.ts` (`MODEL_PRICING_USD`). */
 export const modelName = 'google/gemini-2.5-flash';
+
+/**
+ * Chaînes à passer à `logAiUsage({ aiModel })` par type de flux.
+ * Aujourd’hui tout pointe sur `modelName` ; pour un autre modèle par tâche,
+ * changez uniquement la valeur ciblée (et ajoutez la clé dans `MODEL_PRICING_USD`).
+ */
+export const usageModelIds = {
+  transcriptionAndExtraction: modelName,
+  positioningAnalysis: modelName,
+  positioningGeneration: modelName,
+  jobPostingAnalysis: modelName,
+  keyPointExplain: modelName,
+} as const;
 
 const baseModel = gateway(modelName);
 

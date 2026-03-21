@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { extractionModel, modelName } from '@/lib/ai';
+import { extractionModel, usageModelIds } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import { mergePositioningPartial } from '@/lib/services/positioning-analysis-merge';
@@ -212,7 +212,7 @@ async function saveAnalysis(
     positioningId,
     candidateId: result.candidateId,
     orgId: result.orgId ?? undefined,
-    aiModel: modelName,
+    aiModel: usageModelIds.positioningAnalysis,
     durationMs: result.durationMs,
     usage: result.usage,
   });

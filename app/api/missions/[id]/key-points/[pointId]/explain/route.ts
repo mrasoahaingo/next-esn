@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
-import { model, modelName } from '@/lib/ai';
+import { model, usageModelIds } from '@/lib/ai';
 import { jobPostingKeyPointExplainSchema, type JobPostingAnalysis } from '@/lib/schema';
 import {
   buildJobPostingKeyPointExplainPrompt,
@@ -66,7 +66,7 @@ export async function POST(
       operation: 'analysis',
       missionId,
       orgId,
-      aiModel: modelName,
+      aiModel: usageModelIds.keyPointExplain,
       durationMs: Date.now() - start,
       usage,
     });

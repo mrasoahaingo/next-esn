@@ -9,7 +9,7 @@ import {
   EXTRACTION_SYSTEM_EDUCATION,
   EXTRACTION_SYSTEM_SKILLS_STRENGTHS,
 } from '@/lib/services/ai.service';
-import { extractionModel, model, modelName } from '@/lib/ai';
+import { extractionModel, model, usageModelIds } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { aggregateLanguageModelUsage, mergeExtractedPartial } from '@/lib/services/extraction-merge';
 import {
@@ -272,7 +272,7 @@ async function saveResult(
     operation: 'extraction',
     candidateId,
     orgId: result.orgId ?? undefined,
-    aiModel: modelName,
+    aiModel: usageModelIds.transcriptionAndExtraction,
     durationMs: result.durationMs,
     usage: result.usage,
   });
@@ -291,7 +291,7 @@ async function saveResult(
     await supabase.from('extraction_history').insert({
       candidate_id: candidateId,
       extraction_result: result.object,
-      ai_model: modelName,
+      ai_model: usageModelIds.transcriptionAndExtraction,
       org_id: result.orgId,
     });
   }

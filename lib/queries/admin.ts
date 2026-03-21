@@ -12,6 +12,10 @@ export interface AdminStats {
     positionings: number
     inputTokens: number
     outputTokens: number
+    /** Estimation USD (barème `lib/pricing.ts`), hors modèles non référencés */
+    estimatedCostUsd: number
+    /** `ai_model` présents en base mais absents du barème — coût ignoré pour ces lignes */
+    pricingUnknownModels: string[]
   }
   organizations: {
     orgId: string
@@ -21,6 +25,7 @@ export interface AdminStats {
     positionings: number
     inputTokens: number
     outputTokens: number
+    estimatedCostUsd: number
     cvCodeTemplate: string
   }[]
   recentCandidates: {
