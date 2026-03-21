@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Loader2, Sparkles, BookOpen, AlertTriangle, XCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ import { jobPostingAspectLabel } from '@/lib/services/job-posting-analysis.servi
 import { normalizeSkillKey } from '@/lib/utils/skill-key';
 import { queryKeys } from '@/lib/queries/keys';
 import { useCancelWorkflow } from '@/lib/queries/workflow';
+import { cn } from '@/lib/utils';
 
 function formatJobPostingStreamHint(meta: JobPostingAnalysisStreamMeta | null): string | null {
   if (!meta?.activeBranches?.length && meta?.phase === 'finalizing') {
@@ -46,6 +47,16 @@ interface MissionJobAnalysisProps {
   understood_point_ids: string[];
   /** Clés skills canoniques déjà marquées « comprises » (toutes missions de l’org). */
   global_skill_keys_understood: string[];
+  /** Classes sur le conteneur (ex. grille 2 colonnes : retirer mb-6, overflow). */
+  className?: string;
+}
+
+function AnalysisScrollBody({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+      {children}
+    </div>
+  );
 }
 
 export function MissionJobAnalysis({
@@ -56,6 +67,7 @@ export function MissionJobAnalysis({
   job_analysis_stale,
   understood_point_ids,
   global_skill_keys_understood,
+  className,
 }: MissionJobAnalysisProps) {
   const queryClient = useQueryClient();
   const cancelWorkflow = useCancelWorkflow();
@@ -154,74 +166,78 @@ export function MissionJobAnalysis({
   const showRelaunch = !!job_analysis && !jobAnalyzeActive && !stream.isLoading;
 
   return (
-    <div className="glass-panel rounded-2xl p-6 mb-6">
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <Sparkles className="h-4 w-4 text-neon shrink-0" />
-        <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
-        {streamHint && (stream.isLoading || jobAnalyzeActive) && (
-          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {streamHint}
-          </span>
+    <div className={cn('glass-panel flex min-h-0 flex-col overflow-hidden rounded-2xl p-6 mb-6', className)}>
+      <div className="shrink-0">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Sparkles className="h-4 w-4 shrink-0 text-neon" />
+          <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
+          {streamHint && (stream.isLoading || jobAnalyzeActive) && (
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {streamHint}
+            </span>
+          )}
+        </div>
+
+        {!hasDescription && (
+          <p className="text-xs text-muted-foreground">Ajoutez du texte à la fiche de poste pour lancer une analyse.</p>
+        )}
+
+        {hasDescription && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {showAnalyzeCta && (
+              <Button
+                size="sm"
+                className="bg-neon text-black hover:bg-neon/90"
+                disabled={stream.isLoading}
+                onClick={() => stream.submit({})}
+              >
+                Analyser la fiche
+              </Button>
+            )}
+            {showRelaunch && !showAnalyzeCta && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-neon/40 text-neon hover:bg-neon/10"
+                disabled={stream.isLoading}
+                onClick={() => stream.submit({})}
+              >
+                {job_analysis_stale ? 'Relancer l’analyse' : 'Réanalyser la fiche'}
+              </Button>
+            )}
+            {jobAnalyzeActive && job_analysis_workflow_run_id && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-muted-foreground"
+                onClick={() =>
+                  cancelWorkflow.mutate({
+                    runId: job_analysis_workflow_run_id,
+                    table: 'missions',
+                    recordId: missionId,
+                    missionId,
+                  })
+                }
+                disabled={cancelWorkflow.isPending}
+              >
+                <XCircle className="mr-1 h-3.5 w-3.5" />
+                Annuler
+              </Button>
+            )}
+          </div>
+        )}
+
+        {job_analysis_stale && job_analysis && !stream.isLoading && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200/90">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>La fiche a changé depuis la dernière analyse. Relancez pour une lecture à jour.</span>
+          </div>
         )}
       </div>
 
-      {!hasDescription && (
-        <p className="text-xs text-muted-foreground">Ajoutez du texte à la fiche de poste pour lancer une analyse.</p>
-      )}
-
       {hasDescription && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {showAnalyzeCta && (
-            <Button
-              size="sm"
-              className="bg-neon text-black hover:bg-neon/90"
-              disabled={stream.isLoading}
-              onClick={() => stream.submit({})}
-            >
-              Analyser la fiche
-            </Button>
-          )}
-          {showRelaunch && !showAnalyzeCta && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-neon/40 text-neon hover:bg-neon/10"
-              disabled={stream.isLoading}
-              onClick={() => stream.submit({})}
-            >
-              {job_analysis_stale ? 'Relancer l’analyse' : 'Réanalyser la fiche'}
-            </Button>
-          )}
-          {jobAnalyzeActive && job_analysis_workflow_run_id && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-muted-foreground"
-              onClick={() =>
-                cancelWorkflow.mutate({
-                  runId: job_analysis_workflow_run_id,
-                  table: 'missions',
-                  recordId: missionId,
-                  missionId,
-                })
-              }
-              disabled={cancelWorkflow.isPending}
-            >
-              <XCircle className="h-3.5 w-3.5 mr-1" />
-              Annuler
-            </Button>
-          )}
-        </div>
-      )}
-
-      {job_analysis_stale && job_analysis && !stream.isLoading && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 mb-4 text-xs text-amber-200/90">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          <span>La fiche a changé depuis la dernière analyse. Relancez pour une lecture à jour.</span>
-        </div>
-      )}
-
+      <AnalysisScrollBody>
       {effectiveAnalysis?.executiveSummary && (
         <div className="rounded-xl bg-black/20 border border-white/6 p-4 mb-4">
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
@@ -261,10 +277,11 @@ export function MissionJobAnalysis({
 
       {keyPointsByCategory.length > 0 && (
         <div className="space-y-5">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             Points clés par catégories
           </p>
-          {keyPointsByCategory.map(([category, points]) => (
+          <div className="space-y-5 rounded-xl border border-white/6 bg-black/10 p-3">
+            {keyPointsByCategory.map(([category, points]) => (
             <div key={category} className="space-y-2">
               <h3 className="text-xs font-semibold text-foreground tracking-tight border-b border-white/10 pb-2">
                 {category}
@@ -345,8 +362,11 @@ export function MissionJobAnalysis({
                 })}
               </div>
             </div>
-          ))}
+            ))}
+          </div>
         </div>
+      )}
+      </AnalysisScrollBody>
       )}
 
       <Dialog

@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   Clock,
   Calendar,
+  Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useMission,
   useUploadCvsForMission,
@@ -560,57 +562,6 @@ const CANDIDATE_COLORS = [
   { stroke: '#f59e0b', fill: 'rgba(245,158,11,0.14)', text: '#f59e0b' },
   { stroke: '#38bdf8', fill: 'rgba(56,189,248,0.14)', text: '#38bdf8' },
 ] as const;
-
-// ── Score horizontal bars ──────────────────────────────────────────────────
-
-function ScoreComparisonChart({ positionings }: { positionings: MissionPositioning[] }) {
-  const winner = positionings.reduce((best, p) =>
-    (p.analysis?.matchScore ?? 0) > (best.analysis?.matchScore ?? 0) ? p : best
-  , positionings[0]);
-
-  return (
-    <div className="flex flex-col h-full gap-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50">
-        Scores de matching
-      </p>
-      <div className="flex flex-col justify-around flex-1 gap-3">
-        {positionings.map((p, i) => {
-          const score = p.analysis?.matchScore ?? 0;
-          const name = getCandidateName(p.candidates);
-          const color = CANDIDATE_COLORS[i];
-          const isWinner = p.id === winner.id && positionings.length > 1;
-          return (
-            <div key={p.id} className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color.stroke }} />
-                  <span className="text-xs truncate text-foreground/75">{name}</span>
-                  {isWinner && <span className="text-[10px] text-amber-400 shrink-0" title="Meilleur score">★</span>}
-                </div>
-                <span className="text-base font-bold shrink-0 tabular-nums" style={{ color: color.stroke }}>{score}</span>
-              </div>
-              <div className="relative h-3 rounded-full bg-white/5 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${score}%`, backgroundColor: color.stroke, opacity: 0.8 }}
-                />
-                {/* Score ticks at 25/50/75 */}
-                {[25, 50, 75].map((t) => (
-                  <div key={t} className="absolute top-0 h-full w-px bg-white/10" style={{ left: `${t}%` }} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex items-center gap-4 text-[9px] text-muted-foreground/35 pt-1 border-t border-white/5">
-        <span>0</span>
-        <span className="ml-auto">50</span>
-        <span>100</span>
-      </div>
-    </div>
-  );
-}
 
 // ── Per-column helpers ─────────────────────────────────────────────────────
 
@@ -1313,7 +1264,7 @@ export default function PositionDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -1321,17 +1272,17 @@ export default function PositionDetailPage() {
 
   if (!mission) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
         <p className="text-sm">Position introuvable</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
         {/* Header */}
-        <div className="glass-panel rounded-2xl p-6 mb-6">
+        <div className="glass-panel shrink-0 rounded-2xl p-4 md:p-6">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet/20 text-violet neon-ring">
               <Briefcase className="h-6 w-6" />
@@ -1363,119 +1314,175 @@ export default function PositionDetailPage() {
               Positionner des CVs
             </Button>
           </div>
-
-          {/* Job description preview */}
-          <div className="mt-4 rounded-xl bg-black/20 border border-white/[0.04] p-4">
-            <div className="flex items-center gap-1.5 mb-2">
-              <FileText className="h-3.5 w-3.5 text-violet/60" />
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Fiche de poste
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground/80 whitespace-pre-wrap line-clamp-8">
-              {mission.job_description}
-            </p>
-          </div>
         </div>
 
-        <MissionJobAnalysis
-          missionId={missionId}
-          jobDescription={mission.job_description}
-          job_analysis={mission.job_analysis ?? null}
-          job_analysis_workflow_run_id={mission.job_analysis_workflow_run_id ?? null}
-          job_analysis_stale={mission.job_analysis_stale ?? false}
-          understood_point_ids={mission.understood_point_ids ?? []}
-          global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
-        />
-
-        {/* Empty state */}
-        {positionings.length === 0 ? (
-          <div className="glass-panel rounded-2xl p-6">
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card/50">
-                <Target className="h-6 w-6" />
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1">Aucun positionnement</p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Importez des CVs ou sélectionnez des candidats existants pour commencer
-              </p>
-              <Button
-                onClick={() => setIsModalOpen(true)}
-                variant="outline"
-                className="border-violet/30 text-violet hover:bg-violet/10"
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                Positionner des CVs
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-6">
-            {/* En cours section */}
-            <div className="glass-panel rounded-2xl p-6 flex-1">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-4 w-4 text-violet" />
-                <h2 className="text-sm font-semibold text-foreground">En cours</h2>
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 ml-1">
-                  {drafts.length}
+        <Tabs
+          key={missionId}
+          defaultValue={positionings.length > 0 ? 'positionings' : 'analysis'}
+          className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+        >
+          <div className="shrink-0 overflow-x-auto pb-1 -mx-1 px-1">
+            <TabsList className="mb-3 inline-flex w-full min-w-min sm:grid sm:grid-cols-2 sm:max-w-lg h-auto flex-wrap gap-1 p-1">
+              <TabsTrigger value="analysis" className="gap-1.5 text-xs sm:text-sm px-3 py-2">
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+                Analyse de la fiche
+              </TabsTrigger>
+              <TabsTrigger value="positionings" className="gap-1.5 text-xs sm:text-sm px-3 py-2">
+                <Users className="h-3.5 w-3.5 shrink-0" />
+                CVs positionnés
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 tabular-nums">
+                  {positionings.length}
                 </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent
+            value="analysis"
+            className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden"
+          >
+            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden lg:grid-cols-2 lg:grid-rows-1 lg:gap-6">
+              <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+                <div className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl p-4 md:p-6">
+                  <div className="mb-3 flex shrink-0 items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 shrink-0 text-violet/60" />
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Fiche de poste
+                    </span>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground/80">
+                      {mission.job_description}
+                    </p>
+                  </div>
+                </div>
+              </aside>
+
+              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+                <MissionJobAnalysis
+                  missionId={missionId}
+                  jobDescription={mission.job_description}
+                  job_analysis={mission.job_analysis ?? null}
+                  job_analysis_workflow_run_id={mission.job_analysis_workflow_run_id ?? null}
+                  job_analysis_stale={mission.job_analysis_stale ?? false}
+                  understood_point_ids={mission.understood_point_ids ?? []}
+                  global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
+                  className="mb-0 flex min-h-0 flex-1 flex-col overflow-hidden"
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="positionings"
+            className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden"
+          >
+            <div className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl p-4 md:p-6">
+              <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 gap-y-1">
+                <Users className="h-4 w-4 shrink-0 text-violet" />
+                <h2 className="text-sm font-semibold text-foreground">CVs sur cette mission</h2>
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 tabular-nums">
+                  {positionings.length}
+                </Badge>
+                {ready.length >= 2 && (
+                  <span className="ml-auto text-[10px] text-muted-foreground/50">
+                    Sélectionner les profils prêts pour comparer
+                  </span>
+                )}
               </div>
 
-              {drafts.length === 0 ? (
-                <div className="flex items-center justify-center py-8 text-muted-foreground">
-                  <p className="text-xs">
-                    Tous les positionnements sont prêts
+              {positionings.length === 0 ? (
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-8 text-muted-foreground">
+                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card/50">
+                    <Target className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-1">Aucun CV positionné</p>
+                  <p className="text-xs text-muted-foreground mb-4 text-center max-w-sm">
+                    Importez des CVs ou sélectionnez des candidats existants pour commencer
                   </p>
+                  <Button
+                    onClick={() => setIsModalOpen(true)}
+                    variant="outline"
+                    className="border-violet/30 text-violet hover:bg-violet/10"
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Positionner des CVs
+                  </Button>
                 </div>
               ) : (
-                <div className="space-y-1">
-                  {drafts.map((p) => (
-                    <PositioningRow
-                      key={p.id}
-                      p={p}
-                      missionId={missionId}
-                      onNavigate={(href) => router.push(href)}
-                      onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
-                    />
-                  ))}
+                <div className="min-h-0 flex-1 space-y-8 overflow-y-auto overscroll-contain pr-1">
+                  {drafts.length > 0 && (
+                    <section aria-labelledby="positionings-in-progress">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <Sparkles className="h-4 w-4 text-violet shrink-0" />
+                        <h3
+                          id="positionings-in-progress"
+                          className="text-xs font-semibold text-foreground tracking-tight"
+                        >
+                          En cours
+                        </h3>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-violet/30 text-violet/90">
+                          {drafts.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
+                        {drafts.map((p) => (
+                          <PositioningRow
+                            key={p.id}
+                            p={p}
+                            missionId={missionId}
+                            onNavigate={(href) => router.push(href)}
+                            onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {ready.length > 0 && (
+                    <section
+                      aria-labelledby="positionings-ready"
+                      className={drafts.length > 0 ? 'border-t border-white/[0.06] pt-8' : ''}
+                    >
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <CheckCircle2 className="h-4 w-4 text-neon shrink-0" />
+                        <h3
+                          id="positionings-ready"
+                          className="text-xs font-semibold text-foreground tracking-tight"
+                        >
+                          Analysés et prêts
+                        </h3>
+                        <Badge variant="default" className="text-[9px] px-1.5 py-0 bg-neon/20 text-neon border-0">
+                          {ready.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1 rounded-xl border border-white/[0.06] bg-black/10 p-1">
+                        {ready.map((p) => (
+                          <PositioningRow
+                            key={p.id}
+                            p={p}
+                            missionId={missionId}
+                            onNavigate={(href) => router.push(href)}
+                            onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
+                            selectable={ready.length >= 2}
+                            isSelected={compareIds.has(p.id)}
+                            onToggleSelect={toggleCompare}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {drafts.length > 0 && ready.length === 0 && (
+                    <p className="text-xs text-muted-foreground/80 text-center py-2">
+                      Aucun profil prêt pour l’instant — les lignes ci-dessus passent ici une fois l’analyse terminée.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
-
-            {/* Prêts section */}
-            {ready.length > 0 && (
-              <div className="glass-panel rounded-2xl p-6 flex-1">
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle2 className="h-4 w-4 text-neon" />
-                  <h2 className="text-sm font-semibold text-foreground">Prêts</h2>
-                  <Badge variant="default" className="text-[9px] px-1.5 py-0 ml-1">
-                    {ready.length}
-                  </Badge>
-                  {ready.length >= 2 && (
-                    <span className="ml-auto text-[10px] text-muted-foreground/50">
-                      Sélectionner pour comparer
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  {ready.map((p) => (
-                    <PositioningRow
-                      key={p.id}
-                      p={p}
-                      missionId={missionId}
-                      onNavigate={(href) => router.push(href)}
-                      onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
-                      selectable={ready.length >= 2}
-                      isSelected={compareIds.has(p.id)}
-                      onToggleSelect={toggleCompare}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
 
         {/* Modals */}
         <PositionCvsModal
