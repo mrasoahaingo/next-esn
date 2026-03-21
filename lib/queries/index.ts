@@ -14,5 +14,16 @@ export type {
 export { useCancelWorkflow } from './workflow';
 export { useTemplate, useUpdateTemplate } from './templates';
 export { useAdminStats, useUpdateOrgCvCodeTemplate } from './admin';
+export {
+  useLlmModels,
+  useLlmTasks,
+  useOrgLlmOverrides,
+  useCreateLlmModel,
+  useUpdateLlmModel,
+  useCreateLlmTask,
+  useUpdateLlmTask,
+  type LlmModelRow,
+  type LlmTaskRow,
+} from './admin-llm';
 export { useMembers, useInvitations, useInviteMember, useRevokeInvitation, useUpdateMemberRole, useRemoveMember } from './team';
 export type { OrgMember, OrgInvitation } from './team';

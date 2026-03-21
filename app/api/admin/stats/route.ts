@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { clerkClient } from '@clerk/nextjs/server'
 import { requireSuperAdmin } from '@/lib/utils/auth'
 import { getSupabase } from '@/lib/utils/supabase'
-import { estimateUsageCostUsd } from '@/lib/pricing'
+import { estimateUsageCostUsd, type ModelPricingUsd } from '@/lib/pricing'
 
 export async function GET() {
   try {
@@ -18,6 +18,7 @@ export async function GET() {
     { data: candidates },
     { data: positionings },
     { data: aiUsage },
+    { data: llmModels },
     clerkOrgsResult,
   ] = await Promise.all([
     supabase
@@ -32,8 +33,21 @@ export async function GET() {
       .from('ai_usage_log')
       .select('id, org_id, ai_model, input_tokens, output_tokens, cache_read_tokens, created_at')
       .order('created_at', { ascending: false }),
+    supabase
+      .from('llm_models')
+      .select('gateway_model_id, input_usd_per_1m, output_usd_per_1m, cache_read_usd_per_1m'),
     clerk.organizations.getOrganizationList({ limit: 200 }),
   ])
+
+  const dbPricingByGateway = new Map<string, ModelPricingUsd>()
+  for (const m of llmModels ?? []) {
+    dbPricingByGateway.set(m.gateway_model_id, {
+      inputUsdPer1M: Number(m.input_usd_per_1m),
+      outputUsdPer1M: Number(m.output_usd_per_1m),
+      cacheReadUsdPer1M:
+        m.cache_read_usd_per_1m != null ? Number(m.cache_read_usd_per_1m) : undefined,
+    })
+  }
 
   // Initialiser la map avec toutes les orgs Clerk (y compris celles sans données)
   const orgMap = new Map<
@@ -95,12 +109,15 @@ export async function GET() {
   let totalEstimatedCostUsd = 0
 
   for (const u of aiUsage ?? []) {
-    const cost = estimateUsageCostUsd({
-      ai_model: u.ai_model,
-      input_tokens: u.input_tokens,
-      output_tokens: u.output_tokens,
-      cache_read_tokens: u.cache_read_tokens,
-    })
+    const cost = estimateUsageCostUsd(
+      {
+        ai_model: u.ai_model,
+        input_tokens: u.input_tokens,
+        output_tokens: u.output_tokens,
+        cache_read_tokens: u.cache_read_tokens,
+      },
+      dbPricingByGateway,
+    )
     if (cost === null) {
       pricingUnknownModels.add(u.ai_model)
     } else {

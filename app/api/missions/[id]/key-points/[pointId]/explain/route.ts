@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
-import { model, usageModelIds } from '@/lib/ai';
+import { createGatewayLanguageModel } from '@/lib/ai';
 import { jobPostingKeyPointExplainSchema, type JobPostingAnalysis } from '@/lib/schema';
-import {
-  buildJobPostingKeyPointExplainPrompt,
-  buildJobPostingKeyPointExplainUserContent,
-} from '@/lib/services/job-posting-analysis.service';
+import { buildJobPostingKeyPointExplainUserContent } from '@/lib/services/job-posting-analysis.service';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
+import { resolveLlmTask } from '@/lib/llm/resolve-task';
+import { TASK_KEY } from '@/lib/llm/task-keys';
 
 export async function POST(
   _req: NextRequest,
@@ -43,11 +42,18 @@ export async function POST(
       roleInMission: '',
     };
 
+    const resolved = await resolveLlmTask(supabase, {
+      taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
+      orgId,
+      context: {},
+    });
+    const model = createGatewayLanguageModel(resolved.gatewayModelId, resolved.useExtractJson);
+
     const start = Date.now();
     const { object, usage } = await generateObject({
       model,
       schema: jobPostingKeyPointExplainSchema,
-      system: buildJobPostingKeyPointExplainPrompt(),
+      system: resolved.systemPrompt,
       messages: [
         {
           role: 'user',
@@ -66,7 +72,8 @@ export async function POST(
       operation: 'analysis',
       missionId,
       orgId,
-      aiModel: usageModelIds.keyPointExplain,
+      aiModel: resolved.gatewayModelId,
+      taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
       durationMs: Date.now() - start,
       usage,
     });

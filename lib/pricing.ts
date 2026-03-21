@@ -36,14 +36,7 @@ export type UsageRowForPricing = {
   cache_read_tokens?: number | null;
 };
 
-/**
- * Estime le coût en USD pour une ligne de `ai_usage_log`.
- * Retourne `null` si le modèle n’a pas d’entrée dans `MODEL_PRICING_USD`.
- */
-export function estimateUsageCostUsd(row: UsageRowForPricing): number | null {
-  const p = getModelPricing(row.ai_model);
-  if (!p) return null;
-
+function computeUsd(row: UsageRowForPricing, p: ModelPricingUsd): number {
   const input = (row.input_tokens ?? 0) / 1_000_000;
   const output = (row.output_tokens ?? 0) / 1_000_000;
   const cacheRead = (row.cache_read_tokens ?? 0) / 1_000_000;
@@ -53,4 +46,17 @@ export function estimateUsageCostUsd(row: UsageRowForPricing): number | null {
     usd += cacheRead * p.cacheReadUsdPer1M;
   }
   return usd;
+}
+
+/**
+ * Estime le coût en USD pour une ligne de `ai_usage_log`.
+ * `dbPricingByGateway` : tarifs issus de `llm_models` (prioritaires), sinon `MODEL_PRICING_USD`.
+ */
+export function estimateUsageCostUsd(
+  row: UsageRowForPricing,
+  dbPricingByGateway?: Map<string, ModelPricingUsd>,
+): number | null {
+  const p = dbPricingByGateway?.get(row.ai_model) ?? getModelPricing(row.ai_model);
+  if (!p) return null;
+  return computeUsd(row, p);
 }

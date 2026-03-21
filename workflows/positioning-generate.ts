@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { extractionModel, usageModelIds } from '@/lib/ai';
+import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import {
@@ -19,19 +19,14 @@ import {
   positioningEmailBulletPointsPartSchema,
   positioningCandidateEmailPartSchema,
 } from '@/lib/schema';
-import {
-  buildPositioningGenerateTailoredCvSystemPrompt,
-  buildPositioningGenerateEmailSystemPrompt,
-  buildPositioningGenerateEmailFirstContactSystemPrompt,
-  buildPositioningGenerateEmailBulletPointsSystemPrompt,
-  buildPositioningGenerateCandidateEmailSystemPrompt,
-  buildGenerateUserContent,
-} from '@/lib/services/positioning.service';
+import { buildGenerateUserContent } from '@/lib/services/positioning.service';
 import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
 import type {
   PositioningGenerateBranch,
   PositioningGenerateStreamMeta,
 } from '@/lib/types/positioning-generate-stream';
+import { resolveLlmTask } from '@/lib/llm/resolve-task';
+import { TASK_KEY } from '@/lib/llm/task-keys';
 
 async function fetchAndGenerate(positioningId: string, answers: Record<string, string>) {
   'use step';
@@ -57,6 +52,10 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   const orgId = positioning.org_id as string | null | undefined;
   const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
   const branding = toPositioningPromptBranding(orgSettings);
+  const brandCtx = {
+    displayName: branding.displayName,
+    brandContextBlock: branding.brandContextBlock,
+  };
 
   const userContent = buildGenerateUserContent(cv, jobDescription, analysis, answers ?? {});
 
@@ -88,13 +87,14 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   };
 
   async function consumeBranch<T>(
+    languageModel: LanguageModel,
     system: string,
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: PositioningGenerateBranch,
   ): Promise<LanguageModelUsage> {
     const result = streamText({
-      model: extractionModel,
+      model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],
       output: Output.object({ schema, name: outputName }),
@@ -124,33 +124,66 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   const usages: LanguageModelUsage[] = [];
 
   try {
+    const [rTc, rEm, rFc, rBp, rCe] = await Promise.all([
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+    ]);
+
     const parallelUsages = await Promise.all([
       consumeBranch(
-        buildPositioningGenerateTailoredCvSystemPrompt(branding),
+        createGatewayLanguageModel(rTc.gatewayModelId, rTc.useExtractJson),
+        rTc.systemPrompt,
         positioningTailoredCvPartSchema,
         'positioning_tailored_cv',
         'tailoredCv',
       ),
       consumeBranch(
-        buildPositioningGenerateEmailSystemPrompt(branding),
+        createGatewayLanguageModel(rEm.gatewayModelId, rEm.useExtractJson),
+        rEm.systemPrompt,
         positioningEmailPartSchema,
         'positioning_email',
         'email',
       ),
       consumeBranch(
-        buildPositioningGenerateEmailFirstContactSystemPrompt(branding),
+        createGatewayLanguageModel(rFc.gatewayModelId, rFc.useExtractJson),
+        rFc.systemPrompt,
         positioningEmailFirstContactPartSchema,
         'positioning_email_first_contact',
         'emailFirstContact',
       ),
       consumeBranch(
-        buildPositioningGenerateEmailBulletPointsSystemPrompt(branding),
+        createGatewayLanguageModel(rBp.gatewayModelId, rBp.useExtractJson),
+        rBp.systemPrompt,
         positioningEmailBulletPointsPartSchema,
         'positioning_email_bullet_points',
         'emailBulletPoints',
       ),
       consumeBranch(
-        buildPositioningGenerateCandidateEmailSystemPrompt(branding),
+        createGatewayLanguageModel(rCe.gatewayModelId, rCe.useExtractJson),
+        rCe.systemPrompt,
         positioningCandidateEmailPartSchema,
         'positioning_candidate_email',
         'candidateEmail',
@@ -198,13 +231,19 @@ async function saveGeneration(
   'use step';
 
   const supabase = getSupabase();
+  const resolvedLog = await resolveLlmTask(supabase, {
+    taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
+    orgId: result.orgId,
+    context: { displayName: '', brandContextBlock: '' },
+  });
 
   await logAiUsage(supabase, {
     operation: 'generation',
     positioningId,
     candidateId: result.candidateId,
     orgId: result.orgId ?? undefined,
-    aiModel: usageModelIds.positioningGeneration,
+    aiModel: resolvedLog.gatewayModelId,
+    taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
     durationMs: result.durationMs,
     usage: result.usage,
   });

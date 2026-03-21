@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/table'
 import { CV_CODE_TEMPLATE_IDS, CV_CODE_TEMPLATE_LABELS } from '@/templates/registry'
 import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { LlmSettingsTabs } from '@/components/admin/llm-settings-tabs'
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -74,7 +76,7 @@ export default function AdminPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <div className="mb-8 flex items-center gap-3">
+        <div className="mb-6 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-400">
             <ShieldCheck className="h-5 w-5" />
           </div>
@@ -88,6 +90,13 @@ export default function AdminPage() {
           </div>
         </div>
 
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="mb-6 grid w-full max-w-xl grid-cols-2">
+            <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
+            <TabsTrigger value="llm">Modèles &amp; tâches LLM</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
         {/* Global stats */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[
@@ -152,14 +161,14 @@ export default function AdminPage() {
         </div>
         {totals.pricingUnknownModels.length > 0 ? (
           <p className="mb-6 text-xs text-amber-400/90">
-            Modèles sans entrée dans{' '}
+            Modèles sans tarif en base <span className="font-mono">llm_models</span> ni dans{' '}
             <span className="font-mono">lib/pricing.ts</span> (coût non compté) :{' '}
             {totals.pricingUnknownModels.join(', ')}
           </p>
         ) : (
           <p className="mb-6 text-[11px] text-muted-foreground">
-            Coût basé sur le barème <span className="font-mono">lib/pricing.ts</span> (à
-            aligner sur la grille fournisseur).
+            Coût estimé : table <span className="font-mono">llm_models</span> puis repli sur{' '}
+            <span className="font-mono">lib/pricing.ts</span>.
           </p>
         )}
 
@@ -264,6 +273,12 @@ export default function AdminPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="llm">
+            <LlmSettingsTabs />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

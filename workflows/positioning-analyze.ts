@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { extractionModel, usageModelIds } from '@/lib/ai';
+import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import { mergePositioningPartial } from '@/lib/services/positioning-analysis-merge';
@@ -16,11 +16,6 @@ import {
   positioningSynthesisSchema,
 } from '@/lib/schema';
 import {
-  buildPositioningAnalysisSkillsSystemPrompt,
-  buildPositioningAnalysisExperiencesSystemPrompt,
-  buildPositioningAnalysisGapsSystemPrompt,
-  buildPositioningAnalysisQuestionsSystemPrompt,
-  buildPositioningSynthesisPrompt,
   buildAnalysisUserContent,
   buildPositioningSynthesisUserContent,
 } from '@/lib/services/positioning.service';
@@ -29,6 +24,8 @@ import type {
   PositioningAnalysisBranch,
   PositioningAnalysisStreamMeta,
 } from '@/lib/types/positioning-analysis-stream';
+import { resolveLlmTask } from '@/lib/llm/resolve-task';
+import { TASK_KEY } from '@/lib/llm/task-keys';
 
 async function fetchAndAnalyze(positioningId: string) {
   'use step';
@@ -52,6 +49,10 @@ async function fetchAndAnalyze(positioningId: string) {
   const orgId = positioning.org_id as string | null | undefined;
   const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
   const branding = toPositioningPromptBranding(orgSettings);
+  const brandCtx = {
+    displayName: branding.displayName,
+    brandContextBlock: branding.brandContextBlock,
+  };
 
   const userContent = buildAnalysisUserContent(cv, jobDescription);
 
@@ -83,13 +84,14 @@ async function fetchAndAnalyze(positioningId: string) {
   };
 
   async function consumeBranch<T>(
+    languageModel: LanguageModel,
     system: string,
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: PositioningAnalysisBranch,
   ): Promise<LanguageModelUsage> {
     const result = streamText({
-      model: extractionModel,
+      model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],
       output: Output.object({ schema, name: outputName }),
@@ -119,27 +121,54 @@ async function fetchAndAnalyze(positioningId: string) {
   const usages: LanguageModelUsage[] = [];
 
   try {
+    const [rSk, rEx, rGa, rQu] = await Promise.all([
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_ANALYSIS_SKILLS,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_ANALYSIS_EXPERIENCES,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_ANALYSIS_GAPS,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_ANALYSIS_QUESTIONS,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
+    ]);
+
     const parallelUsages = await Promise.all([
       consumeBranch(
-        buildPositioningAnalysisSkillsSystemPrompt(branding),
+        createGatewayLanguageModel(rSk.gatewayModelId, rSk.useExtractJson),
+        rSk.systemPrompt,
         positioningSkillMatchesSchema,
         'positioning_skills',
         'skills',
       ),
       consumeBranch(
-        buildPositioningAnalysisExperiencesSystemPrompt(branding),
+        createGatewayLanguageModel(rEx.gatewayModelId, rEx.useExtractJson),
+        rEx.systemPrompt,
         positioningExperienceRelevanceSchema,
         'positioning_experiences',
         'experiences',
       ),
       consumeBranch(
-        buildPositioningAnalysisGapsSystemPrompt(branding),
+        createGatewayLanguageModel(rGa.gatewayModelId, rGa.useExtractJson),
+        rGa.systemPrompt,
         positioningGapsSchema,
         'positioning_gaps',
         'gaps',
       ),
       consumeBranch(
-        buildPositioningAnalysisQuestionsSystemPrompt(branding),
+        createGatewayLanguageModel(rQu.gatewayModelId, rQu.useExtractJson),
+        rQu.systemPrompt,
         positioningQuestionsSchema,
         'positioning_questions',
         'questions',
@@ -147,9 +176,15 @@ async function fetchAndAnalyze(positioningId: string) {
     ]);
     usages.push(...parallelUsages);
 
+    const rSyn = await resolveLlmTask(supabase, {
+      taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
+      orgId: orgId ?? null,
+      context: brandCtx,
+    });
+
     const synthesisResult = streamText({
-      model: extractionModel,
-      system: buildPositioningSynthesisPrompt(branding),
+      model: createGatewayLanguageModel(rSyn.gatewayModelId, rSyn.useExtractJson),
+      system: rSyn.systemPrompt,
       messages: [
         {
           role: 'user',
@@ -206,13 +241,19 @@ async function saveAnalysis(
   'use step';
 
   const supabase = getSupabase();
+  const resolvedLog = await resolveLlmTask(supabase, {
+    taskKey: TASK_KEY.POSITIONING_ANALYSIS_SKILLS,
+    orgId: result.orgId,
+    context: { displayName: '', brandContextBlock: '' },
+  });
 
   await logAiUsage(supabase, {
     operation: 'analysis',
     positioningId,
     candidateId: result.candidateId,
     orgId: result.orgId ?? undefined,
-    aiModel: usageModelIds.positioningAnalysis,
+    aiModel: resolvedLog.gatewayModelId,
+    taskKey: TASK_KEY.POSITIONING_ANALYSIS_SKILLS,
     durationMs: result.durationMs,
     usage: result.usage,
   });

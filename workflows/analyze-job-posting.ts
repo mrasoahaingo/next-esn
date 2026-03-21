@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { extractionModel, usageModelIds } from '@/lib/ai';
+import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import { mergeJobPostingPartial } from '@/lib/services/job-posting-analysis-merge';
@@ -11,11 +11,9 @@ import {
   jobPostingExecutiveSchema,
   jobPostingKeyPointsBlockSchema,
 } from '@/lib/schema';
-import {
-  buildJobPostingAnalysisExecutivePrompt,
-  buildJobPostingAnalysisKeyPointsPrompt,
-  buildJobPostingAnalysisUserContent,
-} from '@/lib/services/job-posting-analysis.service';
+import { buildJobPostingAnalysisUserContent } from '@/lib/services/job-posting-analysis.service';
+import { resolveLlmTask } from '@/lib/llm/resolve-task';
+import { TASK_KEY } from '@/lib/llm/task-keys';
 import type {
   JobPostingAnalysisBranch,
   JobPostingAnalysisStreamMeta,
@@ -83,13 +81,14 @@ async function fetchAndAnalyze(missionId: string) {
   };
 
   async function consumeBranch<T>(
+    languageModel: LanguageModel,
     system: string,
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: JobPostingAnalysisBranch,
   ): Promise<LanguageModelUsage> {
     const result = streamText({
-      model: extractionModel,
+      model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],
       output: Output.object({ schema, name: outputName }),
@@ -119,15 +118,31 @@ async function fetchAndAnalyze(missionId: string) {
   const usages: LanguageModelUsage[] = [];
 
   try {
+    const orgId = mission.org_id as string | null;
+    const [rEx, rKp] = await Promise.all([
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE,
+        orgId,
+        context: {},
+      }),
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.MISSION_JOB_POSTING_KEY_POINTS,
+        orgId,
+        context: {},
+      }),
+    ]);
+
     const parallelUsages = await Promise.all([
       consumeBranch(
-        buildJobPostingAnalysisExecutivePrompt(),
+        createGatewayLanguageModel(rEx.gatewayModelId, rEx.useExtractJson),
+        rEx.systemPrompt,
         jobPostingExecutiveSchema,
         'job_posting_executive',
         'executive',
       ),
       consumeBranch(
-        buildJobPostingAnalysisKeyPointsPrompt(),
+        createGatewayLanguageModel(rKp.gatewayModelId, rKp.useExtractJson),
+        rKp.systemPrompt,
         jobPostingKeyPointsBlockSchema,
         'job_posting_key_points',
         'keyPoints',
@@ -177,12 +192,18 @@ async function saveJobPostingAnalysis(
   'use step';
 
   const supabase = getSupabase();
+  const resolvedLog = await resolveLlmTask(supabase, {
+    taskKey: TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE,
+    orgId: result.orgId,
+    context: {},
+  });
 
   await logAiUsage(supabase, {
     operation: 'analysis',
     missionId,
     orgId: result.orgId ?? undefined,
-    aiModel: usageModelIds.jobPostingAnalysis,
+    aiModel: resolvedLog.gatewayModelId,
+    taskKey: TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE,
     durationMs: result.durationMs,
     usage: result.usage,
   });

@@ -62,6 +62,12 @@ Every call to the language model must be accounted for in Supabase table `ai_usa
 
 Do not add new `streamText` / `generateObject` / similar calls without this logging path.
 
+### LLM models and tasks (Supabase + admin)
+
+- Tables: `llm_models` (gateway id + USD/1M), `llm_tasks` (`task_key` + template + `model_id`), `llm_task_org_overrides` (optional per-org overrides). Les prompts système sont en base ; régénérer le seed avec `pnpm dlx tsx scripts/generate-llm-task-seed.ts` (sources dans `scripts/llm-seed-prompt-builders.ts`).
+- Runtime: `resolveLlmTask` in `lib/llm/resolve-task.ts` + `createGatewayLanguageModel` in `lib/ai.ts`. Stable keys: `lib/llm/task-keys.ts`.
+- Super-admin UI: `/admin` tab « Modèles & tâches LLM » (CRUD + surcharges org). APIs under `/api/admin/llm-*` and `/api/admin/org-llm-overrides`.
+
 ### Clerk Dashboard Setup
 
 1. Enable **Organizations** in Clerk Dashboard

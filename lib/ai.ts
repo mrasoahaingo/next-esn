@@ -1,5 +1,5 @@
 
-import { createGateway, extractJsonMiddleware, wrapLanguageModel } from 'ai';
+import { createGateway, extractJsonMiddleware, wrapLanguageModel, type LanguageModel } from 'ai';
 
 const gateway = createGateway({
   apiKey: process.env.AI_GATEWAY_API_KEY ?? '',
@@ -7,6 +7,17 @@ const gateway = createGateway({
 
 /** Identifiant gateway / facturation ; doit exister dans `lib/pricing.ts` (`MODEL_PRICING_USD`). */
 export const modelName = 'google/gemini-2.5-flash';
+
+/** Instancie un modèle gateway (optionnellement avec `extractJsonMiddleware` pour `Output.object`). */
+export function createGatewayLanguageModel(gatewayModelId: string, useExtractJson: boolean): LanguageModel {
+  const m = gateway(gatewayModelId);
+  return useExtractJson
+    ? wrapLanguageModel({
+        model: m,
+        middleware: extractJsonMiddleware(),
+      })
+    : m;
+}
 
 /**
  * Chaînes à passer à `logAiUsage({ aiModel })` par type de flux.

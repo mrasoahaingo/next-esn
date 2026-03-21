@@ -1,15 +1,10 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { triggerMissionAnalysesAfterExtract } from '@/lib/services/positioning-analyze-trigger';
-import {
-  TRANSCRIPTION_SYSTEM,
-  EXTRACTION_SYSTEM_IDENTITY,
-  EXTRACTION_SYSTEM_EXPERIENCES,
-  EXTRACTION_SYSTEM_EDUCATION,
-  EXTRACTION_SYSTEM_SKILLS_STRENGTHS,
-} from '@/lib/services/ai.service';
-import { extractionModel, model, usageModelIds } from '@/lib/ai';
+import { createGatewayLanguageModel } from '@/lib/ai';
+import { resolveLlmTask } from '@/lib/llm/resolve-task';
+import { TASK_KEY } from '@/lib/llm/task-keys';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { aggregateLanguageModelUsage, mergeExtractedPartial } from '@/lib/services/extraction-merge';
 import {
@@ -83,9 +78,19 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
     if (isPdf) {
       await writeLine({ meta: { phase: 'transcription', transcriptionChars: 0 } });
 
+      const resolvedTx = await resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.CV_TRANSCRIPTION,
+        orgId,
+        context: {},
+      });
+      const txModel = createGatewayLanguageModel(
+        resolvedTx.gatewayModelId,
+        resolvedTx.useExtractJson,
+      );
+
       const result = streamText({
-        model,
-        system: TRANSCRIPTION_SYSTEM,
+        model: txModel,
+        system: resolvedTx.systemPrompt,
         messages: [
           {
             role: 'user',
@@ -160,9 +165,11 @@ async function parallelExtractAndStream(
   cvText: string,
   jobDescription: string | undefined,
   startChunkIndex: number,
+  orgId: string | null,
 ): Promise<ParallelExtractResult> {
   'use step';
 
+  const supabase = getSupabase();
   const parallelStart = Date.now();
   const jobCtx = jobDescription
     ? `\n\n--- Fiche de poste (matching / forces) ---\n\n${jobDescription}`
@@ -202,13 +209,14 @@ async function parallelExtractAndStream(
   };
 
   async function consumeBranch<T>(
+    languageModel: LanguageModel,
     system: string,
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: CvExtractionBranch,
   ): Promise<LanguageModelUsage> {
     const result = streamText({
-      model: extractionModel,
+      model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],
       output: Output.object({ schema, name: outputName }),
@@ -236,11 +244,42 @@ async function parallelExtractAndStream(
   }
 
   try {
+    const [rId, rEx, rEd, rSk] = await Promise.all([
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_IDENTITY, orgId, context: {} }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_EXPERIENCES, orgId, context: {} }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_EDUCATION, orgId, context: {} }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_SKILLS, orgId, context: {} }),
+    ]);
+
     const parallelUsages = await Promise.all([
-      consumeBranch(EXTRACTION_SYSTEM_IDENTITY, extractionIdentitySchema, 'cv_identity', 'identity'),
-      consumeBranch(EXTRACTION_SYSTEM_EXPERIENCES, extractionExperiencesSchema, 'cv_experiences', 'experiences'),
-      consumeBranch(EXTRACTION_SYSTEM_EDUCATION, extractionEducationSchema, 'cv_education', 'education'),
-      consumeBranch(EXTRACTION_SYSTEM_SKILLS_STRENGTHS, extractionSkillsStrengthsSchema, 'cv_skills', 'skills'),
+      consumeBranch(
+        createGatewayLanguageModel(rId.gatewayModelId, rId.useExtractJson),
+        rId.systemPrompt,
+        extractionIdentitySchema,
+        'cv_identity',
+        'identity',
+      ),
+      consumeBranch(
+        createGatewayLanguageModel(rEx.gatewayModelId, rEx.useExtractJson),
+        rEx.systemPrompt,
+        extractionExperiencesSchema,
+        'cv_experiences',
+        'experiences',
+      ),
+      consumeBranch(
+        createGatewayLanguageModel(rEd.gatewayModelId, rEd.useExtractJson),
+        rEd.systemPrompt,
+        extractionEducationSchema,
+        'cv_education',
+        'education',
+      ),
+      consumeBranch(
+        createGatewayLanguageModel(rSk.gatewayModelId, rSk.useExtractJson),
+        rSk.systemPrompt,
+        extractionSkillsStrengthsSchema,
+        'cv_skills',
+        'skills',
+      ),
     ]);
 
     const parsed = extractionSchema.safeParse(acc);
@@ -267,12 +306,18 @@ async function saveResult(
   'use step';
 
   const supabase = getSupabase();
+  const resolvedLog = await resolveLlmTask(supabase, {
+    taskKey: TASK_KEY.CV_BRANCH_IDENTITY,
+    orgId: result.orgId,
+    context: {},
+  });
 
   await logAiUsage(supabase, {
     operation: 'extraction',
     candidateId,
     orgId: result.orgId ?? undefined,
-    aiModel: usageModelIds.transcriptionAndExtraction,
+    aiModel: resolvedLog.gatewayModelId,
+    taskKey: TASK_KEY.CV_EXTRACTION_AGGREGATE,
     durationMs: result.durationMs,
     usage: result.usage,
   });
@@ -291,7 +336,7 @@ async function saveResult(
     await supabase.from('extraction_history').insert({
       candidate_id: candidateId,
       extraction_result: result.object,
-      ai_model: usageModelIds.transcriptionAndExtraction,
+      ai_model: resolvedLog.gatewayModelId,
       org_id: result.orgId,
     });
   }
@@ -311,7 +356,7 @@ export async function extractCvWorkflow(candidateId: string, jobDescription?: st
   'use workflow';
 
   const prep = await prepareCvText(candidateId);
-  const ext = await parallelExtractAndStream(prep.cvText, jobDescription, prep.nextChunkIndex);
+  const ext = await parallelExtractAndStream(prep.cvText, jobDescription, prep.nextChunkIndex, prep.orgId);
 
   const usageParts: LanguageModelUsage[] = [...ext.parallelUsages];
   if (prep.transcriptionUsage) {
