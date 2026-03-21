@@ -28,6 +28,8 @@ import {
   Building2,
   ShieldCheck,
   Users,
+  GraduationCap,
+  BarChart3,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -628,6 +630,17 @@ export function UnifiedSidebar() {
           <Palette className="h-4 w-4" />
           <span className="font-medium">Templates</span>
         </button>
+        <button
+          onClick={() => router.push('/settings/profile')}
+          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+            pathname.startsWith('/settings/profile')
+              ? 'bg-neon/10 text-neon'
+              : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+          }`}
+        >
+          <GraduationCap className="h-4 w-4" />
+          <span className="font-medium">Mes technos</span>
+        </button>
         {canManageTeam && (
           <>
             <button
@@ -644,13 +657,24 @@ export function UnifiedSidebar() {
             <button
               onClick={() => router.push('/settings/team')}
               className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
-                pathname.startsWith('/settings/team')
+                pathname.startsWith('/settings/team') && !pathname.startsWith('/settings/team/skills')
                   ? 'bg-violet/10 text-violet'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
               }`}
             >
               <Users className="h-4 w-4" />
               <span className="font-medium">Équipe</span>
+            </button>
+            <button
+              onClick={() => router.push('/settings/team/skills')}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+                pathname.startsWith('/settings/team/skills')
+                  ? 'bg-violet/10 text-violet'
+                  : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="font-medium">Compétences équipe</span>
             </button>
           </>
         )}

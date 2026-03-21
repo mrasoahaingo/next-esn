@@ -63,6 +63,9 @@ export function MissionJobAnalysis({
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(missionId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.recruiterSkills.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.orgRecruiterSkills.all });
   };
 
   const jobAnalyzeActive = !!job_analysis_workflow_run_id;
@@ -115,7 +118,9 @@ export function MissionJobAnalysis({
         throw new Error(j.error ?? 'Échec');
       }
     },
-    onSuccess: () => invalidate(),
+    onSuccess: () => {
+      invalidate();
+    },
   });
 
   const [explainOpen, setExplainOpen] = useState(false);

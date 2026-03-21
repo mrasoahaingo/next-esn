@@ -15,7 +15,9 @@ import {
   ChevronRight,
   Cpu,
   Pencil,
+  GraduationCap,
 } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +41,7 @@ import {
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useDashboard, useUploadCv } from '@/lib/queries';
 import { useOrgBranding } from '@/components/org-branding-provider';
+import { formatSkillKeyLabel } from '@/lib/utils/skill-key';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -82,6 +85,10 @@ interface Positioning {
 interface DashboardData {
   candidates: Candidate[];
   positionings: Positioning[];
+  recruiter_skills?: {
+    total: number;
+    items: { skill_key: string; understood_at: string }[];
+  };
 }
 
 // ─── Chart configs ─────────────────────────────────────────────────
@@ -169,7 +176,10 @@ export default function Dashboard() {
   const isUploading = uploadCv.isPending;
 
   const data: DashboardData | null = useMemo(
-    () => (isDemoMode ? { candidates: [], positionings: [] } : dashboardData ?? null),
+    () =>
+      isDemoMode
+        ? { candidates: [], positionings: [], recruiter_skills: { total: 0, items: [] } }
+        : (dashboardData as DashboardData | null) ?? null,
     [isDemoMode, dashboardData]
   );
 
@@ -482,6 +492,61 @@ export default function Dashboard() {
             return inner;
           })}
         </div>
+
+        {!isDemoMode && data?.recruiter_skills && (
+          <Card className="mb-6 glass-panel border-0">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neon/15 text-neon">
+                  <GraduationCap className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Mes technos assimilées
+                </CardTitle>
+              </div>
+              <Link
+                href="/settings/profile"
+                className="text-xs font-medium text-violet hover:text-violet/90"
+              >
+                Voir tout
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {data.recruiter_skills.total === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Marquez des technos « comprises » sur les analyses de fiches de poste pour les retrouver ici.
+                </p>
+              ) : (
+                <>
+                  <div className="mb-3 flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-foreground">
+                      {data.recruiter_skills.total}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      technologie{data.recruiter_skills.total > 1 ? 's' : ''} sur votre profil
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {data.recruiter_skills.items.map((s) => (
+                      <Badge key={s.skill_key} variant="secondary" className="text-[10px] font-normal">
+                        {formatSkillKeyLabel(s.skill_key)}
+                      </Badge>
+                    ))}
+                  </div>
+                  {data.recruiter_skills.total > data.recruiter_skills.items.length && (
+                    <p className="mt-2 text-[10px] text-muted-foreground">
+                      + {data.recruiter_skills.total - data.recruiter_skills.items.length} autre
+                      {data.recruiter_skills.total - data.recruiter_skills.items.length > 1 ? 's' : ''} —{' '}
+                      <Link href="/settings/profile" className="text-violet hover:underline">
+                        voir la liste complète
+                      </Link>
+                    </p>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Main grid: charts + matching list */}
         <div className="grid grid-cols-3 gap-4">

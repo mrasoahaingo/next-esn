@@ -17,6 +17,12 @@ export const queryKeys = {
   dashboard: {
     all: ['dashboard'] as const,
   },
+  recruiterSkills: {
+    all: ['recruiterSkills'] as const,
+  },
+  orgRecruiterSkills: {
+    all: ['orgRecruiterSkills'] as const,
+  },
   templates: {
     all: ['templates'] as const,
     list: () => [...queryKeys.templates.all, 'list'] as const,
