@@ -1,8 +1,3 @@
-import { generateObject } from 'ai';
-import { extractionSchema, ExtractedCV } from '@/lib/schema';
-import { model } from '@/lib/ai';
-import mammoth from 'mammoth';
-
 /** Règles communes à toutes les extractions segmentées */
 export const EXTRACTION_SYSTEM_COMMON = `Tu es un expert en recrutement technique pour une ESN française.
 Tu extrais et normalises les données à partir du texte du CV fourni.
@@ -61,52 +56,3 @@ export const TRANSCRIPTION_SYSTEM = `Tu transcris un CV depuis le document PDF e
 Consigne : français, fidélité maximale au contenu, sans inventer d'information.
 Préserve la structure : titres de sections, puces, dates, noms d'entreprises et de formations.
 Ne produis pas de JSON ; uniquement du texte brut ou markdown léger (titres ##).`;
-
-/** Prompt legacy pour generateObject (extractCVData) */
-export const SYSTEM_PROMPT = `${EXTRACTION_SYSTEM_COMMON}
-
-${EXTRACTION_SYSTEM_SKILLS}
-
-Format de sortie : JSON structuré couvrant tout le CV (identité, synthèse, expériences, formations, compétences par catégorie, forces optionnelles).
-
-Pour le résumé (summary), rédige 3-4 phrases. Utilise **double astérisques** autour des compétences clés, technologies et réalisations importantes.
-
-Pour les informations personnelles :
-- yearsOfExperience : calcule à partir des dates des expériences (ex. "8 ans")
-- availability : "Immédiate" par défaut sauf préavis mentionné`;
-
-export { extractionSchema, type ExtractedCV };
-
-export async function extractCVData(
-  fileBuffer: Buffer,
-  isPdf: boolean,
-  jobDescription?: string,
-): Promise<ExtractedCV> {
-  const jobContext = jobDescription
-    ? `\n\nVoici la fiche de poste pour le matching :\n\n${jobDescription}`
-    : '';
-
-  type ContentPart = { type: 'text'; text: string } | { type: 'file'; mediaType: string; data: Buffer };
-  let content: ContentPart[];
-
-  if (isPdf) {
-    content = [
-      { type: 'text', text: `Extrais et structure toutes les informations de ce CV.${jobContext}` },
-      { type: 'file', mediaType: 'application/pdf', data: fileBuffer },
-    ];
-  } else {
-    const { value: cvText } = await mammoth.extractRawText({ buffer: fileBuffer });
-    content = [
-      { type: 'text', text: `Voici le texte extrait du CV :\n\n${cvText}${jobContext}` },
-    ];
-  }
-
-  const { object } = await generateObject({
-    model,
-    schema: extractionSchema,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: 'user', content }],
-  });
-
-  return object as ExtractedCV;
-}

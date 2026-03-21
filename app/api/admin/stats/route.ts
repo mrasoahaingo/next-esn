@@ -29,7 +29,7 @@ export async function GET() {
       .order('created_at', { ascending: false }),
     supabase
       .from('ai_usage_log')
-      .select('id, org_id, model, input_tokens, output_tokens, created_at')
+      .select('id, org_id, ai_model, input_tokens, output_tokens, created_at')
       .order('created_at', { ascending: false }),
     clerk.organizations.getOrganizationList({ limit: 200 }),
   ])
