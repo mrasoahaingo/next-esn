@@ -59,7 +59,13 @@ function getSectionStatus(
   prevKeys: string[],
   streamMeta?: PositioningAnalysisStreamMeta | null,
 ): 'pending' | 'streaming' | 'done' {
-  if (!isAnalyzing) return hasData(analysis, key) ? 'done' : 'pending';
+  if (!isAnalyzing) {
+    if (hasData(analysis, key)) return 'done';
+    // Après sauvegarde / rechargement : [] est un résultat valide (aucune ligne extraite), pas « en attente »
+    const raw = analysis && (analysis as Record<string, unknown>)[key];
+    if (Array.isArray(raw)) return 'done';
+    return 'pending';
+  }
   if (hasData(analysis, key)) return 'done';
 
   if (streamMeta?.activeBranches?.length && branchActiveForSection(key, streamMeta)) {
