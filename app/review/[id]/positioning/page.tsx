@@ -88,8 +88,6 @@ export default function PositioningNewPage() {
     );
   };
 
-  const selectedMission = missions.find((m) => m.id === selectedMissionId);
-
   return (
     <div className="h-full bg-background text-foreground overflow-y-auto">
       <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
@@ -158,121 +156,126 @@ export default function PositioningNewPage() {
             </div>
           ) : (
             <div className="space-y-2">
+              {missions.length > 1 && !selectedMissionId ? (
+                <p className="text-xs text-muted-foreground mb-1">
+                  Sélectionnez une fiche pour afficher le détail et lancer l&apos;analyse.
+                </p>
+              ) : null}
               {missions.map((mission) => {
                 const isSelected = selectedMissionId === mission.id;
                 const previewLines = mission.job_description.split('\n').slice(1, 4).join(' ').trim();
                 const preview = previewLines.length > 140 ? previewLines.slice(0, 137) + '...' : previewLines;
 
                 return (
-                  <Button
+                  <div
                     key={mission.id}
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setSelectedMissionId(isSelected ? null : mission.id)}
-                    className={`group h-auto w-full rounded-xl p-4 text-left font-normal transition-all duration-200 ${
+                    className={`group flex flex-col rounded-xl border transition-all duration-200 ${
                       isSelected
-                        ? 'bg-violet/10 border border-violet/30 violet-ring'
-                        : 'bg-overlay/[0.03] border border-overlay/[0.06] hover:border-violet/20 hover:bg-overlay/[0.05]'
+                        ? 'bg-violet/10 border-violet/30 violet-ring'
+                        : 'bg-overlay/[0.03] border-overlay/[0.06] hover:border-violet/20 hover:bg-overlay/[0.05]'
                     }`}
                   >
-                    <div className="flex items-start gap-3">
-                      {/* Selection indicator */}
-                      <div
-                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
-                          isSelected
-                            ? 'border-violet bg-violet'
-                            : 'border-border group-hover:border-violet/40'
-                        }`}
-                      >
-                        {isSelected && (
-                          <div className="h-2 w-2 rounded-full bg-background" />
-                        )}
-                      </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMissionId(isSelected ? null : mission.id)}
+                      className="flex w-full flex-col items-stretch gap-0 rounded-xl p-4 text-left font-normal whitespace-normal outline-none transition-colors hover:bg-transparent focus-visible:ring-2 focus-visible:ring-ring/50"
+                    >
+                      <div className="flex items-start gap-3">
+                        {/* Selection indicator */}
+                        <div
+                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                            isSelected
+                              ? 'border-violet bg-violet'
+                              : 'border-border group-hover:border-violet/40'
+                          }`}
+                        >
+                          {isSelected && (
+                            <div className="h-2 w-2 rounded-full bg-background" />
+                          )}
+                        </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-sm font-semibold ${isSelected ? 'text-foreground' : 'text-foreground/90'}`}>
-                            {mission.title}
-                          </span>
-                          {mission.company && (
-                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                              <Building2 className="h-3 w-3" />
-                              {mission.company}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-sm font-semibold ${isSelected ? 'text-foreground' : 'text-foreground/90'}`}>
+                              {mission.title}
                             </span>
+                            {mission.company && (
+                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <Building2 className="h-3 w-3" />
+                                {mission.company}
+                              </span>
+                            )}
+                          </div>
+
+                          {preview && (
+                            <p className="text-xs text-muted-foreground/70 line-clamp-2 mb-2">
+                              {preview}
+                            </p>
                           )}
+
+                          <div className="flex items-center gap-3">
+                            {mission.positioning_count > 0 && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                <Users className="mr-1 h-2.5 w-2.5" />
+                                {mission.positioning_count} positionnement{mission.positioning_count > 1 ? 's' : ''}
+                              </Badge>
+                            )}
+                            <span className="text-[10px] text-muted-foreground/50">
+                              {new Date(mission.created_at).toLocaleDateString('fr-FR', {
+                                day: 'numeric',
+                                month: 'short',
+                              })}
+                            </span>
+                          </div>
                         </div>
 
-                        {preview && (
-                          <p className="text-xs text-muted-foreground/70 line-clamp-2 mb-2">
-                            {preview}
-                          </p>
-                        )}
-
-                        <div className="flex items-center gap-3">
-                          {mission.positioning_count > 0 && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                              <Users className="mr-1 h-2.5 w-2.5" />
-                              {mission.positioning_count} positionnement{mission.positioning_count > 1 ? 's' : ''}
-                            </Badge>
-                          )}
-                          <span className="text-[10px] text-muted-foreground/50">
-                            {new Date(mission.created_at).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'short',
-                            })}
-                          </span>
-                        </div>
+                        <ChevronRight
+                          className={`h-4 w-4 shrink-0 mt-1 transition-all ${
+                            isSelected
+                              ? 'text-violet rotate-90'
+                              : 'text-muted-foreground/30 group-hover:text-muted-foreground/60'
+                          }`}
+                        />
                       </div>
+                    </button>
 
-                      <ChevronRight
-                        className={`h-4 w-4 shrink-0 mt-1 transition-all ${
-                          isSelected
-                            ? 'text-violet rotate-90'
-                            : 'text-muted-foreground/30 group-hover:text-muted-foreground/60'
-                        }`}
-                      />
-                    </div>
-
-                    {/* Expanded job description preview */}
+                    {/* Expanded job description + CTA (hors du bouton de sélection) */}
                     {isSelected && (
-                      <div className="mt-3 ml-8 rounded-lg bg-foreground/[0.04] border border-border/60 p-3">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <FileText className="h-3 w-3 text-violet/60" />
-                          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                            Fiche de poste
-                          </span>
+                      <div className="border-t border-border/40 px-4 pb-4 pt-0">
+                        <div className="ml-8 mt-3 rounded-lg bg-foreground/[0.04] border border-border/60 p-3">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <FileText className="h-3 w-3 text-violet/60" />
+                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                              Fiche de poste
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground/80 whitespace-pre-wrap line-clamp-6">
+                            {mission.job_description}
+                          </p>
                         </div>
-                        <p className="text-xs text-muted-foreground/80 whitespace-pre-wrap line-clamp-6">
-                          {mission.job_description}
-                        </p>
+                        <div className="ml-8 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-[11px] text-muted-foreground">
+                            Mission sélectionnée — lancez l&apos;analyse de matching sur cette fiche.
+                          </p>
+                          <Button
+                            type="button"
+                            className="w-full shrink-0 bg-violet hover:bg-violet/90 sm:w-auto"
+                            onClick={handleStartPositioning}
+                            disabled={isCreating}
+                          >
+                            {isCreating ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Search className="mr-2 h-4 w-4" />
+                            )}
+                            Analyser le matching
+                          </Button>
+                        </div>
                       </div>
                     )}
-                  </Button>
+                  </div>
                 );
               })}
-            </div>
-          )}
-
-          {/* Action bar */}
-          {missions.length > 0 && (
-            <div className="mt-6 flex items-center justify-between border-t border-overlay/[0.06] pt-5">
-              <p className="text-xs text-muted-foreground">
-                {selectedMission
-                  ? <>Mission sélectionnée : <span className="text-foreground font-medium">{selectedMission.title}</span></>
-                  : 'Sélectionnez une mission pour continuer'
-                }
-              </p>
-              <Button
-                onClick={handleStartPositioning}
-                disabled={!selectedMissionId || isCreating}
-              >
-                {isCreating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="mr-2 h-4 w-4" />
-                )}
-                Analyser le matching
-              </Button>
             </div>
           )}
         </div>
