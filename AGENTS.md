@@ -93,3 +93,11 @@ Always prefer shadcn/ui components (`components/ui/`) over custom HTML elements.
 ### Custom Tailwind Theme
 
 Defined in `tailwind.config.ts` — dark-first palette with custom colors: `shell`, `panel`, `neon` (accent green), `violet` (accent purple). Glass-panel and neon-ring utility classes defined in `globals.css`.
+
+### Implemented features
+
+See the ./docs/FEATURES.md file
+
+### Auth
+
+See the ./docs/AUTH.md file
