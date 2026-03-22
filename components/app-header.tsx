@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
+import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 import { ChevronRight, Menu, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useMobileNav } from '@/components/mobile-nav-context';
 import { cn } from '@/lib/utils';
 
@@ -135,6 +137,34 @@ export function AppHeader() {
           })}
         </ol>
       </nav>
+
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <OrganizationSwitcher
+          hidePersonal
+          afterSelectOrganizationUrl="/"
+          afterCreateOrganizationUrl="/"
+          appearance={{
+            elements: {
+              rootBox: 'flex shrink-0',
+              organizationSwitcherTrigger: cn(
+                'rounded-lg border border-border bg-background/60 px-2 py-1.5 text-xs text-foreground',
+                'shadow-none hover:bg-muted/80 hover:text-foreground',
+                'max-w-[9rem] sm:max-w-[11rem] md:max-w-[14rem]'
+              ),
+              organizationSwitcherPopoverCard: 'bg-popover text-popover-foreground border border-border shadow-lg',
+            },
+          }}
+        />
+        <ThemeToggle />
+        <UserButton
+          afterSwitchSessionUrl="/"
+          appearance={{
+            elements: {
+              avatarBox: 'h-8 w-8',
+            },
+          }}
+        />
+      </div>
     </header>
   );
 }

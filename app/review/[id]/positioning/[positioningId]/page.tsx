@@ -745,7 +745,7 @@ export default function PositioningWizardPage() {
                             a.download = 'ESNEO_CV_positioning.pdf';
                             a.click();
                           }}
-                          className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                          className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
                         >
                           <Download className="mr-1.5 h-3.5 w-3.5" />
                           Télécharger
@@ -813,7 +813,7 @@ export default function PositioningWizardPage() {
                   a.click();
                 }}
                 disabled={!pdfBlobUrl}
-                className="border-accent/30 text-accent-foreground hover:bg-accent/10"
+                className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
               >
                 <Download className="mr-1.5 h-3.5 w-3.5" />
                 Télécharger

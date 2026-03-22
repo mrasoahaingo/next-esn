@@ -33,13 +33,13 @@ function SkillBadge({ skill }: { skill: Skill }) {
       className={`gap-1 cursor-pointer transition-all ${
         isAdded
           ? isInferred
-            ? 'border-accent/30 bg-accent/10 text-accent'
-            : 'border-accent/30 bg-accent/15 text-accent-foreground'
+            ? 'border-accent/40 bg-muted text-accent dark:border-accent/30 dark:bg-accent/15 dark:text-accent-foreground'
+            : 'border-accent/40 bg-muted text-foreground dark:border-accent/30 dark:bg-accent/15 dark:text-accent-foreground'
           : 'border-overlay/10 bg-overlay/[0.06] text-muted-foreground opacity-60'
       }`}
     >
       {skill.starred && (
-        <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+        <Star className="w-3 h-3 shrink-0 fill-amber-600 text-amber-600 dark:fill-amber-400 dark:text-amber-400" />
       )}
       {isInferred && <Sparkles className="w-3 h-3 shrink-0" />}
       {skill.name}

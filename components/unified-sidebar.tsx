@@ -5,7 +5,7 @@ import { useMobileNav } from '@/components/mobile-nav-context';
 import { cn } from '@/lib/utils';
 import { useCandidates, usePositionings, useMissions, useUploadCv, useCancelWorkflow, useCreateMission } from '@/lib/queries';
 import { useRouter, useParams, usePathname } from 'next/navigation';
-import { useAuth, UserButton, OrganizationSwitcher } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import Image from 'next/image';
+import { EsneoFullLogo } from '@/components/esneo-full-logo';
 import { Switch } from '@/components/ui/switch';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
@@ -260,7 +260,7 @@ export function UnifiedSidebar() {
       {/* Header */}
       <Link
         href="/"
-        className="flex items-center px-4 py-3.5 transition-opacity hover:opacity-90"
+        className="flex items-center px-4 py-10 transition-opacity hover:opacity-90"
       >
         {appLogoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- URL dynamique (Supabase public)
@@ -270,14 +270,9 @@ export function UnifiedSidebar() {
             className="max-h-8 max-w-[200px] object-contain object-left"
           />
         ) : (
-          <Image
-            src="/esneo-full.svg"
-            alt={displayName}
-            width={120}
-            height={30}
-            className="max-w-full object-contain object-left"
-            priority
-            unoptimized
+          <EsneoFullLogo
+            className="max-h-8 w-30 max-w-full object-contain object-left"
+            title={displayName}
           />
         )}
       </Link>
@@ -716,31 +711,6 @@ export function UnifiedSidebar() {
             <span className="font-medium">Administration</span>
           </button>
         )}
-      </div>
-
-      {/* User & Organization */}
-      <Separator />
-      <div className="flex items-center justify-between px-3 py-3">
-        <OrganizationSwitcher
-          hidePersonal
-          afterSelectOrganizationUrl="/"
-          afterCreateOrganizationUrl="/"
-          appearance={{
-            elements: {
-              rootBox: 'flex-1 min-w-0',
-              organizationSwitcherTrigger:
-                'w-full justify-between rounded-lg px-2.5 py-2 text-xs text-muted-foreground hover:bg-card/60 hover:text-foreground border-0',
-            },
-          }}
-        />
-        <UserButton
-          afterSwitchSessionUrl="/"
-          appearance={{
-            elements: {
-              avatarBox: 'h-7 w-7',
-            },
-          }}
-        />
       </div>
 
       {/* New mission dialog */}
