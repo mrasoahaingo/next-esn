@@ -20,7 +20,7 @@ export function TailoredCvForm({ data, onUpdateField, readOnly }: TailoredCvForm
   const safeEducation = (data.education ?? []).filter(Boolean);
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <PersonalInfo
           data={data.personalInfo}

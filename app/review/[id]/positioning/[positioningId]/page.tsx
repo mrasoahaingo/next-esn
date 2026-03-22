@@ -674,11 +674,11 @@ export default function PositioningWizardPage() {
                 {/* Tabs: Résultats | Questions — once analysis complete */}
                 {analysisComplete && (
                   <Tabs defaultValue="results" className="flex flex-col min-h-0 flex-1">
-                    <TabsList className="w-full shrink-0 bg-muted/40 border border-border rounded-xl p-1">
-                      <TabsTrigger value="results" className="flex-1 text-xs data-[state=active]:bg-overlay/10 data-[state=active]:text-foreground rounded-lg">
+                    <TabsList variant="segmented" className="w-full shrink-0 grid grid-cols-2">
+                      <TabsTrigger value="results" className="text-xs">
                         Résultats
                       </TabsTrigger>
-                      <TabsTrigger value="questions" className="flex-1 text-xs data-[state=active]:bg-overlay/10 data-[state=active]:text-foreground rounded-lg">
+                      <TabsTrigger value="questions" className="text-xs">
                         Questions & Affinage
                       </TabsTrigger>
                     </TabsList>

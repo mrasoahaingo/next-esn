@@ -13,9 +13,17 @@ import {
   type LlmTaskRow,
 } from '@/lib/queries'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -31,10 +39,12 @@ import { TASK_KEY } from '@/lib/llm/task-keys'
 
 const TASK_KEY_OPTIONS = Object.values(TASK_KEY)
 
+const MODEL_SELECT_NONE = '__none__'
+
 export function LlmSettingsTabs() {
   return (
     <Tabs defaultValue="models" className="w-full">
-      <TabsList className="mb-4 grid w-full max-w-lg grid-cols-3">
+      <TabsList variant="segmented" className="mb-4 grid w-full max-w-lg grid-cols-3">
         <TabsTrigger value="models">Modèles</TabsTrigger>
         <TabsTrigger value="tasks">Tâches</TabsTrigger>
         <TabsTrigger value="overrides">Surcharges org</TabsTrigger>
@@ -76,47 +86,44 @@ function ModelsPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="rounded-xl glass-panel p-4">
         <h3 className="mb-3 text-sm font-medium text-foreground">Ajouter un modèle</h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="gw">ID gateway</Label>
+          <Field>
+            <FieldLabel htmlFor="gw">ID gateway</FieldLabel>
             <Input
               id="gw"
-              className="mt-1 font-mono text-xs"
+              className="font-mono text-xs"
               value={form.gatewayModelId}
               onChange={(e) => setForm((f) => ({ ...f, gatewayModelId: e.target.value }))}
               placeholder="google/gemini-2.5-flash"
             />
-          </div>
-          <div>
-            <Label htmlFor="dn">Nom affiché</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="dn">Nom affiché</FieldLabel>
             <Input
               id="dn"
-              className="mt-1"
               value={form.displayName}
               onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
             />
-          </div>
-          <div>
-            <Label htmlFor="in">USD / 1M entrée</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="in">USD / 1M entrée</FieldLabel>
             <Input
               id="in"
-              className="mt-1"
               value={form.inputUsdPer1m}
               onChange={(e) => setForm((f) => ({ ...f, inputUsdPer1m: e.target.value }))}
             />
-          </div>
-          <div>
-            <Label htmlFor="out">USD / 1M sortie</Label>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="out">USD / 1M sortie</FieldLabel>
             <Input
               id="out"
-              className="mt-1"
               value={form.outputUsdPer1m}
               onChange={(e) => setForm((f) => ({ ...f, outputUsdPer1m: e.target.value }))}
             />
-          </div>
+          </Field>
         </div>
         <Button
           className="mt-3"
@@ -238,20 +245,32 @@ function EditModelDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-panel p-4 shadow-xl">
         <h3 className="mb-3 text-sm font-medium">Modifier le modèle</h3>
-        <div className="space-y-2">
-          <Label>Gateway ID</Label>
-          <Input className="font-mono text-xs" value={gatewayModelId} onChange={(e) => setGw(e.target.value)} />
-          <Label>Nom</Label>
-          <Input value={displayName} onChange={(e) => setDn(e.target.value)} />
-          <Label>USD / 1M entrée</Label>
-          <Input value={inP} onChange={(e) => setIn(e.target.value)} />
-          <Label>USD / 1M sortie</Label>
-          <Input value={outP} onChange={(e) => setOut(e.target.value)} />
-          <Label>USD / 1M cache read (optionnel)</Label>
-          <Input value={cacheP} onChange={(e) => setCache(e.target.value)} />
-          <Label>Notes</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-        </div>
+        <FieldGroup className="gap-2">
+          <Field>
+            <FieldLabel htmlFor="edit-gw">Gateway ID</FieldLabel>
+            <Input id="edit-gw" className="font-mono text-xs" value={gatewayModelId} onChange={(e) => setGw(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-dn">Nom</FieldLabel>
+            <Input id="edit-dn" value={displayName} onChange={(e) => setDn(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-in">USD / 1M entrée</FieldLabel>
+            <Input id="edit-in" value={inP} onChange={(e) => setIn(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-out">USD / 1M sortie</FieldLabel>
+            <Input id="edit-out" value={outP} onChange={(e) => setOut(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-cache">USD / 1M cache read (optionnel)</FieldLabel>
+            <Input id="edit-cache" value={cacheP} onChange={(e) => setCache(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-notes">Notes</FieldLabel>
+            <Textarea id="edit-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          </Field>
+        </FieldGroup>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
             Annuler
@@ -310,54 +329,80 @@ function TasksPanel() {
   const defaultModelId = models?.[0]?.id ?? ''
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="rounded-xl glass-panel p-4">
         <h3 className="mb-3 text-sm font-medium">Nouvelle tâche (clé unique)</h3>
-        <div className="space-y-2">
-          <Label>task_key</Label>
-          <select
-            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-            value={form.taskKey}
-            onChange={(e) => setForm((f) => ({ ...f, taskKey: e.target.value }))}
-          >
-            {TASK_KEY_OPTIONS.map((k) => (
-              <option key={k} value={k}>
-                {k}
-              </option>
-            ))}
-          </select>
-          <Label>Libellé</Label>
-          <Input value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} />
-          <Label>Modèle</Label>
-          <select
-            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-            value={form.modelId || defaultModelId}
-            onChange={(e) => setForm((f) => ({ ...f, modelId: e.target.value }))}
-          >
-            {(models ?? []).map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.display_name} ({m.gateway_model_id})
-              </option>
-            ))}
-          </select>
-          <Label>Prompt système (ex. {'{{displayName}}'}, {'{{brandContextBlock}}'})</Label>
-          <Textarea
-            rows={8}
-            className="font-mono text-xs"
-            value={form.systemPromptTemplate}
-            onChange={(e) => setForm((f) => ({ ...f, systemPromptTemplate: e.target.value }))}
-          />
-          <label className="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
+        <FieldGroup className="gap-2">
+          <Field>
+            <FieldLabel htmlFor="new-task-key">task_key</FieldLabel>
+            <Select
+              value={form.taskKey}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, taskKey: v != null ? v : f.taskKey }))
+              }
+            >
+              <SelectTrigger id="new-task-key" className="h-9 w-full text-xs font-mono">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_KEY_OPTIONS.map((k) => (
+                  <SelectItem key={k} value={k} className="font-mono text-xs">
+                    {k}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="new-task-label">Libellé</FieldLabel>
+            <Input id="new-task-label" value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="new-task-model">Modèle</FieldLabel>
+            <Select
+              value={form.modelId || defaultModelId}
+              onValueChange={(v) =>
+                setForm((f) => ({ ...f, modelId: v != null ? v : f.modelId }))
+              }
+            >
+              <SelectTrigger id="new-task-model" className="h-9 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(models ?? []).map((m) => (
+                  <SelectItem key={m.id} value={m.id} className="text-xs">
+                    {m.display_name} ({m.gateway_model_id})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="new-task-prompt">Prompt système (ex. {'{{displayName}}'}, {'{{brandContextBlock}}'})</FieldLabel>
+            <Textarea
+              id="new-task-prompt"
+              rows={8}
+              className="font-mono text-xs"
+              value={form.systemPromptTemplate}
+              onChange={(e) => setForm((f) => ({ ...f, systemPromptTemplate: e.target.value }))}
+            />
+          </Field>
+          <Field orientation="horizontal" className="items-center gap-2">
+            <Checkbox
+              id="new-task-json-middleware"
               checked={form.useExtractJsonMiddleware}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, useExtractJsonMiddleware: e.target.checked }))
+              onCheckedChange={(v) =>
+                setForm((f) => ({ ...f, useExtractJsonMiddleware: v === true }))
               }
             />
-            Middleware extract JSON (streamText + Output.object)
-          </label>
-        </div>
+            <FieldLabel
+              htmlFor="new-task-json-middleware"
+              className="cursor-pointer text-xs font-normal"
+            >
+              Middleware extract JSON (streamText + Output.object)
+            </FieldLabel>
+          </Field>
+        </FieldGroup>
         <Button
           className="mt-3"
           size="sm"
@@ -476,28 +521,41 @@ function EditTaskDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-panel p-4 shadow-xl">
         <h3 className="mb-3 font-mono text-xs text-muted-foreground">{task.task_key}</h3>
-        <div className="space-y-2">
-          <Label>Libellé</Label>
-          <Input value={label} onChange={(e) => setLabel(e.target.value)} />
-          <Label>Modèle</Label>
-          <select
-            className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-            value={modelId}
-            onChange={(e) => setModelId(e.target.value)}
-          >
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.display_name}
-              </option>
-            ))}
-          </select>
-          <Label>Prompt</Label>
-          <Textarea className="font-mono text-xs" rows={14} value={tpl} onChange={(e) => setTpl(e.target.value)} />
-          <label className="flex items-center gap-2 text-xs">
-            <input type="checkbox" checked={useJ} onChange={(e) => setUseJ(e.target.checked)} />
-            Middleware extract JSON
-          </label>
-        </div>
+        <FieldGroup className="gap-2">
+          <Field>
+            <FieldLabel htmlFor="edit-task-label">Libellé</FieldLabel>
+            <Input id="edit-task-label" value={label} onChange={(e) => setLabel(e.target.value)} />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-task-model">Modèle</FieldLabel>
+            <Select value={modelId} onValueChange={(v) => setModelId(v ?? '')}>
+              <SelectTrigger id="edit-task-model" className="h-9 w-full text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((m) => (
+                  <SelectItem key={m.id} value={m.id} className="text-xs">
+                    {m.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="edit-task-prompt">Prompt</FieldLabel>
+            <Textarea id="edit-task-prompt" className="font-mono text-xs" rows={14} value={tpl} onChange={(e) => setTpl(e.target.value)} />
+          </Field>
+          <Field orientation="horizontal" className="items-center gap-2">
+            <Checkbox
+              id="edit-task-json-middleware"
+              checked={useJ}
+              onCheckedChange={(v) => setUseJ(v === true)}
+            />
+            <FieldLabel htmlFor="edit-task-json-middleware" className="cursor-pointer text-xs font-normal">
+              Middleware extract JSON
+            </FieldLabel>
+          </Field>
+        </FieldGroup>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
             Annuler
@@ -540,17 +598,18 @@ function OverridesPanel() {
   })
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[200px] flex-1">
-          <Label>org_id (Clerk)</Label>
+        <Field className="min-w-[200px] flex-1">
+          <FieldLabel htmlFor="override-org-id">org_id (Clerk)</FieldLabel>
           <Input
-            className="mt-1 font-mono text-xs"
+            id="override-org-id"
+            className="font-mono text-xs"
             value={orgId}
             onChange={(e) => setOrgId(e.target.value)}
             placeholder="org_..."
           />
-        </div>
+        </Field>
         <Button
           size="sm"
           variant="secondary"
@@ -568,39 +627,67 @@ function OverridesPanel() {
       {orgId.trim() ? (
         <div className="rounded-xl glass-panel p-4">
           <h4 className="mb-2 text-xs font-medium text-muted-foreground">Ajouter / remplacer une surcharge</h4>
-          <div className="space-y-2">
-            <select
-              className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-              value={form.taskKey}
-              onChange={(e) => setForm((f) => ({ ...f, taskKey: e.target.value }))}
-            >
-              {TASK_KEY_OPTIONS.map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-            <Label>Modèle (vide = défaut global)</Label>
-            <select
-              className="flex h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-              value={form.modelId}
-              onChange={(e) => setForm((f) => ({ ...f, modelId: e.target.value }))}
-            >
-              <option value="">—</option>
-              {(models ?? []).map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.gateway_model_id}
-                </option>
-              ))}
-            </select>
-            <Label>Prompt (vide = défaut global)</Label>
-            <Textarea
-              rows={6}
-              className="font-mono text-xs"
-              value={form.systemPromptTemplate}
-              onChange={(e) => setForm((f) => ({ ...f, systemPromptTemplate: e.target.value }))}
-            />
-          </div>
+          <FieldGroup className="gap-2">
+            <Field>
+              <FieldLabel htmlFor="override-task-key" className="sr-only">
+                task_key
+              </FieldLabel>
+              <Select
+                value={form.taskKey}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, taskKey: v != null ? v : f.taskKey }))
+                }
+              >
+                <SelectTrigger id="override-task-key" className="h-9 w-full font-mono text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TASK_KEY_OPTIONS.map((k) => (
+                    <SelectItem key={k} value={k} className="font-mono text-xs">
+                      {k}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="override-model">Modèle (vide = défaut global)</FieldLabel>
+              <Select
+                value={form.modelId ? form.modelId : MODEL_SELECT_NONE}
+                onValueChange={(v) =>
+                  setForm((f) => ({
+                    ...f,
+                    modelId:
+                      v == null || v === MODEL_SELECT_NONE ? '' : v,
+                  }))
+                }
+              >
+                <SelectTrigger id="override-model" className="h-9 w-full font-mono text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={MODEL_SELECT_NONE} className="text-xs">
+                    —
+                  </SelectItem>
+                  {(models ?? []).map((m) => (
+                    <SelectItem key={m.id} value={m.id} className="font-mono text-xs">
+                      {m.gateway_model_id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="override-prompt">Prompt (vide = défaut global)</FieldLabel>
+              <Textarea
+                id="override-prompt"
+                rows={6}
+                className="font-mono text-xs"
+                value={form.systemPromptTemplate}
+                onChange={(e) => setForm((f) => ({ ...f, systemPromptTemplate: e.target.value }))}
+              />
+            </Field>
+          </FieldGroup>
           <Button
             className="mt-3"
             size="sm"

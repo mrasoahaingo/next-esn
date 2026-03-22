@@ -1,6 +1,7 @@
 
 import { memo } from 'react';
 import { Textarea } from '@/components/ui/textarea';
+import { Field, FieldLabel } from '@/components/ui/field';
 
 interface SummaryProps {
   data: string | undefined;
@@ -19,12 +20,18 @@ export const Summary = memo(function Summary({ data, onChange, readOnly }: Summa
           {data}
         </p>
       ) : (
-        <Textarea
-          value={data ?? ''}
-          onChange={(e) => onChange(e.target.value)}
-          className="min-h-[150px]"
-          placeholder="Enter professional summary..."
-        />
+        <Field>
+          <FieldLabel htmlFor="cv-summary" className="sr-only">
+            Professional summary
+          </FieldLabel>
+          <Textarea
+            id="cv-summary"
+            value={data ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            className="min-h-[150px]"
+            placeholder="Enter professional summary..."
+          />
+        </Field>
       )}
     </section>
   );

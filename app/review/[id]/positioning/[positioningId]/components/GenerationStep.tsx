@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Sparkles, RefreshCw, Mail, UserCheck, List } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { TailoredCvForm } from './TailoredCvForm';
@@ -58,7 +59,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
   const activeBranches = streamMeta?.activeBranches ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Generate / Re-generate button */}
       {!isStreaming && (
         <div className="flex justify-center">
@@ -107,7 +108,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
                 Cinq blocs sont produits en parallèle : CV retravaillé et quatre variantes d&apos;emails (les onglets se rempliront au fil du stream).
               </p>
             </div>
-            <ul className="w-full max-w-md space-y-2 mt-2 text-left">
+            <ul className="mt-2 flex w-full max-w-md flex-col gap-2 text-left">
               {GENERATION_BRANCH_ORDER.map((branch) => {
                 const busy = activeBranches.includes(branch);
                 return (
@@ -137,7 +138,7 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
       {(tailoredCv || email || emailFirstContact || emailBulletPoints || candidateEmail) && (
         <>
           {isStreaming && (
-            <div className="space-y-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20">
+            <div className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20">
               <div className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" />
@@ -154,102 +155,91 @@ export function GenerationStep({ isStreaming, streamMeta, onGenerate }: Generati
             </div>
           )}
 
-          <div className="flex gap-2">
-            <button
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant={activeTab === 'email' ? 'secondary' : 'outline'}
               onClick={() => setActiveTab('email')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={
                 activeTab === 'email'
-                  ? 'bg-violet/15 text-violet border border-violet/30'
-                  : 'bg-overlay/[0.04] text-muted-foreground border border-border hover:bg-overlay/[0.08]'
-              }`}
+                  ? 'border-violet/30 bg-violet/15 text-violet'
+                  : 'border-border bg-overlay/[0.04] text-muted-foreground hover:bg-overlay/[0.08]'
+              }
             >
               Email client
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant={activeTab === 'candidateEmail' ? 'secondary' : 'outline'}
               onClick={() => setActiveTab('candidateEmail')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={
                 activeTab === 'candidateEmail'
-                  ? 'bg-neon/15 text-neon border border-neon/30'
-                  : 'bg-overlay/[0.04] text-muted-foreground border border-border hover:bg-overlay/[0.08]'
-              }`}
+                  ? 'border-neon/30 bg-neon/15 text-neon'
+                  : 'border-border bg-overlay/[0.04] text-muted-foreground hover:bg-overlay/[0.08]'
+              }
             >
               Email candidat
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant={activeTab === 'cv' ? 'secondary' : 'outline'}
               onClick={() => setActiveTab('cv')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={
                 activeTab === 'cv'
-                  ? 'bg-violet/15 text-violet border border-violet/30'
-                  : 'bg-overlay/[0.04] text-muted-foreground border border-border hover:bg-overlay/[0.08]'
-              }`}
+                  ? 'border-violet/30 bg-violet/15 text-violet'
+                  : 'border-border bg-overlay/[0.04] text-muted-foreground hover:bg-overlay/[0.08]'
+              }
             >
               CV retravaillé
-            </button>
+            </Button>
           </div>
 
           {activeTab === 'email' && (
-            <div className="space-y-3">
-              {/* Email variant sub-tabs */}
-              <div className="flex gap-1.5 p-1 rounded-xl bg-overlay/[0.04] border border-overlay/10">
-                <button
-                  onClick={() => setActiveEmailVariant('full')}
-                  className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    activeEmailVariant === 'full'
-                      ? 'bg-violet/20 text-violet border border-violet/30'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-overlay/[0.06]'
-                  }`}
-                >
-                  <Mail className="h-3 w-3" />
-                  Complet
-                </button>
-                <button
-                  onClick={() => setActiveEmailVariant('firstContact')}
-                  className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    activeEmailVariant === 'firstContact'
-                      ? 'bg-violet/20 text-violet border border-violet/30'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-overlay/[0.06]'
-                  }`}
-                >
-                  <UserCheck className="h-3 w-3" />
-                  Première contact
-                </button>
-                <button
-                  onClick={() => setActiveEmailVariant('bulletPoints')}
-                  className={`flex items-center gap-1.5 flex-1 justify-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    activeEmailVariant === 'bulletPoints'
-                      ? 'bg-violet/20 text-violet border border-violet/30'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-overlay/[0.06]'
-                  }`}
-                >
-                  <List className="h-3 w-3" />
-                  Bullet points
-                </button>
-              </div>
-
-              {activeEmailVariant === 'full' && (
-                <EmailEditor
-                  email={email}
-                  onChange={setEmail}
-                  readOnly={isStreaming}
-                  title="Email complet de positionnement"
-                />
-              )}
-              {activeEmailVariant === 'firstContact' && (
-                <EmailEditor
-                  email={emailFirstContact}
-                  onChange={setEmailFirstContact}
-                  readOnly={isStreaming}
-                  title="Email de première prise de contact"
-                />
-              )}
-              {activeEmailVariant === 'bulletPoints' && (
-                <EmailEditor
-                  email={emailBulletPoints}
-                  onChange={setEmailBulletPoints}
-                  readOnly={isStreaming}
-                  title="Email en bullet points"
-                />
-              )}
+            <div className="flex flex-col gap-3">
+              <Tabs
+                value={activeEmailVariant}
+                onValueChange={(v) => setActiveEmailVariant(v as EmailVariant)}
+                className="flex flex-col gap-3"
+              >
+                <TabsList variant="segmented" className="grid w-full grid-cols-3">
+                  <TabsTrigger value="full">
+                    <Mail className="h-3 w-3" />
+                    Complet
+                  </TabsTrigger>
+                  <TabsTrigger value="firstContact">
+                    <UserCheck className="h-3 w-3" />
+                    Premier contact
+                  </TabsTrigger>
+                  <TabsTrigger value="bulletPoints">
+                    <List className="h-3 w-3" />
+                    Bullet points
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="full" className="mt-0 focus-visible:outline-none">
+                  <EmailEditor
+                    email={email}
+                    onChange={setEmail}
+                    readOnly={isStreaming}
+                    title="Email complet de positionnement"
+                  />
+                </TabsContent>
+                <TabsContent value="firstContact" className="mt-0 focus-visible:outline-none">
+                  <EmailEditor
+                    email={emailFirstContact}
+                    onChange={setEmailFirstContact}
+                    readOnly={isStreaming}
+                    title="Email de première prise de contact"
+                  />
+                </TabsContent>
+                <TabsContent value="bulletPoints" className="mt-0 focus-visible:outline-none">
+                  <EmailEditor
+                    email={emailBulletPoints}
+                    onChange={setEmailBulletPoints}
+                    readOnly={isStreaming}
+                    title="Email en bullet points"
+                  />
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 

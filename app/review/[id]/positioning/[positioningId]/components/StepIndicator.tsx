@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface StepIndicatorProps {
   currentStep: 1 | 2;
@@ -26,15 +27,17 @@ export function StepIndicator({ currentStep, onStepClick, canGoToStep }: StepInd
             {i > 0 && (
               <div className={`h-px w-8 ${canClick || isActive ? 'bg-neon/50' : 'bg-border'}`} />
             )}
-            <button
+            <Button
+              type="button"
+              variant="ghost"
               onClick={() => canClick && onStepClick(step.num)}
               disabled={!canClick}
-              className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`h-auto gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
                 isActive
-                  ? 'bg-neon/15 text-neon border border-neon/30'
+                  ? 'border border-neon/30 bg-neon/15 text-neon'
                   : isDone
-                    ? 'bg-neon/10 text-neon/70 border border-neon/20 cursor-pointer hover:bg-overlay/10'
-                    : 'bg-overlay/[0.04] text-muted-foreground border border-border cursor-not-allowed'
+                    ? 'cursor-pointer border border-neon/20 bg-neon/10 text-neon/70 hover:bg-overlay/10'
+                    : 'cursor-not-allowed border border-border bg-overlay/[0.04] text-muted-foreground'
               }`}
             >
               {isDone ? (
@@ -45,7 +48,7 @@ export function StepIndicator({ currentStep, onStepClick, canGoToStep }: StepInd
                 </span>
               )}
               {step.label}
-            </button>
+            </Button>
           </div>
         );
       })}

@@ -1,6 +1,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -41,21 +42,29 @@ export function Strengths({ data, onChange, readOnly }: StrengthsProps) {
       </h2>
 
       {!readOnly && (
-        <div className="flex gap-2 mb-4">
-          <Input
-            type="text"
-            placeholder="Add a strength..."
-            value={newStrength}
-            onChange={(e) => setNewStrength(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <Button size="default" onClick={handleAdd}>
-            <Plus className="w-5 h-5" />
-          </Button>
-        </div>
+        <FieldGroup className="mb-4 gap-3">
+          <Field orientation="horizontal" className="flex-row items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <FieldLabel htmlFor="new-strength" className="sr-only">
+                Add a strength
+              </FieldLabel>
+              <Input
+                id="new-strength"
+                type="text"
+                placeholder="Add a strength..."
+                value={newStrength}
+                onChange={(e) => setNewStrength(e.target.value)}
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+            <Button type="button" size="default" onClick={handleAdd} aria-label="Add strength">
+              <Plus data-icon="inline-start" />
+            </Button>
+          </Field>
+        </FieldGroup>
       )}
 
-      <ul className="space-y-2">
+      <ul className="flex flex-col gap-2">
         {normalizedData.map((strength, i) => (
           <li key={i} className="flex items-start justify-between text-sm text-foreground group">
             <div className="flex items-start">
@@ -64,12 +73,14 @@ export function Strengths({ data, onChange, readOnly }: StrengthsProps) {
             </div>
             {!readOnly && (
               <Button
+                type="button"
                 variant="ghost"
                 size="icon-xs"
                 onClick={() => handleRemove(i)}
                 className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Remove strength"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 />
               </Button>
             )}
           </li>

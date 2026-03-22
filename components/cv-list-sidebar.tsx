@@ -2,6 +2,8 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Loader2,
   FileText,
@@ -83,7 +85,7 @@ export function CvListSidebar() {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-foreground">CVs</h2>
         <label className="relative cursor-pointer">
-          <input
+          <Input
             type="file"
             onChange={handleFileChange}
             className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -115,7 +117,7 @@ export function CvListSidebar() {
             <p className="text-xs">Aucun CV</p>
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div className="flex flex-col gap-0.5">
             {candidates.map((c) => {
               const name = getCandidateName(c);
               const title = getCandidateTitle(c);
@@ -123,10 +125,12 @@ export function CvListSidebar() {
               const isActive = c.id === activeId;
 
               return (
-                <button
+                <Button
                   key={c.id}
+                  type="button"
+                  variant="ghost"
                   onClick={() => router.push(`/review/${c.id}`)}
-                  className={`group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                  className={`group h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left font-normal transition ${
                     isActive
                       ? 'bg-accent/10 text-foreground'
                       : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -153,7 +157,7 @@ export function CvListSidebar() {
                       </p>
                     )}
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>

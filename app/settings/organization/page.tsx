@@ -8,8 +8,13 @@ import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 import { useOrgBranding } from '@/components/org-branding-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field';
 import { Building2, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -108,6 +113,10 @@ export default function OrganizationSettingsPage() {
     }
   }
 
+  const contactEmailInvalid =
+    form.contact_email.trim().length > 0 &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contact_email.trim());
+
   async function handleLogoFile(file: File | null) {
     if (!file) return;
     setUploadingLogo(true);
@@ -135,7 +144,7 @@ export default function OrganizationSettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl space-y-8 px-6 py-8">
+      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-8">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet/15 text-violet">
             <Building2 className="h-5 w-5" />
@@ -154,57 +163,63 @@ export default function OrganizationSettingsPage() {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <form onSubmit={handleSave} className="space-y-8">
-            <div className="rounded-xl glass-panel space-y-4 p-5">
+          <form onSubmit={handleSave} className="flex flex-col gap-8">
+            <div className="rounded-xl glass-panel flex flex-col gap-4 p-5">
               <h2 className="text-sm font-semibold text-foreground">Identité</h2>
-              <div className="space-y-1.5">
-                <Label htmlFor="display_name" className="text-xs text-muted-foreground">
-                  Nom affiché dans l&apos;application
-                </Label>
-                <Input
-                  id="display_name"
-                  value={form.display_name}
-                  onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))}
-                  placeholder="Laissez vide pour utiliser le nom Clerk"
-                  className="h-9 text-sm"
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="contact_email" className="text-xs text-muted-foreground">
-                    Email de contact
-                  </Label>
+              <FieldGroup className="gap-4">
+                <Field>
+                  <FieldLabel htmlFor="display_name" className="text-xs text-muted-foreground">
+                    Nom affiché dans l&apos;application
+                  </FieldLabel>
                   <Input
-                    id="contact_email"
-                    type="email"
-                    value={form.contact_email}
-                    onChange={(e) => setForm((p) => ({ ...p, contact_email: e.target.value }))}
-                    placeholder="contact@entreprise.fr"
+                    id="display_name"
+                    value={form.display_name}
+                    onChange={(e) => setForm((p) => ({ ...p, display_name: e.target.value }))}
+                    placeholder="Laissez vide pour utiliser le nom Clerk"
                     className="h-9 text-sm"
                   />
+                </Field>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field data-invalid={contactEmailInvalid ? true : undefined}>
+                    <FieldLabel htmlFor="contact_email" className="text-xs text-muted-foreground">
+                      Email de contact
+                    </FieldLabel>
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={form.contact_email}
+                      onChange={(e) => setForm((p) => ({ ...p, contact_email: e.target.value }))}
+                      placeholder="contact@entreprise.fr"
+                      className="h-9 text-sm"
+                      aria-invalid={contactEmailInvalid}
+                    />
+                    {contactEmailInvalid && (
+                      <FieldError>Format d&apos;email invalide</FieldError>
+                    )}
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="website_url" className="text-xs text-muted-foreground">
+                      Site web
+                    </FieldLabel>
+                    <Input
+                      id="website_url"
+                      type="url"
+                      value={form.website_url}
+                      onChange={(e) => setForm((p) => ({ ...p, website_url: e.target.value }))}
+                      placeholder="https://www.entreprise.fr"
+                      className="h-9 text-sm"
+                    />
+                  </Field>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="website_url" className="text-xs text-muted-foreground">
-                    Site web
-                  </Label>
-                  <Input
-                    id="website_url"
-                    type="url"
-                    value={form.website_url}
-                    onChange={(e) => setForm((p) => ({ ...p, website_url: e.target.value }))}
-                    placeholder="https://www.entreprise.fr"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
+              </FieldGroup>
             </div>
 
-            <div className="rounded-xl glass-panel space-y-4 p-5">
+            <div className="rounded-xl glass-panel flex flex-col gap-4 p-5">
               <h2 className="text-sm font-semibold text-foreground">Logo application</h2>
               <p className="text-xs text-muted-foreground">
                 Barre latérale uniquement. PNG, JPEG, WebP ou SVG — max 2 Mo.
               </p>
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
@@ -221,7 +236,7 @@ export default function OrganizationSettingsPage() {
                     )}
                     Envoyer un fichier
                   </Button>
-                  <input
+                  <Input
                     id="logo-app-file"
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -241,24 +256,30 @@ export default function OrganizationSettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl glass-panel space-y-4 p-5">
+            <div className="rounded-xl glass-panel flex flex-col gap-4 p-5">
               <h2 className="text-sm font-semibold text-foreground">IA — positionnement</h2>
               <p className="text-xs text-muted-foreground">
                 Texte injecté en tête des prompts d&apos;analyse et de génération (métier, ton, signature
                 d&apos;équipe…).
               </p>
-              <Textarea
-                value={form.positioning_brand_context}
-                onChange={(e) => setForm((p) => ({ ...p, positioning_brand_context: e.target.value }))}
-                placeholder="Ex. : Nous sommes une ESN française spécialisée dans le placement de consultants IT."
-                rows={6}
-                className="min-h-[120px] resize-y text-sm"
-              />
+              <Field>
+                <FieldLabel htmlFor="positioning_brand_context" className="sr-only">
+                  Contexte marque pour l&apos;IA
+                </FieldLabel>
+                <Textarea
+                  id="positioning_brand_context"
+                  value={form.positioning_brand_context}
+                  onChange={(e) => setForm((p) => ({ ...p, positioning_brand_context: e.target.value }))}
+                  placeholder="Ex. : Nous sommes une ESN française spécialisée dans le placement de consultants IT."
+                  rows={6}
+                  className="min-h-[120px] resize-y text-sm"
+                />
+              </Field>
             </div>
 
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || contactEmailInvalid}
               className="bg-neon text-neutral-950 hover:bg-neon/90"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enregistrer'}

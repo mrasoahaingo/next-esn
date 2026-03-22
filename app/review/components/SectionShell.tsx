@@ -2,6 +2,7 @@
 
 import { Loader2, Check } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type SectionStatus = 'pending' | 'streaming' | 'done';
 
@@ -25,11 +26,10 @@ export function SectionShell({ status, label, children }: SectionShellProps) {
             <p className="text-xs text-muted-foreground/80">{label}</p>
           </div>
         </div>
-        {/* Skeleton lines */}
-        <div className="mt-4 space-y-3">
-          <div className="h-3 w-3/4 rounded bg-overlay/[0.06] animate-pulse" />
-          <div className="h-3 w-1/2 rounded bg-overlay/[0.06] animate-pulse" />
-          <div className="h-3 w-2/3 rounded bg-overlay/[0.06] animate-pulse" />
+        <div className="mt-4 flex flex-col gap-3">
+          <Skeleton className="h-3 w-3/4 rounded bg-overlay/[0.06]" />
+          <Skeleton className="h-3 w-1/2 rounded bg-overlay/[0.06]" />
+          <Skeleton className="h-3 w-2/3 rounded bg-overlay/[0.06]" />
         </div>
       </section>
     );

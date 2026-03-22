@@ -91,12 +91,12 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="mb-6 grid w-full max-w-xl grid-cols-2">
+          <TabsList variant="segmented" className="mb-6 grid w-full max-w-xl grid-cols-2">
             <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
             <TabsTrigger value="llm">Modèles &amp; tâches LLM</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="flex flex-col gap-6">
         {/* Global stats */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[

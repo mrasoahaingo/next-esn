@@ -20,7 +20,7 @@ export default function GlobalError({
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
         <AlertCircle className="h-8 w-8 text-destructive" />
       </div>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Une erreur est survenue</h2>
         <p className="text-sm text-muted-foreground">
           {error.message || 'Quelque chose s\u2019est mal passé. Veuillez réessayer.'}

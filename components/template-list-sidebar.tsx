@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Loader2, Palette, Plus, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -60,17 +61,21 @@ export function TemplateListSidebar() {
     <aside className="flex h-screen w-72 flex-col border-r border-border bg-panel">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-foreground">Templates</h2>
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
           onClick={handleCreate}
           disabled={isCreating}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-card hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Créer un template"
         >
           {isCreating ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Plus className="h-4 w-4" />
           )}
-        </button>
+        </Button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
@@ -86,16 +91,18 @@ export function TemplateListSidebar() {
             <p className="mt-1 text-[10px]">Crée ton premier template</p>
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div className="flex flex-col gap-0.5">
             {templates.map((t) => {
               const isActive = t.id === activeId;
               const primary = t.config?.colors?.primary ?? '#010557';
 
               return (
-                <button
+                <Button
                   key={t.id}
+                  type="button"
+                  variant="ghost"
                   onClick={() => router.push(`/templates/${t.id}`)}
-                  className={`group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                  className={`group h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left font-normal transition ${
                     isActive
                       ? 'bg-primary/10 text-foreground'
                       : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -121,7 +128,7 @@ export function TemplateListSidebar() {
                       )}
                     </div>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>

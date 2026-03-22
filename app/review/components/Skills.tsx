@@ -2,7 +2,7 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Sparkles, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { memo, useState } from 'react';
@@ -64,12 +64,14 @@ function SkillBadge({ skill }: { skill: Skill }) {
 }
 
 function CategorySection({
+  categoryKey,
   label,
   items,
   onAdd,
   onToggleAdded,
   readOnly,
 }: {
+  categoryKey: string;
   label: string;
   items: Skill[];
   onAdd: (value: string) => void;
@@ -107,66 +109,80 @@ function CategorySection({
   if (added.length === 0 && notAdded.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
+    <FieldGroup className="gap-2">
+      <FieldLabel className="text-xs uppercase tracking-wider text-muted-foreground">{label}</FieldLabel>
       {!readOnly && (
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            placeholder="Ajouter..."
-            value={newItem}
-            onChange={(e) => setNewItem(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <Button size="default" onClick={handleAdd}>
-            <Plus className="w-4 h-4" />
+        <Field orientation="horizontal" className="flex-row items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <FieldLabel htmlFor={`skill-add-${categoryKey}`} className="sr-only">
+              Ajouter une compétence — {label}
+            </FieldLabel>
+            <Input
+              id={`skill-add-${categoryKey}`}
+              type="text"
+              placeholder="Ajouter..."
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
+          <Button type="button" size="default" onClick={handleAdd} aria-label={`Ajouter ${label}`}>
+            <Plus data-icon="inline-start" />
           </Button>
-        </div>
+        </Field>
       )}
       {/* Added skills — included in PDF */}
       <div className="flex flex-wrap gap-1.5">
         {added.map((skill) => {
           const originalIndex = items.indexOf(skill);
           return (
-            <button
+            <Button
               key={`${skill.name}-${originalIndex}`}
+              type="button"
+              variant="ghost"
+              className="h-auto p-0 font-normal hover:bg-transparent"
               onClick={() => !readOnly && onToggleAdded(originalIndex)}
               disabled={readOnly}
             >
               <SkillBadge skill={skill} />
-            </button>
+            </Button>
           );
         })}
       </div>
       {/* Not added — click to add to PDF */}
       {notAdded.length > 0 && (
         <>
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-auto justify-start gap-1.5 p-0 text-xs text-muted-foreground hover:text-foreground"
             onClick={() => setShowOthers(!showOthers)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            {showOthers ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showOthers ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
             {notAdded.length} autre{notAdded.length > 1 ? 's' : ''}
-          </button>
+          </Button>
           {showOthers && (
             <div className="flex flex-wrap gap-1.5">
               {notAdded.map((skill) => {
                 const originalIndex = items.indexOf(skill);
                 return (
-                  <button
+                  <Button
                     key={`${skill.name}-${originalIndex}`}
+                    type="button"
+                    variant="ghost"
+                    className="h-auto p-0 font-normal hover:bg-transparent"
                     onClick={() => !readOnly && onToggleAdded(originalIndex)}
                     disabled={readOnly}
                   >
                     <SkillBadge skill={skill} />
-                  </button>
+                  </Button>
                 );
               })}
             </div>
           )}
         </>
       )}
-    </div>
+    </FieldGroup>
   );
 }
 
@@ -196,10 +212,11 @@ export const Skills = memo(function Skills({ data, onChange, readOnly }: SkillsP
       <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Compétences
       </h2>
-      <div className="space-y-4">
+      <FieldGroup className="gap-4">
         {CATEGORIES.map((cat) => (
           <CategorySection
             key={cat.key}
+            categoryKey={cat.key}
             label={cat.label}
             items={normalizeItems(safeData[cat.key])}
             onAdd={(value) => handleAdd(cat.key, value)}
@@ -207,7 +224,7 @@ export const Skills = memo(function Skills({ data, onChange, readOnly }: SkillsP
             readOnly={readOnly}
           />
         ))}
-      </div>
+      </FieldGroup>
     </section>
   );
 });

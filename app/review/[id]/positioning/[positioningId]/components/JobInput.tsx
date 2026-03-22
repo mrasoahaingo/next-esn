@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Loader2, Search, RefreshCw, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 
 interface JobInputProps {
@@ -42,16 +43,18 @@ export function JobInput({
             {displayText}
           </p>
           {isTruncated && (
-            <button
+            <Button
+              type="button"
+              variant="link"
+              className="mt-1 h-auto p-0 text-[11px] text-muted-foreground"
               onClick={() => setExpanded((v) => !v)}
-              className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {expanded ? (
-                <><ChevronUp className="h-3 w-3" /> Réduire</>
+                <><ChevronUp className="size-3" /> Réduire</>
               ) : (
-                <><ChevronDown className="h-3 w-3" /> Voir tout</>
+                <><ChevronDown className="size-3" /> Voir tout</>
               )}
-            </button>
+            </Button>
           )}
         </div>
         {onReAnalyze && !isAnalyzing && (
@@ -80,13 +83,19 @@ export function JobInput({
       <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         Fiche de poste
       </h2>
-      <Textarea
-        value={jobDescription}
-        onChange={(e) => onJobDescriptionChange(e.target.value)}
-        placeholder="Collez ici la fiche de poste..."
-        className="min-h-[160px] text-sm max-h-[400px]"
-        disabled={isAnalyzing || disabled}
-      />
+      <Field>
+        <FieldLabel htmlFor="job-description-input" className="sr-only">
+          Fiche de poste
+        </FieldLabel>
+        <Textarea
+          id="job-description-input"
+          value={jobDescription}
+          onChange={(e) => onJobDescriptionChange(e.target.value)}
+          placeholder="Collez ici la fiche de poste..."
+          className="min-h-[160px] text-sm max-h-[400px]"
+          disabled={isAnalyzing || disabled}
+        />
+      </Field>
       <div className="mt-4 flex justify-end">
         <Button
           onClick={onAnalyze}

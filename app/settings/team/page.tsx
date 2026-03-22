@@ -15,7 +15,7 @@ import {
 import type { OrgMember, OrgInvitation } from '@/lib/queries'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
 import {
   Select,
@@ -187,7 +187,7 @@ export default function TeamSettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-3xl px-6 py-8 space-y-8">
+      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 py-8">
         {/* Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet/15 text-violet">
@@ -241,21 +241,23 @@ export default function TeamSettingsPage() {
                   </>
                 )}
               </Button>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="ml-1 shrink-0 text-muted-foreground"
                 onClick={() => { setLastInviteUrl(null); setLastInviteEmail(null) }}
-                className="ml-1 text-muted-foreground hover:text-foreground text-xs"
                 aria-label="Fermer"
               >
                 ✕
-              </button>
+              </Button>
             </div>
           )}
           <form onSubmit={handleInvite} className="flex items-end gap-3">
-            <div className="flex-1 space-y-1.5">
-              <Label htmlFor="invite-email" className="text-xs text-muted-foreground">
+            <Field className="min-w-0 flex-1">
+              <FieldLabel htmlFor="invite-email" className="text-xs text-muted-foreground">
                 Adresse email
-              </Label>
+              </FieldLabel>
               <Input
                 id="invite-email"
                 type="email"
@@ -265,16 +267,16 @@ export default function TeamSettingsPage() {
                 required
                 className="h-9 text-sm"
               />
-            </div>
-            <div className="w-36 space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Rôle</Label>
+            </Field>
+            <Field className="w-36">
+              <FieldLabel htmlFor="invite-role" className="text-xs text-muted-foreground">Rôle</FieldLabel>
               <Select
                 value={role}
                 onValueChange={(v: string | null) => {
                   if (v) setRole(v as 'org:admin' | 'org:member')
                 }}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger id="invite-role" className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -282,7 +284,7 @@ export default function TeamSettingsPage() {
                   <SelectItem value="org:admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </Field>
             <Button
               type="submit"
               disabled={inviteMember.isPending || !email.trim()}

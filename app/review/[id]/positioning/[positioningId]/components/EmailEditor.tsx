@@ -3,7 +3,8 @@
 import { useEffect } from 'react';
 import type { PositioningEmail } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -35,18 +36,20 @@ function ToolbarButton({
   children: React.ReactNode;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="icon-xs"
       onClick={onClick}
       disabled={disabled}
-      className={`p-1.5 rounded transition-colors ${
+      className={
         active
           ? 'bg-overlay/15 text-foreground'
           : 'text-muted-foreground hover:bg-overlay/10 hover:text-foreground'
-      } disabled:opacity-30 disabled:cursor-not-allowed`}
+      }
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -99,23 +102,24 @@ export function EmailEditor({
       <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
         {title}
       </h2>
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+      <FieldGroup className="gap-4">
+        <Field>
+          <FieldLabel htmlFor="email-subject" className="text-xs uppercase tracking-wider text-muted-foreground">
             Objet
-          </Label>
+          </FieldLabel>
           <Input
+            id="email-subject"
             value={email?.subject ?? ''}
             onChange={(e) => onChange({ ...email, subject: e.target.value })}
             disabled={readOnly}
             placeholder="Objet de l'email..."
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+        </Field>
+        <Field>
+          <FieldLabel htmlFor="email-body-editor" className="text-xs uppercase tracking-wider text-muted-foreground">
             Corps
-          </Label>
-          <div className="rounded-md border border-input bg-background overflow-hidden">
+          </FieldLabel>
+          <div id="email-body-editor" className="rounded-md border border-input bg-background overflow-hidden">
             {!readOnly && editor && (
               <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-overlay/10 bg-overlay/[0.02]">
                 <ToolbarButton
@@ -162,8 +166,8 @@ export function EmailEditor({
             )}
             <EditorContent editor={editor} />
           </div>
-        </div>
-      </div>
+        </Field>
+      </FieldGroup>
     </section>
   );
 }

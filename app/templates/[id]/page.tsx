@@ -284,11 +284,11 @@ export default function TemplateEditorPage() {
                   { key: 'lightText', label: 'Texte léger' },
                 ].map(({ key, label }) => (
                   <div key={key} className="flex items-center gap-2">
-                    <input
+                    <Input
                       type="color"
                       value={config.colors[key as keyof typeof config.colors]}
                       onChange={(e) => updateColors(key, e.target.value)}
-                      className="h-8 w-8 cursor-pointer rounded border border-border bg-transparent"
+                      className="h-8 w-8 min-w-8 cursor-pointer rounded border border-border bg-transparent p-0 shadow-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-moz-color-swatch]:rounded-md"
                     />
                     <Label className="text-xs">{label}</Label>
                   </div>

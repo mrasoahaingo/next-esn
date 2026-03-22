@@ -1,23 +1,34 @@
 'use client';
 
 import { Palette } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 
 export default function TemplatesPage() {
   return (
-    <div className="flex h-full items-center justify-center">
-      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-card/50">
-          <Palette className="h-5 w-5" />
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-medium text-foreground">
-            Sélectionne un template ou crée-en un nouveau
-          </p>
-          <p className="mt-0.5 text-xs">
-            Les templates définissent couleurs, logo, pied de page, ordre des sections et préfixe d&apos;export PDF
-          </p>
-        </div>
-      </div>
+    <div className="flex h-full items-center justify-center p-6">
+      <Card className="w-full max-w-md border-dashed border-border/60 bg-card/40">
+        <CardContent className="pt-6">
+          <Empty className="min-h-0 border-0 p-0">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Palette />
+              </EmptyMedia>
+              <EmptyTitle>Sélectionne un template ou crée-en un nouveau</EmptyTitle>
+              <EmptyDescription>
+                Les templates définissent couleurs, logo, pied de page, ordre des sections et préfixe
+                d&apos;export PDF
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </CardContent>
+      </Card>
     </div>
   );
 }

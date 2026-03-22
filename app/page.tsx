@@ -20,10 +20,16 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
 import dynamic from 'next/dynamic';
+import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
+import { useDashboard, useUploadCv } from '@/lib/queries';
+import { useOrgBranding } from '@/components/org-branding-provider';
+import { formatSkillKeyLabel } from '@/lib/utils/skill-key';
 
 const ScoreDistributionChart = dynamic(
   () => import('@/components/dashboard/score-distribution-chart').then((m) => m.ScoreDistributionChart),
@@ -37,14 +43,10 @@ const SkillCoverageChart = dynamic(
 function ChartSkeleton() {
   return (
     <div className="col-span-1 glass-panel border-0 rounded-xl p-6">
-      <div className="h-[180px] animate-pulse rounded-lg bg-overlay/[0.03]" />
+      <Skeleton className="h-[180px] w-full rounded-lg bg-overlay/[0.03]" />
     </div>
   );
 }
-import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
-import { useDashboard, useUploadCv } from '@/lib/queries';
-import { useOrgBranding } from '@/components/org-branding-provider';
-import { formatSkillKeyLabel } from '@/lib/utils/skill-key';
 
 // ─── Types ─────────────────────────────────────────────────────────
 
@@ -383,7 +385,7 @@ export default function Dashboard() {
             }`}
           >
             <label className="flex cursor-pointer items-center gap-2 px-4 py-2.5">
-              <input
+              <Input
                 type="file"
                 onChange={handleFileChange}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -463,7 +465,7 @@ export default function Dashboard() {
                     {inner}
                   </TooltipTrigger>
                   <TooltipContent side="bottom" className="text-xs">
-                    <div className="space-y-1">
+                    <div className="flex flex-col gap-1">
                       <p>Temps manuel estimé : <span className="font-semibold">{formatTimeSaved(stats.estimatedManualMinutes)}</span></p>
                       <p>Temps réel ({displayName}) : <span className="font-semibold">{formatTimeSaved(stats.actualTotalMinutes)}</span></p>
                       <div className="border-t border-white/10 pt-1 mt-1 text-muted-foreground">
@@ -552,7 +554,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               {data && data.candidates.length > 0 ? (
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   {pipeline.map((stage) => (
                     <div key={stage.key}>
                       <div className="mb-1 flex items-center justify-between">
@@ -770,7 +772,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {recentPositionings.length > 0 ? (
-              <div className="space-y-1">
+              <div className="flex flex-col gap-1">
                 {recentPositionings.map((p) => {
                   const score = p.analysis?.matchScore ?? 0;
                   const candidateName = p.candidates
@@ -878,7 +880,7 @@ export default function Dashboard() {
                                 )}
                               </TooltipTrigger>
                               <TooltipContent side="bottom" className="text-xs">
-                                <div className="space-y-0.5">
+                                <div className="flex flex-col gap-0.5">
                                   {(p.ai_analysis_duration_ms ?? 0) > 0 && (
                                     <p>Analyse : {formatDurationMs(p.ai_analysis_duration_ms!)}</p>
                                   )}

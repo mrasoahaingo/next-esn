@@ -2,6 +2,7 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Loader2, Target } from 'lucide-react';
 import { usePositionings } from '@/lib/queries';
 
@@ -85,7 +86,7 @@ export function PositioningListSidebar() {
             <p className="mt-1 text-[10px]">Ouvre un CV pour lancer un positionnement</p>
           </div>
         ) : (
-          <div className="space-y-0.5">
+          <div className="flex flex-col gap-0.5">
             {positionings.map((p) => {
               const candidateName = getCandidateName(p);
               const jobTitle = getPositioningLabel(p);
@@ -94,14 +95,16 @@ export function PositioningListSidebar() {
               const isActive = p.id === activePositioningId;
 
               return (
-                <button
+                <Button
                   key={p.id}
+                  type="button"
+                  variant="ghost"
                   onClick={() =>
                     router.push(
                       `/review/${p.candidate_id}/positioning/${p.id}`
                     )
                   }
-                  className={`group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition ${
+                  className={`group h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left font-normal transition ${
                     isActive
                       ? 'bg-violet/10 text-foreground'
                       : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -136,7 +139,7 @@ export function PositioningListSidebar() {
                       {jobTitle}
                     </p>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>

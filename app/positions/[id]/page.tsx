@@ -350,9 +350,11 @@ function PositionCvsModal({
 
         {/* Tab switcher */}
         <div className="flex rounded-lg bg-muted/50 border border-border p-0.5">
-          <button
+          <Button
+            type="button"
+            variant="ghost"
             onClick={() => setTab('upload')}
-            className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all ${
+            className={`flex-1 gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all ${
               tab === 'upload'
                 ? 'bg-violet/20 text-violet shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -360,10 +362,12 @@ function PositionCvsModal({
           >
             <Upload className="h-3.5 w-3.5" />
             Importer des CVs
-          </button>
-          <button
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
             onClick={() => setTab('existing')}
-            className={`flex-1 flex items-center justify-center gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all ${
+            className={`flex-1 gap-2 rounded-md px-3 py-2 text-xs font-medium transition-all ${
               tab === 'existing'
                 ? 'bg-violet/20 text-violet shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -376,7 +380,7 @@ function PositionCvsModal({
                 {eligibleCandidates.length}
               </Badge>
             )}
-          </button>
+          </Button>
         </div>
 
         {/* Upload tab */}
@@ -392,7 +396,7 @@ function PositionCvsModal({
             }`}
           >
             <label className="flex cursor-pointer flex-col items-center gap-3 px-6 py-10">
-              <input
+              <Input
                 ref={fileInputRef}
                 type="file"
                 multiple
@@ -455,10 +459,12 @@ function PositionCvsModal({
                   const title = c.extracted_data?.personalInfo?.title;
 
                   return (
-                    <button
+                    <Button
                       key={c.id}
+                      type="button"
+                      variant="ghost"
                       onClick={() => toggleCandidate(c.id)}
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all ${
+                      className={`h-auto w-full justify-start gap-3 rounded-lg px-3 py-2.5 text-left font-normal transition-all ${
                         isSelected
                           ? 'bg-violet/10 ring-1 ring-violet/40'
                           : 'hover:bg-overlay/[0.03]'
@@ -483,7 +489,7 @@ function PositionCvsModal({
                           </span>
                         )}
                       </div>
-                    </button>
+                    </Button>
                   );
                 })
               )}
@@ -892,13 +898,15 @@ function CompareCvsModal({
               ))}
             </div>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             onClick={() => onOpenChange(false)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center self-end rounded-lg text-muted-foreground transition hover:bg-overlay/10 hover:text-foreground sm:self-start"
+            className="shrink-0 self-end text-muted-foreground hover:bg-overlay/10 hover:text-foreground sm:self-start"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         {/* ── Candidate columns ── */}
@@ -1067,12 +1075,14 @@ function PositioningRow({
       }`}
     >
       {selectable && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
           onClick={(e) => {
             e.stopPropagation();
             onToggleSelect?.(p.id);
           }}
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-all ${
+          className={`h-5 w-5 shrink-0 rounded border p-0 transition-all ${
             isSelected
               ? 'border-violet bg-violet text-white'
               : 'border-overlay/20 bg-overlay/[0.03] opacity-0 group-hover:opacity-100'
@@ -1080,7 +1090,7 @@ function PositioningRow({
           title={isSelected ? 'Retirer de la comparaison' : 'Ajouter à la comparaison'}
         >
           {isSelected && <Check className="h-3 w-3" />}
-        </button>
+        </Button>
       )}
 
       {score != null ? (
@@ -1192,14 +1202,16 @@ function PositioningRow({
         </Badge>
 
         {(showCancelExtract || showCancelPositioning) && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={handleCancel}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+            className="shrink-0 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
             title="Annuler"
           >
             <Square className="h-3 w-3" />
-          </button>
+          </Button>
         )}
 
         {canNavigate && (
@@ -1321,21 +1333,22 @@ export default function PositionDetailPage() {
           defaultValue={positionings.length > 0 ? 'positionings' : 'analysis'}
           className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
         >
-          <div className="shrink-0 overflow-x-auto pb-1 -mx-1 px-1">
-            <TabsList className="mb-3 inline-flex w-full min-w-min sm:grid sm:grid-cols-2 sm:max-w-lg h-auto flex-wrap gap-1 p-1">
-              <TabsTrigger value="analysis" className="gap-1.5 text-xs sm:text-sm px-3 py-2">
-                <FileText className="h-3.5 w-3.5 shrink-0" />
-                Analyse de la fiche
-              </TabsTrigger>
-              <TabsTrigger value="positionings" className="gap-1.5 text-xs sm:text-sm px-3 py-2">
-                <Users className="h-3.5 w-3.5 shrink-0" />
-                CVs positionnés
-                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 tabular-nums">
-                  {positionings.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-          </div>
+          <TabsList
+            variant="segmented"
+            className="mb-3 w-full shrink-0 grid grid-cols-2 sm:max-w-lg"
+          >
+            <TabsTrigger value="analysis" className="gap-1.5 text-xs sm:text-sm">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              Analyse de la fiche
+            </TabsTrigger>
+            <TabsTrigger value="positionings" className="gap-1.5 text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 shrink-0" />
+              CVs positionnés
+              <Badge variant="secondary" className="text-[9px] px-1.5 py-0 tabular-nums">
+                {positionings.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent
             value="analysis"
@@ -1523,12 +1536,14 @@ export default function PositionDetailPage() {
 
           <div className="h-4 w-px bg-overlay/[0.08]" />
 
-          <button
+          <Button
+            type="button"
+            variant="link"
             onClick={() => setCompareIds(new Set())}
-            className="text-xs text-muted-foreground hover:text-foreground transition"
+            className="h-auto p-0 text-xs text-muted-foreground"
           >
             Effacer
-          </button>
+          </Button>
 
           <Button
             onClick={() => setIsCompareOpen(true)}

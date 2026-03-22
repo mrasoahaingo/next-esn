@@ -8,7 +8,7 @@ export default function NotFound() {
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
         <FileQuestion className="h-8 w-8 text-muted-foreground" />
       </div>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Page introuvable</h2>
         <p className="text-sm text-muted-foreground">
           La page que vous recherchez n&apos;existe pas ou a été déplacée.

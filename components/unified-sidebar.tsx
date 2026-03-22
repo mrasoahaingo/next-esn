@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { EsneoFullLogo } from '@/components/esneo-full-logo';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 import { useOrgRole } from '@/lib/hooks/useOrgRole';
@@ -240,12 +241,13 @@ export function UnifiedSidebar() {
 
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         aria-label="Fermer le menu"
         aria-hidden={!mobileNavOpen}
         className={cn(
-          'fixed inset-0 z-40 bg-scrim transition-opacity md:hidden',
+          'fixed inset-0 z-40 min-h-0 rounded-none border-0 bg-scrim p-0 shadow-none hover:bg-scrim md:hidden',
           mobileNavOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
         onClick={() => setMobileNavOpen(false)}
@@ -294,43 +296,35 @@ export function UnifiedSidebar() {
 
       <Separator />
 
-      {/* Tab switcher */}
-      <div className="mx-3 mt-3 mb-2 flex rounded-lg bg-overlay/[0.03] p-0.5">
-        <button
-          type="button"
-          onClick={() => router.push('/')}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-            activeTab === 'cvs'
-              ? 'bg-accent/15 text-accent'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          if (v === 'cvs') router.push('/');
+          else router.push('/positions');
+        }}
+        className="flex min-h-0 min-w-0 flex-1 flex-col px-3 pt-3"
+      >
+        <TabsList
+          variant="segmented"
+          className="mb-2 w-full min-w-0 max-w-full grid grid-cols-2 shrink-0"
         >
-          <User className="h-3 w-3" />
-          CVs
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push('/positions')}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
-            activeTab === 'positions'
-              ? 'bg-violet/15 text-violet'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Briefcase className="h-3 w-3" />
-          Positions
-        </button>
-      </div>
+          <TabsTrigger value="cvs" className="min-w-0 text-xs">
+            <User className="h-3 w-3 shrink-0" />
+            <span className="truncate">CVs</span>
+          </TabsTrigger>
+          <TabsTrigger value="positions" className="min-w-0 text-xs">
+            <Briefcase className="h-3 w-3 shrink-0" />
+            <span className="truncate">Positions</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2">
-        {activeTab === 'cvs' ? (
-          /* ─── CVs Tab ──────────────────────────────────── */
-          <>
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-2 pb-2">
+          <TabsContent value="cvs" className="mt-0 focus-visible:outline-none">
+            <>
             {/* Upload */}
             <div className="px-1 py-2">
               <label className="relative block cursor-pointer">
-                <input
+                <Input
                   type="file"
                   onChange={handleFileChange}
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -364,7 +358,7 @@ export function UnifiedSidebar() {
                 <p className="mt-0.5 text-[10px]">Importe un CV pour commencer</p>
               </div>
             ) : (
-              <div className="space-y-0.5">
+              <div className="flex flex-col gap-0.5">
                 {candidates.map((c) => {
                   const name = getCandidateName(c);
                   const title = getCandidateTitle(c);
@@ -379,14 +373,19 @@ export function UnifiedSidebar() {
                       {/* CV item */}
                       <div className="group flex items-center gap-1">
                         {/* Expand toggle */}
-                        <button
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => toggleExpand(c.id)}
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground/50 transition hover:text-foreground"
+                          className="shrink-0 text-muted-foreground/50 hover:text-foreground"
+                          aria-expanded={isExpanded}
+                          aria-label={isExpanded ? 'Réduire la liste' : 'Développer la liste'}
                         >
                           <ChevronRight
                             className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
                           />
-                        </button>
+                        </Button>
 
                         {/* CV button */}
                         <div
@@ -431,7 +430,10 @@ export function UnifiedSidebar() {
 
                           {/* Cancel extraction button */}
                           {c.status === 'extracting' && c.workflow_run_id && (
-                            <button
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 cancelWorkflow.mutate({
@@ -441,11 +443,11 @@ export function UnifiedSidebar() {
                                   resetStatus: 'uploaded',
                                 });
                               }}
-                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+                              className="shrink-0 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
                               title="Annuler l'extraction"
                             >
                               <Square className="h-3 w-3" />
-                            </button>
+                            </Button>
                           )}
 
                           {/* Positioning count badge */}
@@ -459,7 +461,7 @@ export function UnifiedSidebar() {
 
                       {/* Nested positionings */}
                       {isExpanded && (
-                        <div className="ml-6 mt-0.5 mb-1 space-y-0.5 border-l border-border/60 pl-2">
+                        <div className="ml-6 mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-border/60 pl-2">
                           {cvPositionings.map((p) => {
                             const label = p.missions?.title ?? p.job_description.trim().split('\n')[0].slice(0, 40);
                             const pst = posStatusConfig[p.status] ?? { label: 'Brouillon', variant: 'secondary' as const };
@@ -519,7 +521,10 @@ export function UnifiedSidebar() {
                                 </div>
                                 {/* Cancel workflow button */}
                                 {(p.status === 'analyzing' || p.status === 'generating') && p.workflow_run_id && (
-                                  <button
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-xs"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       cancelWorkflow.mutate({
@@ -529,24 +534,26 @@ export function UnifiedSidebar() {
                                         resetStatus: p.status === 'analyzing' ? 'draft' : 'analyzed',
                                       });
                                     }}
-                                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-destructive/70 transition hover:bg-destructive/10 hover:text-destructive"
+                                    className="shrink-0 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
                                     title="Annuler"
                                   >
                                     <Square className="h-2.5 w-2.5" />
-                                  </button>
+                                  </Button>
                                 )}
                               </div>
                             );
                           })}
 
                           {/* Add positioning button */}
-                          <button
+                          <Button
+                            type="button"
+                            variant="ghost"
                             onClick={() => router.push(`/review/${c.id}/positioning`)}
-                            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-muted-foreground/50 transition hover:text-violet"
+                            className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-[11px] font-normal text-muted-foreground/50 hover:text-violet"
                           >
                             <Plus className="h-3 w-3" />
                             <span>Nouveau positionnement</span>
-                          </button>
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -555,18 +562,21 @@ export function UnifiedSidebar() {
               </div>
             )}
           </>
-        ) : (
-          /* ─── Positions Tab ────────────────────────────── */
-          <>
+          </TabsContent>
+
+          <TabsContent value="positions" className="mt-0 focus-visible:outline-none">
+            <>
             {/* Create position button */}
             <div className="px-1 py-2">
-              <button
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setShowNewMission(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-overlay/12 bg-overlay/[0.03] px-3 py-2 text-sm text-muted-foreground transition hover:border-violet/40 hover:bg-violet/5 hover:text-violet"
+                className="w-full gap-2 rounded-lg border-dashed border-overlay/12 bg-overlay/[0.03] py-2 text-sm text-muted-foreground hover:border-violet/40 hover:bg-violet/5 hover:text-violet"
               >
                 <Plus className="h-4 w-4" />
                 <span className="text-xs font-medium">Nouvelle position</span>
-              </button>
+              </Button>
             </div>
 
             {isLoading ? (
@@ -583,7 +593,7 @@ export function UnifiedSidebar() {
                 <p className="mt-0.5 text-[10px]">Créez une position pour commencer</p>
               </div>
             ) : (
-              <div className="space-y-0.5">
+              <div className="flex flex-col gap-0.5">
                 {missions.map((m) => {
                   const isActive = m.id === activePositionId;
 
@@ -633,15 +643,18 @@ export function UnifiedSidebar() {
               </div>
             )}
           </>
-        )}
-      </div>
+          </TabsContent>
+        </div>
+      </Tabs>
 
       {/* Bottom: Templates + Team + Admin */}
       <Separator />
-      <div className="px-2 py-2 space-y-0.5">
-        <button
+      <div className="flex flex-col gap-0.5 px-2 py-2">
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => router.push('/templates')}
-          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+          className={`h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-normal ${
             isOnTemplates
               ? 'bg-primary/10 text-foreground'
               : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -649,10 +662,12 @@ export function UnifiedSidebar() {
         >
           <Palette className="h-4 w-4" />
           <span className="font-medium">Templates</span>
-        </button>
-        <button
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
           onClick={() => router.push('/settings/profile')}
-          className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+          className={`h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-normal ${
             pathname.startsWith('/settings/profile')
               ? 'bg-neon/10 text-neon'
               : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -660,12 +675,14 @@ export function UnifiedSidebar() {
         >
           <GraduationCap className="h-4 w-4" />
           <span className="font-medium">Mes technos</span>
-        </button>
+        </Button>
         {canManageTeam && (
           <>
-            <button
+            <Button
+              type="button"
+              variant="ghost"
               onClick={() => router.push('/settings/organization')}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+              className={`h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-normal ${
                 pathname.startsWith('/settings/organization')
                   ? 'bg-violet/10 text-violet'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -673,10 +690,12 @@ export function UnifiedSidebar() {
             >
               <Building2 className="h-4 w-4" />
               <span className="font-medium">Organisation</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
               onClick={() => router.push('/settings/team')}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+              className={`h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-normal ${
                 pathname.startsWith('/settings/team') && !pathname.startsWith('/settings/team/skills')
                   ? 'bg-violet/10 text-violet'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -684,10 +703,12 @@ export function UnifiedSidebar() {
             >
               <Users className="h-4 w-4" />
               <span className="font-medium">Équipe</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
               onClick={() => router.push('/settings/team/skills')}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+              className={`h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-normal ${
                 pathname.startsWith('/settings/team/skills')
                   ? 'bg-violet/10 text-violet'
                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
@@ -695,13 +716,15 @@ export function UnifiedSidebar() {
             >
               <BarChart3 className="h-4 w-4" />
               <span className="font-medium">Compétences équipe</span>
-            </button>
+            </Button>
           </>
         )}
         {isSuperAdmin && (
-          <button
+          <Button
+            type="button"
+            variant="ghost"
             onClick={() => router.push('/admin')}
-            className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+            className={`h-auto w-full justify-start gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-normal ${
               pathname.startsWith('/admin')
                 ? 'bg-amber-500/10 text-amber-400'
                 : 'text-muted-foreground hover:bg-card/60 hover:text-amber-400'
@@ -709,7 +732,7 @@ export function UnifiedSidebar() {
           >
             <ShieldCheck className="h-4 w-4" />
             <span className="font-medium">Administration</span>
-          </button>
+          </Button>
         )}
       </div>
 
@@ -723,9 +746,9 @@ export function UnifiedSidebar() {
             Nouvelle position
           </DialogTitle>
 
-          <div className="space-y-4 mt-2">
+          <div className="mt-2 flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="sidebar-mission-title">Intitulé du poste *</Label>
                 <Input
                   id="sidebar-mission-title"
@@ -734,7 +757,7 @@ export function UnifiedSidebar() {
                   placeholder="Ex: Développeur Full-Stack Senior"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="sidebar-mission-company">Entreprise / Client</Label>
                 <Input
                   id="sidebar-mission-company"
@@ -745,7 +768,7 @@ export function UnifiedSidebar() {
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="sidebar-mission-desc">Description du poste *</Label>
               <Textarea
                 id="sidebar-mission-desc"

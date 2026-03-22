@@ -164,10 +164,12 @@ export default function PositioningNewPage() {
                 const preview = previewLines.length > 140 ? previewLines.slice(0, 137) + '...' : previewLines;
 
                 return (
-                  <button
+                  <Button
                     key={mission.id}
+                    type="button"
+                    variant="ghost"
                     onClick={() => setSelectedMissionId(isSelected ? null : mission.id)}
-                    className={`group w-full text-left rounded-xl p-4 transition-all duration-200 ${
+                    className={`group h-auto w-full rounded-xl p-4 text-left font-normal transition-all duration-200 ${
                       isSelected
                         ? 'bg-violet/10 border border-violet/30 violet-ring'
                         : 'bg-overlay/[0.03] border border-overlay/[0.06] hover:border-violet/20 hover:bg-overlay/[0.05]'
@@ -245,7 +247,7 @@ export default function PositioningNewPage() {
                         </p>
                       </div>
                     )}
-                  </button>
+                  </Button>
                 );
               })}
             </div>

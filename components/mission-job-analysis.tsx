@@ -254,7 +254,7 @@ export function MissionJobAnalysis({
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
             À clarifier avec le client
           </p>
-          <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
+          <ul className="flex flex-col gap-1 list-disc pl-4 text-xs text-muted-foreground">
             {effectiveAnalysis.openQuestions.map((q, i) => (
               <li key={i}>{q}</li>
             ))}
@@ -267,7 +267,7 @@ export function MissionJobAnalysis({
           <p className="text-[10px] font-medium text-destructive/80 uppercase tracking-wider mb-2">
             Points de vigilance
           </p>
-          <ul className="text-xs text-destructive/90 space-y-1 list-disc pl-4">
+          <ul className="flex flex-col gap-1 list-disc pl-4 text-xs text-destructive/90">
             {effectiveAnalysis.redFlags.map((q, i) => (
               <li key={i}>{q}</li>
             ))}
@@ -276,17 +276,17 @@ export function MissionJobAnalysis({
       )}
 
       {keyPointsByCategory.length > 0 && (
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             Points clés par catégories
           </p>
-          <div className="space-y-5 rounded-xl border border-overlay/6 bg-overlay/10 p-3">
+          <div className="flex flex-col gap-5 rounded-xl border border-overlay/6 bg-overlay/10 p-3">
             {keyPointsByCategory.map(([category, points]) => (
-            <div key={category} className="space-y-2">
+            <div key={category} className="flex flex-col gap-2">
               <h3 className="text-xs font-semibold text-foreground tracking-tight border-b border-overlay/10 pb-2">
                 {category}
               </h3>
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 {points.map((kp) => {
                   const aspect = (kp.aspect ?? 'other') as JobPostingKeyPointAspect;
                   const technicalKey =
@@ -303,7 +303,7 @@ export function MissionJobAnalysis({
                       key={kp.id}
                       className="flex flex-col sm:flex-row sm:items-start gap-3 rounded-xl border border-overlay/6 bg-overlay/15 px-3 py-3"
                     >
-                      <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-medium text-foreground">{kp.label}</span>
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-violet/30 text-violet/90">
@@ -387,7 +387,7 @@ export function MissionJobAnalysis({
             </div>
           )}
           {!explainLoading && explainData && (
-            <div className="space-y-4 text-sm">
+            <div className="flex flex-col gap-4 text-sm">
               <section>
                 <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
                   Définition
@@ -406,7 +406,7 @@ export function MissionJobAnalysis({
                 <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
                   Questions au candidat
                 </h4>
-                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                <ul className="flex flex-col gap-1 list-disc pl-4 text-muted-foreground">
                   {explainData.candidateQuestions.map((q, i) => (
                     <li key={i}>{q}</li>
                   ))}
@@ -417,7 +417,7 @@ export function MissionJobAnalysis({
                 <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
                   Réponses attendues
                 </h4>
-                <div className="space-y-2 text-xs">
+                <div className="flex flex-col gap-2 text-xs">
                   <p>
                     <span className="text-neon font-medium">Débutant — </span>
                     {explainData.expectedAnswers.debutant}

@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Trash2, Plus } from 'lucide-react';
 
 type EducationItem = ExtractedCV['education'][number];
@@ -45,12 +46,13 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
         </h2>
         {!readOnly && (
           <Button variant="ghost" size="sm" onClick={handleAdd} className="text-primary">
-            <Plus className="w-4 h-4 mr-1" /> Add Education
+            <Plus data-icon="inline-start" />
+            Add Education
           </Button>
         )}
       </div>
 
-      <div className="space-y-4">
+      <FieldGroup className="gap-4">
         {Array.isArray(data) && data.map((edu, i) => edu ? (
           <div key={i} className="flex justify-between items-start group border-b border-overlay/10 pb-4 last:border-0 last:pb-0">
             <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -66,33 +68,47 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
                 </>
               ) : (
                 <>
-                  <div className="col-span-2 space-y-2">
-                    <Input
-                      value={edu.degree ?? ''}
-                      onChange={(e) => handleUpdate(i, 'degree', e.target.value)}
-                      placeholder="Degree"
-                      className="font-bold"
-                    />
-                    <Input
-                      value={edu.school ?? ''}
-                      onChange={(e) => handleUpdate(i, 'school', e.target.value)}
-                      placeholder="School"
-                    />
+                  <div className="col-span-2 flex flex-col gap-2">
+                    <Field>
+                      <FieldLabel htmlFor={`edu-degree-${i}`} className="sr-only">Degree</FieldLabel>
+                      <Input
+                        id={`edu-degree-${i}`}
+                        value={edu.degree ?? ''}
+                        onChange={(e) => handleUpdate(i, 'degree', e.target.value)}
+                        placeholder="Degree"
+                        className="font-bold"
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor={`edu-school-${i}`} className="sr-only">School</FieldLabel>
+                      <Input
+                        id={`edu-school-${i}`}
+                        value={edu.school ?? ''}
+                        onChange={(e) => handleUpdate(i, 'school', e.target.value)}
+                        placeholder="School"
+                      />
+                    </Field>
                   </div>
                   <div className="flex items-start gap-2 justify-end">
-                    <Input
-                      value={edu.year ?? ''}
-                      onChange={(e) => handleUpdate(i, 'year', e.target.value)}
-                      placeholder="Year"
-                      className="w-24 text-center"
-                    />
+                    <Field>
+                      <FieldLabel htmlFor={`edu-year-${i}`} className="sr-only">Year</FieldLabel>
+                      <Input
+                        id={`edu-year-${i}`}
+                        value={edu.year ?? ''}
+                        onChange={(e) => handleUpdate(i, 'year', e.target.value)}
+                        placeholder="Year"
+                        className="w-24 text-center"
+                      />
+                    </Field>
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon-xs"
                       onClick={() => handleRemove(i)}
                       className="text-muted-foreground hover:text-destructive mt-1"
+                      aria-label="Remove education entry"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 />
                     </Button>
                   </div>
                 </>
@@ -100,7 +116,7 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
             </div>
           </div>
         ) : null)}
-      </div>
+      </FieldGroup>
     </section>
   );
 });
