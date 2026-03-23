@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExtractedCV } from '@/lib/schema';
@@ -67,7 +67,7 @@ export default function ReviewPage() {
     },
   });
 
-  // Derive time tracking from candidateData during render (no useState + useEffect)
+  // Derive time tracking from candidateData during render (no useState + layout effect sync)
   const aiDurationMs = candidateData?.ai_extraction_duration_ms ?? null;
   const userTimeSeconds = candidateData?.user_review_time_seconds ?? null;
 
@@ -90,7 +90,7 @@ export default function ReviewPage() {
   const initializedForId = useRef<string | null>(null);
 
   // Load candidate data & trigger extraction if needed
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!candidateData) return;
 
     // Don't reset while we're actively streaming
@@ -131,7 +131,7 @@ export default function ReviewPage() {
   }, [candidateData?.id, candidateData?.status]);
 
   // Sync streaming object to store
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (object) {
       setCvData(object as Partial<ExtractedCV>);
     }

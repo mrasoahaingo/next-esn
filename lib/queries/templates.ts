@@ -3,6 +3,28 @@ import { queryKeys } from './keys';
 import type { TemplateConfig } from '@/lib/schema';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
 
+export interface TemplateListItem {
+  id: string;
+  name: string;
+  is_default: boolean;
+  config: {
+    colors?: { primary?: string; secondary?: string };
+  };
+  created_at: string;
+}
+
+export function useTemplatesList() {
+  return useQuery<TemplateListItem[]>({
+    queryKey: queryKeys.templates.list(),
+    queryFn: async () => {
+      const res = await fetch('/api/templates');
+      if (!res.ok) throw new Error('Failed to fetch templates');
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+  });
+}
+
 interface TemplateData {
   id: string;
   name: string;

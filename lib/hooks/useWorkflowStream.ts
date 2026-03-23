@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useLayoutEffect, useRef, useCallback } from 'react';
 
 interface UseWorkflowStreamOptions {
   api: string;
@@ -144,7 +144,7 @@ export function useWorkflowStream<T, M = unknown>(
   }, [api, startConsuming]);
 
   // Reconnect to an existing workflow run on mount
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!runId) return;
     if (!runStatus || !activeStatuses.includes(runStatus)) return;
     if (reconnectedRunIdRef.current === runId) return;
@@ -207,7 +207,7 @@ export function useWorkflowStream<T, M = unknown>(
   }, []);
 
   // Cleanup on unmount
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
     };

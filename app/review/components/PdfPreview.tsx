@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Download, Loader2, FileText, Maximize2 } from 'lucide-react';
+import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
 
 export function PdfPreview() {
   const pdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
@@ -54,17 +55,17 @@ export function PdfPreview() {
           </div>
         </div>
 
-        <div className="relative flex-1 bg-shell">
+        <div className="relative flex-1 bg-background dark:bg-shell">
           {isPdfLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
 
           {pdfBlobUrl ? (
             <iframe
-              src={pdfBlobUrl}
-              className="h-full w-full"
+              src={pdfEmbedSrc(pdfBlobUrl)}
+              className="h-full w-full bg-background dark:bg-shell"
               title="CV Preview"
             />
           ) : (
@@ -78,7 +79,7 @@ export function PdfPreview() {
 
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <DialogContent
-          className="sm:max-w-[90vw] h-[90vh] flex flex-col gap-0 p-0 bg-shell border border-border"
+          className="sm:max-w-[90vw] h-[90vh] flex flex-col gap-0 p-0 bg-background dark:bg-shell border border-border"
           showCloseButton={false}
         >
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -108,17 +109,17 @@ export function PdfPreview() {
             </div>
           </div>
 
-          <div className="relative flex-1 min-h-0">
+          <div className="relative flex-1 min-h-0 bg-background dark:bg-shell">
             {isPdfLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             )}
 
             {pdfBlobUrl ? (
               <iframe
-                src={pdfBlobUrl}
-                className="h-full w-full"
+                src={pdfEmbedSrc(pdfBlobUrl)}
+                className="h-full w-full bg-background dark:bg-shell"
                 title="CV Preview — Plein écran"
               />
             ) : (

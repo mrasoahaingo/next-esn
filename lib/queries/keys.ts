@@ -28,4 +28,7 @@ export const queryKeys = {
     list: () => [...queryKeys.templates.all, 'list'] as const,
     detail: (id: string) => [...queryKeys.templates.all, 'detail', id] as const,
   },
+  org: {
+    settings: (orgId: string) => ['org', 'settings', orgId] as const,
+  },
 };

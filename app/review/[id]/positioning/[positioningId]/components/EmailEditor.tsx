@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import type { PositioningEmail } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -82,14 +82,14 @@ export function EmailEditor({
   });
 
   // Sync editable state
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (editor && editor.isEditable !== !readOnly) {
       editor.setEditable(!readOnly);
     }
   }, [editor, readOnly]);
 
   // Sync external content changes (streaming)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!editor) return;
     const incoming = email?.body ?? '';
     if (editor.getHTML() !== incoming) {

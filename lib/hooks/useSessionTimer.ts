@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useLayoutEffect, useRef, useCallback } from 'react';
 
 /**
  * Tracks active user time on a page and periodically flushes it to the server.
@@ -12,11 +12,6 @@ export function useSessionTimer(options: {
   const { endpoint, enabled, flushIntervalMs = 30_000 } = options;
   const accumulatedRef = useRef(0);
   const lastTickRef = useRef<number | null>(null);
-  const endpointRef = useRef(endpoint);
-
-  useEffect(() => {
-    endpointRef.current = endpoint;
-  }, [endpoint]);
 
   const flush = useCallback(() => {
     const seconds = accumulatedRef.current;
@@ -27,20 +22,20 @@ export function useSessionTimer(options: {
     const body = JSON.stringify({ seconds });
     if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
       navigator.sendBeacon(
-        endpointRef.current,
+        endpoint,
         new Blob([body], { type: 'application/json' }),
       );
     } else {
-      fetch(endpointRef.current, {
+      fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
         keepalive: true,
       }).catch(() => {});
     }
-  }, []);
+  }, [endpoint]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!enabled) {
       lastTickRef.current = null;
       return;

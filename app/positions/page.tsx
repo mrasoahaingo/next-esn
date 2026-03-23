@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Briefcase, Loader2 } from 'lucide-react';
 import { useMissions } from '@/lib/queries';
@@ -23,7 +23,7 @@ export default function PositionsIndexPage() {
     [missionsData]
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isLoading) return;
     if (missions.length === 1) {
       router.replace(`/positions/${missions[0].id}`);

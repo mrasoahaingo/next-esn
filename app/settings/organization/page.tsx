@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import { redirect } from 'next/navigation';
 import { useOrgRole } from '@/lib/hooks/useOrgRole';
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 import { useOrgBranding } from '@/components/org-branding-provider';
+import { useOrgSettings } from '@/lib/queries';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,45 +36,39 @@ const emptyForm: SettingsForm = {
 };
 
 export default function OrganizationSettingsPage() {
-  const { userId } = useAuth();
+  const { orgId } = useAuth();
   const { isOrgAdmin, isLoaded: roleLoaded } = useOrgRole();
   const { isSuperAdmin } = useSuperAdmin();
   const canManage = isOrgAdmin || isSuperAdmin;
   const { refetch: refetchBranding } = useOrgBranding();
 
+  const { data: settings, isPending, isError } = useOrgSettings();
+
   const [form, setForm] = useState<SettingsForm>(emptyForm);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    try {
-      const res = await fetch('/api/org/settings');
-      if (!res.ok) throw new Error('Chargement impossible');
-      const data = await res.json();
-      setForm({
-        display_name: data.display_name ?? '',
-        contact_email: data.contact_email ?? '',
-        website_url: data.website_url ?? '',
-        app_logo_url: data.app_logo_url ?? '',
-        positioning_brand_context: data.positioning_brand_context ?? '',
-      });
-    } catch {
-      toast.error('Impossible de charger les paramètres');
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
+  const seededForOrg = useRef<string | null>(null);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useLayoutEffect(() => {
+    if (!orgId) return;
+    if (!settings) return;
+    if (seededForOrg.current === orgId) return;
+    seededForOrg.current = orgId;
+    setForm({
+      display_name: settings.display_name ?? '',
+      contact_email: settings.contact_email ?? '',
+      website_url: settings.website_url ?? '',
+      app_logo_url: settings.app_logo_url ?? '',
+      positioning_brand_context: settings.positioning_brand_context ?? '',
+    });
+  }, [orgId, settings]);
 
   if (roleLoaded && !canManage) {
     redirect('/');
   }
+
+  const loading = !!orgId && isPending && !settings;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -128,10 +123,10 @@ export default function OrganizationSettingsPage() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error ?? 'Upload échoué');
       }
-      const { url, settings } = await res.json();
+      const { url, settings: nextSettings } = await res.json();
       setForm((p) => ({
         ...p,
-        app_logo_url: url ?? settings?.app_logo_url ?? p.app_logo_url,
+        app_logo_url: url ?? nextSettings?.app_logo_url ?? p.app_logo_url,
       }));
       toast.success('Logo application mis à jour');
       await refetchBranding();
@@ -162,6 +157,8 @@ export default function OrganizationSettingsPage() {
           <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
+        ) : isError ? (
+          <p className="text-sm text-destructive">Impossible de charger les paramètres</p>
         ) : (
           <form onSubmit={handleSave} className="flex flex-col gap-8">
             <div className="rounded-xl glass-panel flex flex-col gap-4 p-5">

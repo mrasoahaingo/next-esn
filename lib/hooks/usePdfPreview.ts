@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { useTemplateStore } from '@/lib/stores/template.store';
 import type { ExtractedCV, TemplateConfig } from '@/lib/schema';
 
@@ -30,7 +30,7 @@ export function usePdfPreview({
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!data) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);

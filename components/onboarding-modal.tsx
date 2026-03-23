@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useLayoutEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -300,7 +300,7 @@ export function OnboardingModal() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!completed) {
       const timer = setTimeout(() => setOpen(true), 600);
       return () => clearTimeout(timer);

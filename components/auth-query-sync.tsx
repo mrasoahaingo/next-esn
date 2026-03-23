@@ -2,7 +2,7 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 
 /**
@@ -14,7 +14,7 @@ export function AuthQuerySync() {
   const queryClient = useQueryClient();
   const prevKeyRef = useRef<string | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded) return;
     const key = `${userId ?? ''}:${orgId ?? ''}`;
     if (prevKeyRef.current === null) {

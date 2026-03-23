@@ -12,7 +12,8 @@ export type {
   OrgRecruiterSkillsResponse,
 } from './recruiter-skills';
 export { useCancelWorkflow } from './workflow';
-export { useTemplate, useUpdateTemplate } from './templates';
+export { useTemplate, useUpdateTemplate, useTemplatesList, type TemplateListItem } from './templates';
+export { useOrgSettings } from './org-settings';
 export { useAdminStats, useUpdateOrgCvCodeTemplate } from './admin';
 export {
   useLlmModels,

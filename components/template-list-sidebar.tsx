@@ -1,40 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Palette, Plus, Star } from 'lucide-react';
 import { toast } from 'sonner';
-
-interface Template {
-  id: string;
-  name: string;
-  is_default: boolean;
-  config: {
-    colors?: { primary?: string; secondary?: string };
-  };
-  created_at: string;
-}
+import { useTemplatesList } from '@/lib/queries';
+import { queryKeys } from '@/lib/queries/keys';
 
 export function TemplateListSidebar() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: templates = [], isPending } = useTemplatesList();
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const params = useParams();
+  const queryClient = useQueryClient();
 
   const activeId = params?.id as string | undefined;
-
-  useEffect(() => {
-    fetch('/api/templates')
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTemplates(data);
-      })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
 
   const handleCreate = async () => {
     setIsCreating(true);
@@ -46,7 +29,7 @@ export function TemplateListSidebar() {
       });
       const data = await res.json();
       if (data.id) {
-        setTemplates((prev) => [data, ...prev]);
+        await queryClient.invalidateQueries({ queryKey: queryKeys.templates.list() });
         toast.success('Template créé');
         router.push(`/templates/${data.id}`);
       }
@@ -79,7 +62,7 @@ export function TemplateListSidebar() {
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
-        {isLoading ? (
+        {isPending ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             <span className="text-xs">Chargement...</span>

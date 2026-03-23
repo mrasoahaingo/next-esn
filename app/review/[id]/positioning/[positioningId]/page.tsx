@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useLayoutEffect, useCallback, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
@@ -15,6 +15,7 @@ import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning, useCancelWorkflow } from '@/lib/queries';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
+import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -123,7 +124,7 @@ export default function PositioningWizardPage() {
     },
   });
 
-  // Derive time tracking from server data (no useState + useEffect sync)
+  // Derive time tracking from server data (no useState + layout effect sync)
   const aiAnalysisDurationMs = positioningData?.ai_analysis_duration_ms ?? null;
   const aiGenerationDurationMs = positioningData?.ai_generation_duration_ms ?? null;
   const userTimeSeconds = positioningData?.user_time_seconds ?? null;
@@ -152,7 +153,7 @@ export default function PositioningWizardPage() {
   const initializedForId = useRef<string | null>(null);
 
   // Load positioning from DB via React Query
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!positioningData || !candidateData) return;
 
     // Don't reset while we're actively streaming
@@ -247,7 +248,7 @@ export default function PositioningWizardPage() {
 
   // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning).
   // Si l’analyse a déjà été lancée depuis la mission (stream en cours), on ne refait pas un POST.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded || autoAnalyzedRef.current) return;
     if (isAnalysisLoading) return;
     if (positioningData?.status === 'analyzing') return;
@@ -279,21 +280,21 @@ export default function PositioningWizardPage() {
   ]);
 
   // Sync streaming analysis to store
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (analysisObject) {
       setAnalysis(analysisObject as Partial<PositioningAnalysis>);
     }
   }, [analysisObject, setAnalysis]);
 
   // Derive: when analysis loading finishes, clear isAnalyzing flag
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isAnalysisLoading && isAnalyzing) {
       setIsAnalyzing(false);
     }
   }, [isAnalysisLoading, isAnalyzing, setIsAnalyzing]);
 
   // Sync streaming generation to store
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (generateObject) {
       const obj = generateObject as Partial<PositioningOutput>;
       if (obj.tailoredCv) setTailoredCv(obj.tailoredCv as Partial<ExtractedCV>);
@@ -304,14 +305,14 @@ export default function PositioningWizardPage() {
     }
   }, [generateObject, setTailoredCv, setEmail, setEmailFirstContact, setEmailBulletPoints, setCandidateEmail]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isGenerateLoading && isGenerating) {
       setIsGenerating(false);
     }
   }, [isGenerateLoading, isGenerating, setIsGenerating]);
 
   // Persist answers to DB when they change (debounced)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded) return;
     if (!analysis?.candidateQuestions && !analysis?.clientQuestions) return;
     const answers: Record<string, string> = {};
@@ -325,37 +326,37 @@ export default function PositioningWizardPage() {
   }, [isLoaded, analysis?.candidateQuestions, analysis?.clientQuestions, debouncedSave]);
 
   // Persist tailoredCv edits to DB (debounced)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded || !tailoredCv || isGenerating || isGenerateLoading) return;
     debouncedSave({ tailored_cv: tailoredCv });
   }, [isLoaded, tailoredCv, isGenerating, isGenerateLoading, debouncedSave]);
 
   // Persist email edits to DB (debounced)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded || !email || isGenerating || isGenerateLoading) return;
     debouncedSave({ email });
   }, [isLoaded, email, isGenerating, isGenerateLoading, debouncedSave]);
 
   // Persist emailFirstContact edits to DB (debounced)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded || !emailFirstContact || isGenerating || isGenerateLoading) return;
     debouncedSave({ email_first_contact: emailFirstContact });
   }, [isLoaded, emailFirstContact, isGenerating, isGenerateLoading, debouncedSave]);
 
   // Persist emailBulletPoints edits to DB (debounced)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded || !emailBulletPoints || isGenerating || isGenerateLoading) return;
     debouncedSave({ email_bullet_points: emailBulletPoints });
   }, [isLoaded, emailBulletPoints, isGenerating, isGenerateLoading, debouncedSave]);
 
   // Persist candidate email edits to DB (debounced)
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded || !candidateEmail || isGenerating || isGenerateLoading) return;
     debouncedSave({ candidate_email: candidateEmail });
   }, [isLoaded, candidateEmail, isGenerating, isGenerateLoading, debouncedSave]);
 
   // Reset store on unmount
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => reset();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -753,14 +754,18 @@ export default function PositioningWizardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="relative flex-1 bg-shell">
+                  <div className="relative flex-1 bg-background dark:bg-shell">
                     {isPdfLoading && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       </div>
                     )}
                     {pdfBlobUrl ? (
-                      <iframe src={pdfBlobUrl} className="h-full w-full" title="CV Preview" />
+                      <iframe
+                        src={pdfEmbedSrc(pdfBlobUrl)}
+                        className="h-full w-full bg-background dark:bg-shell"
+                        title="CV Preview"
+                      />
                     ) : (
                       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
                         <FileText className="mb-2 h-10 w-10" />
@@ -793,7 +798,7 @@ export default function PositioningWizardPage() {
       {/* Fullscreen comparison dialog */}
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <DialogContent
-          className="sm:max-w-[95vw] h-[92vh] flex flex-col gap-0 p-0 bg-shell border border-border"
+          className="sm:max-w-[95vw] h-[92vh] flex flex-col gap-0 p-0 bg-background dark:bg-shell border border-border"
           showCloseButton={false}
         >
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -836,11 +841,11 @@ export default function PositioningWizardPage() {
                 <FileInput className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-muted-foreground">CV extrait</span>
               </div>
-              <div className="relative flex-1 bg-shell">
+              <div className="relative flex-1 bg-background dark:bg-shell">
                 {originalPdfBlobUrl ? (
                   <iframe
-                    src={originalPdfBlobUrl}
-                    className="h-full w-full"
+                    src={pdfEmbedSrc(originalPdfBlobUrl)}
+                    className="h-full w-full bg-background dark:bg-shell"
                     title="CV Original"
                   />
                 ) : (
@@ -858,16 +863,16 @@ export default function PositioningWizardPage() {
                 <FileText className="h-3.5 w-3.5 text-accent" />
                 <span className="text-xs font-medium text-accent">CV retravaillé</span>
               </div>
-              <div className="relative flex-1 bg-shell">
+              <div className="relative flex-1 bg-background dark:bg-shell">
                 {isPdfLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-shell/70">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 )}
                 {pdfBlobUrl ? (
                   <iframe
-                    src={pdfBlobUrl}
-                    className="h-full w-full"
+                    src={pdfEmbedSrc(pdfBlobUrl)}
+                    className="h-full w-full bg-background dark:bg-shell"
                     title="CV Retravaillé"
                   />
                 ) : (

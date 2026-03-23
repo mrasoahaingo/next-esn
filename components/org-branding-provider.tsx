@@ -4,12 +4,14 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useState,
+  useMemo,
   type ReactNode,
 } from 'react';
 import { useAuth, useOrganization } from '@clerk/nextjs';
+import { useQueryClient } from '@tanstack/react-query';
 import type { OrganizationSettingsRow } from '@/lib/types/organization-settings';
+import { useOrgSettings } from '@/lib/queries';
+import { queryKeys } from '@/lib/queries/keys';
 
 export type OrgBrandingContextValue = {
   displayName: string;
@@ -22,56 +24,38 @@ export type OrgBrandingContextValue = {
 const OrgBrandingContext = createContext<OrgBrandingContextValue | null>(null);
 
 export function OrgBrandingProvider({ children }: { children: ReactNode }) {
-  const { isSignedIn, orgId } = useAuth();
+  const { orgId } = useAuth();
   const { organization } = useOrganization();
-  const [settings, setSettings] = useState<OrganizationSettingsRow | null>(null);
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: settings, isFetched } = useOrgSettings();
+
+  const settingsLoaded = !orgId ? true : isFetched;
 
   const refetch = useCallback(async () => {
-    if (!orgId) {
-      setSettings(null);
-      setSettingsLoaded(true);
-      return;
-    }
-    setSettingsLoaded(false);
-    try {
-      const res = await fetch('/api/org/settings');
-      if (res.ok) {
-        const data = (await res.json()) as OrganizationSettingsRow & { created_at: string | null };
-        setSettings(data.created_at === null ? null : data);
-      } else {
-        setSettings(null);
-      }
-    } catch {
-      setSettings(null);
-    } finally {
-      setSettingsLoaded(true);
-    }
-  }, [orgId]);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.org.settings(orgId ?? '') });
+  }, [queryClient, orgId]);
 
-  useEffect(() => {
-    if (!isSignedIn || !orgId) {
-      setSettings(null);
-      setSettingsLoaded(true);
-      return;
-    }
-    void refetch();
-  }, [isSignedIn, orgId, refetch]);
-
-  const displayName =
-    settings?.display_name?.trim() ||
-    organization?.name ||
-    'Organisation';
+  const displayName = useMemo(
+    () =>
+      settings?.display_name?.trim() ||
+      organization?.name ||
+      'Organisation',
+    [settings?.display_name, organization?.name],
+  );
 
   const appLogoUrl = settings?.app_logo_url?.trim() || null;
 
-  const value: OrgBrandingContextValue = {
-    displayName,
-    appLogoUrl,
-    settings,
-    settingsLoaded,
-    refetch,
-  };
+  const value: OrgBrandingContextValue = useMemo(
+    () => ({
+      displayName,
+      appLogoUrl,
+      settings: settings ?? null,
+      settingsLoaded,
+      refetch,
+    }),
+    [displayName, appLogoUrl, settings, settingsLoaded, refetch],
+  );
 
   return (
     <OrgBrandingContext.Provider value={value}>{children}</OrgBrandingContext.Provider>
