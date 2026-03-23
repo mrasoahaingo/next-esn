@@ -47,7 +47,7 @@ export const Summary = memo(function Summary({ data, onChange, readOnly, spacing
                 max={100}
                 step={2}
                 value={[spacingAfter ?? 0]}
-                onValueChange={(v) => onSpacingChange(v)}
+                onValueChange={(v) => onSpacingChange(Array.isArray(v) ? v[0] : v)}
               />
             </Field>
           )}

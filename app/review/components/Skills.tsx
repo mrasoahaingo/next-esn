@@ -239,7 +239,7 @@ export const Skills = memo(function Skills({ data, onChange, readOnly, spacingAf
             max={100}
             step={2}
             value={[spacingAfter ?? 0]}
-            onValueChange={(v) => onSpacingChange(v)}
+            onValueChange={(v) => onSpacingChange(Array.isArray(v) ? v[0] : v)}
           />
         </Field>
       )}

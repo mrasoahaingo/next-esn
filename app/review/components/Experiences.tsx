@@ -19,7 +19,7 @@ interface ExperiencesProps {
 export const Experiences = memo(function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-  const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[] | number) => {
+  const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[] | number | number[]) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
     onChange(newData);
@@ -241,7 +241,7 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
                   max={100}
                   step={2}
                   value={[exp.spacingAfter ?? 0]}
-                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', Array.isArray(v) ? v[0] : v)}
                 />
               </Field>
             )}
