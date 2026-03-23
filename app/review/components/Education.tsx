@@ -128,7 +128,7 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
                   max={100}
                   step={2}
                   value={[edu.spacingAfter ?? 0]}
-                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', v[0])}
                 />
               </Field>
             )}
