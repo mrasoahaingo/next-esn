@@ -6,6 +6,7 @@ import { UnifiedSidebar } from '@/components/unified-sidebar';
 import { OrgBrandingProvider } from '@/components/org-branding-provider';
 import { MobileNavProvider } from '@/components/mobile-nav-context';
 import { AppHeader } from '@/components/app-header';
+import { OnboardingModal } from '@/components/onboarding-modal';
 
 const PUBLIC_PREFIXES = ['/sign-in', '/sign-up', '/org-selection'] as const;
 
@@ -46,6 +47,7 @@ export function AuthenticatedShell({ children }: { children: React.ReactNode }) 
             <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
           </div>
         </div>
+        <OnboardingModal />
       </MobileNavProvider>
     </OrgBrandingProvider>
   );

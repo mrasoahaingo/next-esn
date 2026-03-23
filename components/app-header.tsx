@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
-import { ChevronRight, Menu, PanelLeft } from 'lucide-react';
+import { ChevronRight, CircleHelp, Menu, PanelLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useMobileNav } from '@/components/mobile-nav-context';
+import { useOnboarding } from '@/lib/hooks/use-onboarding';
 import { cn } from '@/lib/utils';
 
 type Crumb = { label: string; href?: string };
@@ -84,6 +85,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const params = useParams();
   const { openMobileNav } = useMobileNav();
+  const { reset: openOnboarding } = useOnboarding();
   const crumbs = buildBreadcrumbs(pathname, params);
 
   return (
@@ -155,6 +157,15 @@ export function AppHeader() {
             },
           }}
         />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={openOnboarding}
+          aria-label="Guide d'utilisation"
+        >
+          <CircleHelp className="h-4 w-4" />
+        </Button>
         <ThemeToggle />
         <UserButton
           afterSwitchSessionUrl="/"
