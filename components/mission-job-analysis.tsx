@@ -138,8 +138,17 @@ export function MissionJobAnalysis({
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainData, setExplainData] = useState<JobPostingKeyPointExplain | null>(null);
+  const [explainCache, setExplainCache] = useState<Record<string, JobPostingKeyPointExplain>>({});
 
   const openExplain = async (pointId: string) => {
+    const cached = explainCache[pointId] ?? effectiveAnalysis?.keyPointExplanations?.[pointId];
+    if (cached) {
+      setExplainData(cached);
+      setExplainLoading(false);
+      setExplainOpen(true);
+      return;
+    }
+
     setExplainOpen(true);
     setExplainData(null);
     setExplainLoading(true);
@@ -153,6 +162,7 @@ export function MissionJobAnalysis({
       }
       const data = (await res.json()) as JobPostingKeyPointExplain;
       setExplainData(data);
+      setExplainCache((prev) => ({ ...prev, [pointId]: data }));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
       setExplainOpen(false);

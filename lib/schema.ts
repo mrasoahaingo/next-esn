@@ -261,6 +261,10 @@ export const jobPostingAnalysisSchema = z.object({
     .describe('Points clés triés par importanceRank croissant (rang 1 en premier)'),
   openQuestions: z.array(z.string()).optional().describe('Zones floues ou à clarifier avec le client'),
   redFlags: z.array(z.string()).optional().describe('Ambiguïtés ou risques pour le discours commercial'),
+  keyPointExplanations: z
+    .record(z.string(), z.lazy(() => jobPostingKeyPointExplainSchema))
+    .optional()
+    .describe('Cache d’explications détaillées par point clé (clé = pointId)'),
 });
 
 export type JobPostingAnalysis = z.infer<typeof jobPostingAnalysisSchema>;

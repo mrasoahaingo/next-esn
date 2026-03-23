@@ -4,7 +4,11 @@ import { generateObject } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { createGatewayLanguageModel } from '@/lib/ai';
-import { jobPostingKeyPointExplainSchema, type JobPostingAnalysis } from '@/lib/schema';
+import {
+  jobPostingKeyPointExplainSchema,
+  type JobPostingAnalysis,
+  type JobPostingKeyPointExplain,
+} from '@/lib/schema';
 import { buildJobPostingKeyPointExplainUserContent } from '@/lib/services/job-posting-analysis.service';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
@@ -32,6 +36,10 @@ export async function POST(
 
     const jd = mission.job_description as string;
     const analysis = mission.job_analysis as JobPostingAnalysis | null;
+    const cached = analysis?.keyPointExplanations?.[pointId];
+    if (cached) {
+      return NextResponse.json(cached);
+    }
     const fromAnalysis = analysis?.keyPoints?.find((k) => k.id === pointId);
 
     const point = fromAnalysis ?? {
@@ -72,15 +80,30 @@ export async function POST(
     const durationMs = Date.now() - start;
 
     after(async () => {
-      await logAiUsage(supabase, {
-        operation: 'analysis',
-        missionId,
-        orgId,
-        aiModel: resolved.gatewayModelId,
-        taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
-        durationMs,
-        usage,
-      });
+      await Promise.all([
+        logAiUsage(supabase, {
+          operation: 'analysis',
+          missionId,
+          orgId,
+          aiModel: resolved.gatewayModelId,
+          taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
+          durationMs,
+          usage,
+        }),
+        supabase
+          .from('missions')
+          .update({
+            job_analysis: {
+              ...(analysis ?? {}),
+              keyPointExplanations: {
+                ...((analysis?.keyPointExplanations ?? {}) as Record<string, JobPostingKeyPointExplain>),
+                [pointId]: object,
+              },
+            },
+          })
+          .eq('id', missionId)
+          .eq('org_id', orgId),
+      ]);
     });
 
     return NextResponse.json(object);
