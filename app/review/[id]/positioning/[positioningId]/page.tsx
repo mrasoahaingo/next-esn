@@ -662,7 +662,7 @@ export default function PositioningWizardPage() {
 
                 {/* Analysis results during streaming — no tabs yet */}
                 {(isAnalyzing || isAnalysisLoading) && (
-                  <div className="flex-1 overflow-y-auto pr-2">
+                  <div className="flex-1 overflow-y-auto">
                     <AnalysisView
                       analysis={analysis}
                       isAnalyzing={isAnalyzing || isAnalysisLoading}
@@ -682,14 +682,14 @@ export default function PositioningWizardPage() {
                         Questions & Affinage
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="results" className="flex-1 overflow-y-auto mt-3 pr-2 space-y-4 data-[state=inactive]:hidden">
+                    <TabsContent value="results" className="flex-1 overflow-y-auto mt-3 space-y-4 data-[state=inactive]:hidden">
                       <AnalysisView
                         analysis={analysis}
                         isAnalyzing={false}
                         onReAnalyze={handleReAnalyze}
                       />
                     </TabsContent>
-                    <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 pr-2 data-[state=inactive]:hidden">
+                    <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden">
                       <QuestionsPanel
                         analysis={analysis}
                         onUpdateAnswer={updateAnswer}
@@ -704,7 +704,7 @@ export default function PositioningWizardPage() {
             )}
 
             {currentStep === 2 && (
-              <div className="flex-1 overflow-y-auto pr-2">
+              <div className="flex-1 overflow-y-auto">
                 <GenerationStep
                   isStreaming={isGenerating || isGenerateLoading}
                   streamMeta={generateStreamMeta}

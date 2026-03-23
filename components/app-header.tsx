@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
-import { ChevronRight, CircleHelp, Menu, PanelLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronRight, CircleHelp, PanelLeft } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { useMobileNav } from '@/components/mobile-nav-context';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useOnboarding } from '@/lib/hooks/use-onboarding';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 type Crumb = { label: string; href?: string };
 
@@ -84,7 +84,6 @@ function buildBreadcrumbs(pathname: string, params: ReturnType<typeof useParams>
 export function AppHeader() {
   const pathname = usePathname();
   const params = useParams();
-  const { openMobileNav } = useMobileNav();
   const { reset: openOnboarding } = useOnboarding();
   const crumbs = buildBreadcrumbs(pathname, params);
 
@@ -94,16 +93,7 @@ export function AppHeader() {
         'sticky top-0 z-30 flex shrink-0 items-center gap-3 border-b border-border/60 bg-shell/90 px-3 py-2.5 backdrop-blur-md md:px-5'
       )}
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="shrink-0 md:hidden"
-        onClick={openMobileNav}
-        aria-label="Ouvrir le menu de navigation"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+      <SidebarTrigger className="shrink-0 md:hidden" />
 
       <nav aria-label="Fil d&apos;Ariane" className="flex min-w-0 flex-1 items-center gap-1 text-sm">
         <div className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary md:flex">
