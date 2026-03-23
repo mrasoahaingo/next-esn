@@ -511,7 +511,7 @@ export default function PositioningWizardPage() {
                   <span className={`text-lg font-bold ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}>
                     {analysis.matchScore}%
                   </span>
-                  <span className="text-xs text-muted-foreground">Score</span>
+                  <span className="hidden md:block text-xs text-muted-foreground">Score</span>
                 </div>
                 {analysis.skillMatches && (
                   <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
@@ -519,14 +519,14 @@ export default function PositioningWizardPage() {
                     <span className="text-sm font-semibold text-foreground">
                       {analysis.skillMatches.filter((s) => s.relevance === 'strong').length}/{analysis.skillMatches.length}
                     </span>
-                    <span className="text-xs text-muted-foreground">Compétences</span>
+                    <span className="hidden md:block text-xs text-muted-foreground">Compétences</span>
                   </div>
                 )}
                 {analysis.gaps && analysis.gaps.length > 0 && (
                   <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
                     <AlertTriangle className="h-4 w-4 text-destructive" />
                     <span className="text-sm font-semibold text-foreground">{analysis.gaps.length}</span>
-                    <span className="text-xs text-muted-foreground">Lacunes</span>
+                    <span className="hidden md:block text-xs text-muted-foreground">Lacunes</span>
                   </div>
                 )}
               </div>
@@ -636,9 +636,9 @@ export default function PositioningWizardPage() {
         </div>
 
         {/* Split layout */}
-        <div className="flex min-h-0 flex-1 gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
           {/* Left panel */}
-          <div className="w-1/2 flex flex-col min-h-0">
+          <div className="w-full flex flex-col min-h-0 lg:w-1/2">
             {currentStep === 1 && (
               <div className="flex flex-col min-h-0 gap-3 h-full">
                 {/* Job description — editable before analysis, read-only after */}
@@ -715,7 +715,7 @@ export default function PositioningWizardPage() {
           </div>
 
           {/* Right panel */}
-          <div className="w-1/2 sticky top-0">
+          <div className="w-full min-h-[400px] lg:sticky lg:top-0 lg:w-1/2">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
               {currentStep === 2 ? (
                 <>

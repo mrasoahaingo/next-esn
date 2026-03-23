@@ -98,6 +98,7 @@ export default function RecruiterProfilePage() {
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Aucun résultat pour ce filtre.</p>
           ) : (
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -125,6 +126,7 @@ export default function RecruiterProfilePage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </div>
       </div>

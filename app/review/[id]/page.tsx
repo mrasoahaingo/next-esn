@@ -285,7 +285,7 @@ export default function ReviewPage() {
                 </h1>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {/* Cancel extraction */}
               {isLoading && candidateData?.workflow_run_id && (
                 <Button
@@ -480,7 +480,7 @@ export default function ReviewPage() {
           </div>
 
           {/* Right: PDF Preview */}
-          <div className="w-full sticky top-0 lg:w-1/2">
+          <div className="w-full min-h-[400px] lg:sticky lg:top-0 lg:w-1/2">
             <PdfPreview />
           </div>
         </div>

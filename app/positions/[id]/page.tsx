@@ -860,7 +860,7 @@ function CompareCvsModal({
   positionings: MissionPositioning[];
 }) {
   const count = positionings.length;
-  const gridCols = count === 2 ? 'grid-cols-2' : count === 3 ? 'grid-cols-3' : 'grid-cols-4';
+  const gridCols = count === 2 ? 'grid-cols-1 sm:grid-cols-2' : count === 3 ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4';
 
   const winnerIndex = positionings.reduce((best, p, i) =>
     (p.analysis?.matchScore ?? 0) > (positionings[best]?.analysis?.matchScore ?? 0) ? i : best

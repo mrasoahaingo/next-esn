@@ -364,9 +364,9 @@ export default function Dashboard() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
         {/* Header */}
-        <div className="mb-8 flex items-end justify-between">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold title-gradient inline-block">Dashboard</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -405,7 +405,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stat cards */}
-        <div className="mb-6 grid grid-cols-5 gap-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
             {
               icon: FileText,
@@ -538,7 +538,7 @@ export default function Dashboard() {
         )}
 
         {/* Main grid: charts + matching list */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {/* ─── Score distribution (bar chart) ─────────────────────── */}
           <ScoreDistributionChart scoreDistribution={scoreDistribution} />
 
@@ -598,7 +598,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {[
                   {
                     label: 'Extraction IA',
@@ -683,12 +683,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {topSkills.length > 0 ? (
-              <div className="grid grid-cols-2 gap-x-8 gap-y-2.5">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-2.5 sm:grid-cols-2">
                 {topSkills.map((s) => {
                   const total = s.strong + s.partial + s.missing;
                   return (
                     <div key={s.skill} className="group flex items-center gap-3">
-                      <span className="w-[140px] shrink-0 truncate text-xs text-foreground">
+                      <span className="w-[100px] shrink-0 truncate text-xs text-foreground sm:w-[140px]">
                         {s.skill}
                       </span>
                       <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-overlay/[0.06]">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, startTransition } from 'react';
+import { useState, useMemo, useEffect, useRef, startTransition } from 'react';
 import { useMobileNav } from '@/components/mobile-nav-context';
 import { cn } from '@/lib/utils';
 import { useCandidates, usePositionings, useMissions, useUploadCv, useCancelWorkflow, useCreateMission } from '@/lib/queries';
@@ -119,7 +119,12 @@ export function UnifiedSidebar() {
   const params = useParams();
   const pathname = usePathname();
 
+  const skipNextClose = useRef(false);
   useEffect(() => {
+    if (skipNextClose.current) {
+      skipNextClose.current = false;
+      return;
+    }
     startTransition(() => setMobileNavOpen(false));
   }, [pathname, setMobileNavOpen]);
   const { isDemoMode, toggleDemoMode } = useDemoModeStore();
@@ -254,7 +259,7 @@ export function UnifiedSidebar() {
       />
       <aside
         className={cn(
-          'flex h-screen w-[280px] shrink-0 flex-col border-r border-violet/10 bg-panel',
+          'flex h-screen w-[280px] shrink-0 flex-col overflow-hidden border-r border-violet/10 bg-panel',
           'fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out md:relative md:z-0 md:translate-x-0',
           mobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
@@ -299,6 +304,7 @@ export function UnifiedSidebar() {
       <Tabs
         value={activeTab}
         onValueChange={(v) => {
+          skipNextClose.current = true;
           if (v === 'cvs') router.push('/');
           else router.push('/positions');
         }}
@@ -747,7 +753,7 @@ export function UnifiedSidebar() {
           </DialogTitle>
 
           <div className="mt-2 flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="sidebar-mission-title">Intitulé du poste *</Label>
                 <Input

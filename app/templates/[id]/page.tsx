@@ -225,10 +225,10 @@ export default function TemplateEditorPage() {
       <div className="flex flex-1 flex-col px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div
-                className="flex h-9 w-9 items-center justify-center rounded-lg"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
                 style={{ backgroundColor: config.colors.primary }}
               >
                 <span
@@ -236,7 +236,7 @@ export default function TemplateEditorPage() {
                   style={{ backgroundColor: config.colors.secondary }}
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <Input
                   value={name}
                   onChange={(e) => setLocalName(e.target.value)}
@@ -269,9 +269,9 @@ export default function TemplateEditorPage() {
         </div>
 
         {/* Split layout */}
-        <div className="flex min-h-0 flex-1 gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
           {/* Left: Config form */}
-          <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
+          <div className="w-full overflow-y-auto pr-0 space-y-4 lg:w-1/2 lg:pr-2">
             {/* Colors */}
             <div className="rounded-xl glass-panel p-4">
               <h3 className="mb-3 text-sm font-semibold text-foreground">Couleurs</h3>
@@ -402,7 +402,7 @@ export default function TemplateEditorPage() {
           </div>
 
           {/* Right: PDF preview */}
-          <div className="w-1/2 sticky top-0">
+          <div className="w-full sticky top-0 lg:w-1/2">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <h2 className="flex items-center text-sm font-semibold text-foreground">

@@ -25,7 +25,7 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
         Personal Info
       </h2>
       <FieldGroup className="gap-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="pi-firstName" className="text-xs uppercase tracking-wider text-muted-foreground">
               First Name
@@ -94,7 +94,7 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
             disabled={readOnly}
           />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="pi-yoe" className="text-xs uppercase tracking-wider text-muted-foreground">
               Années d&apos;expérience

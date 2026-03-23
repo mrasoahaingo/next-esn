@@ -182,6 +182,7 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             {sortedOrgs.length > 0 ? (
+              <div className="overflow-x-auto -mx-2">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -265,6 +266,7 @@ export default function AdminPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Building2 className="mb-2 h-8 w-8" />
