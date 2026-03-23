@@ -16,6 +16,7 @@ import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square, Save, CheckCircle2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -209,6 +210,11 @@ export default function ReviewPage() {
   const handleExperiences = useCallback((val: unknown) => handleUpdate('experiences', val), [handleUpdate]);
   const handleEducation = useCallback((val: unknown) => handleUpdate('education', val), [handleUpdate]);
 
+  const sectionSpacing = safeData?.sectionSpacing ?? {};
+  const handleSectionSpacing = useCallback((section: string, value: number) => {
+    handleUpdate('sectionSpacing', { ...((cvData as Partial<ExtractedCV>)?.sectionSpacing ?? {}), [section]: value });
+  }, [handleUpdate, cvData]);
+
   // Section status helper
   const status = (field: keyof ExtractedCV) =>
     getSectionStatus(cvData, isLoading, field, streamMeta);
@@ -246,30 +252,52 @@ export default function ReviewPage() {
               Annuler l&apos;extraction
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleteCandidate.isPending}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-          >
-            {deleteCandidate.isPending ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Supprimer
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={deleteCandidate.isPending}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  {deleteCandidate.isPending ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                  )}
+                  Supprimer
+                </Button>
+              }
+            />
+            <AlertDialogContent className="bg-panel border-overlay/10">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer ce CV ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action est irréversible. Le CV et toutes ses données seront définitivement supprimés.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col bg-background text-foreground">
-      <div className="flex flex-1 flex-col px-4 py-4 md:px-6">
+    <div className="grid h-full grid-rows-[auto_1fr] bg-background text-foreground">
+      <div className="px-4 pt-4 md:px-6">
         {/* Top bar */}
-        <div className="mb-4 rounded-2xl glass-panel p-4">
+        <div className="rounded-2xl glass-panel p-4">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
             <div className="flex items-center gap-4">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 text-primary neon-ring">
@@ -305,28 +333,50 @@ export default function ReviewPage() {
               )}
 
               {/* Delete candidate */}
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="sm"
+              <AlertDialog>
+                <Tooltip>
+                  <AlertDialogTrigger
+                    render={
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={deleteCandidate.isPending}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {deleteCandidate.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        }
+                      />
+                    }
+                  />
+                  <TooltipContent side="bottom" className="text-xs">
+                    Supprimer ce CV
+                  </TooltipContent>
+                </Tooltip>
+                <AlertDialogContent className="bg-panel border-overlay/10">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer ce CV ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Le CV et toutes ses données seront définitivement supprimés.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
                       onClick={handleDelete}
-                      disabled={deleteCandidate.isPending}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      {deleteCandidate.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
-                  }
-                />
-                <TooltipContent side="bottom" className="text-xs">
-                  Supprimer ce CV
-                </TooltipContent>
-              </Tooltip>
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
               {/* Time tracking indicators */}
               {(aiDurationMs || userTimeSeconds) && (
@@ -425,64 +475,68 @@ export default function ReviewPage() {
           <ExtractionProgress data={cvData} isStreaming={isLoading} streamMeta={streamMeta} />
         </div>
 
-        {error && (
-          <div className="mb-4 flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
-            <AlertCircle className="mr-2 h-5 w-5" />
-            {error.message}
-            <Button variant="ghost" size="sm" onClick={handleRetryExtraction} className="ml-auto">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Réessayer
-            </Button>
-          </div>
-        )}
+      </div>
 
-        {/* Split layout: form left, PDF right */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-          {/* Left: Form */}
-          <div className="w-full overflow-y-auto space-y-4 lg:w-1/2">
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
-                <PersonalInfo
-                  data={safeData?.personalInfo}
-                  onChange={handlePersonalInfo}
-                  readOnly={isLoading}
-                />
-              </SectionShell>
-              <SectionShell status={status('summary')} label="Rédaction du résumé...">
-                <Summary
-                  data={safeData?.summary}
-                  onChange={handleSummary}
-                  readOnly={isLoading}
-                />
-              </SectionShell>
+      {/* Split layout: two independent scroll columns */}
+      <div className="grid min-h-0 grid-cols-1 gap-4 px-4 py-4 md:px-6 lg:grid-cols-2">
+        {/* Left: Form (independent scroll) */}
+        <div className="overflow-y-auto space-y-4">
+          {error && (
+            <div className="flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+              <AlertCircle className="mr-2 h-5 w-5" />
+              {error.message}
+              <Button variant="ghost" size="sm" onClick={handleRetryExtraction} className="ml-auto">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Réessayer
+              </Button>
             </div>
-            <SectionShell status={status('skills')} label="Analyse des compétences...">
-              <Skills
-                data={safeSkills}
-                onChange={handleSkills}
+          )}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
+              <PersonalInfo
+                data={safeData?.personalInfo}
+                onChange={handlePersonalInfo}
                 readOnly={isLoading}
               />
             </SectionShell>
-            <SectionShell status={status('experiences')} label="Analyse des expériences...">
-              <Experiences
-                data={safeExperiences}
-                onChange={handleExperiences}
+            <SectionShell status={status('summary')} label="Rédaction du résumé...">
+              <Summary
+                data={safeData?.summary}
+                onChange={handleSummary}
                 readOnly={isLoading}
-              />
-            </SectionShell>
-            <SectionShell status={status('education')} label="Extraction des formations...">
-              <Education
-                data={safeEducation}
-                onChange={handleEducation}
-                readOnly={isLoading}
+                spacingAfter={sectionSpacing.summary}
+                onSpacingChange={(v) => handleSectionSpacing('summary', v)}
               />
             </SectionShell>
           </div>
+          <SectionShell status={status('skills')} label="Analyse des compétences...">
+            <Skills
+              data={safeSkills}
+              onChange={handleSkills}
+              readOnly={isLoading}
+              spacingAfter={sectionSpacing.skills}
+              onSpacingChange={(v) => handleSectionSpacing('skills', v)}
+            />
+          </SectionShell>
+          <SectionShell status={status('experiences')} label="Analyse des expériences...">
+            <Experiences
+              data={safeExperiences}
+              onChange={handleExperiences}
+              readOnly={isLoading}
+            />
+          </SectionShell>
+          <SectionShell status={status('education')} label="Extraction des formations...">
+            <Education
+              data={safeEducation}
+              onChange={handleEducation}
+              readOnly={isLoading}
+            />
+          </SectionShell>
+        </div>
 
-          {/* Right: PDF Preview */}
-          <div className="w-full min-h-[400px] lg:sticky lg:top-0 lg:w-1/2">
-            <PdfPreview />
-          </div>
+        {/* Right: PDF Preview (independent scroll) */}
+        <div className="overflow-y-auto">
+          <PdfPreview />
         </div>
       </div>
     </div>

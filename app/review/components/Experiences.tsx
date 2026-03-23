@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Slider } from '@/components/ui/slider';
 import { Trash2, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { memo, useState } from 'react';
 
@@ -18,7 +19,7 @@ interface ExperiencesProps {
 export const Experiences = memo(function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
-  const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[]) => {
+  const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[] | number) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
     onChange(newData);
@@ -228,6 +229,22 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
                 </Button>
               )}
             </div>
+
+            {!readOnly && (
+              <Field className="mt-3">
+                <FieldLabel htmlFor={`exp-spacing-${i}`} className="text-xs text-muted-foreground">
+                  Marge en dessous : {exp.spacingAfter ?? 0} pt
+                </FieldLabel>
+                <Slider
+                  id={`exp-spacing-${i}`}
+                  min={0}
+                  max={100}
+                  step={2}
+                  value={[exp.spacingAfter ?? 0]}
+                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                />
+              </Field>
+            )}
           </div>
         ) : null)}
       </FieldGroup>

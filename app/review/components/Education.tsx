@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Trash2, Plus } from 'lucide-react';
 
@@ -15,7 +16,7 @@ interface EducationProps {
 }
 
 export const Education = memo(function Education({ data, onChange, readOnly }: EducationProps) {
-  const handleUpdate = (index: number, field: keyof EducationItem, value: string) => {
+  const handleUpdate = (index: number, field: keyof EducationItem, value: string | number) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
     onChange(newData);
@@ -54,66 +55,83 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
 
       <FieldGroup className="gap-4">
         {Array.isArray(data) && data.map((edu, i) => edu ? (
-          <div key={i} className="flex justify-between items-start group border-b border-overlay/10 pb-4 last:border-0 last:pb-0">
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-              {readOnly ? (
-                <>
-                  <div className="col-span-2">
-                    <div className="font-bold text-foreground">{edu.degree}</div>
-                    <div className="text-muted-foreground">{edu.school}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-muted-foreground bg-overlay/10 px-2 py-1 rounded inline-block">{edu.year}</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="col-span-2 flex flex-col gap-2">
-                    <Field>
-                      <FieldLabel htmlFor={`edu-degree-${i}`} className="sr-only">Degree</FieldLabel>
-                      <Input
-                        id={`edu-degree-${i}`}
-                        value={edu.degree ?? ''}
-                        onChange={(e) => handleUpdate(i, 'degree', e.target.value)}
-                        placeholder="Degree"
-                        className="font-bold"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor={`edu-school-${i}`} className="sr-only">School</FieldLabel>
-                      <Input
-                        id={`edu-school-${i}`}
-                        value={edu.school ?? ''}
-                        onChange={(e) => handleUpdate(i, 'school', e.target.value)}
-                        placeholder="School"
-                      />
-                    </Field>
-                  </div>
-                  <div className="flex items-start gap-2 justify-end">
-                    <Field>
-                      <FieldLabel htmlFor={`edu-year-${i}`} className="sr-only">Year</FieldLabel>
-                      <Input
-                        id={`edu-year-${i}`}
-                        value={edu.year ?? ''}
-                        onChange={(e) => handleUpdate(i, 'year', e.target.value)}
-                        placeholder="Year"
-                        className="w-24 text-center"
-                      />
-                    </Field>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => handleRemove(i)}
-                      className="text-muted-foreground hover:text-destructive mt-1"
-                      aria-label="Remove education entry"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </div>
-                </>
-              )}
+          <div key={i} className="border-b border-overlay/10 pb-4 last:border-0 last:pb-0">
+            <div className="flex justify-between items-start group">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {readOnly ? (
+                  <>
+                    <div className="col-span-2">
+                      <div className="font-bold text-foreground">{edu.degree}</div>
+                      <div className="text-muted-foreground">{edu.school}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-muted-foreground bg-overlay/10 px-2 py-1 rounded inline-block">{edu.year}</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="col-span-2 flex flex-col gap-2">
+                      <Field>
+                        <FieldLabel htmlFor={`edu-degree-${i}`} className="sr-only">Degree</FieldLabel>
+                        <Input
+                          id={`edu-degree-${i}`}
+                          value={edu.degree ?? ''}
+                          onChange={(e) => handleUpdate(i, 'degree', e.target.value)}
+                          placeholder="Degree"
+                          className="font-bold"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`edu-school-${i}`} className="sr-only">School</FieldLabel>
+                        <Input
+                          id={`edu-school-${i}`}
+                          value={edu.school ?? ''}
+                          onChange={(e) => handleUpdate(i, 'school', e.target.value)}
+                          placeholder="School"
+                        />
+                      </Field>
+                    </div>
+                    <div className="flex items-start gap-2 justify-end">
+                      <Field>
+                        <FieldLabel htmlFor={`edu-year-${i}`} className="sr-only">Year</FieldLabel>
+                        <Input
+                          id={`edu-year-${i}`}
+                          value={edu.year ?? ''}
+                          onChange={(e) => handleUpdate(i, 'year', e.target.value)}
+                          placeholder="Year"
+                          className="w-24 text-center"
+                        />
+                      </Field>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleRemove(i)}
+                        className="text-muted-foreground hover:text-destructive mt-1"
+                        aria-label="Remove education entry"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
+            {!readOnly && (
+              <Field className="mt-3">
+                <FieldLabel htmlFor={`edu-spacing-${i}`} className="text-xs text-muted-foreground">
+                  Marge en dessous : {edu.spacingAfter ?? 0} pt
+                </FieldLabel>
+                <Slider
+                  id={`edu-spacing-${i}`}
+                  min={0}
+                  max={100}
+                  step={2}
+                  value={[edu.spacingAfter ?? 0]}
+                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                />
+              </Field>
+            )}
           </div>
         ) : null)}
       </FieldGroup>

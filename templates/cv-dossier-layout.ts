@@ -465,7 +465,7 @@ function createSectionBuilders(): Record<string, SectionBuilder> {
         children: [],
       };
       pageChildren.push('summary-text');
-      elements['spacer-summary'] = { type: 'Spacer', props: { height: theme.spacerAfterSummary }, children: [] };
+      elements['spacer-summary'] = { type: 'Spacer', props: { height: theme.spacerAfterSummary + (data.sectionSpacing?.summary ?? 0) }, children: [] };
       pageChildren.push('spacer-summary');
     },
 
@@ -494,7 +494,7 @@ function createSectionBuilders(): Record<string, SectionBuilder> {
 
       addSectionHeading(elements, 'skills', 'Compétences', pageChildren, colors, theme);
       addInfoTable(elements, 'skills', categoryRows, pageChildren, colors, theme);
-      elements['spacer-skills'] = { type: 'Spacer', props: { height: theme.spacerAfterSkills }, children: [] };
+      elements['spacer-skills'] = { type: 'Spacer', props: { height: theme.spacerAfterSkills + (data.sectionSpacing?.skills ?? 0) }, children: [] };
       pageChildren.push('spacer-skills');
     },
 
@@ -554,7 +554,7 @@ function createSectionBuilders(): Record<string, SectionBuilder> {
           children: [],
         };
         pageChildren.push(`edu-${i}-row`);
-        elements[`edu-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterEducationBlock }, children: [] };
+        elements[`edu-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterEducationBlock + (edu.spacingAfter ?? 0) }, children: [] };
         pageChildren.push(`edu-${i}-spacer`);
       });
 
@@ -737,7 +737,7 @@ function createSectionBuilders(): Record<string, SectionBuilder> {
         }
 
         pageChildren.push(`exp-${i}-wrapper`);
-        elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterExperienceBlock }, children: [] };
+        elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterExperienceBlock + (exp.spacingAfter ?? 0) }, children: [] };
         pageChildren.push(`exp-${i}-spacer`);
       });
 

@@ -80,11 +80,13 @@ export const extractionSchema = z.object({
     isCurrent: z.boolean(),
     description: z.array(z.string()).describe("List of missions/tasks"),
     skills: z.array(z.string()).optional().describe("Key technologies/tools used in this experience (e.g. 'React', 'Node.js', 'AWS')"),
+    spacingAfter: z.number().min(0).max(100).optional().describe("Extra bottom margin in pt (PDF layout tweak)"),
   })),
   education: z.array(z.object({
     degree: z.string(),
     school: z.string(),
     year: z.string(),
+    spacingAfter: z.number().min(0).max(100).optional().describe("Extra bottom margin in pt (PDF layout tweak)"),
   })),
   skills: z.object({
     technologies: z.array(skillSchema).describe("Technical skills: languages, frameworks, databases, tools (mapped to skills.sh taxonomy)"),
@@ -93,6 +95,12 @@ export const extractionSchema = z.object({
     methodologies: z.array(skillSchema).describe("Methodologies: Agile, Scrum, DevOps, TDD, etc."),
   }).describe("Skills organized by category. Mark each skill as 'extracted' if explicitly written in the CV, or 'inferred' if deduced from context."),
   strengths: z.array(z.string()).optional().describe("4-5 bullet points of strengths based on CV and job description"),
+  sectionSpacing: z.object({
+    summary: z.number().min(0).max(100).optional(),
+    skills: z.number().min(0).max(100).optional(),
+    education: z.number().min(0).max(100).optional(),
+    strengths: z.number().min(0).max(100).optional(),
+  }).optional().describe("Extra bottom margin per section in pt (PDF layout tweak)"),
 });
 
 export type ExtractedCV = z.infer<typeof extractionSchema>;

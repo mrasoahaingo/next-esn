@@ -2,6 +2,7 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Sparkles, Star, ChevronDown, ChevronUp } from 'lucide-react';
@@ -14,6 +15,8 @@ interface SkillsProps {
   data: SkillsData | undefined;
   onChange: (data: SkillsData) => void;
   readOnly?: boolean;
+  spacingAfter?: number;
+  onSpacingChange?: (value: number) => void;
 }
 
 const CATEGORIES: { key: keyof NonNullable<SkillsData>; label: string }[] = [
@@ -186,7 +189,7 @@ function CategorySection({
   );
 }
 
-export const Skills = memo(function Skills({ data, onChange, readOnly }: SkillsProps) {
+export const Skills = memo(function Skills({ data, onChange, readOnly, spacingAfter, onSpacingChange }: SkillsProps) {
   const safeData = data ?? {};
 
   const normalizeItems = (items: (Skill | string)[] | undefined): Skill[] =>
@@ -225,6 +228,21 @@ export const Skills = memo(function Skills({ data, onChange, readOnly }: SkillsP
           />
         ))}
       </FieldGroup>
+      {!readOnly && onSpacingChange && (
+        <Field className="mt-4">
+          <FieldLabel htmlFor="skills-spacing" className="text-xs text-muted-foreground">
+            Marge en dessous : {spacingAfter ?? 0} pt
+          </FieldLabel>
+          <Slider
+            id="skills-spacing"
+            min={0}
+            max={100}
+            step={2}
+            value={[spacingAfter ?? 0]}
+            onValueChange={(v) => onSpacingChange(v)}
+          />
+        </Field>
+      )}
     </section>
   );
 });

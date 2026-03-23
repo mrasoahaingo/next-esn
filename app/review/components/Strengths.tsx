@@ -1,6 +1,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
@@ -9,9 +10,11 @@ interface StrengthsProps {
   data: (string | undefined)[] | undefined;
   onChange: (data: string[]) => void;
   readOnly?: boolean;
+  spacingAfter?: number;
+  onSpacingChange?: (value: number) => void;
 }
 
-export function Strengths({ data, onChange, readOnly }: StrengthsProps) {
+export function Strengths({ data, onChange, readOnly, spacingAfter, onSpacingChange }: StrengthsProps) {
   const [newStrength, setNewStrength] = useState('');
   const normalizedData = (data || []).filter((item): item is string => Boolean(item));
 
@@ -86,6 +89,21 @@ export function Strengths({ data, onChange, readOnly }: StrengthsProps) {
           </li>
         ))}
       </ul>
+      {!readOnly && onSpacingChange && (
+        <Field className="mt-4">
+          <FieldLabel htmlFor="strengths-spacing" className="text-xs text-muted-foreground">
+            Marge en dessous : {spacingAfter ?? 0} pt
+          </FieldLabel>
+          <Slider
+            id="strengths-spacing"
+            min={0}
+            max={100}
+            step={2}
+            value={[spacingAfter ?? 0]}
+            onValueChange={(v) => onSpacingChange(v)}
+          />
+        </Field>
+      )}
     </section>
   );
 }
