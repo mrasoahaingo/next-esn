@@ -485,7 +485,7 @@ export default function PositioningWizardPage() {
 
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
-      <div className="flex flex-1 flex-col px-4 py-4 md:px-6">
+      <div className="flex flex-1 flex-col min-h-0 px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
@@ -715,7 +715,7 @@ export default function PositioningWizardPage() {
           </div>
 
           {/* Right panel */}
-          <div className="w-full min-h-[400px] lg:sticky lg:top-0 lg:w-1/2">
+          <div className="w-full min-h-[400px] lg:min-h-0 lg:w-1/2">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
               {currentStep === 2 ? (
                 <>
