@@ -127,7 +127,6 @@ interface MissionDetail {
   job_analysis_input_hash?: string | null;
   job_analysis_workflow_run_id?: string | null;
   job_analysis_stale?: boolean;
-  understood_point_ids?: string[];
   global_skill_keys_understood?: string[];
 }
 
@@ -1378,7 +1377,6 @@ export default function PositionDetailPage() {
                   job_analysis={mission.job_analysis ?? null}
                   job_analysis_workflow_run_id={mission.job_analysis_workflow_run_id ?? null}
                   job_analysis_stale={mission.job_analysis_stale ?? false}
-                  understood_point_ids={mission.understood_point_ids ?? []}
                   global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
                   className="mb-0 flex min-h-0 flex-1 flex-col overflow-hidden"
                 />

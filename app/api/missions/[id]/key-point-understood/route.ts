@@ -34,55 +34,30 @@ export async function POST(
 
     const analysis = mission.job_analysis as JobPostingAnalysis | null;
     const point = analysis?.keyPoints?.find((p) => p.id === pointId);
-    const useGlobalSkill =
-      point?.aspect === 'technical' &&
-      point.canonicalSkillKey &&
-      point.canonicalSkillKey.trim().length > 0;
+    const skillKey =
+      point?.canonicalSkillKey?.trim()
+        ? normalizeSkillKey(point.canonicalSkillKey)
+        : pointId;
 
-    if (useGlobalSkill && point.canonicalSkillKey) {
-      const skillKey = normalizeSkillKey(point.canonicalSkillKey);
-      if (understood) {
-        const { error: upErr } = await supabase.from('recruiter_skill_understood').upsert(
-          {
-            org_id: orgId,
-            user_id: userId,
-            skill_key: skillKey,
-            understood_at: new Date().toISOString(),
-          },
-          { onConflict: 'org_id,user_id,skill_key' },
-        );
-        if (upErr) throw upErr;
-      } else {
-        const { error: delErr } = await supabase
-          .from('recruiter_skill_understood')
-          .delete()
-          .eq('org_id', orgId)
-          .eq('user_id', userId)
-          .eq('skill_key', skillKey);
-        if (delErr) throw delErr;
-      }
+    if (understood) {
+      const { error: upErr } = await supabase.from('recruiter_skill_understood').upsert(
+        {
+          org_id: orgId,
+          user_id: userId,
+          skill_key: skillKey,
+          understood_at: new Date().toISOString(),
+        },
+        { onConflict: 'org_id,user_id,skill_key' },
+      );
+      if (upErr) throw upErr;
     } else {
-      if (understood) {
-        const { error: upErr } = await supabase.from('mission_skill_understood').upsert(
-          {
-            mission_id: missionId,
-            org_id: orgId,
-            user_id: userId,
-            point_id: pointId,
-            understood_at: new Date().toISOString(),
-          },
-          { onConflict: 'mission_id,user_id,point_id' },
-        );
-        if (upErr) throw upErr;
-      } else {
-        const { error: delErr } = await supabase
-          .from('mission_skill_understood')
-          .delete()
-          .eq('mission_id', missionId)
-          .eq('user_id', userId)
-          .eq('point_id', pointId);
-        if (delErr) throw delErr;
-      }
+      const { error: delErr } = await supabase
+        .from('recruiter_skill_understood')
+        .delete()
+        .eq('org_id', orgId)
+        .eq('user_id', userId)
+        .eq('skill_key', skillKey);
+      if (delErr) throw delErr;
     }
 
     return NextResponse.json({ ok: true });

@@ -12,18 +12,13 @@ export async function GET(
     const { id } = await params;
     const supabase = getSupabase();
 
-    const [missionResult, understoodResult, globalSkillResult] = await Promise.all([
+    const [missionResult, globalSkillResult] = await Promise.all([
       supabase
         .from('missions')
         .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, added_via, candidates(id, extracted_data, original_file_url, status, workflow_run_id))')
         .eq('id', id)
         .eq('org_id', orgId)
         .single(),
-      supabase
-        .from('mission_skill_understood')
-        .select('point_id')
-        .eq('mission_id', id)
-        .eq('user_id', userId),
       supabase
         .from('recruiter_skill_understood')
         .select('skill_key')
@@ -36,7 +31,6 @@ export async function GET(
       return NextResponse.json({ error: 'Mission not found' }, { status: 404 });
     }
 
-    const understood_point_ids = (understoodResult.data ?? []).map((r) => r.point_id as string);
     const global_skill_keys_understood = (globalSkillResult.data ?? []).map((r) => r.skill_key as string);
 
     const job_analysis_stale =
@@ -46,7 +40,6 @@ export async function GET(
 
     return NextResponse.json({
       ...data,
-      understood_point_ids,
       global_skill_keys_understood,
       job_analysis_stale: !!job_analysis_stale,
     });

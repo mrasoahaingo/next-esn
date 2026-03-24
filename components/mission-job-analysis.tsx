@@ -44,8 +44,7 @@ interface MissionJobAnalysisProps {
   job_analysis: JobPostingAnalysis | null;
   job_analysis_workflow_run_id: string | null;
   job_analysis_stale: boolean;
-  understood_point_ids: string[];
-  /** Clés skills canoniques déjà marquées « comprises » (toutes missions de l’org). */
+  /** Clés skills marquées « comprises » par le recruteur (toutes missions de l’org). */
   global_skill_keys_understood: string[];
   /** Classes sur le conteneur (ex. grille 2 colonnes : retirer mb-6, overflow). */
   className?: string;
@@ -65,7 +64,6 @@ export function MissionJobAnalysis({
   job_analysis,
   job_analysis_workflow_run_id,
   job_analysis_stale,
-  understood_point_ids,
   global_skill_keys_understood,
   className,
 }: MissionJobAnalysisProps) {
@@ -299,14 +297,10 @@ export function MissionJobAnalysis({
               <div className="flex flex-col gap-2">
                 {points.map((kp) => {
                   const aspect = (kp.aspect ?? 'other') as JobPostingKeyPointAspect;
-                  const technicalKey =
-                    aspect === 'technical' && kp.canonicalSkillKey
-                      ? normalizeSkillKey(kp.canonicalSkillKey)
-                      : null;
-                  const understoodGlobal =
-                    technicalKey != null && global_skill_keys_understood.includes(technicalKey);
-                  const understoodLocal = understood_point_ids.includes(kp.id);
-                  const understood = technicalKey != null ? understoodGlobal : understoodLocal;
+                  const skillKey = kp.canonicalSkillKey?.trim()
+                    ? normalizeSkillKey(kp.canonicalSkillKey)
+                    : kp.id;
+                  const understood = global_skill_keys_understood.includes(skillKey);
 
                   return (
                     <div
@@ -322,17 +316,17 @@ export function MissionJobAnalysis({
                           <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
                             {jobPostingAspectLabel(aspect)}
                           </Badge>
-                          {technicalKey && understoodGlobal && (
+                          {understood && (
                             <Badge
                               variant="default"
                               className="text-[9px] px-1.5 py-0 gap-0.5 bg-neon/20 text-neon border-0"
                             >
                               <CheckCircle2 className="h-3 w-3" />
-                              Assimilé (profil)
+                              Assimilé
                             </Badge>
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{kp.roleInMission}</p>
+                        <p className="text-xs text-white/70 leading-relaxed">{kp.roleInMission}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         <div className="flex items-center gap-1.5">
@@ -346,7 +340,7 @@ export function MissionJobAnalysis({
                           />
                           <Label
                             htmlFor={`understood-${kp.id}`}
-                            className="text-[10px] cursor-pointer text-muted-foreground"
+                            className="text-[10px] cursor-pointer text-white/70"
                           >
                             Compris
                           </Label>
@@ -356,15 +350,11 @@ export function MissionJobAnalysis({
                           size="sm"
                           variant="outline"
                           className="h-7 text-[10px] border-violet/30"
-                          title={
-                            understoodGlobal
-                              ? 'Explication contextualisée à cette fiche (la techno est déjà marquée comprise sur votre profil)'
-                              : 'Explication contextualisée à cette fiche de poste'
-                          }
+                          title="Explication contextualisée à cette fiche de poste"
                           onClick={() => openExplain(kp.id)}
                         >
                           <BookOpen className="h-3 w-3 mr-1" />
-                          {understoodGlobal ? 'Expliquer (mission)' : 'Expliquer'}
+                          Expliquer
                         </Button>
                       </div>
                     </div>
