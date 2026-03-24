@@ -1,9 +1,8 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
-import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import { mergeJobPostingPartial } from '@/lib/services/job-posting-analysis-merge';
 import {
   jobPostingAnalysisSchema,
@@ -13,7 +12,7 @@ import {
 } from '@/lib/schema';
 import { buildJobPostingAnalysisUserContent } from '@/lib/services/job-posting-analysis.service';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
-import { TASK_KEY } from '@/lib/llm/task-keys';
+import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import type {
   JobPostingAnalysisBranch,
   JobPostingAnalysisStreamMeta,
@@ -42,7 +41,7 @@ async function fetchAndAnalyze(missionId: string) {
 
   const { data: mission, error: fetchError } = await supabase
     .from('missions')
-    .select('id, org_id, job_description')
+    .select('id, org_id, job_description, job_analysis_workflow_run_id')
     .eq('id', missionId)
     .single();
 
@@ -52,6 +51,9 @@ async function fetchAndAnalyze(missionId: string) {
   if (!jobDescription?.trim()) throw new Error('Fiche de poste vide');
 
   const userContent = buildJobPostingAnalysisUserContent(jobDescription);
+
+  const workflowRunId = (mission.job_analysis_workflow_run_id as string | null) ?? null;
+  const missionRowId = mission.id as string;
 
   const startTime = Date.now();
   const encoder = new TextEncoder();
@@ -86,7 +88,11 @@ async function fetchAndAnalyze(missionId: string) {
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: JobPostingAnalysisBranch,
-  ): Promise<LanguageModelUsage> {
+    taskKey: TaskKey,
+    gatewayModelId: string,
+    orgId: string | null,
+  ): Promise<void> {
+    const branchStart = Date.now();
     const result = streamText({
       model: languageModel,
       system,
@@ -112,10 +118,22 @@ async function fetchAndAnalyze(missionId: string) {
       await emit();
     });
 
-    return await result.usage;
-  }
+    const usage = await result.usage;
+    const output = await result.output;
 
-  const usages: LanguageModelUsage[] = [];
+    await logAiUsage(supabase, {
+      operation: 'analysis',
+      missionId: missionRowId,
+      orgId: orgId ?? undefined,
+      aiModel: gatewayModelId,
+      taskKey,
+      durationMs: Date.now() - branchStart,
+      usage,
+      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+      outputPayload: output,
+      workflowRunId,
+    });
+  }
 
   try {
     const orgId = mission.org_id as string | null;
@@ -132,13 +150,16 @@ async function fetchAndAnalyze(missionId: string) {
       }),
     ]);
 
-    const parallelUsages = await Promise.all([
+    await Promise.all([
       consumeBranch(
         createGatewayLanguageModel(rEx.gatewayModelId, rEx.useExtractJson),
         rEx.systemPrompt,
         jobPostingExecutiveSchema,
         'job_posting_executive',
         'executive',
+        TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE,
+        rEx.gatewayModelId,
+        orgId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rKp.gatewayModelId, rKp.useExtractJson),
@@ -146,9 +167,11 @@ async function fetchAndAnalyze(missionId: string) {
         jobPostingKeyPointsBlockSchema,
         'job_posting_key_points',
         'keyPoints',
+        TASK_KEY.MISSION_JOB_POSTING_KEY_POINTS,
+        rKp.gatewayModelId,
+        orgId,
       ),
     ]);
-    usages.push(...parallelUsages);
 
     await runLocked(async () => {
       const meta: JobPostingAnalysisStreamMeta = { phase: 'finalizing', activeBranches: [] };
@@ -169,7 +192,6 @@ async function fetchAndAnalyze(missionId: string) {
 
     return {
       object,
-      usage: aggregateLanguageModelUsage(usages),
       durationMs,
       orgId: mission.org_id as string | null,
       inputHash: hashJobDescription(jobDescription),
@@ -183,7 +205,6 @@ async function saveJobPostingAnalysis(
   missionId: string,
   result: {
     object: unknown;
-    usage: LanguageModelUsage;
     durationMs: number;
     orgId: string | null;
     inputHash: string;
@@ -192,21 +213,6 @@ async function saveJobPostingAnalysis(
   'use step';
 
   const supabase = getSupabase();
-  const resolvedLog = await resolveLlmTask(supabase, {
-    taskKey: TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE,
-    orgId: result.orgId,
-    context: {},
-  });
-
-  await logAiUsage(supabase, {
-    operation: 'analysis',
-    missionId,
-    orgId: result.orgId ?? undefined,
-    aiModel: resolvedLog.gatewayModelId,
-    taskKey: TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE,
-    durationMs: result.durationMs,
-    usage: result.usage,
-  });
 
   if (result.object != null && typeof result.object === 'object') {
     await supabase

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useAdminStats, useUpdateOrgCvCodeTemplate } from '@/lib/queries'
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin'
 import { redirect } from 'next/navigation'
@@ -12,6 +13,7 @@ import {
   Loader2,
   TrendingUp,
   ShieldCheck,
+  History,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -33,6 +35,7 @@ import { CV_CODE_TEMPLATE_IDS, CV_CODE_TEMPLATE_LABELS } from '@/templates/regis
 import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { LlmSettingsTabs } from '@/components/admin/llm-settings-tabs'
+import { LlmUsageHistoryTab } from '@/components/admin/llm-usage-history'
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -50,6 +53,7 @@ function formatUsd(n: number): string {
 }
 
 export default function AdminPage() {
+  const [adminTab, setAdminTab] = useState('overview')
   const { isSuperAdmin, isLoaded } = useSuperAdmin()
   const { data, isLoading } = useAdminStats()
   const updateCvTemplate = useUpdateOrgCvCodeTemplate()
@@ -90,10 +94,14 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList variant="segmented" className="mb-6 grid w-full max-w-xl grid-cols-2">
+        <Tabs value={adminTab} onValueChange={setAdminTab} className="w-full">
+          <TabsList variant="segmented" className="mb-6 grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="overview">Vue d&apos;ensemble</TabsTrigger>
             <TabsTrigger value="llm">Modèles &amp; tâches LLM</TabsTrigger>
+            <TabsTrigger value="llm-history" className="gap-1.5">
+              <History className="h-3.5 w-3.5 opacity-80" />
+              Historique LLM
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="flex flex-col gap-6">
@@ -279,6 +287,13 @@ export default function AdminPage() {
 
           <TabsContent value="llm">
             <LlmSettingsTabs />
+          </TabsContent>
+
+          <TabsContent value="llm-history">
+            <LlmUsageHistoryTab
+              enabled={adminTab === 'llm-history'}
+              orgs={sortedOrgs.map((o) => ({ orgId: o.orgId, name: o.name ?? '' }))}
+            />
           </TabsContent>
         </Tabs>
       </div>

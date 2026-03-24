@@ -1,9 +1,8 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
-import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import {
   mergePositioningOutputPartial,
   type PositioningGenerateAccumulator,
@@ -26,7 +25,7 @@ import type {
   PositioningGenerateStreamMeta,
 } from '@/lib/types/positioning-generate-stream';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
-import { TASK_KEY } from '@/lib/llm/task-keys';
+import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 
 async function fetchAndGenerate(positioningId: string, answers: Record<string, string>) {
   'use step';
@@ -58,6 +57,10 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   };
 
   const userContent = buildGenerateUserContent(cv, jobDescription, analysis, answers ?? {});
+
+  const workflowRunId = (positioning.workflow_run_id as string | null) ?? null;
+  const positioningRowId = positioning.id as string;
+  const candidateRowId = positioning.candidate_id as string;
 
   const startTime = Date.now();
   const encoder = new TextEncoder();
@@ -92,7 +95,10 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: PositioningGenerateBranch,
-  ): Promise<LanguageModelUsage> {
+    taskKey: TaskKey,
+    gatewayModelId: string,
+  ): Promise<void> {
+    const branchStart = Date.now();
     const result = streamText({
       model: languageModel,
       system,
@@ -118,10 +124,23 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
       await emit();
     });
 
-    return await result.usage;
-  }
+    const usage = await result.usage;
+    const output = await result.output;
 
-  const usages: LanguageModelUsage[] = [];
+    await logAiUsage(supabase, {
+      operation: 'generation',
+      positioningId: positioningRowId,
+      candidateId: candidateRowId,
+      orgId: orgId ?? undefined,
+      aiModel: gatewayModelId,
+      taskKey,
+      durationMs: Date.now() - branchStart,
+      usage,
+      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+      outputPayload: output,
+      workflowRunId,
+    });
+  }
 
   try {
     const [rTc, rEm, rFc, rBp, rCe] = await Promise.all([
@@ -152,13 +171,15 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
       }),
     ]);
 
-    const parallelUsages = await Promise.all([
+    await Promise.all([
       consumeBranch(
         createGatewayLanguageModel(rTc.gatewayModelId, rTc.useExtractJson),
         rTc.systemPrompt,
         positioningTailoredCvPartSchema,
         'positioning_tailored_cv',
         'tailoredCv',
+        TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
+        rTc.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rEm.gatewayModelId, rEm.useExtractJson),
@@ -166,6 +187,8 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
         positioningEmailPartSchema,
         'positioning_email',
         'email',
+        TASK_KEY.POSITIONING_GENERATE_EMAIL,
+        rEm.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rFc.gatewayModelId, rFc.useExtractJson),
@@ -173,6 +196,8 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
         positioningEmailFirstContactPartSchema,
         'positioning_email_first_contact',
         'emailFirstContact',
+        TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
+        rFc.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rBp.gatewayModelId, rBp.useExtractJson),
@@ -180,6 +205,8 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
         positioningEmailBulletPointsPartSchema,
         'positioning_email_bullet_points',
         'emailBulletPoints',
+        TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
+        rBp.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rCe.gatewayModelId, rCe.useExtractJson),
@@ -187,9 +214,10 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
         positioningCandidateEmailPartSchema,
         'positioning_candidate_email',
         'candidateEmail',
+        TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
+        rCe.gatewayModelId,
       ),
     ]);
-    usages.push(...parallelUsages);
 
     const parsed = positioningOutputSchema.safeParse(acc);
     const object = parsed.success ? parsed.data : acc;
@@ -202,7 +230,6 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
 
     return {
       object,
-      usage: aggregateLanguageModelUsage(usages),
       durationMs,
       candidateId: positioning.candidate_id,
       orgId: positioning.org_id as string | null,
@@ -222,7 +249,6 @@ async function saveGeneration(
       emailBulletPoints?: unknown;
       candidateEmail?: unknown;
     };
-    usage: LanguageModelUsage;
     durationMs: number;
     candidateId: string;
     orgId: string | null;
@@ -231,22 +257,6 @@ async function saveGeneration(
   'use step';
 
   const supabase = getSupabase();
-  const resolvedLog = await resolveLlmTask(supabase, {
-    taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
-    orgId: result.orgId,
-    context: { displayName: '', brandContextBlock: '' },
-  });
-
-  await logAiUsage(supabase, {
-    operation: 'generation',
-    positioningId,
-    candidateId: result.candidateId,
-    orgId: result.orgId ?? undefined,
-    aiModel: resolvedLog.gatewayModelId,
-    taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
-    durationMs: result.durationMs,
-    usage: result.usage,
-  });
 
   if (result.object) {
     await supabase

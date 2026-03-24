@@ -14,7 +14,14 @@ export type {
 export { useCancelWorkflow } from './workflow';
 export { useTemplate, useUpdateTemplate, useTemplatesList, type TemplateListItem } from './templates';
 export { useOrgSettings } from './org-settings';
-export { useAdminStats, useUpdateOrgCvCodeTemplate } from './admin';
+export {
+  useAdminStats,
+  useUpdateOrgCvCodeTemplate,
+  useAdminLlmUsage,
+  type AdminLlmUsageQueryParams,
+  type AdminLlmUsageResponse,
+} from './admin';
+export type { AdminLlmUsageRow } from '@/lib/types/admin-llm-usage';
 export {
   useLlmModels,
   useLlmTasks,

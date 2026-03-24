@@ -1,9 +1,8 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
-import { aggregateLanguageModelUsage } from '@/lib/services/extraction-merge';
 import { mergePositioningPartial } from '@/lib/services/positioning-analysis-merge';
 import {
   positioningAnalysisSchema,
@@ -25,7 +24,7 @@ import type {
   PositioningAnalysisStreamMeta,
 } from '@/lib/types/positioning-analysis-stream';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
-import { TASK_KEY } from '@/lib/llm/task-keys';
+import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 
 async function fetchAndAnalyze(positioningId: string) {
   'use step';
@@ -55,6 +54,10 @@ async function fetchAndAnalyze(positioningId: string) {
   };
 
   const userContent = buildAnalysisUserContent(cv, jobDescription);
+
+  const workflowRunId = (positioning.workflow_run_id as string | null) ?? null;
+  const positioningRowId = positioning.id as string;
+  const candidateRowId = positioning.candidate_id as string;
 
   const startTime = Date.now();
   const encoder = new TextEncoder();
@@ -89,7 +92,10 @@ async function fetchAndAnalyze(positioningId: string) {
     schema: FlexibleSchema<T>,
     outputName: string,
     branch: PositioningAnalysisBranch,
-  ): Promise<LanguageModelUsage> {
+    taskKey: TaskKey,
+    gatewayModelId: string,
+  ): Promise<void> {
+    const branchStart = Date.now();
     const result = streamText({
       model: languageModel,
       system,
@@ -115,10 +121,23 @@ async function fetchAndAnalyze(positioningId: string) {
       await emit();
     });
 
-    return await result.usage;
-  }
+    const usage = await result.usage;
+    const output = await result.output;
 
-  const usages: LanguageModelUsage[] = [];
+    await logAiUsage(supabase, {
+      operation: 'analysis',
+      positioningId: positioningRowId,
+      candidateId: candidateRowId,
+      orgId: orgId ?? undefined,
+      aiModel: gatewayModelId,
+      taskKey,
+      durationMs: Date.now() - branchStart,
+      usage,
+      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+      outputPayload: output,
+      workflowRunId,
+    });
+  }
 
   try {
     const [rSk, rEx, rGa, rQu] = await Promise.all([
@@ -144,13 +163,15 @@ async function fetchAndAnalyze(positioningId: string) {
       }),
     ]);
 
-    const parallelUsages = await Promise.all([
+    await Promise.all([
       consumeBranch(
         createGatewayLanguageModel(rSk.gatewayModelId, rSk.useExtractJson),
         rSk.systemPrompt,
         positioningSkillMatchesSchema,
         'positioning_skills',
         'skills',
+        TASK_KEY.POSITIONING_ANALYSIS_SKILLS,
+        rSk.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rEx.gatewayModelId, rEx.useExtractJson),
@@ -158,6 +179,8 @@ async function fetchAndAnalyze(positioningId: string) {
         positioningExperienceRelevanceSchema,
         'positioning_experiences',
         'experiences',
+        TASK_KEY.POSITIONING_ANALYSIS_EXPERIENCES,
+        rEx.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rGa.gatewayModelId, rGa.useExtractJson),
@@ -165,6 +188,8 @@ async function fetchAndAnalyze(positioningId: string) {
         positioningGapsSchema,
         'positioning_gaps',
         'gaps',
+        TASK_KEY.POSITIONING_ANALYSIS_GAPS,
+        rGa.gatewayModelId,
       ),
       consumeBranch(
         createGatewayLanguageModel(rQu.gatewayModelId, rQu.useExtractJson),
@@ -172,9 +197,10 @@ async function fetchAndAnalyze(positioningId: string) {
         positioningQuestionsSchema,
         'positioning_questions',
         'questions',
+        TASK_KEY.POSITIONING_ANALYSIS_QUESTIONS,
+        rQu.gatewayModelId,
       ),
     ]);
-    usages.push(...parallelUsages);
 
     const rSyn = await resolveLlmTask(supabase, {
       taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
@@ -182,13 +208,15 @@ async function fetchAndAnalyze(positioningId: string) {
       context: brandCtx,
     });
 
+    const synthesisUserText = buildPositioningSynthesisUserContent(cv, jobDescription, acc);
+    const synStart = Date.now();
     const synthesisResult = streamText({
       model: createGatewayLanguageModel(rSyn.gatewayModelId, rSyn.useExtractJson),
       system: rSyn.systemPrompt,
       messages: [
         {
           role: 'user',
-          content: buildPositioningSynthesisUserContent(cv, jobDescription, acc),
+          content: synthesisUserText,
         },
       ],
       output: Output.object({ schema: positioningSynthesisSchema, name: 'positioning_synthesis' }),
@@ -211,7 +239,24 @@ async function fetchAndAnalyze(positioningId: string) {
       await emit();
     });
 
-    usages.push(await synthesisResult.usage);
+    const synUsage = await synthesisResult.usage;
+    const synOutput = await synthesisResult.output;
+    await logAiUsage(supabase, {
+      operation: 'analysis',
+      positioningId: positioningRowId,
+      candidateId: candidateRowId,
+      orgId: orgId ?? undefined,
+      aiModel: rSyn.gatewayModelId,
+      taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
+      durationMs: Date.now() - synStart,
+      usage: synUsage,
+      inputPayload: {
+        system: rSyn.systemPrompt,
+        messages: [{ role: 'user', content: synthesisUserText }],
+      },
+      outputPayload: synOutput,
+      workflowRunId,
+    });
 
     const parsed = positioningAnalysisSchema.safeParse(acc);
     const object = parsed.success ? parsed.data : acc;
@@ -224,7 +269,6 @@ async function fetchAndAnalyze(positioningId: string) {
 
     return {
       object,
-      usage: aggregateLanguageModelUsage(usages),
       durationMs,
       candidateId: positioning.candidate_id,
       orgId: positioning.org_id as string | null,
@@ -236,27 +280,11 @@ async function fetchAndAnalyze(positioningId: string) {
 
 async function saveAnalysis(
   positioningId: string,
-  result: { object: unknown; usage: LanguageModelUsage; durationMs: number; candidateId: string; orgId: string | null },
+  result: { object: unknown; durationMs: number; candidateId: string; orgId: string | null },
 ) {
   'use step';
 
   const supabase = getSupabase();
-  const resolvedLog = await resolveLlmTask(supabase, {
-    taskKey: TASK_KEY.POSITIONING_ANALYSIS_SKILLS,
-    orgId: result.orgId,
-    context: { displayName: '', brandContextBlock: '' },
-  });
-
-  await logAiUsage(supabase, {
-    operation: 'analysis',
-    positioningId,
-    candidateId: result.candidateId,
-    orgId: result.orgId ?? undefined,
-    aiModel: resolvedLog.gatewayModelId,
-    taskKey: TASK_KEY.POSITIONING_ANALYSIS_SKILLS,
-    durationMs: result.durationMs,
-    usage: result.usage,
-  });
 
   if (result.object) {
     await supabase

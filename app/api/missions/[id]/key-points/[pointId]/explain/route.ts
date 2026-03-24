@@ -25,7 +25,7 @@ export async function POST(
 
     const { data: mission, error } = await supabase
       .from('missions')
-      .select('id, org_id, job_description, job_analysis')
+      .select('id, org_id, job_description, job_analysis, job_analysis_workflow_run_id')
       .eq('id', missionId)
       .eq('org_id', orgId)
       .single();
@@ -58,23 +58,20 @@ export async function POST(
     });
     const model = createGatewayLanguageModel(resolved.gatewayModelId, resolved.useExtractJson);
 
+    const explainUserContent = buildJobPostingKeyPointExplainUserContent(jd, {
+      id: point.id,
+      label: point.label,
+      aspect: point.aspect,
+      roleInMission: point.roleInMission,
+      canonicalSkillKey: fromAnalysis?.canonicalSkillKey,
+    });
+
     const start = Date.now();
     const { object, usage } = await generateObject({
       model,
       schema: jobPostingKeyPointExplainSchema,
       system: resolved.systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: buildJobPostingKeyPointExplainUserContent(jd, {
-            id: point.id,
-            label: point.label,
-            aspect: point.aspect,
-            roleInMission: point.roleInMission,
-            canonicalSkillKey: fromAnalysis?.canonicalSkillKey,
-          }),
-        },
-      ],
+      messages: [{ role: 'user', content: explainUserContent }],
     });
 
     const durationMs = Date.now() - start;
@@ -89,6 +86,12 @@ export async function POST(
           taskKey: TASK_KEY.MISSION_KEY_POINT_EXPLAIN,
           durationMs,
           usage,
+          inputPayload: {
+            system: resolved.systemPrompt,
+            messages: [{ role: 'user' as const, content: explainUserContent }],
+          },
+          outputPayload: object,
+          workflowRunId: mission.job_analysis_workflow_run_id ?? null,
         }),
         supabase
           .from('missions')

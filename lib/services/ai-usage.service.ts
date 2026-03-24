@@ -1,5 +1,6 @@
 import type { LanguageModelUsage } from 'ai';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { serializeLlmLogPayload } from '@/lib/utils/llm-log-payload';
 
 export type AiOperation = 'extraction' | 'analysis' | 'generation';
 
@@ -15,9 +16,26 @@ export async function logAiUsage(
     taskKey?: string;
     durationMs: number;
     usage: LanguageModelUsage;
+    /** Objet sérialisable (tronqué avant insert). */
+    inputPayload?: unknown;
+    outputPayload?: unknown;
+    workflowRunId?: string | null;
   },
 ) {
-  const { operation, candidateId, positioningId, missionId, orgId, aiModel, taskKey, durationMs, usage } = params;
+  const {
+    operation,
+    candidateId,
+    positioningId,
+    missionId,
+    orgId,
+    aiModel,
+    taskKey,
+    durationMs,
+    usage,
+    inputPayload,
+    outputPayload,
+    workflowRunId,
+  } = params;
 
   await supabase.from('ai_usage_log').insert({
     candidate_id: candidateId ?? null,
@@ -34,5 +52,8 @@ export async function logAiUsage(
     cache_write_tokens: usage.inputTokenDetails?.cacheWriteTokens ?? null,
     reasoning_tokens: usage.outputTokenDetails?.reasoningTokens ?? null,
     raw_usage: usage,
+    input_payload: inputPayload !== undefined ? serializeLlmLogPayload(inputPayload) : null,
+    output_payload: outputPayload !== undefined ? serializeLlmLogPayload(outputPayload) : null,
+    workflow_run_id: workflowRunId ?? null,
   });
 }
