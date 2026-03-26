@@ -1,7 +1,7 @@
 import { streamText } from 'ai';
 import mammoth from 'mammoth';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createGatewayLanguageModel } from '@/lib/ai';
+import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY } from '@/lib/llm/task-keys';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
@@ -38,6 +38,7 @@ export async function extractJobPostingTextFromFile(
     );
     const txStart = Date.now();
     const result = streamText({
+      ...llmFactualGenerationSettings,
       model: txModel,
       system: resolvedTx.systemPrompt,
       messages: [

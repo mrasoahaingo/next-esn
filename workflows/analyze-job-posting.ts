@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { createGatewayLanguageModel } from '@/lib/ai';
+import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { mergeJobPostingPartial } from '@/lib/services/job-posting-analysis-merge';
 import {
@@ -100,6 +100,7 @@ async function fetchAndAnalyze(missionId: string) {
 
     try {
       const result = streamText({
+        ...llmFactualGenerationSettings,
         model: languageModel,
         system,
         messages: [{ role: 'user', content: userContent }],

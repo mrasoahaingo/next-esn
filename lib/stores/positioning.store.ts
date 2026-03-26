@@ -1,10 +1,5 @@
 import { create } from 'zustand';
-import type {
-  ExtractedCV,
-  PositioningAnalysis,
-  PositioningEmail,
-  PositioningExpertiseConfirmationItem,
-} from '@/lib/schema';
+import type { ExtractedCV, PositioningAnalysis, PositioningEmail } from '@/lib/schema';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
 
 interface PositioningState {
@@ -16,15 +11,12 @@ interface PositioningState {
   emailFirstContact: Partial<PositioningEmail> | null;
   emailBulletPoints: Partial<PositioningEmail> | null;
   candidateEmail: Partial<PositioningEmail> | null;
-  currentStep: 1 | 2;
+  currentStep: 1 | 2 | 3;
   isAnalyzing: boolean;
   isGenerating: boolean;
   pdfBlobUrl: string | null;
   isPdfLoading: boolean;
   originalPdfBlobUrl: string | null;
-  /** Questions + suggestions (phase génération), hors formulaire CV. */
-  generationExpertisePrompts: PositioningExpertiseConfirmationItem[] | null;
-  generationExpertiseResponses: Record<string, string>;
   /**
    * Historique recruteur par clé `candidat:…` / `client:…` (append-only côté affinage ;
    * suppression d’une entrée depuis l’onglet Résultats).
@@ -39,16 +31,13 @@ interface PositioningState {
   setEmailFirstContact: (data: Partial<PositioningEmail> | null) => void;
   setEmailBulletPoints: (data: Partial<PositioningEmail> | null) => void;
   setCandidateEmail: (data: Partial<PositioningEmail> | null) => void;
-  setCurrentStep: (step: 1 | 2) => void;
+  setCurrentStep: (step: 1 | 2 | 3) => void;
   setIsAnalyzing: (v: boolean) => void;
   setIsGenerating: (v: boolean) => void;
   setPdfBlobUrl: (url: string | null) => void;
   setIsPdfLoading: (loading: boolean) => void;
   setOriginalPdfBlobUrl: (url: string | null) => void;
   updateTailoredCvField: (field: keyof ExtractedCV, value: unknown) => void;
-  setGenerationExpertisePrompts: (v: PositioningExpertiseConfirmationItem[] | null) => void;
-  setGenerationExpertiseResponses: (v: Record<string, string>) => void;
-  setGenerationExpertiseResponse: (id: string, text: string) => void;
   setRecruiterAnswerEntries: (v: Record<string, PositioningRecruiterAnswerEntry[]>) => void;
   appendRecruiterAnswer: (key: string, text: string) => void;
   removeRecruiterAnswerEntry: (key: string, entryId: string) => void;
@@ -70,8 +59,6 @@ const initialState = {
   pdfBlobUrl: null,
   isPdfLoading: false,
   originalPdfBlobUrl: null,
-  generationExpertisePrompts: null,
-  generationExpertiseResponses: {},
   recruiterAnswerEntries: {} as Record<string, PositioningRecruiterAnswerEntry[]>,
 };
 
@@ -106,13 +93,6 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
     if (!current) return;
     set({ tailoredCv: { ...current, [field]: value } });
   },
-
-  setGenerationExpertisePrompts: (v) => set({ generationExpertisePrompts: v }),
-  setGenerationExpertiseResponses: (v) => set({ generationExpertiseResponses: v }),
-  setGenerationExpertiseResponse: (id, text) =>
-    set((s) => ({
-      generationExpertiseResponses: { ...s.generationExpertiseResponses, [id]: text },
-    })),
 
   setRecruiterAnswerEntries: (v) => set({ recruiterAnswerEntries: v }),
 

@@ -27,7 +27,6 @@ import {
   extractRecruiterEntriesFromParsed,
   hasUsableJobAnalysisForPositioning,
   mergePositioningAnswersForPersistence,
-  normalizeStoredExpertisePrompts,
   parsePositioningAnswers,
   removeEntryFromAnalysisRecruiterSnapshot,
 } from '@/lib/services/positioning.service';
@@ -44,7 +43,8 @@ import { StepIndicator } from './components/StepIndicator';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
 import { QuestionsPanel } from './components/QuestionsPanel';
-import { GenerationStep } from './components/GenerationStep';
+import { EmailsGenerationStep } from './components/EmailsGenerationStep';
+import { CvGenerationStep } from './components/CvGenerationStep';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AnalysisCharts = dynamic(
@@ -89,9 +89,6 @@ export default function PositioningWizardPage() {
     setPdfBlobUrl,
     setIsPdfLoading,
     reset,
-    generationExpertiseResponses,
-    setGenerationExpertisePrompts,
-    setGenerationExpertiseResponses,
     recruiterAnswerEntries,
     setRecruiterAnswerEntries,
     appendRecruiterAnswer,
@@ -102,10 +99,6 @@ export default function PositioningWizardPage() {
 
   const { data: positioningData } = usePositioning(positioningIdParam);
   const { data: candidateData } = useCandidate(candidateId);
-
-  const generationExpertiseRaw = positioningData
-    ? (positioningData as { generation_expertise_prompts?: unknown }).generation_expertise_prompts
-    : undefined;
 
   const missionRecord = positioningData?.missions as
     | { title?: string | null; company?: string | null; job_analysis?: unknown }
@@ -131,9 +124,8 @@ export default function PositioningWizardPage() {
     return mergePositioningAnswersForPersistence({
       baseAnswers: parsePositioningAnswers(positioningData?.answers),
       recruiterAnswerEntries,
-      generationExpertiseResponses,
     });
-  }, [positioningData?.answers, recruiterAnswerEntries, generationExpertiseResponses]);
+  }, [positioningData?.answers, recruiterAnswerEntries]);
 
   const recruiterDraftsDifferFromSnapshot = useMemo(() => {
     const raw = (positioningData as { analysis_recruiter_answers?: unknown } | undefined)
@@ -245,24 +237,6 @@ export default function PositioningWizardPage() {
   useLayoutEffect(() => {
     if (!positioningData || !candidateData) return;
 
-    // Don't reset while we're actively streaming ou relance d'analyse (évite de réinjecter l'ancienne analyse depuis le cache)
-    if (
-      isAnalysisLoading ||
-      isGenerateLoading ||
-      isAnalyzing ||
-      positioningData.status === 'analyzing'
-    ) {
-      // useWorkflowStream met isGenerateLoading / isAnalysisLoading à true (POST ou reconnexion) avant que ce bloc ne tourne :
-      // sans setIsLoaded, on reste sur l'écran plein « Chargement » au lieu du wizard (blocs step 1 / 2 en loading).
-      if (positioningData.status === 'generating' || isGenerateLoading) {
-        setCurrentStep(2);
-      } else {
-        setCurrentStep(1);
-      }
-      setIsLoaded(true);
-      return;
-    }
-
     const isNewPositioning = initializedForId.current !== positioningData.id;
 
     if (isNewPositioning) {
@@ -270,12 +244,10 @@ export default function PositioningWizardPage() {
       setPositioningId(positioningIdParam);
       setTemplateConfig(null);
 
-      // Load template config from candidate
       const templateId = positioningData.candidates?.template_id;
       fetchTemplateConfig(templateId).then((config) => {
         setTemplateConfig(config);
 
-        // Generate PDF from extracted_data (original CV before positioning)
         if (candidateData.extracted_data) {
           fetch('/api/pdf-preview', {
             method: 'POST',
@@ -295,16 +267,30 @@ export default function PositioningWizardPage() {
       });
     }
 
+    // Don't reset while we're actively streaming ou relance d'analyse (évite de réinjecter l'ancienne analyse depuis le cache)
+    if (
+      isAnalysisLoading ||
+      isGenerateLoading ||
+      isAnalyzing ||
+      positioningData.status === 'analyzing'
+    ) {
+      // useWorkflowStream met isGenerateLoading / isAnalysisLoading à true (POST ou reconnexion) avant que ce bloc ne tourne :
+      // sans setIsLoaded, on reste sur l'écran plein « Chargement » au lieu du wizard (blocs step 1 / 2 en loading).
+      if (isNewPositioning) {
+        setCurrentStep(1);
+      }
+      setIsLoaded(true);
+      return;
+    }
+
     const data = positioningData;
 
     setJobDescription(data.job_description ?? '');
 
     // In-progress operations — reconnection is handled by useWorkflowStream
     if (data.status === 'analyzing' || data.status === 'generating') {
-      if (data.status === 'analyzing') {
+      if (isNewPositioning) {
         setCurrentStep(1);
-      } else {
-        setCurrentStep(2);
       }
       setIsLoaded(true);
       return;
@@ -316,18 +302,7 @@ export default function PositioningWizardPage() {
     if (data.email_bullet_points) setEmailBulletPoints(data.email_bullet_points);
     if (data.candidate_email) setCandidateEmail(data.candidate_email);
 
-    const storedExpertise = normalizeStoredExpertisePrompts(generationExpertiseRaw);
-    setGenerationExpertisePrompts(storedExpertise.length > 0 ? storedExpertise : null);
     const parsedAnswers = parsePositioningAnswers(data.answers);
-    const genResp: Record<string, string> = {};
-    for (const p of storedExpertise) {
-      const pid = p.id;
-      if (!pid) continue;
-      const v = parsedAnswers[`generationExpertise:${pid}`];
-      if (typeof v === 'string' && v) genResp[pid] = v;
-    }
-    setGenerationExpertiseResponses(genResp);
-
     setRecruiterAnswerEntries(extractRecruiterEntriesFromParsed(parsedAnswers));
 
     if (data.analysis) {
@@ -351,10 +326,8 @@ export default function PositioningWizardPage() {
       setAnalysis(restored);
     }
 
-    // Determine initial step
-    if (data.tailored_cv || data.email) {
-      setCurrentStep(2);
-    } else {
+    // Étape par défaut : (1) tant que l’utilisateur n’a pas choisi une autre étape (clic indicateur ou « suite »).
+    if (isNewPositioning) {
       setCurrentStep(1);
     }
 
@@ -372,7 +345,6 @@ export default function PositioningWizardPage() {
     positioningData?.email_bullet_points,
     positioningData?.candidate_email,
     positioningData?.answers,
-    generationExpertiseRaw,
     candidateData?.id,
     isAnalysisLoading,
     isGenerateLoading,
@@ -387,8 +359,6 @@ export default function PositioningWizardPage() {
     setEmailFirstContact,
     setEmailBulletPoints,
     setCandidateEmail,
-    setGenerationExpertisePrompts,
-    setGenerationExpertiseResponses,
     setRecruiterAnswerEntries,
     setIsLoaded,
     positioningIdParam,
@@ -415,9 +385,6 @@ export default function PositioningWizardPage() {
       if (obj.emailFirstContact) setEmailFirstContact(obj.emailFirstContact);
       if (obj.emailBulletPoints) setEmailBulletPoints(obj.emailBulletPoints);
       if (obj.candidateEmail) setCandidateEmail(obj.candidateEmail);
-      if (obj.expertiseConfirmations?.length) {
-        setGenerationExpertisePrompts(normalizeStoredExpertisePrompts(obj.expertiseConfirmations));
-      }
     }
   }, [
     generateObject,
@@ -426,7 +393,6 @@ export default function PositioningWizardPage() {
     setEmailFirstContact,
     setEmailBulletPoints,
     setCandidateEmail,
-    setGenerationExpertisePrompts,
   ]);
 
   useLayoutEffect(() => {
@@ -435,22 +401,15 @@ export default function PositioningWizardPage() {
     }
   }, [isGenerateLoading, isGenerating, setIsGenerating]);
 
-  // Persist answers (analyse + confirmations génération) — ne pas mélanger avec l’édition du CV
+  // Persist answers (affinage analyse) — ne pas mélanger avec l’édition du CV
   useLayoutEffect(() => {
     if (!isLoaded) return;
     const answers = mergePositioningAnswersForPersistence({
       baseAnswers: parsePositioningAnswers(positioningData?.answers),
       recruiterAnswerEntries,
-      generationExpertiseResponses,
     });
     debouncedSave({ answers });
-  }, [
-    isLoaded,
-    generationExpertiseResponses,
-    recruiterAnswerEntries,
-    positioningData?.answers,
-    debouncedSave,
-  ]);
+  }, [isLoaded, recruiterAnswerEntries, positioningData?.answers, debouncedSave]);
 
   // Brouillon : persister la fiche (collage / import fichier) avant analyse ou refresh
   useLayoutEffect(() => {
@@ -512,7 +471,6 @@ export default function PositioningWizardPage() {
     const mergedAnswers = mergePositioningAnswersForPersistence({
       baseAnswers: parsePositioningAnswers(positioningData?.answers),
       recruiterAnswerEntries: st.recruiterAnswerEntries,
-      generationExpertiseResponses: st.generationExpertiseResponses,
     });
 
     updatePositioning.mutate(
@@ -546,7 +504,7 @@ export default function PositioningWizardPage() {
     refreshMissionCards,
   ]);
 
-  const handleGenerate = useCallback(() => {
+  const handleGenerateCv = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
     if (isGenerating || isGenerateLoading) return;
     if (positioningData?.status === 'generating') return;
@@ -556,7 +514,6 @@ export default function PositioningWizardPage() {
     const answers = mergePositioningAnswersForPersistence({
       baseAnswers: parsePositioningAnswers(positioningData?.answers),
       recruiterAnswerEntries: st.recruiterAnswerEntries,
-      generationExpertiseResponses: st.generationExpertiseResponses,
     });
 
     updatePositioning.mutate(
@@ -565,11 +522,7 @@ export default function PositioningWizardPage() {
         onSuccess: () => {
           setIsGenerating(true);
           setTailoredCv(null);
-          setEmail(null);
-          setEmailFirstContact(null);
-          setEmailBulletPoints(null);
-          setCandidateEmail(null);
-          submitGenerate({ positioningId: positioningIdParam, answers });
+          submitGenerate({ positioningId: positioningIdParam, answers, generateMode: 'cv' });
           refreshMissionCards();
         },
       }
@@ -581,6 +534,45 @@ export default function PositioningWizardPage() {
     updatePositioning,
     setIsGenerating,
     setTailoredCv,
+    submitGenerate,
+    refreshMissionCards,
+    isGenerating,
+    isGenerateLoading,
+    positioningData?.status,
+  ]);
+
+  const handleGenerateEmails = useCallback(() => {
+    if (!positioningIdParam || !analysis) return;
+    if (isGenerating || isGenerateLoading) return;
+    if (positioningData?.status === 'generating') return;
+    if (updatePositioning.isPending) return;
+
+    const st = usePositioningStore.getState();
+    const answers = mergePositioningAnswersForPersistence({
+      baseAnswers: parsePositioningAnswers(positioningData?.answers),
+      recruiterAnswerEntries: st.recruiterAnswerEntries,
+    });
+
+    updatePositioning.mutate(
+      { id: positioningIdParam, answers },
+      {
+        onSuccess: () => {
+          setIsGenerating(true);
+          setEmail(null);
+          setEmailFirstContact(null);
+          setEmailBulletPoints(null);
+          setCandidateEmail(null);
+          submitGenerate({ positioningId: positioningIdParam, answers, generateMode: 'emails' });
+          refreshMissionCards();
+        },
+      }
+    );
+  }, [
+    positioningIdParam,
+    analysis,
+    positioningData?.answers,
+    updatePositioning,
+    setIsGenerating,
     setEmail,
     setEmailFirstContact,
     setEmailBulletPoints,
@@ -645,14 +637,14 @@ export default function PositioningWizardPage() {
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
   const analysisComplete = !!analysis?.matchScore && !isAnalyzing && !isAnalysisLoading;
 
-  const canGoToStep = (step: 1 | 2) => {
+  const canGoToStep = (step: 1 | 2 | 3) => {
     if (isStreaming) return false;
     if (step === 1) return true;
-    if (step === 2) return analysisComplete;
+    if (step === 2 || step === 3) return analysisComplete;
     return false;
   };
 
-  const handleStepClick = (step: 1 | 2) => {
+  const handleStepClick = (step: 1 | 2 | 3) => {
     if (canGoToStep(step)) setCurrentStep(step);
   };
 
@@ -811,7 +803,7 @@ export default function PositioningWizardPage() {
                   Position
                 </Button>
               )}
-              {currentStep === 2 && (
+              {currentStep === 3 && (
                 <Button onClick={handleExport} disabled={exportPositioning.isPending || isStreaming || !tailoredCv}>
                   {exportPositioning.isPending ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -831,10 +823,14 @@ export default function PositioningWizardPage() {
           />
         </div>
 
-        {/* Split layout */}
-        <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-          {/* Left panel */}
-          <div className="w-full flex flex-col min-h-0 lg:w-1/2">
+        {/* Split layout — étape 2 : emails client + candidat sur toute la largeur (pas de graphiques d’analyse à droite) */}
+        <div
+          className={`flex min-h-0 flex-1 flex-col gap-4 ${currentStep === 2 ? '' : 'lg:flex-row'}`}
+        >
+          {/* Left / principal */}
+          <div
+            className={`w-full flex flex-col min-h-0 ${currentStep === 2 ? 'flex-1' : 'lg:w-1/2'}`}
+          >
             {currentStep === 1 && (
               <div className="flex flex-col min-h-0 gap-3 h-full">
                 {/* Job description — editable before analysis, read-only after */}
@@ -910,19 +906,30 @@ export default function PositioningWizardPage() {
 
             {currentStep === 2 && (
               <div className="flex-1 overflow-y-auto">
-                <GenerationStep
+                <EmailsGenerationStep
                   isStreaming={isGenerating || isGenerateLoading}
                   streamMeta={generateStreamMeta}
-                  onGenerate={handleGenerate}
+                  onGenerateEmails={handleGenerateEmails}
+                />
+              </div>
+            )}
+
+            {currentStep === 3 && (
+              <div className="flex-1 overflow-y-auto">
+                <CvGenerationStep
+                  isStreaming={isGenerating || isGenerateLoading}
+                  streamMeta={generateStreamMeta}
+                  onGenerateCv={handleGenerateCv}
                 />
               </div>
             )}
           </div>
 
-          {/* Right panel */}
+          {/* Right panel — masqué à l’étape 2 (l’analyse est déjà à l’étape 1) */}
+          {currentStep !== 2 && (
           <div className="w-full min-h-[400px] lg:min-h-0 lg:w-1/2">
             <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
-              {currentStep === 2 ? (
+              {currentStep === 3 ? (
                 <>
                   <div className="flex items-center justify-between border-b border-border px-4 py-3">
                     <h2 className="flex items-center text-sm font-semibold text-foreground">
@@ -996,6 +1003,7 @@ export default function PositioningWizardPage() {
               )}
             </div>
           </div>
+          )}
         </div>
       </div>
 

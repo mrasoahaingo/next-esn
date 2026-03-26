@@ -2,7 +2,7 @@ import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { triggerMissionAnalysesAfterExtract } from '@/lib/services/positioning-analyze-trigger';
-import { createGatewayLanguageModel } from '@/lib/ai';
+import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
@@ -93,6 +93,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
 
       const txStart = Date.now();
       const result = streamText({
+        ...llmFactualGenerationSettings,
         model: txModel,
         system: resolvedTx.systemPrompt,
         messages: [
@@ -246,6 +247,7 @@ async function parallelExtractAndStream(
   ): Promise<void> {
     const branchStart = Date.now();
     const result = streamText({
+      ...llmFactualGenerationSettings,
       model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],

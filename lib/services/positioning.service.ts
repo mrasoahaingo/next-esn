@@ -3,12 +3,7 @@ import {
   positioningOutputSchema,
   jobPostingAnalysisSchema,
 } from '@/lib/schema';
-import type {
-  ExtractedCV,
-  JobPostingAnalysis,
-  PositioningAnalysis,
-  PositioningExpertiseConfirmationItem,
-} from '@/lib/schema';
+import type { ExtractedCV, JobPostingAnalysis, PositioningAnalysis } from '@/lib/schema';
 import type { MatchingWeightsConfig } from '@/lib/config/matching-weights';
 import { buildExperienceRecencyContextBlock } from '@/lib/utils/experience-recency';
 import { prepareCvForMatchingPrompt } from '@/lib/utils/cv-experience-time';
@@ -21,23 +16,6 @@ export const POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY =
   'candidat:Contexte libre (recruteur)';
 export const POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY =
   'client:Contexte libre (demande client)';
-
-/** Reprend les questions / suggestions persistées (`generation_expertise_prompts`) avec ids stables `ec-i`. */
-export function normalizeStoredExpertisePrompts(raw: unknown): PositioningExpertiseConfirmationItem[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.map((item, i) => {
-    const o = item as Record<string, unknown>;
-    const suggested = Array.isArray(o.suggestedAnswers)
-      ? o.suggestedAnswers.map((s) => String(s).trim()).filter((s) => s.length > 0)
-      : [];
-    return {
-      id: typeof o.id === 'string' && o.id.trim() ? o.id.trim() : `ec-${i}`,
-      question: String(o.question ?? '').trim(),
-      context: String(o.context ?? '').trim(),
-      suggestedAnswers: suggested.length ? suggested : ['À préciser avec le candidat'],
-    };
-  });
-}
 
 const MISSION_BARÈME_USAGE_RULES_WITH_RAW = `## Règles d'usage du barème
 - Pour les compétences, lacunes et questions : t'aligner sur **chaque point clé** (champ \`id\`) lorsque pertinent.
@@ -98,10 +76,7 @@ export function parsePositioningAnswers(raw: unknown): Record<string, Positionin
   if (!raw || typeof raw !== 'object') return {};
   const out: Record<string, PositioningAnswerStoredValue> = {};
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (k.startsWith('generationExpertise:')) {
-      if (typeof v === 'string' && v.trim()) out[k] = v.trim();
-      continue;
-    }
+    if (k.startsWith('generationExpertise:')) continue;
     if (Array.isArray(v)) {
       const entries = parseEntryArray(v);
       if (entries.length) out[k] = entries;
@@ -185,7 +160,7 @@ export function removeEntryFromAnalysisRecruiterSnapshot(
   return null;
 }
 
-/** Exclut les réponses réservées à la phase génération (confirmations expertise). */
+/** Exclut les clés réservées obsolètes (`generationExpertise:*` — plus persistées). */
 export function analysisPhaseAnswersOnly(
   answers: Record<string, PositioningAnswerStoredValue> | null | undefined,
 ): Record<string, PositioningAnswerStoredValue> {
@@ -265,13 +240,12 @@ export function analysisPhaseAffinageDiffersFromSnapshotForCurrentQuestions(para
   return false;
 }
 
-/** Fusion pour persister `positionings.answers` (historique recruteur + confirmations génération). */
+/** Fusion pour persister `positionings.answers` (historique recruteur). */
 export function mergePositioningAnswersForPersistence(params: {
   baseAnswers: Record<string, PositioningAnswerStoredValue>;
   recruiterAnswerEntries: Record<string, PositioningRecruiterAnswerEntry[]>;
-  generationExpertiseResponses: Record<string, string>;
 }): Record<string, PositioningAnswerStoredValue> {
-  const { baseAnswers, recruiterAnswerEntries, generationExpertiseResponses } = params;
+  const { baseAnswers, recruiterAnswerEntries } = params;
   const next: Record<string, PositioningAnswerStoredValue> = {};
 
   for (const [k, v] of Object.entries(baseAnswers)) {
@@ -304,9 +278,6 @@ export function mergePositioningAnswersForPersistence(params: {
     else if (Array.isArray(fb) && fb.length) next[k] = fb.map((e) => ({ ...e }));
   }
 
-  for (const [id, text] of Object.entries(generationExpertiseResponses)) {
-    if (text.trim()) next[`generationExpertise:${id}`] = text.trim();
-  }
   return next;
 }
 
@@ -361,27 +332,7 @@ export function mergeIncomingPositioningAnswers(
   return { ...existing, ...incoming };
 }
 
-/** Bloc : confirmations expertise saisies par le recruteur (ids `ec-0`, …). */
-export function buildGenerationExpertiseRecruiterBlock(
-  prompts: PositioningExpertiseConfirmationItem[] | null | undefined,
-  answers: Record<string, PositioningAnswerStoredValue>,
-): string {
-  if (!prompts?.length) return '';
-  const parts: string[] = [];
-  for (const p of prompts) {
-    const id = p.id ?? '';
-    if (!id) continue;
-    const key = `generationExpertise:${id}`;
-    const raw = answers[key];
-    const r = typeof raw === 'string' ? raw.trim() : '';
-    if (!r) continue;
-    parts.push(`Q: ${p.question}\nR: ${r}`);
-  }
-  if (!parts.length) return '';
-  return `\n\n## Confirmations d’expertise (saisies par le recruteur — source prioritaire pour ajuster niveau et compétences dans les livrables)\n\n${parts.join('\n\n')}\n`;
-}
-
-/** Bloc utilisateur : réponses phase analyse uniquement (pas les confirmations génération). */
+/** Bloc utilisateur : réponses phase analyse / affinage. */
 export function buildPriorAnswersPromptBlock(
   answers: Record<string, PositioningAnswerStoredValue> | null | undefined,
 ): string {
@@ -463,6 +414,34 @@ export function buildAnalysisUserContent(
   return `${preamble}${cvBlock}Voici la fiche de poste (texte brut) :\n\n${jobDescription}${answersBlock}`;
 }
 
+/** Fenêtre temporelle pour le verdict final (synthèse) : cohérent avec l’objectif « focus récent ». */
+const SYNTHESIS_VERDICT_RECENCY_YEARS = 5;
+
+/** Nombre d’expériences les plus récentes qui font foi pour le niveau (Lead / Senior / Expert, etc.). */
+const SYNTHESIS_LEVEL_EVIDENCE_EXPERIENCE_COUNT = 2;
+
+function buildSynthesisVerdictInstructionsBlock(referenceDate: Date): string {
+  const d = referenceDate.toISOString().slice(0, 10);
+  return `## Verdict final (synthèse uniquement)
+
+Pour **matchScore**, **matchSummary**, **matchScoreConfidence** et **matchScoreConfidenceNote** : base ton jugement **uniquement** sur ce qui relève du parcours professionnel du candidat sur les **${SYNTHESIS_VERDICT_RECENCY_YEARS} dernières années** par rapport à la date de référence **${d}** (UTC).
+
+- Priorise les expériences et compétences **démontrées ou encore actives** dans cette fenêtre.
+- N’utilise pas le parcours plus ancien pour **hausser ou baisser** le score ni pour le niveau de confiance (tu peux y faire **allusion** en au plus une phrase dans **matchSummary** si le contexte l’exige, sans qu’il influe sur le score).
+- Si le CV ne permet pas d’évaluer la pertinence sur ces ${SYNTHESIS_VERDICT_RECENCY_YEARS} ans, réduis la confiance et explique-le dans **matchScoreConfidenceNote**.
+
+### Niveau attendu (Lead, Senior, Expert, confirmé, etc.)
+
+Pour décider si le candidat **tient le niveau** du poste (séniorité, autonomie, rôle), ne t’appuie **pas** sur le parcours au-delà des **${SYNTHESIS_LEVEL_EVIDENCE_EXPERIENCE_COUNT} expériences les plus récentes** du JSON CV : \`experiences[0]\` et \`experiences[1]\` (convention : **0 = la plus récente**). Si une seule expérience existe, elle suffit.
+
+- **\`experiences[0]\` définit techniquement le niveau actuel** du candidat (poste en cours ou dernier poste) : c’est la **référence principale** pour le verdict sur la séniorité.
+- **\`experiences[1]\`** (si présente) **corrobore** : elle confirme la cohérence du niveau sur le poste précédent ; elle ne doit **pas** être traitée comme un second critère équivalent qui « conteste » le niveau lu sur \`experiences[0]\` sans bonne raison (ex. rupture de carrière explicite dans le CV).
+- Si \`experiences[0]\` (éventuellement soutenue par \`experiences[1]\`) montre un niveau **aligné** avec le besoin, **ne fais pas** baisser **matchScoreConfidence** au **motif principal** d’**ambiguïté ou de contradiction** dans la fiche de poste ou le barème (ex. « première expérience » vs « profil confirmé »).
+- Tu peux **mentionner** l’ambiguïté textuelle en **une phrase** dans **matchSummary** ou en **complément** dans **matchScoreConfidenceNote**, sans en faire la **cause principale** d’une confiance \`medium\` ou \`low\` : la confiance suit surtout le **niveau démontré sur le poste actuel** (\`experiences[0]\`) vs le besoin.
+
+`;
+}
+
 export function buildPositioningSynthesisUserContent(
   cv: ExtractedCV,
   jobDescription: string,
@@ -472,11 +451,14 @@ export function buildPositioningSynthesisUserContent(
   options?: PositioningPromptOptions,
   priorAnswers?: Record<string, PositioningAnswerStoredValue> | null,
 ): string {
+  const referenceDate = options?.referenceDate ?? new Date();
+  const verdictInstructions = buildSynthesisVerdictInstructionsBlock(referenceDate);
+
   return `${buildAnalysisUserContent(cv, jobDescription, jobAnalysis, matchingWeights, options, priorAnswers)}
 
 ---
 
-Voici l'analyse détaillée déjà produite (à synthétiser en score + résumé + confiance, cohérents avec le barème mission si fourni) :
+${verdictInstructions}Voici l'analyse détaillée déjà produite (à synthétiser en score + résumé + confiance, cohérents avec le barème mission si fourni ; le verdict final doit respecter les règles ci-dessus) :
 
 ${JSON.stringify(mergedAnalysis, null, 2)}`;
 }
@@ -489,13 +471,8 @@ export function buildGenerateUserContent(
   jobAnalysis?: JobPostingAnalysis | null,
   matchingWeights?: MatchingWeightsConfig | null,
   options?: PositioningPromptOptions,
-  generationExpertisePrompts?: PositioningExpertiseConfirmationItem[] | null,
 ): string {
   const analysisAnswerLines = formatPositioningAnswerLines(answers);
-  const expertiseRecruiterBlock = buildGenerationExpertiseRecruiterBlock(
-    generationExpertisePrompts ?? null,
-    answers,
-  );
 
   const referenceDate = options?.referenceDate ?? new Date();
   const cvPrepared = prepareCvForMatchingPrompt(cv, referenceDate);
@@ -509,10 +486,10 @@ export function buildGenerateUserContent(
     : `Voici la fiche de poste (texte brut) :\n\n${jobDescription}\n\n`;
 
   const analysisAnswersSection = analysisAnswerLines
-    ? `\n\nVoici les réponses aux questions (phase analyse — contexte ; le recruteur complète les confirmations expertise à part) :\n\n${analysisAnswerLines}`
+    ? `\n\nVoici les réponses du recruteur (phase analyse / affinage) :\n\n${analysisAnswerLines}`
     : '';
 
-  return `${preamble}${cvBlock}${jobTail}Voici l'analyse de matching :\n\n${JSON.stringify(analysis, null, 2)}${analysisAnswersSection}${expertiseRecruiterBlock}`;
+  return `${preamble}${cvBlock}${jobTail}Voici l'analyse de matching :\n\n${JSON.stringify(analysis, null, 2)}${analysisAnswersSection}`;
 }
 
 export function buildAnalysisMessages(
@@ -546,7 +523,6 @@ export function buildGenerateMessages(
   jobAnalysis?: JobPostingAnalysis | null,
   matchingWeights?: MatchingWeightsConfig | null,
   options?: PositioningPromptOptions,
-  generationExpertisePrompts?: PositioningExpertiseConfirmationItem[] | null,
 ) {
   return [
     {
@@ -559,7 +535,6 @@ export function buildGenerateMessages(
         jobAnalysis,
         matchingWeights,
         options,
-        generationExpertisePrompts,
       ),
     },
   ];

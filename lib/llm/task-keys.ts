@@ -14,7 +14,6 @@ export const TASK_KEY = {
   POSITIONING_ANALYSIS_SYNTHESIS: 'positioning.analysis.synthesis',
 
   POSITIONING_GENERATE_TAILORED_CV: 'positioning.generate.tailoredCv',
-  POSITIONING_GENERATE_EXPERTISE_CONFIRMATIONS: 'positioning.generate.expertiseConfirmations',
   POSITIONING_GENERATE_EMAIL: 'positioning.generate.email',
   POSITIONING_GENERATE_EMAIL_FIRST_CONTACT: 'positioning.generate.emailFirstContact',
   POSITIONING_GENERATE_EMAIL_BULLETS: 'positioning.generate.emailBullets',

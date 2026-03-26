@@ -3,11 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { positioningGenerateWorkflow } from '@/workflows/positioning-generate';
+import type { PositioningGenerateMode } from '@/lib/types/positioning-generate-stream';
 
 export async function POST(req: NextRequest) {
   try {
     await requireOrgId();
-    const { positioningId, answers } = await req.json();
+    const body = await req.json();
+    const { positioningId, answers } = body;
+    const rawMode = body.generateMode as string | undefined;
+    const generateMode: PositioningGenerateMode =
+      rawMode === 'cv' || rawMode === 'emails' || rawMode === 'all' ? rawMode : 'all';
     if (!positioningId) throw new Error('positioningId is required');
 
     const supabase = getSupabase();
@@ -63,7 +68,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const run = await start(positioningGenerateWorkflow, [positioningId, answers ?? {}]);
+    const run = await start(positioningGenerateWorkflow, [positioningId, answers ?? {}, generateMode]);
 
     await supabase
       .from('positionings')

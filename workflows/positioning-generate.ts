@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { createGatewayLanguageModel } from '@/lib/ai';
+import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import {
   mergePositioningOutputPartial,
@@ -19,12 +19,10 @@ import {
   positioningEmailFirstContactPartSchema,
   positioningEmailBulletPointsPartSchema,
   positioningCandidateEmailPartSchema,
-  positioningExpertiseConfirmationsPartSchema,
 } from '@/lib/schema';
 import {
   buildGenerateUserContent,
   buildMissionPositionHeadline,
-  normalizeStoredExpertisePrompts,
   parsePositioningAnswers,
 } from '@/lib/services/positioning.service';
 import { withMandatoryJobPostingLists } from '@/lib/services/job-posting-analysis.service';
@@ -32,12 +30,17 @@ import { mergeMatchingWeights } from '@/lib/config/matching-weights';
 import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
 import type {
   PositioningGenerateBranch,
+  PositioningGenerateMode,
   PositioningGenerateStreamMeta,
 } from '@/lib/types/positioning-generate-stream';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 
-async function fetchAndGenerate(positioningId: string, answers: Record<string, unknown>) {
+async function fetchAndGenerate(
+  positioningId: string,
+  answers: Record<string, unknown>,
+  generateMode: PositioningGenerateMode,
+) {
   'use step';
 
   const supabase = getSupabase();
@@ -79,10 +82,6 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, u
     brandContextBlock: branding.brandContextBlock,
   };
 
-  const expertisePromptsForGenerate = normalizeStoredExpertisePrompts(
-    positioning.generation_expertise_prompts,
-  );
-
   const userContent = buildGenerateUserContent(
     cv,
     jobDescription,
@@ -91,7 +90,6 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, u
     jobAnalysis,
     matchingWeights,
     { positionHeadline: buildMissionPositionHeadline(missionRow) },
-    expertisePromptsForGenerate.length > 0 ? expertisePromptsForGenerate : null,
   );
 
   const workflowRunId = (positioning.workflow_run_id as string | null) ?? null;
@@ -119,6 +117,7 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, u
     const meta: PositioningGenerateStreamMeta = {
       phase: 'generating',
       activeBranches: [...activeBranches],
+      generateMode,
     };
     await writer.write(
       encoder.encode(JSON.stringify({ index: chunkIndex++, data: snapshot, meta }) + '\n'),
@@ -136,6 +135,7 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, u
   ): Promise<void> {
     const branchStart = Date.now();
     const result = streamText({
+      ...llmFactualGenerationSettings,
       model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],
@@ -179,95 +179,166 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, u
   }
 
   try {
-    const [rEc, rTc, rEm, rFc, rBp, rCe] = await Promise.all([
-      resolveLlmTask(supabase, {
-        taskKey: TASK_KEY.POSITIONING_GENERATE_EXPERTISE_CONFIRMATIONS,
-        orgId: orgId ?? null,
-        context: brandCtx,
-      }),
-      resolveLlmTask(supabase, {
+    const branchTasks: Promise<void>[] = [];
+
+    if (generateMode === 'all') {
+      const [rTc, rEm, rFc, rBp, rCe] = await Promise.all([
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+      ]);
+
+      branchTasks.push(
+        consumeBranch(
+          createGatewayLanguageModel(rTc.gatewayModelId, rTc.useExtractJson),
+          rTc.systemPrompt,
+          positioningTailoredCvPartSchema,
+          'positioning_tailored_cv',
+          'tailoredCv',
+          TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
+          rTc.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rEm.gatewayModelId, rEm.useExtractJson),
+          rEm.systemPrompt,
+          positioningEmailPartSchema,
+          'positioning_email',
+          'email',
+          TASK_KEY.POSITIONING_GENERATE_EMAIL,
+          rEm.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rFc.gatewayModelId, rFc.useExtractJson),
+          rFc.systemPrompt,
+          positioningEmailFirstContactPartSchema,
+          'positioning_email_first_contact',
+          'emailFirstContact',
+          TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
+          rFc.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rBp.gatewayModelId, rBp.useExtractJson),
+          rBp.systemPrompt,
+          positioningEmailBulletPointsPartSchema,
+          'positioning_email_bullet_points',
+          'emailBulletPoints',
+          TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
+          rBp.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rCe.gatewayModelId, rCe.useExtractJson),
+          rCe.systemPrompt,
+          positioningCandidateEmailPartSchema,
+          'positioning_candidate_email',
+          'candidateEmail',
+          TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
+          rCe.gatewayModelId,
+        ),
+      );
+    } else if (generateMode === 'cv') {
+      const rTc = await resolveLlmTask(supabase, {
         taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
         orgId: orgId ?? null,
         context: brandCtx,
-      }),
-      resolveLlmTask(supabase, {
-        taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL,
-        orgId: orgId ?? null,
-        context: brandCtx,
-      }),
-      resolveLlmTask(supabase, {
-        taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
-        orgId: orgId ?? null,
-        context: brandCtx,
-      }),
-      resolveLlmTask(supabase, {
-        taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
-        orgId: orgId ?? null,
-        context: brandCtx,
-      }),
-      resolveLlmTask(supabase, {
-        taskKey: TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
-        orgId: orgId ?? null,
-        context: brandCtx,
-      }),
-    ]);
+      });
+      branchTasks.push(
+        consumeBranch(
+          createGatewayLanguageModel(rTc.gatewayModelId, rTc.useExtractJson),
+          rTc.systemPrompt,
+          positioningTailoredCvPartSchema,
+          'positioning_tailored_cv',
+          'tailoredCv',
+          TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
+          rTc.gatewayModelId,
+        ),
+      );
+    } else if (generateMode === 'emails') {
+      const [rEm, rFc, rBp, rCe] = await Promise.all([
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+        resolveLlmTask(supabase, {
+          taskKey: TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
+          orgId: orgId ?? null,
+          context: brandCtx,
+        }),
+      ]);
 
-    await Promise.all([
-      consumeBranch(
-        createGatewayLanguageModel(rEc.gatewayModelId, rEc.useExtractJson),
-        rEc.systemPrompt,
-        positioningExpertiseConfirmationsPartSchema,
-        'positioning_expertise_confirmations',
-        'expertiseConfirmations',
-        TASK_KEY.POSITIONING_GENERATE_EXPERTISE_CONFIRMATIONS,
-        rEc.gatewayModelId,
-      ),
-      consumeBranch(
-        createGatewayLanguageModel(rTc.gatewayModelId, rTc.useExtractJson),
-        rTc.systemPrompt,
-        positioningTailoredCvPartSchema,
-        'positioning_tailored_cv',
-        'tailoredCv',
-        TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
-        rTc.gatewayModelId,
-      ),
-      consumeBranch(
-        createGatewayLanguageModel(rEm.gatewayModelId, rEm.useExtractJson),
-        rEm.systemPrompt,
-        positioningEmailPartSchema,
-        'positioning_email',
-        'email',
-        TASK_KEY.POSITIONING_GENERATE_EMAIL,
-        rEm.gatewayModelId,
-      ),
-      consumeBranch(
-        createGatewayLanguageModel(rFc.gatewayModelId, rFc.useExtractJson),
-        rFc.systemPrompt,
-        positioningEmailFirstContactPartSchema,
-        'positioning_email_first_contact',
-        'emailFirstContact',
-        TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
-        rFc.gatewayModelId,
-      ),
-      consumeBranch(
-        createGatewayLanguageModel(rBp.gatewayModelId, rBp.useExtractJson),
-        rBp.systemPrompt,
-        positioningEmailBulletPointsPartSchema,
-        'positioning_email_bullet_points',
-        'emailBulletPoints',
-        TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
-        rBp.gatewayModelId,
-      ),
-      consumeBranch(
-        createGatewayLanguageModel(rCe.gatewayModelId, rCe.useExtractJson),
-        rCe.systemPrompt,
-        positioningCandidateEmailPartSchema,
-        'positioning_candidate_email',
-        'candidateEmail',
-        TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
-        rCe.gatewayModelId,
-      ),
-    ]);
+      branchTasks.push(
+        consumeBranch(
+          createGatewayLanguageModel(rEm.gatewayModelId, rEm.useExtractJson),
+          rEm.systemPrompt,
+          positioningEmailPartSchema,
+          'positioning_email',
+          'email',
+          TASK_KEY.POSITIONING_GENERATE_EMAIL,
+          rEm.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rFc.gatewayModelId, rFc.useExtractJson),
+          rFc.systemPrompt,
+          positioningEmailFirstContactPartSchema,
+          'positioning_email_first_contact',
+          'emailFirstContact',
+          TASK_KEY.POSITIONING_GENERATE_EMAIL_FIRST_CONTACT,
+          rFc.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rBp.gatewayModelId, rBp.useExtractJson),
+          rBp.systemPrompt,
+          positioningEmailBulletPointsPartSchema,
+          'positioning_email_bullet_points',
+          'emailBulletPoints',
+          TASK_KEY.POSITIONING_GENERATE_EMAIL_BULLETS,
+          rBp.gatewayModelId,
+        ),
+        consumeBranch(
+          createGatewayLanguageModel(rCe.gatewayModelId, rCe.useExtractJson),
+          rCe.systemPrompt,
+          positioningCandidateEmailPartSchema,
+          'positioning_candidate_email',
+          'candidateEmail',
+          TASK_KEY.POSITIONING_GENERATE_CANDIDATE_EMAIL,
+          rCe.gatewayModelId,
+        ),
+      );
+    }
+
+    await Promise.all(branchTasks);
 
     const parsed = positioningOutputSchema.safeParse(acc);
     const object = parsed.success ? parsed.data : acc;
@@ -298,30 +369,24 @@ async function saveGeneration(
       emailFirstContact?: unknown;
       emailBulletPoints?: unknown;
       candidateEmail?: unknown;
-      expertiseConfirmations?: unknown;
     };
     durationMs: number;
     candidateId: string;
     orgId: string | null;
   },
+  generateMode: PositioningGenerateMode,
 ) {
   'use step';
 
   const supabase = getSupabase();
 
-  if (result.object) {
-    const rawEc = result.object.expertiseConfirmations;
-    const expertiseStored = Array.isArray(rawEc)
-      ? rawEc.map((x: { question?: string; context?: string; suggestedAnswers?: string[] }, i: number) => ({
-          id: `ec-${i}`,
-          question: String(x.question ?? ''),
-          context: String(x.context ?? ''),
-          suggestedAnswers: Array.isArray(x.suggestedAnswers)
-            ? x.suggestedAnswers.map((s) => String(s)).filter(Boolean)
-            : [],
-        }))
-      : null;
+  if (!result.object) {
+    const writable = getWritable<Uint8Array>();
+    await writable.close();
+    return;
+  }
 
+  if (generateMode === 'all') {
     await supabase
       .from('positionings')
       .update({
@@ -330,12 +395,47 @@ async function saveGeneration(
         email_first_contact: result.object.emailFirstContact,
         email_bullet_points: result.object.emailBulletPoints,
         candidate_email: result.object.candidateEmail,
-        generation_expertise_prompts: expertiseStored,
         status: 'generated',
         ai_generation_duration_ms: result.durationMs,
         workflow_run_id: null,
       })
       .eq('id', positioningId);
+  } else {
+    const { data: existing } = await supabase
+      .from('positionings')
+      .select(
+        'tailored_cv, email, email_first_contact, email_bullet_points, candidate_email, ai_generation_duration_ms',
+      )
+      .eq('id', positioningId)
+      .single();
+
+    const prevMs = (existing?.ai_generation_duration_ms as number | null | undefined) ?? 0;
+    const nextDuration = prevMs + result.durationMs;
+
+    if (generateMode === 'cv') {
+      await supabase
+        .from('positionings')
+        .update({
+          tailored_cv: result.object.tailoredCv,
+          status: 'generated',
+          ai_generation_duration_ms: nextDuration,
+          workflow_run_id: null,
+        })
+        .eq('id', positioningId);
+    } else {
+      await supabase
+        .from('positionings')
+        .update({
+          email: result.object.email,
+          email_first_contact: result.object.emailFirstContact,
+          email_bullet_points: result.object.emailBulletPoints,
+          candidate_email: result.object.candidateEmail,
+          status: 'generated',
+          ai_generation_duration_ms: nextDuration,
+          workflow_run_id: null,
+        })
+        .eq('id', positioningId);
+    }
   }
 
   const writable = getWritable<Uint8Array>();
@@ -345,10 +445,11 @@ async function saveGeneration(
 export async function positioningGenerateWorkflow(
   positioningId: string,
   answers: Record<string, unknown>,
+  generateMode: PositioningGenerateMode = 'all',
 ) {
   'use workflow';
 
-  const result = await fetchAndGenerate(positioningId, answers);
-  await saveGeneration(positioningId, result);
+  const result = await fetchAndGenerate(positioningId, answers, generateMode);
+  await saveGeneration(positioningId, result, generateMode);
   return result.object;
 }

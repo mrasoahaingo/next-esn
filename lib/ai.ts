@@ -8,6 +8,14 @@ const gateway = createGateway({
 /** Identifiant gateway / facturation ; doit exister dans `lib/pricing.ts` (`MODEL_PRICING_USD`). */
 export const modelName = 'google/gemini-2.5-flash';
 
+/**
+ * Température 0 pour toutes les tâches factuelles (transcription, extraction, analyse, JSON structuré).
+ * Réduit la variance entre exécutions et limite les inventions par rapport au prompt / aux pièces jointes.
+ */
+export const llmFactualGenerationSettings = {
+  temperature: 0,
+} as const;
+
 /** Instancie un modèle gateway (optionnellement avec `extractJsonMiddleware` pour `Output.object`). */
 export function createGatewayLanguageModel(gatewayModelId: string, useExtractJson: boolean): LanguageModel {
   const m = gateway(gatewayModelId);

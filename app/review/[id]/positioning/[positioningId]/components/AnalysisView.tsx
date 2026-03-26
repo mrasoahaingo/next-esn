@@ -153,8 +153,7 @@ function RecruiterContextSection({
       <p className="text-xs text-muted-foreground mb-4">
         Ce bloc correspond aux notes et réponses qui ont servi au dernier calcul du score ci-dessus. Les
         ajouts dans l’onglet Questions & affinage n’apparaissent ici qu’après une relance d’analyse.
-        Retirez une ligne si elle n’est plus pertinente pour les prochains échanges. Les confirmations
-        d’expertise (génération) restent sur l’étape « Génération ».
+        Retirez une ligne si elle n’est plus pertinente pour les prochains échanges.
       </p>
       <div className="space-y-6">
         {(['candidat', 'client'] as const).map((aud) => {

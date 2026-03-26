@@ -1,7 +1,7 @@
 import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
-import { createGatewayLanguageModel } from '@/lib/ai';
+import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { mergePositioningPartial } from '@/lib/services/positioning-analysis-merge';
 import {
@@ -129,6 +129,7 @@ async function fetchAndAnalyze(positioningId: string) {
   ): Promise<void> {
     const branchStart = Date.now();
     const result = streamText({
+      ...llmFactualGenerationSettings,
       model: languageModel,
       system,
       messages: [{ role: 'user', content: userContent }],
@@ -251,6 +252,7 @@ async function fetchAndAnalyze(positioningId: string) {
     );
     const synStart = Date.now();
     const synthesisResult = streamText({
+      ...llmFactualGenerationSettings,
       model: createGatewayLanguageModel(rSyn.gatewayModelId, rSyn.useExtractJson),
       system: rSyn.systemPrompt,
       messages: [

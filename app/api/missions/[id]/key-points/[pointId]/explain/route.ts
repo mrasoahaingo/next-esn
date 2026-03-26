@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
-import { createGatewayLanguageModel } from '@/lib/ai';
+import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import {
   jobPostingKeyPointExplainSchema,
   type JobPostingAnalysis,
@@ -68,6 +68,7 @@ export async function POST(
 
     const start = Date.now();
     const { object, usage } = await generateObject({
+      ...llmFactualGenerationSettings,
       model,
       schema: jobPostingKeyPointExplainSchema,
       system: resolved.systemPrompt,

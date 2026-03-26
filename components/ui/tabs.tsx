@@ -30,7 +30,7 @@ const tabsListVariants = cva(
       variant: {
         default: "bg-muted",
         line: "gap-1 bg-transparent",
-        /** Aligné sur les sous-onglets email (GenerationStep : Complet / Premier contact / Bullet points) */
+        /** Aligné sur les sous-onglets email (EmailsGenerationStep : Complet / Premier contact / Bullet points) */
         segmented:
           "!h-auto min-h-0 w-full min-w-0 items-stretch justify-stretch rounded-xl border border-overlay/10 bg-overlay/[0.04] p-1 gap-1.5 shadow-none",
       },

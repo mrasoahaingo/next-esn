@@ -208,25 +208,12 @@ export const positioningEmailSchema = z.object({
 
 export type PositioningEmail = z.infer<typeof positioningEmailSchema>;
 
-/** Questions de confirmation d’expertise (phase génération) — saisie recruteur, suggestions LLM. */
-export const positioningExpertiseConfirmationItemSchema = z.object({
-  id: z.string().optional(),
-  question: z.string(),
-  context: z.string(),
-  suggestedAnswers: z.array(z.string()).min(1).max(5),
-});
-
-export type PositioningExpertiseConfirmationItem = z.infer<
-  typeof positioningExpertiseConfirmationItemSchema
->;
-
 export const positioningOutputSchema = z.object({
   tailoredCv: extractionSchema,
   email: positioningEmailSchema,
   emailFirstContact: positioningEmailSchema,
   emailBulletPoints: positioningEmailSchema,
   candidateEmail: positioningEmailSchema,
-  expertiseConfirmations: z.array(positioningExpertiseConfirmationItemSchema).optional(),
 });
 
 export type PositioningOutput = z.infer<typeof positioningOutputSchema>;
@@ -242,10 +229,6 @@ export const positioningEmailBulletPointsPartSchema = positioningOutputSchema.pi
 });
 export const positioningCandidateEmailPartSchema = positioningOutputSchema.pick({
   candidateEmail: true,
-});
-/** Branche LLM dédiée : uniquement les questions de confirmation d’expertise. */
-export const positioningExpertiseConfirmationsPartSchema = z.object({
-  expertiseConfirmations: z.array(positioningExpertiseConfirmationItemSchema).min(1).max(8),
 });
 
 // ─── Analyse fiche de poste (mission) — recruteur ─────────────────

@@ -1,6 +1,14 @@
 import { View, Text, Image, Svg, Path, Rect, Circle } from '@react-pdf/renderer';
 import type { RenderComponentRegistry } from '@json-render/react-pdf/render';
 
+/** Aligné sur @json-render/react-pdf (standard List) — retire les emoji des puces CV. */
+const EMOJI_RE =
+  /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu;
+
+function stripEmoji(text: string): string {
+  return text.replace(EMOJI_RE, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 // Custom components with fixed={true} to repeat on every page
 function FixedViewComponent({ element, children }: { element: { props: Record<string, unknown> }; children?: React.ReactNode }) {
   const p = element.props;
@@ -133,20 +141,23 @@ function FixedColumnComponent({ element, children }: { element: { props: Record<
   );
 }
 
-function RichTextComponent({ element }: { element: { props: Record<string, unknown> } }) {
-  const p = element.props;
-  const text = (p.text as string) ?? '';
-  const fontSize = (p.fontSize as number) ?? 9;
-  const color = (p.color as string) ?? '#000';
-  const lineHeight = (p.lineHeight as number) ?? undefined;
-
-  // Split on **bold** markers
+/** Rendu inline **gras** (même convention que l’extraction CV / synthèse). */
+function MarkdownInlineText({
+  text,
+  fontSize,
+  color,
+  lineHeight,
+  flex,
+}: {
+  text: string;
+  fontSize: number;
+  color?: string;
+  lineHeight?: number;
+  flex?: number;
+}) {
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
-
   return (
-    <Text
-      style={{ fontSize, color, lineHeight, fontFamily: 'Helvetica' }}
-    >
+    <Text style={{ fontSize, color, lineHeight, flex, fontFamily: 'Helvetica' }}>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           return (
@@ -158,6 +169,43 @@ function RichTextComponent({ element }: { element: { props: Record<string, unkno
         return part;
       })}
     </Text>
+  );
+}
+
+function RichTextComponent({ element }: { element: { props: Record<string, unknown> } }) {
+  const p = element.props;
+  const text = (p.text as string) ?? '';
+  const fontSize = (p.fontSize as number) ?? 9;
+  const color = (p.color as string) ?? '#000';
+  const lineHeight = (p.lineHeight as number) ?? undefined;
+
+  return <MarkdownInlineText text={text} fontSize={fontSize} color={color} lineHeight={lineHeight} />;
+}
+
+/** Remplace le List standard : supporte **gras** dans chaque puce (CV positionnement). */
+function ListComponent({ element }: { element: { props: Record<string, unknown> } }) {
+  const p = element.props;
+  const fontSize = (p.fontSize as number) ?? 12;
+  const spacing = (p.spacing as number) ?? 4;
+  const items = (p.items as string[]) ?? [];
+  const ordered = Boolean(p.ordered);
+
+  return (
+    <View style={{ gap: spacing }}>
+      {items.map((item, index) => (
+        <View key={index} style={{ flexDirection: 'row', gap: 6 }}>
+          <Text style={{ fontSize, color: (p.color as string) ?? undefined, width: ordered ? 20 : 12 }}>
+            {ordered ? `${index + 1}.` : '\u2022'}
+          </Text>
+          <MarkdownInlineText
+            text={stripEmoji(item)}
+            fontSize={fontSize}
+            color={p.color as string | undefined}
+            flex={1}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -216,15 +264,19 @@ function BadgeListComponent({ element }: { element: { props: Record<string, unkn
             paddingVertical: 2.5,
           }}
         >
-          <Text
-            style={{
-              fontSize,
-              color: textColor,
-              fontFamily: 'Helvetica-Bold',
-            }}
-          >
-            {item}
-          </Text>
+          {item.includes('**') ? (
+            <MarkdownInlineText text={item} fontSize={fontSize} color={textColor} />
+          ) : (
+            <Text
+              style={{
+                fontSize,
+                color: textColor,
+                fontFamily: 'Helvetica-Bold',
+              }}
+            >
+              {item}
+            </Text>
+          )}
         </View>
       ))}
     </View>
@@ -234,6 +286,7 @@ function BadgeListComponent({ element }: { element: { props: Record<string, unkn
 export const fixedComponents: RenderComponentRegistry = {
   CvAccentBar: CvAccentBarComponent,
   BadgeList: BadgeListComponent,
+  List: ListComponent,
   FixedView: FixedViewComponent,
   FixedRow: FixedRowComponent,
   FixedColumn: FixedColumnComponent,
