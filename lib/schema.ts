@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeSkillKey } from '@/lib/utils/skill-key';
 
 // ─── Template config ─────────────────────────────────────────────
 
@@ -392,59 +393,156 @@ export const jobPostingEvidenceTypeExpectedSchema = z.enum([
 
 export type JobPostingEvidenceTypeExpected = z.infer<typeof jobPostingEvidenceTypeExpectedSchema>;
 
+/** Tolère les libellés LLM hors enum pour éviter AI_NoObjectGeneratedError sur keyPoints. */
+function normalizeJobPostingKeyPointAspect(val: unknown): JobPostingKeyPointAspect {
+  const direct = jobPostingKeyPointAspectSchema.safeParse(val);
+  if (direct.success) return direct.data;
+
+  const s = String(val ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  if (!s) return 'other';
+
+  if (s === 'technical' || s.includes('technique') || s === 'tech') return 'technical';
+  if (s === 'methodology' || s.includes('methodologie') || s.includes('process')) return 'methodology';
+  if (s.includes('soft') || s.includes('relationnel')) return 'soft_skills';
+  if (s.includes('context') || s.includes('client')) return 'context_client';
+  if (s.includes('constraint') || s.includes('contrainte')) return 'constraints';
+  if (s.includes('delivery') || s.includes('livraison')) return 'delivery';
+  return 'other';
+}
+
+function normalizeJobPostingRequirementTier(val: unknown): JobPostingRequirementTier | undefined {
+  if (val == null || val === '') return undefined;
+  const direct = jobPostingRequirementTierSchema.safeParse(val);
+  if (direct.success) return direct.data;
+  const s = String(val)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  if (!s) return undefined;
+  if ((s.includes('hard') && s.includes('constraint')) || s.includes('eliminatoire')) {
+    return 'hard_constraint';
+  }
+  if (s.includes('must')) return 'must_have';
+  if (s.includes('should')) return 'should_have';
+  if (s.includes('nice')) return 'nice_to_have';
+  return undefined;
+}
+
+function normalizeJobPostingEvidenceTypeExpected(val: unknown): JobPostingEvidenceTypeExpected | undefined {
+  if (val == null || val === '') return undefined;
+  const direct = jobPostingEvidenceTypeExpectedSchema.safeParse(val);
+  if (direct.success) return direct.data;
+  const s = String(val).toLowerCase().trim();
+  if (s.includes('explicit')) return 'explicit';
+  if (s.includes('implicit')) return 'implicit_acceptable';
+  if (s.includes('transfer')) return 'transferable_proven';
+  return undefined;
+}
+
+function slugAsciiFromLabel(label: string): string {
+  const base = label
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return base || 'point';
+}
+
 export const jobPostingKeyPointSchema = z
   .object({
     id: z
-      .string()
+      .union([z.string(), z.number()])
       .describe(
         "Identifiant stable pour cette mission / réanalyse (slug ASCII). Pour le technique, préférer aligner id sur canonicalSkillKey quand c'est une techno.",
-      ),
-    label: z.string(),
-    aspect: jobPostingKeyPointAspectSchema,
-    /** Obligatoire si aspect = technical : clé canonique cross-missions (ex. react, nodejs, graphql, aws). Minuscules, tirets. */
+      )
+      .transform((v) => String(v).trim()),
+    label: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
+    aspect: z
+      .union([jobPostingKeyPointAspectSchema, z.string()])
+      .describe('Catégorie du point (synonymes FR/EN acceptés).')
+      .transform((v) => normalizeJobPostingKeyPointAspect(v)),
+    /** Obligatoire si aspect = technical : complété automatiquement depuis le label si omis. */
     canonicalSkillKey: z
-      .string()
+      .union([z.string(), z.number(), z.null()])
       .optional()
       .describe(
         'Pour aspect technical uniquement : identifiant stable partagé entre toutes les missions (stats, « compris » global). Ex. react, nodejs, kubernetes.',
-      ),
-    category: z.string().describe('Libellé court FR pour regroupement visuel (ex. Backend, Contexte client)'),
-    importanceRank: z.number().int().min(1).describe('1 = le plus critique pour répondre au besoin mission'),
-    roleInMission: z.string().describe('Ce que ce point change concrètement pour le recruteur ou le candidat'),
+      )
+      .transform((v) => {
+        if (v == null) return undefined;
+        const s = String(v).trim();
+        return s.length > 0 ? normalizeSkillKey(s) : undefined;
+      }),
+    category: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
+    importanceRank: z
+      .union([z.number(), z.string()])
+      .describe('1 = le plus critique pour répondre au besoin mission')
+      .transform((v) => {
+        const n = typeof v === 'number' ? v : Number.parseFloat(String(v).replace(',', '.'));
+        if (!Number.isFinite(n)) return 1;
+        return Math.max(1, Math.round(n));
+      }),
+    roleInMission: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
     /** Rubric REFACTO : bloquant vs négociable */
-    requirementTier: jobPostingRequirementTierSchema.optional().describe(
-      'hard_constraint = éliminatoire si non satisfait ; les autres se pondèrent entre eux (somme des importanceWeight ≈ 1)',
-    ),
+    requirementTier: z
+      .union([jobPostingRequirementTierSchema, z.string(), z.null()])
+      .optional()
+      .describe(
+        'hard_constraint = éliminatoire si non satisfait ; les autres se pondèrent entre eux (somme des importanceWeight ≈ 1)',
+      )
+      .transform((v) => normalizeJobPostingRequirementTier(v)),
     /** Poids 0–1 pour critères non hard_constraint (somme ≈ 1 entre eux) */
     importanceWeight: z
-      .number()
-      .min(0)
-      .max(1)
+      .union([z.number(), z.string(), z.null()])
       .optional()
-      .describe('Uniquement pour must_have / should_have / nice_to_have'),
-    evidenceTypeExpected: jobPostingEvidenceTypeExpectedSchema.optional().describe(
-      'Type de preuve attendu sur le CV pour scorer ce critère',
-    ),
+      .describe('Uniquement pour must_have / should_have / nice_to_have')
+      .transform((v) => {
+        if (v == null || v === '') return undefined;
+        const n = typeof v === 'number' ? v : Number.parseFloat(String(v).replace(',', '.'));
+        if (!Number.isFinite(n)) return undefined;
+        return Math.min(1, Math.max(0, n));
+      }),
+    evidenceTypeExpected: z
+      .union([jobPostingEvidenceTypeExpectedSchema, z.string(), z.null()])
+      .optional()
+      .describe('Type de preuve attendu sur le CV pour scorer ce critère')
+      .transform((v) => normalizeJobPostingEvidenceTypeExpected(v)),
     valueSought: z
-      .string()
+      .union([z.string(), z.number(), z.null()])
       .optional()
-      .describe('Formulation courte de l’exigence vérifiable (ex. "Python confirmé 3+ ans", "Anglais C1")'),
+      .describe('Formulation courte de l’exigence vérifiable (ex. "Python confirmé 3+ ans", "Anglais C1")')
+      .transform((v) => {
+        if (v == null || v === '') return undefined;
+        return String(v).trim();
+      }),
     scoringRubricHint: z
-      .string()
+      .union([z.string(), z.number(), z.null()])
       .optional()
-      .describe('Indication brève pour le scoring 0 / 50 / 100 (barème métier)'),
+      .describe('Indication brève pour le scoring 0 / 50 / 100 (barème métier)')
+      .transform((v) => {
+        if (v == null || v === '') return undefined;
+        return String(v).trim();
+      }),
   })
-  .superRefine((data, ctx) => {
-    if (data.aspect === 'technical') {
-      const k = data.canonicalSkillKey?.trim();
-      if (!k) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'canonicalSkillKey est requis pour les points techniques',
-          path: ['canonicalSkillKey'],
-        });
-      }
+  .transform((data) => {
+    const { aspect, label, importanceRank } = data;
+    let { id, canonicalSkillKey } = data;
+    if (!id) {
+      id = `${slugAsciiFromLabel(label)}-${importanceRank}`;
     }
+    if (aspect === 'technical' && !canonicalSkillKey?.trim()) {
+      canonicalSkillKey = normalizeSkillKey(slugAsciiFromLabel(label));
+    }
+    return { ...data, id, canonicalSkillKey };
   });
 
 export const jobPostingAnalysisSchema = z.object({
