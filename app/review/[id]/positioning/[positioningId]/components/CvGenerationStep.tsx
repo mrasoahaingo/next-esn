@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, FileText } from 'lucide-react';
+import { Loader2, RefreshCw, FileText, Download } from 'lucide-react';
 import { TailoredCvForm } from './TailoredCvForm';
 
 const CV_BRANCHES = ['tailoredCv'] as const;
@@ -41,9 +41,17 @@ interface CvGenerationStepProps {
   isStreaming: boolean;
   streamMeta?: PositioningGenerateStreamMeta | null;
   onGenerateCv: () => void;
+  onExport: () => void;
+  exportPending: boolean;
 }
 
-export function CvGenerationStep({ isStreaming, streamMeta, onGenerateCv }: CvGenerationStepProps) {
+export function CvGenerationStep({
+  isStreaming,
+  streamMeta,
+  onGenerateCv,
+  onExport,
+  exportPending,
+}: CvGenerationStepProps) {
   const { tailoredCv, updateTailoredCvField } = usePositioningStore();
 
   const hasCv = !!tailoredCv;
@@ -87,7 +95,7 @@ export function CvGenerationStep({ isStreaming, streamMeta, onGenerateCv }: CvGe
       </p>
 
       <section className="rounded-xl border border-overlay/10 bg-overlay/[0.06] overflow-hidden">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-border/60">
+        <div className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-border/60">
           <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-semibold text-foreground">CV retravaillé</h3>
@@ -95,15 +103,32 @@ export function CvGenerationStep({ isStreaming, streamMeta, onGenerateCv }: CvGe
               Texte structuré aligné sur l&apos;offre ; l&apos;aperçu PDF est à droite.
             </p>
           </div>
-          {!isStreaming && (
-            <RegenButton onClick={onGenerateCv} disabled={isStreaming} hasContent={hasCv} />
-          )}
-          {showCvHeaderBusy && (
-            <div className="ml-2 flex items-center gap-1.5 text-xs text-violet shrink-0">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              En cours…
-            </div>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0 ml-auto">
+            {!isStreaming && (
+              <RegenButton onClick={onGenerateCv} disabled={isStreaming} hasContent={hasCv} />
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onExport}
+              disabled={exportPending || isStreaming || !tailoredCv}
+              className="h-7 shrink-0"
+            >
+              {exportPending ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              Exporter
+            </Button>
+            {showCvHeaderBusy && (
+              <div className="flex items-center gap-1.5 text-xs text-violet shrink-0">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                En cours…
+              </div>
+            )}
+          </div>
         </div>
         <div className="p-4">
           {isStreaming && !tailoredCv && generateMode === 'emails' ? (

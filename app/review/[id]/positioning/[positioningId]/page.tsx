@@ -803,16 +803,6 @@ export default function PositioningWizardPage() {
                   Position
                 </Button>
               )}
-              {currentStep === 3 && (
-                <Button onClick={handleExport} disabled={exportPositioning.isPending || isStreaming || !tailoredCv}>
-                  {exportPositioning.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="mr-2 h-4 w-4" />
-                  )}
-                  Exporter
-                </Button>
-              )}
             </div>
           </div>
 
@@ -920,6 +910,8 @@ export default function PositioningWizardPage() {
                   isStreaming={isGenerating || isGenerateLoading}
                   streamMeta={generateStreamMeta}
                   onGenerateCv={handleGenerateCv}
+                  onExport={handleExport}
+                  exportPending={exportPositioning.isPending}
                 />
               </div>
             )}
