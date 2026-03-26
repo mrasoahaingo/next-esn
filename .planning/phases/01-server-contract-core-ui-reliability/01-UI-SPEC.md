@@ -51,10 +51,8 @@ All text in this phase uses the existing Geist font stack. No new type roles int
 |------|------|--------|-------------|
 | Body | 14px (text-sm) | 400 (normal) | 1.43 (20px) |
 | Label | 14px (text-sm) | 500 (medium) | 1.43 (20px) |
-| Heading | 20px (text-xl) | 600 (semibold) | 1.2 (24px) |
-| Display | 28px (text-2xl) | 600 (semibold) | 1.2 (34px) |
 
-Phase 1 uses only Body and Label roles. Heading and Display are declared for completeness but not introduced in this phase.
+Heading and Display roles will be declared in the phase that introduces them.
 
 ---
 
@@ -70,6 +68,8 @@ This phase uses the existing Esneo theme tokens from `globals.css`. No new color
 | Destructive | `var(--destructive)` oklch(0.577 0.245 27.325) | Error toast icon, error status badge, destructive button variant |
 
 Accent reserved for: primary CTA buttons (Extraire, Analyser, Generer), loading spinner inside active buttons, success toast icon, `ring` focus indicator.
+
+Focal point: the workflow trigger button (Extraire / Analyser / Generer) is the primary action anchor on each view.
 
 ### Semantic Status Colors
 
