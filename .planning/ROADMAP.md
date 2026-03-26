@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Workflow status (`idle`, `pending`, `running`, `done`, `error`) persists in Supabase — a page reload never leaves a record stuck in `extracting` forever
 **Plans:** 2 plans
 Plans:
-- [ ] 01-01-PLAN.md — Server contract: workflow error handlers + NDJSON error frame parsing
+- [x] 01-01-PLAN.md — Server contract: workflow error handlers + NDJSON error frame parsing
 - [ ] 01-02-PLAN.md — UI reliability: server-derived button state, toast feedback, cache invalidation, store reset
 **UI hint**: yes
 

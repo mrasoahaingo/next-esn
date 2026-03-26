@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: planning
-stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-03-26T20:26:43.175Z"
-last_activity: 2026-03-26 — Roadmap created from requirements + research
+status: executing
+stopped_at: Completed 01-01-PLAN.md
+last_updated: "2026-03-26T20:48:08.110Z"
+last_activity: 2026-03-26
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille
-**Current focus:** Phase 1 — Server Contract & Core UI Reliability
+**Current focus:** Phase 01 — server-contract-core-ui-reliability
 
 ## Current Position
 
-Phase: 1 of 2 (Server Contract & Core UI Reliability)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-03-26 — Roadmap created from requirements + research
+Phase: 01 (server-contract-core-ui-reliability) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-26
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01 P01 | 2min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Recent decisions affecting current work:
 
 - Init: Focus fiabilisation avant features — UX de base doit être solide
 - Init: Garder le workflow runtime beta — pas d'alternative mature équivalente
+- [Phase 01]: handleWorkflowError step local to each file (not shared) -- workflow runtime needs co-location
 
 ### Pending Todos
 
@@ -75,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T20:26:43.172Z
-Stopped at: Phase 1 UI-SPEC approved
-Resume file: .planning/phases/01-server-contract-core-ui-reliability/01-UI-SPEC.md
+Last session: 2026-03-26T20:48:08.107Z
+Stopped at: Completed 01-01-PLAN.md
+Resume file: None

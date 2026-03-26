@@ -9,10 +9,10 @@ Requirements for the reliability milestone. Each maps to roadmap phases.
 
 ### Workflow State
 
-- [ ] **WFS-01**: Les workflows IA écrivent `status: 'error'` dans Supabase quand ils échouent — pas de ghost states
-- [ ] **WFS-02**: Chaque workflow a un statut clair dans Supabase (idle, pending, running, done, error)
-- [ ] **WFS-03**: Le statut workflow persiste après navigation/reload — dérivé de Supabase, pas de Zustand volatile
-- [ ] **WFS-04**: Les erreurs NDJSON ne sont plus avalées silencieusement par le catch block du stream
+- [x] **WFS-01**: Les workflows IA écrivent `status: 'error'` dans Supabase quand ils échouent — pas de ghost states
+- [x] **WFS-02**: Chaque workflow a un statut clair dans Supabase (idle, pending, running, done, error)
+- [x] **WFS-03**: Le statut workflow persiste après navigation/reload — dérivé de Supabase, pas de Zustand volatile
+- [x] **WFS-04**: Les erreurs NDJSON ne sont plus avalées silencieusement par le catch block du stream
 
 ### Button & Loading
 
@@ -23,7 +23,7 @@ Requirements for the reliability milestone. Each maps to roadmap phases.
 
 ### Error Display
 
-- [ ] **ERR-01**: Toute erreur de workflow remonte à l'UI avec un message compréhensible
+- [x] **ERR-01**: Toute erreur de workflow remonte à l'UI avec un message compréhensible
 - [ ] **ERR-02**: Les messages d'erreur sont actionnables ("Extraction échouée. Réessayez ou contactez le support.")
 - [ ] **ERR-03**: Les erreurs sont attribuées spécifiquement au sous-workflow qui a échoué ("Extraction CV échouée — fichier corrompu ?")
 
@@ -69,15 +69,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WFS-01 | Phase 1 | Pending |
-| WFS-02 | Phase 1 | Pending |
-| WFS-03 | Phase 1 | Pending |
-| WFS-04 | Phase 1 | Pending |
+| WFS-01 | Phase 1 | Complete |
+| WFS-02 | Phase 1 | Complete |
+| WFS-03 | Phase 1 | Complete |
+| WFS-04 | Phase 1 | Complete |
 | BTN-01 | Phase 1 | Pending |
 | BTN-02 | Phase 1 | Pending |
 | BTN-03 | Phase 1 | Pending |
 | BTN-04 | Phase 1 | Pending |
-| ERR-01 | Phase 1 | Pending |
+| ERR-01 | Phase 1 | Complete |
 | ERR-02 | Phase 1 | Pending |
 | ERR-03 | Phase 2 | Pending |
 | SUB-01 | Phase 2 | Pending |
