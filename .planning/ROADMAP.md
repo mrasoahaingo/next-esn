@@ -27,7 +27,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. When a workflow completes successfully, the user sees a visible success feedback
   4. After a workflow ends (success or error), the list view and detail view both reflect the updated state without a manual refresh
   5. Workflow status (`idle`, `pending`, `running`, `done`, `error`) persists in Supabase — a page reload never leaves a record stuck in `extracting` forever
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 01-01-PLAN.md — Server contract: workflow error handlers + NDJSON error frame parsing
+- [ ] 01-02-PLAN.md — UI reliability: server-derived button state, toast feedback, cache invalidation, store reset
 **UI hint**: yes
 
 ### Phase 2: Sub-Step Progress & Step Error Attribution
@@ -48,5 +51,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Server Contract & Core UI Reliability | 0/TBD | Not started | - |
+| 1. Server Contract & Core UI Reliability | 0/2 | Planning complete | - |
 | 2. Sub-Step Progress & Step Error Attribution | 0/TBD | Not started | - |
