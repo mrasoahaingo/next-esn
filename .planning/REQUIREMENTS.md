@@ -69,27 +69,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WFS-01 | — | Pending |
-| WFS-02 | — | Pending |
-| WFS-03 | — | Pending |
-| WFS-04 | — | Pending |
-| BTN-01 | — | Pending |
-| BTN-02 | — | Pending |
-| BTN-03 | — | Pending |
-| BTN-04 | — | Pending |
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| SUB-01 | — | Pending |
-| SUB-02 | — | Pending |
-| CCH-01 | — | Pending |
-| CCH-02 | — | Pending |
+| WFS-01 | Phase 1 | Pending |
+| WFS-02 | Phase 1 | Pending |
+| WFS-03 | Phase 1 | Pending |
+| WFS-04 | Phase 1 | Pending |
+| BTN-01 | Phase 1 | Pending |
+| BTN-02 | Phase 1 | Pending |
+| BTN-03 | Phase 1 | Pending |
+| BTN-04 | Phase 1 | Pending |
+| ERR-01 | Phase 1 | Pending |
+| ERR-02 | Phase 1 | Pending |
+| ERR-03 | Phase 2 | Pending |
+| SUB-01 | Phase 2 | Pending |
+| SUB-02 | Phase 2 | Pending |
+| CCH-01 | Phase 1 | Pending |
+| CCH-02 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-26*
-*Last updated: 2026-03-26 after initial definition*
+*Last updated: 2026-03-26 — traceability filled after roadmap creation*
