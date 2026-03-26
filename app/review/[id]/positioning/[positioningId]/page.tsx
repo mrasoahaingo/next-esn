@@ -1,7 +1,8 @@
 'use client';
 
 import { useLayoutEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
@@ -36,10 +37,9 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil, Square } from 'lucide-react';
+import { Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil, Square, GitCompare } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import dynamic from 'next/dynamic';
-import { StepIndicator } from './components/StepIndicator';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
 import { QuestionsPanel } from './components/QuestionsPanel';
@@ -54,7 +54,6 @@ const AnalysisCharts = dynamic(
 
 export default function PositioningWizardPage() {
   const params = useParams();
-  const router = useRouter();
   const queryClient = useQueryClient();
   const candidateId = params?.id as string;
   const positioningIdParam = params?.positioningId as string;
@@ -644,9 +643,23 @@ export default function PositioningWizardPage() {
     return false;
   };
 
-  const handleStepClick = (step: 1 | 2 | 3) => {
-    if (canGoToStep(step)) setCurrentStep(step);
-  };
+  const candidateDisplayName = useMemo(() => {
+    const pi = (candidateData?.extracted_data as ExtractedCV | null | undefined)?.personalInfo;
+    if (!pi) return null;
+    const name = [pi.firstName, pi.lastName].filter(Boolean).join(' ').trim();
+    return name || null;
+  }, [candidateData?.extracted_data]);
+
+  /** Ligne sous le nom : intitulé CV, ou extrait du résumé. */
+  const candidateDescriptionLine = useMemo(() => {
+    const ex = candidateData?.extracted_data as ExtractedCV | null | undefined;
+    const title = ex?.personalInfo?.title?.trim();
+    if (title) return title;
+    const summary = ex?.summary?.trim();
+    if (!summary) return null;
+    const oneLine = summary.replace(/\s+/g, ' ');
+    return oneLine.length > 140 ? `${oneLine.slice(0, 137)}…` : oneLine;
+  }, [candidateData?.extracted_data]);
 
   if (!isLoaded) {
     return (
@@ -660,107 +673,64 @@ export default function PositioningWizardPage() {
     <div className="flex h-full flex-col bg-background text-foreground">
       <div className="flex flex-1 flex-col min-h-0 px-4 py-4 md:px-6">
         {/* Top bar */}
-        <div className="mb-4 rounded-2xl glass-panel p-4">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet/20 text-violet neon-ring">
+        <div className="rounded-2xl glass-panel p-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet/20 text-violet neon-ring">
                 <Target className="h-4 w-4" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
                   <Target className="h-3 w-3 text-violet" />
                   Positionnement
                 </div>
-                <h1 className="text-lg font-semibold title-gradient">
-                  Positionnement sur offre
-                </h1>
+                <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                  <h1 className="text-lg font-semibold title-gradient">
+                    Positionnement sur offre
+                  </h1>
+                  {(aiAnalysisDurationMs || aiGenerationDurationMs || userTimeSeconds) ? (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-overlay/6 px-2 py-0.5">
+                          <Clock className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                            {formatDuration(
+                              (aiAnalysisDurationMs ?? 0) +
+                              (aiGenerationDurationMs ?? 0) +
+                              (userTimeSeconds ?? 0) * 1000
+                            )}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">
+                        <div className="space-y-1">
+                          {aiAnalysisDurationMs != null && aiAnalysisDurationMs > 0 && (
+                            <p className="flex items-center gap-1.5">
+                              <Cpu className="h-3 w-3 text-violet" />
+                              Analyse IA : <span className="font-semibold">{formatDuration(aiAnalysisDurationMs)}</span>
+                            </p>
+                          )}
+                          {aiGenerationDurationMs != null && aiGenerationDurationMs > 0 && (
+                            <p className="flex items-center gap-1.5">
+                              <Cpu className="h-3 w-3 text-accent" />
+                              Génération IA : <span className="font-semibold">{formatDuration(aiGenerationDurationMs)}</span>
+                            </p>
+                          )}
+                          {userTimeSeconds != null && userTimeSeconds > 0 && (
+                            <p className="flex items-center gap-1.5">
+                              <Pencil className="h-3 w-3 text-amber-400" />
+                              Edition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
+                            </p>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : null}
+                </div>
               </div>
             </div>
-            {/* Key metrics */}
-            {analysis?.matchScore != null && !isAnalyzing && !isAnalysisLoading && (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
-                  <TrendingUp className={`h-4 w-4 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`} />
-                  <span className={`text-lg font-bold ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}>
-                    {analysis.matchScore}%
-                  </span>
-                  <span className="hidden md:block text-xs text-muted-foreground">Score</span>
-                </div>
-                <Tooltip>
-                  <TooltipTrigger
-                    className={`flex cursor-help items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium outline-none ${matchScoreConfidenceBadgeClass(analysis.matchScoreConfidence)}`}
-                  >
-                    <span className="text-muted-foreground">Fiabilité</span>
-                    <span>{matchScoreConfidenceShortLabel(analysis.matchScoreConfidence)}</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs text-xs">
-                    {analysis.matchScoreConfidenceNote?.trim()
-                      ? analysis.matchScoreConfidenceNote
-                      : analysis.matchScoreConfidence
-                        ? 'Indicateur produit par la synthèse d’analyse pour contextualiser le score.'
-                        : 'Analyse antérieure : la fiabilité du score n’était pas encore calculée. Relancez l’analyse pour l’obtenir.'}
-                  </TooltipContent>
-                </Tooltip>
-                {analysis.skillMatches && (
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-neon" />
-                    <span className="text-sm font-semibold text-foreground">
-                      {analysis.skillMatches.filter((s) => s.relevance === 'strong').length}/{analysis.skillMatches.length}
-                    </span>
-                    <span className="hidden md:block text-xs text-muted-foreground">Compétences</span>
-                  </div>
-                )}
-                {analysis.gaps && analysis.gaps.length > 0 && (
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <span className="text-sm font-semibold text-foreground">{analysis.gaps.length}</span>
-                    <span className="hidden md:block text-xs text-muted-foreground">Lacunes</span>
-                  </div>
-                )}
-              </div>
-            )}
 
-            <div className="flex items-center gap-3">
-              {/* Time tracking */}
-              {(aiAnalysisDurationMs || aiGenerationDurationMs || userTimeSeconds) && (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {formatDuration(
-                          (aiAnalysisDurationMs ?? 0) +
-                          (aiGenerationDurationMs ?? 0) +
-                          (userTimeSeconds ?? 0) * 1000
-                        )}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    <div className="space-y-1">
-                      {aiAnalysisDurationMs != null && aiAnalysisDurationMs > 0 && (
-                        <p className="flex items-center gap-1.5">
-                          <Cpu className="h-3 w-3 text-violet" />
-                          Analyse IA : <span className="font-semibold">{formatDuration(aiAnalysisDurationMs)}</span>
-                        </p>
-                      )}
-                      {aiGenerationDurationMs != null && aiGenerationDurationMs > 0 && (
-                        <p className="flex items-center gap-1.5">
-                          <Cpu className="h-3 w-3 text-accent" />
-                          Génération IA : <span className="font-semibold">{formatDuration(aiGenerationDurationMs)}</span>
-                        </p>
-                      )}
-                      {userTimeSeconds != null && userTimeSeconds > 0 && (
-                        <p className="flex items-center gap-1.5">
-                          <Pencil className="h-3 w-3 text-amber-400" />
-                          Edition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
-                        </p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-
+            <div className="flex flex-wrap items-center gap-3">
               {/* Streaming indicator + cancel */}
               {isStreaming && (
                 <>
@@ -788,29 +758,150 @@ export default function PositioningWizardPage() {
                   )}
                 </>
               )}
-
-              <Button variant="ghost" size="sm" onClick={() => router.push(`/review/${candidateId}`)}>
-                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-                CV
-              </Button>
-              {positioningData?.mission_id && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(`/positions/${positioningData.mission_id}`)}
-                >
-                  <Target className="mr-1.5 h-3.5 w-3.5" />
-                  Position
-                </Button>
-              )}
             </div>
+            {/* Key metrics — score + fiabilité, compétences + lacunes */}
+            {analysis?.matchScore != null && !isAnalyzing && !isAnalysisLoading && (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp
+                      className={`h-4 w-4 shrink-0 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
+                    />
+                    <span
+                      className={`text-lg font-bold tabular-nums ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
+                    >
+                      {analysis.matchScore}%
+                    </span>
+                    <span className="hidden sm:inline text-xs text-muted-foreground">Score</span>
+                  </div>
+                  <span className="hidden sm:inline h-4 w-px bg-border" aria-hidden />
+                  <Tooltip>
+                    <TooltipTrigger
+                      className={`flex cursor-help items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium outline-none ${matchScoreConfidenceBadgeClass(analysis.matchScoreConfidence)}`}
+                    >
+                      <span className="text-muted-foreground">Fiabilité</span>
+                      <span>{matchScoreConfidenceShortLabel(analysis.matchScoreConfidence)}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs text-xs">
+                      {analysis.matchScoreConfidenceNote?.trim()
+                        ? analysis.matchScoreConfidenceNote
+                        : analysis.matchScoreConfidence
+                          ? 'Indicateur produit par la synthèse d’analyse pour contextualiser le score.'
+                          : 'Analyse antérieure : la fiabilité du score n’était pas encore calculée. Relancez l’analyse pour l’obtenir.'}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-neon" />
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
+                      {(analysis.skillMatches?.filter((s) => s.relevance === 'strong').length ?? 0)}/
+                      {analysis.skillMatches?.length ?? 0}
+                    </span>
+                    <span className="text-xs text-muted-foreground">fortes</span>
+                  </div>
+                  <span className="hidden sm:inline text-xs text-muted-foreground">·</span>
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle
+                      className={`h-4 w-4 shrink-0 ${(analysis.gaps?.length ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
+                    />
+                    <span className="text-sm font-semibold tabular-nums text-foreground">
+                      {analysis.gaps?.length ?? 0}
+                    </span>
+                    <span className="text-xs text-muted-foreground">lacune{(analysis.gaps?.length ?? 0) !== 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          <StepIndicator
-            currentStep={currentStep}
-            onStepClick={handleStepClick}
-            canGoToStep={canGoToStep}
-          />
+          {/* CV | matching | fiche — cartes cliquables */}
+          <div
+            className={`mt-4 flex flex-col gap-3 ${positioningData?.mission_id && missionHeadlineForUi ? 'md:flex-row md:items-stretch' : ''}`}
+          >
+            <Link
+              href={`/review/${candidateId}`}
+              className={`group flex min-h-22 min-w-0 flex-col justify-between rounded-xl border border-neon/35 bg-neon/5 p-4 shadow-sm outline-none transition-colors hover:border-neon/55 hover:bg-neon/10 focus-visible:ring-2 focus-visible:ring-ring ${positioningData?.mission_id && missionHeadlineForUi ? 'flex-1 md:min-w-0' : 'w-full'}`}
+              aria-label={`Ouvrir le CV de ${candidateDisplayName ?? 'ce candidat'}`}
+            >
+              <p className="text-lg font-semibold leading-snug text-foreground group-hover:text-neon/95">
+                {candidateDisplayName ?? 'Candidat'}
+              </p>
+              {candidateDescriptionLine ? (
+                <p className="truncate mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                  {candidateDescriptionLine}
+                </p>
+              ) : (
+                <p className="truncate mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  Profil extrait du CV — cliquez pour ouvrir la fiche.
+                </p>
+              )}
+            </Link>
+
+            {positioningData?.mission_id && missionHeadlineForUi ? (
+              <>
+                <div className="flex shrink-0 items-center justify-center md:w-14 md:py-0">
+                  <Tooltip>
+                    <TooltipTrigger
+                      type="button"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-violet/30 bg-violet/15 text-violet shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label="Analyse de matching"
+                    >
+                      <GitCompare className="h-5 w-5" />
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-xs text-xs">
+                      Analyse de matching : comparaison entre la fiche de poste et le profil candidat.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+
+                <Link
+                  href={`/positions/${positioningData.mission_id}`}
+                  className="group flex min-h-0 min-w-0 flex-1 flex-col justify-between rounded-xl border border-violet/25 bg-violet/5 p-4 shadow-sm outline-none transition-colors hover:border-violet/45 hover:bg-violet/10 focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`Ouvrir la fiche de la position : ${missionHeadlineForUi}`}
+                >
+                  <p className="text-lg font-semibold leading-snug text-foreground group-hover:text-violet">
+                    {missionHeadlineForUi}
+                  </p>
+                  <p className="truncate mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {usesStructuredMissionAnalysis
+                      ? 'Matching basé sur l’analyse structurée de la fiche (barème « Comprendre la fiche »).'
+                      : 'Enrichissez la fiche sur la page mission pour affiner le barème ; le texte du positionnement peut servir de secours.'}
+                  </p>
+                </Link>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mb-4 mt-3 flex w-full justify-center">
+          <Tabs
+            value={String(currentStep)}
+            onValueChange={(v) => {
+              const n = Number(v);
+              if (n !== 1 && n !== 2 && n !== 3) return;
+              if (canGoToStep(n)) setCurrentStep(n);
+            }}
+            className="w-full max-w-2xl"
+          >
+            <TabsList variant="segmented" className="grid w-full grid-cols-3 gap-1">
+              <TabsTrigger value="1" disabled={!canGoToStep(1)} className="flex-col gap-0.5 py-2 sm:flex-row sm:gap-1">
+                <span className="tabular-nums">1</span>
+                <span className="text-center leading-tight sm:inline">Analyse & affinage</span>
+              </TabsTrigger>
+              <TabsTrigger value="2" disabled={!canGoToStep(2)} className="flex-col gap-0.5 py-2 sm:flex-row sm:gap-1">
+                <span className="tabular-nums">2</span>
+                <span className="text-center leading-tight">
+                  <span className="sm:hidden">Emails</span>
+                  <span className="hidden sm:inline">Emails (client & candidat)</span>
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="3" disabled={!canGoToStep(3)} className="flex-col gap-0.5 py-2 sm:flex-row sm:gap-1">
+                <span className="tabular-nums">3</span>
+                <span className="text-center leading-tight sm:inline">CV retravaillé</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Split layout — étape 2 : emails client + candidat sur toute la largeur (pas de graphiques d’analyse à droite) */}
@@ -833,7 +924,6 @@ export default function PositioningWizardPage() {
                     isAnalyzing={isAnalyzing || isAnalysisLoading}
                     readOnly
                     missionHeadline={missionHeadlineForUi}
-                    usesStructuredMissionAnalysis={usesStructuredMissionAnalysis}
                   />
                 ) : (
                   <JobInput

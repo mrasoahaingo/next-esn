@@ -88,12 +88,6 @@ export function CvGenerationStep({
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-xs text-muted-foreground text-center max-w-xl mx-auto leading-relaxed">
-        Les réponses du recruteur saisies à l&apos;étape Analyse (onglet{' '}
-        <strong className="text-foreground font-medium">Questions &amp; affinage</strong>) sont prises en
-        compte dans le prompt lorsque vous regénérez le CV.
-      </p>
-
       <section className="rounded-xl border border-overlay/10 bg-overlay/[0.06] overflow-hidden">
         <div className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-border/60">
           <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
