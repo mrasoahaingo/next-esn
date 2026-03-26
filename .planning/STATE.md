@@ -1,54 +1,46 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: AI Workflow Reliability
-status: v1.0 milestone complete
+milestone: v1.1
+milestone_name: Réactivité, flux & résilience
+status: defining_requirements
 stopped_at: null
-last_updated: "2026-03-26T22:05:00.000Z"
+last_updated: "2026-03-26T23:30:00.000Z"
 last_activity: 2026-03-26
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-03-26)
+See: `.planning/PROJECT.md` (milestone v1.1)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille  
-**Current focus:** Planning the next milestone — run `/gsd-new-milestone`
+**Current focus:** v1.1 — flux positionnement (mission inline) + réactivité + résilience
 
 ## Current Position
 
-**Milestone:** v1.0 AI Workflow Reliability — **shipped** 2026-03-26  
-**Status:** Milestone archived (`milestones/v1.0-*`, `MILESTONES.md`)
+Phase: Not started (roadmap defined)  
+Plan: —  
+Status: Ready to discuss / plan Phase 3  
+Last activity: 2026-03-26 — Milestone v1.1 initialized
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Velocity (v1.0):**
-
-- Total plans completed: 5
-- Phases: 2
-
-**By phase:**
-
-| Phase | Plans | Notes |
-|-------|-------|-------|
-| 01 | 2/2 | Server contract + UI reliability |
-| 02 | 3/3 | Sub-step progress + step errors |
+_To be updated after first plans complete._
 
 ## Accumulated Context
 
 ### Decisions
 
-See `PROJECT.md` Key Decisions — v1.0 outcomes recorded.
+- **FLOW** : Rester sur `/review/[id]/positioning` après upload mission ; analyse visible inline ; bouton positionnement actif seulement quand l’analyse mission est prête (serveur).
 
 ### Pending todos
 
@@ -56,9 +48,8 @@ None.
 
 ### Blockers / concerns
 
-None open for v1.0. Next milestone may revisit workflow-runtime limits from `.planning/codebase/`.
+Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last activity:** Milestone v1.0 completed and archived.  
-**Next step:** `/gsd-new-milestone` when you are ready to scope v1.1+.
+**Next step:** `/gsd-discuss-phase 3` ou `/gsd-plan-phase 3` — Phase 3 « Positioning mission upload & inline status ».
