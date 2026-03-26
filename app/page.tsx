@@ -179,6 +179,10 @@ export default function Dashboard() {
     const { candidates, positionings } = data;
 
     const totalCvs = candidates.length;
+    /** Extraction terminée (hors upload / extraction en cours) */
+    const extractedCvs = candidates.filter((c) =>
+      ['reviewing', 'ready', 'generated'].includes(c.status),
+    ).length;
     const readyCvs = candidates.filter(
       (c) => c.status === 'ready' || c.status === 'generated'
     ).length;
@@ -196,10 +200,10 @@ export default function Dashboard() {
               analyzedPos.length
           )
         : 0;
-    // Estimated manual time (baseline manuel)
-    const estimatedManualMinutes = totalCvs * 40 + generatedPos * 90;
+    // Temps gagné : 40 min d'édition manuelle estimée par CV extrait
+    const timeSaved = extractedCvs * 40;
 
-    // Temps réel avec l'outil
+    // Temps réel avec l'outil (détail « Temps par opération »)
     const aiExtractionMs = candidates.reduce((s, c) => s + (c.ai_extraction_duration_ms ?? 0), 0);
     const aiAnalysisMs = positionings.reduce((s, p) => s + (p.ai_analysis_duration_ms ?? 0), 0);
     const aiGenerationMs = positionings.reduce((s, p) => s + (p.ai_generation_duration_ms ?? 0), 0);
@@ -209,17 +213,14 @@ export default function Dashboard() {
     const userMinutes = (userReviewSeconds + userPositioningSeconds) / 60;
     const actualTotalMinutes = Math.round(aiMinutes + userMinutes);
 
-    // ROI = estimated manual time - actual time spent
-    const timeSaved = Math.max(0, estimatedManualMinutes - actualTotalMinutes);
-
     return {
       totalCvs,
+      extractedCvs,
       readyCvs,
       totalPos,
       generatedPos,
       avgScore,
       timeSaved,
-      estimatedManualMinutes,
       actualTotalMinutes,
       aiMinutes: Math.round(aiMinutes),
       userMinutes: Math.round(userMinutes),
@@ -464,14 +465,16 @@ export default function Dashboard() {
                   <TooltipTrigger className="text-left">
                     {inner}
                   </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
+                  <TooltipContent side="bottom" className="text-xs max-w-xs">
                     <div className="flex flex-col gap-1">
-                      <p>Temps manuel estimé : <span className="font-semibold">{formatTimeSaved(stats.estimatedManualMinutes)}</span></p>
-                      <p>Temps réel ({displayName}) : <span className="font-semibold">{formatTimeSaved(stats.actualTotalMinutes)}</span></p>
-                      <div className="border-t border-white/10 pt-1 mt-1 text-muted-foreground">
-                        <p>IA : {formatTimeSaved(stats.aiMinutes)}</p>
-                        <p>Édition : {formatTimeSaved(stats.userMinutes)}</p>
-                      </div>
+                      <p>
+                        <span className="font-semibold">{stats.extractedCvs}</span> CV
+                        {stats.extractedCvs > 1 ? ' extraits' : ' extrait'} × 40 min ={' '}
+                        <span className="font-semibold">{formatTimeSaved(stats.timeSaved)}</span>
+                      </p>
+                      <p className="text-muted-foreground">
+                        Compte les CV en relecture, prêts ou déjà générés (extraction terminée).
+                      </p>
                     </div>
                   </TooltipContent>
                 </Tooltip>

@@ -14,7 +14,7 @@ export function useCandidates() {
     refetchInterval: (query) => {
       const data = query.state.data as { status: string }[] | undefined;
       if (data?.some((c) => ACTIVE_CV_STATUSES.includes(c.status))) return 3000;
-      return false;
+      return 60_000;
     },
   });
 }

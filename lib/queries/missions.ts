@@ -12,6 +12,7 @@ export function useMissions() {
       if (!res.ok) throw new Error('Failed to fetch missions');
       return res.json();
     },
+    refetchInterval: 60_000,
   });
 }
 

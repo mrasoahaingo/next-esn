@@ -42,6 +42,7 @@ import {
   Users,
   GraduationCap,
   BarChart3,
+  RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -135,9 +136,30 @@ export function UnifiedSidebar() {
   const canManageTeam = isOrgAdmin || isSuperAdmin;
   const { displayName, appLogoUrl } = useOrgBranding();
 
-  const { data: candidatesData, isLoading: isLoadingCandidates } = useCandidates();
-  const { data: positioningsData, isLoading: isLoadingPositionings } = usePositionings();
-  const { data: missionsData, isLoading: isLoadingMissions } = useMissions();
+  const {
+    data: candidatesData,
+    isLoading: isLoadingCandidates,
+    isFetching: isFetchingCandidates,
+    refetch: refetchCandidates,
+  } = useCandidates();
+  const {
+    data: positioningsData,
+    isLoading: isLoadingPositionings,
+    isFetching: isFetchingPositionings,
+    refetch: refetchPositionings,
+  } = usePositionings();
+  const {
+    data: missionsData,
+    isLoading: isLoadingMissions,
+    isFetching: isFetchingMissions,
+    refetch: refetchMissions,
+  } = useMissions();
+
+  const isRefreshingLists =
+    isFetchingCandidates || isFetchingPositionings || isFetchingMissions;
+  const handleRefreshLists = () => {
+    void Promise.all([refetchCandidates(), refetchPositionings(), refetchMissions()]);
+  };
   const uploadCv = useUploadCv();
   const isUploading = uploadCv.isPending;
   const cancelWorkflow = useCancelWorkflow();
@@ -306,19 +328,38 @@ export function UnifiedSidebar() {
             }}
             className="flex min-h-0 min-w-0 flex-1 flex-col px-3 pt-3"
           >
-            <TabsList
-              variant="segmented"
-              className="mb-2 w-full min-w-0 max-w-full grid grid-cols-2 shrink-0"
-            >
-              <TabsTrigger value="cvs" className="min-w-0 text-xs">
-                <User className="h-3 w-3 shrink-0" />
-                <span className="truncate">CVs</span>
-              </TabsTrigger>
-              <TabsTrigger value="positions" className="min-w-0 text-xs">
-                <Briefcase className="h-3 w-3 shrink-0" />
-                <span className="truncate">Positions</span>
-              </TabsTrigger>
-            </TabsList>
+            <div className="mb-2 flex shrink-0 items-center gap-1">
+              <TabsList
+                variant="segmented"
+                className="min-h-8 min-w-0 flex-1 max-w-full grid grid-cols-2"
+              >
+                <TabsTrigger value="cvs" className="min-w-0 text-xs">
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="truncate">CVs</span>
+                </TabsTrigger>
+                <TabsTrigger value="positions" className="min-w-0 text-xs">
+                  <Briefcase className="h-3 w-3 shrink-0" />
+                  <span className="truncate">Positions</span>
+                </TabsTrigger>
+              </TabsList>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={handleRefreshLists}
+                disabled={isDemoMode}
+                title="Rafraîchir les listes"
+                aria-label="Rafraîchir les listes"
+              >
+                <RefreshCw
+                  className={cn(
+                    'h-3.5 w-3.5',
+                    isRefreshingLists && !isLoading && 'animate-spin',
+                  )}
+                />
+              </Button>
+            </div>
 
             <div className="min-h-0 min-w-0 flex-1 px-2 pb-2">
               <TabsContent value="cvs" className="mt-0 focus-visible:outline-none">

@@ -14,7 +14,7 @@ export function usePositionings() {
     refetchInterval: (query) => {
       const data = query.state.data as { status: string }[] | undefined;
       if (data?.some((p) => ACTIVE_POS_STATUSES.includes(p.status))) return 3000;
-      return false;
+      return 60_000;
     },
   });
 }
