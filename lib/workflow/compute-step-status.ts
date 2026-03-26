@@ -134,6 +134,57 @@ function jobPostingBranchDone(branch: JobPostingAnalysisBranch, data: Partial<Jo
   return false;
 }
 
+const JOB_POSTING_UI_STEP_KEYS = new Set(JOB_POSTING_WORKFLOW_STEPS.map((d) => d.stepKey));
+
+/**
+ * Aligne les clés d’erreur (nom `Output.object`, erreurs enveloppées) sur les `stepKey` affichés
+ * (executive, keyPoints, finalizing). Sinon aucune ligne ne matche → tout en « En attente ».
+ */
+function normalizeJobPostingErrorStepKey(key: string | null | undefined): string | null {
+  if (!key) return null;
+  const k = String(key).trim();
+  if (k === 'job_posting_key_points' || k === 'key_points') return 'keyPoints';
+  if (k === 'job_posting_executive') return 'executive';
+  return k;
+}
+
+/** Quand `workflow_last_error.stepKey` vaut `unknown` (perte à l’enveloppe workflow), déduire depuis l’état partiel. */
+function inferJobPostingFailedStepKey(
+  partialData: Partial<JobPostingAnalysis> | null,
+): 'executive' | 'keyPoints' | null {
+  const ex = !!partialData?.executiveSummary?.trim();
+  const kp = (partialData?.keyPoints?.length ?? 0) > 0;
+  if (ex && !kp) return 'keyPoints';
+  if (!ex && kp) return 'executive';
+  if (!ex && !kp) return 'executive';
+  return 'keyPoints';
+}
+
+function resolveJobPostingErrorDisplay(input: {
+  errorStepKey: string | null;
+  persistedError: WorkflowLastError | null;
+  workflowFailed: boolean;
+  partialData: Partial<JobPostingAnalysis> | null;
+}): { errKey: string | null; errMessage: string | undefined } {
+  const { errorStepKey, persistedError, workflowFailed, partialData } = input;
+  const base = resolveErrorKeys(errorStepKey, persistedError, workflowFailed);
+  let errKey = normalizeJobPostingErrorStepKey(base.key);
+  if (errKey && !JOB_POSTING_UI_STEP_KEYS.has(errKey)) errKey = null;
+
+  if (!errKey && workflowFailed && persistedError) {
+    const nk = normalizeJobPostingErrorStepKey(persistedError.stepKey);
+    if (nk && JOB_POSTING_UI_STEP_KEYS.has(nk)) {
+      errKey = nk;
+    } else if (persistedError.stepKey === 'unknown') {
+      errKey = inferJobPostingFailedStepKey(partialData);
+    }
+  }
+
+  const errMessage =
+    workflowFailed && persistedError?.message ? persistedError.message : undefined;
+  return { errKey, errMessage };
+}
+
 export function computeJobPostingStepStates(input: {
   streamMeta: JobPostingAnalysisStreamMeta | null;
   partialData: Partial<JobPostingAnalysis> | null;
@@ -149,11 +200,12 @@ export function computeJobPostingStepStates(input: {
   workflowRunActive?: boolean;
 }): StepStateRow[] {
   const defs = JOB_POSTING_WORKFLOW_STEPS;
-  const { key: errKey, message: persistedMsg } = resolveErrorKeys(
-    input.errorStepKey,
-    input.persistedError,
-    input.workflowFailed,
-  );
+  const { errKey, errMessage } = resolveJobPostingErrorDisplay({
+    errorStepKey: input.errorStepKey,
+    persistedError: input.persistedError,
+    workflowFailed: input.workflowFailed,
+    partialData: input.partialData,
+  });
 
   const workflowRunActive = input.workflowRunActive ?? false;
   if (!input.isStreaming && !input.workflowFailed && !workflowRunActive) {
@@ -171,8 +223,19 @@ export function computeJobPostingStepStates(input: {
         stepKey,
         label: shortLabel,
         status: 'error',
-        errorMessage: persistedMsg ?? 'Analyse échouée. Réessayez ou contactez le support.',
+        errorMessage: errMessage ?? 'Analyse échouée. Réessayez ou contactez le support.',
       };
+    }
+
+    const br = stepKey as JobPostingAnalysisBranch;
+    if (
+      input.workflowFailed &&
+      errKey &&
+      errKey !== stepKey &&
+      (stepKey === 'executive' || stepKey === 'keyPoints') &&
+      jobPostingBranchDone(br, input.partialData)
+    ) {
+      return { stepKey, label: shortLabel, status: 'done' as const };
     }
 
     if (stepKey === 'finalizing') {
@@ -181,7 +244,6 @@ export function computeJobPostingStepStates(input: {
       return { stepKey, label: shortLabel, status: 'pending' };
     }
 
-    const br = stepKey as JobPostingAnalysisBranch;
     if (phase === 'finalizing') {
       return { stepKey, label: shortLabel, status: 'done' };
     }
