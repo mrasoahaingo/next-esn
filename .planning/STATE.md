@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
-status: phase_3_context_ready
-stopped_at: Phase 3 context gathered
+status: phase_3_ui_spec_ready
+stopped_at: Phase 3 UI-SPEC approved
 last_updated: "2026-03-26T23:30:00.000Z"
 last_activity: 2026-03-26
 progress:
@@ -27,8 +27,8 @@ See: `.planning/PROJECT.md` (milestone v1.1)
 
 Phase: 03 — Positioning Mission Upload & Inline Status  
 Plan: —  
-Status: Context documented — ready to plan  
-Last activity: 2026-03-26 — `/gsd-discuss-phase 3` completed
+Status: UI-SPEC approved — ready to plan  
+Last activity: 2026-03-26 — `/gsd-ui-phase 3` completed
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -54,6 +54,6 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 **Last session:** 2026-03-26  
 **Stopped at:** Phase 3 context gathered  
-**Resume file:** `.planning/phases/03-positioning-mission-upload-inline-status/03-CONTEXT.md`
+**Resume file:** `.planning/phases/03-positioning-mission-upload-inline-status/03-UI-SPEC.md`
 
 **Next step:** `/gsd-plan-phase 3`
