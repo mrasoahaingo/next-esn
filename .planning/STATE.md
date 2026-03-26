@@ -5,7 +5,7 @@ milestone_name: Réactivité, flux & résilience
 status: phase_4_next
 stopped_at: Phase 3 complete — ready to plan Phase 4
 last_updated: "2026-03-26T23:59:00.000Z"
-last_activity: 2026-03-26
+last_activity: 2026-03-26 — Quick 260326-x7n (étapes analyse mission)
 progress:
   total_phases: 3
   completed_phases: 1
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.1)
 Phase: 4
 Plan: Not started
 Status: Phase 3 complete
-Last activity: 2026-03-26
+Last activity: 2026-03-26 — Quick 260326-x7n (étapes analyse mission)
 
 Progress: [███░░░░░░░] 33%
 
@@ -54,6 +54,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260326-x7n | Étapes analyse mission inline cohérentes si run actif avant reconnexion flux | 2026-03-26 | d0f0fad | [260326-x7n-clarifier-tapes-analyse-mission-inline-q](./quick/260326-x7n-clarifier-tapes-analyse-mission-inline-q/) |
 
 ## Session continuity
 
