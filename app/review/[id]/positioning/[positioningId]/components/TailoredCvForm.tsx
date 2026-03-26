@@ -21,18 +21,16 @@ export function TailoredCvForm({ data, onUpdateField, readOnly }: TailoredCvForm
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <PersonalInfo
-          data={data.personalInfo}
-          onChange={(val) => onUpdateField('personalInfo', val)}
-          readOnly={readOnly}
-        />
-        <Summary
-          data={data.summary}
-          onChange={(val) => onUpdateField('summary', val)}
-          readOnly={readOnly}
-        />
-      </div>
+      <PersonalInfo
+        data={data.personalInfo}
+        onChange={(val) => onUpdateField('personalInfo', val)}
+        readOnly={readOnly}
+      />
+      <Summary
+        data={data.summary}
+        onChange={(val) => onUpdateField('summary', val)}
+        readOnly={readOnly}
+      />
       <Skills
         data={data.skills}
         onChange={(val) => onUpdateField('skills', val)}

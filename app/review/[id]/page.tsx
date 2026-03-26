@@ -503,24 +503,22 @@ export default function ReviewPage() {
               </Button>
             </div>
           )}
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
-              <PersonalInfo
-                data={safeData?.personalInfo}
-                onChange={handlePersonalInfo}
-                readOnly={isLoading}
-              />
-            </SectionShell>
-            <SectionShell status={status('summary')} label="Rédaction du résumé...">
-              <Summary
-                data={safeData?.summary}
-                onChange={handleSummary}
-                readOnly={isLoading}
-                spacingAfter={sectionSpacing.summary}
-                onSpacingChange={(v) => handleSectionSpacing('summary', v)}
-              />
-            </SectionShell>
-          </div>
+          <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
+            <PersonalInfo
+              data={safeData?.personalInfo}
+              onChange={handlePersonalInfo}
+              readOnly={isLoading}
+            />
+          </SectionShell>
+          <SectionShell status={status('summary')} label="Rédaction du résumé...">
+            <Summary
+              data={safeData?.summary}
+              onChange={handleSummary}
+              readOnly={isLoading}
+              spacingAfter={sectionSpacing.summary}
+              onSpacingChange={(v) => handleSectionSpacing('summary', v)}
+            />
+          </SectionShell>
           <SectionShell status={status('skills')} label="Analyse des compétences...">
             <Skills
               data={safeSkills}

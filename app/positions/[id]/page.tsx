@@ -4,6 +4,7 @@ import { useState, useRef, useMemo, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, JobPostingAnalysis } from '@/lib/schema';
 import { MissionJobAnalysis } from '@/components/mission-job-analysis';
+import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
@@ -1379,9 +1380,10 @@ export default function PositionDetailPage() {
                     </span>
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                    <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground/80">
-                      {mission.job_description}
-                    </p>
+                    <JobDescriptionMarkdown
+                      content={mission.job_description}
+                      className="text-muted-foreground/80"
+                    />
                   </div>
                 </div>
               </aside>

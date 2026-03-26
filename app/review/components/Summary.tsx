@@ -1,6 +1,6 @@
-
 import { memo } from 'react';
-import { Textarea } from '@/components/ui/textarea';
+import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
+import { MarkdownEditor } from '@/components/markdown-editor';
 import { Slider } from '@/components/ui/slider';
 import { Field, FieldLabel } from '@/components/ui/field';
 
@@ -19,21 +19,26 @@ export const Summary = memo(function Summary({ data, onChange, readOnly, spacing
         Professional Summary
       </h2>
       {readOnly ? (
-        <p className="text-foreground leading-relaxed whitespace-pre-wrap">
-          {data}
-        </p>
+        data?.trim() ? (
+          <JobDescriptionMarkdown
+            content={data}
+            className="[&_p]:text-foreground/90 [&_li]:text-foreground/85 [&_ul]:text-foreground/85 [&_ol]:text-foreground/85 [&_td]:text-foreground/85 [&_th]:text-foreground"
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">—</p>
+        )
       ) : (
         <>
           <Field>
-            <FieldLabel htmlFor="cv-summary" className="sr-only">
-              Professional summary
+            <FieldLabel htmlFor="cv-summary-md" className="sr-only">
+              Résumé professionnel (Markdown)
             </FieldLabel>
-            <Textarea
-              id="cv-summary"
+            <MarkdownEditor
+              id="cv-summary-md"
               value={data ?? ''}
-              onChange={(e) => onChange(e.target.value)}
-              className="min-h-[150px]"
-              placeholder="Enter professional summary..."
+              onChange={onChange}
+              placeholder="Résumé professionnel — gras, italique, titres, listes…"
+              className="border-overlay/15 bg-panel/30"
             />
           </Field>
           {onSpacingChange && (

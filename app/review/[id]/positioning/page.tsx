@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { JobDescriptionInput } from '@/components/job-description-input';
+import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -249,9 +250,11 @@ export default function PositioningNewPage() {
                               Fiche de poste
                             </span>
                           </div>
-                          <p className="text-xs text-muted-foreground/80 whitespace-pre-wrap line-clamp-6">
-                            {mission.job_description}
-                          </p>
+                          <JobDescriptionMarkdown
+                            content={mission.job_description}
+                            clampClassName="line-clamp-6"
+                            className="text-muted-foreground/80"
+                          />
                         </div>
                         <div className="ml-8 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <p className="text-[11px] text-muted-foreground">
@@ -314,13 +317,14 @@ export default function PositioningNewPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mission-desc">Description du poste *</Label>
-              <Textarea
+              <Label htmlFor="mission-desc">Fiche de poste *</Label>
+              <JobDescriptionInput
                 id="mission-desc"
                 value={newJobDescription}
-                onChange={(e) => setNewJobDescription(e.target.value)}
-                placeholder="Collez ici la fiche de poste complète..."
-                className="min-h-[300px] max-h-[60vh] text-sm"
+                onChange={setNewJobDescription}
+                initialMode="upload"
+                placeholder="Saisissez ou collez l’intégralité de la fiche de poste…"
+                textareaClassName="min-h-[300px] max-h-[60vh] text-sm"
               />
             </div>
 

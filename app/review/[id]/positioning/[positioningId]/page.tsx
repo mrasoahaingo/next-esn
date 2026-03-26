@@ -452,6 +452,23 @@ export default function PositioningWizardPage() {
     debouncedSave,
   ]);
 
+  // Brouillon : persister la fiche (collage / import fichier) avant analyse ou refresh
+  useLayoutEffect(() => {
+    if (!isLoaded) return;
+    if (positioningData?.status !== 'draft') return;
+    if (isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading) return;
+    debouncedSave({ job_description: jobDescription });
+  }, [
+    isLoaded,
+    jobDescription,
+    positioningData?.status,
+    isAnalyzing,
+    isAnalysisLoading,
+    isGenerating,
+    isGenerateLoading,
+    debouncedSave,
+  ]);
+
   // Persist tailoredCv edits to DB (debounced)
   useLayoutEffect(() => {
     if (!isLoaded || !tailoredCv || isGenerating || isGenerateLoading) return;

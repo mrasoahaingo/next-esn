@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { JobDescriptionInput } from '@/components/job-description-input';
 import {
   Dialog,
   DialogContent,
@@ -779,13 +779,14 @@ export function UnifiedSidebar() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="sidebar-mission-desc">Description du poste *</Label>
-              <Textarea
+              <Label htmlFor="sidebar-mission-desc">Fiche de poste *</Label>
+              <JobDescriptionInput
                 id="sidebar-mission-desc"
                 value={newJobDescription}
-                onChange={(e) => setNewJobDescription(e.target.value)}
-                placeholder="Collez ici la fiche de poste complète..."
-                className="min-h-[300px] max-h-[60vh] text-sm"
+                onChange={setNewJobDescription}
+                initialMode="upload"
+                placeholder="Saisissez ou collez l’intégralité de la fiche de poste…"
+                textareaClassName="min-h-[300px] max-h-[60vh] text-sm"
               />
             </div>
 

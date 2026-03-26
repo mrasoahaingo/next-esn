@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Textarea } from '@/components/ui/textarea';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { JobDescriptionInput } from '@/components/job-description-input';
 import { Field, FieldLabel } from '@/components/ui/field';
+import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
 import { Loader2, Search, RefreshCw, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 
 interface JobInputProps {
@@ -20,8 +21,6 @@ interface JobInputProps {
   usesStructuredMissionAnalysis?: boolean;
 }
 
-const PREVIEW_LENGTH = 180;
-
 export function JobInput({
   jobDescription,
   onJobDescriptionChange,
@@ -34,6 +33,10 @@ export function JobInput({
   usesStructuredMissionAnalysis = false,
 }: JobInputProps) {
   const [expanded, setExpanded] = useState(false);
+  const [isImportingFile, setIsImportingFile] = useState(false);
+  const handleExtractingChange = useCallback((busy: boolean) => {
+    setIsImportingFile(busy);
+  }, []);
 
   if (readOnly) {
     if (missionHeadline) {
@@ -69,19 +72,17 @@ export function JobInput({
       );
     }
 
-    const isTruncated = jobDescription.length > PREVIEW_LENGTH;
-    const displayText = isTruncated && !expanded
-      ? jobDescription.slice(0, PREVIEW_LENGTH) + '…'
-      : jobDescription;
+    const showExpandToggle = jobDescription.trim().length > 400;
 
     return (
       <div className="flex items-start gap-3 rounded-xl border border-overlay/10 bg-overlay/[0.06] px-4 py-3">
         <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap wrap-break-word">
-            {displayText}
-          </p>
-          {isTruncated && (
+          <JobDescriptionMarkdown
+            content={jobDescription}
+            clampClassName={expanded || !showExpandToggle ? undefined : 'line-clamp-6'}
+          />
+          {showExpandToggle ? (
             <Button
               type="button"
               variant="link"
@@ -94,7 +95,7 @@ export function JobInput({
                 <><ChevronDown className="size-3" /> Voir tout</>
               )}
             </Button>
-          )}
+          ) : null}
         </div>
         {onReAnalyze && !isAnalyzing && (
           <Button
@@ -126,19 +127,20 @@ export function JobInput({
         <FieldLabel htmlFor="job-description-input" className="sr-only">
           Fiche de poste
         </FieldLabel>
-        <Textarea
+        <JobDescriptionInput
           id="job-description-input"
           value={jobDescription}
-          onChange={(e) => onJobDescriptionChange(e.target.value)}
-          placeholder="Collez ici la fiche de poste..."
-          className="min-h-[160px] text-sm max-h-[400px]"
+          onChange={onJobDescriptionChange}
+          placeholder="Saisissez ou collez la fiche de poste (onglet « Saisie manuelle »)…"
           disabled={isAnalyzing || disabled}
+          textareaClassName="min-h-[160px] text-sm max-h-[400px]"
+          onExtractingChange={handleExtractingChange}
         />
       </Field>
       <div className="mt-4 flex justify-end">
         <Button
           onClick={onAnalyze}
-          disabled={!jobDescription.trim() || isAnalyzing || disabled}
+          disabled={!jobDescription.trim() || isAnalyzing || disabled || isImportingFile}
         >
           {isAnalyzing ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

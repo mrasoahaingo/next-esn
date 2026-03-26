@@ -22,6 +22,8 @@ export const TASK_KEY = {
 
   MISSION_JOB_POSTING_EXECUTIVE: 'mission.jobPosting.executive',
   MISSION_JOB_POSTING_KEY_POINTS: 'mission.jobPosting.keyPoints',
+  /** Transcription PDF fiche de poste (import fichier → texte brut). */
+  MISSION_JOB_POSTING_TRANSCRIPTION: 'mission.jobPosting.transcription',
   /** Audit : run workflow annulé (doublon, autre requête a gagné le claim). */
   MISSION_JOB_POSTING_WORKFLOW_DEDUP: 'mission.jobPosting.workflowDedup',
   MISSION_KEY_POINT_EXPLAIN: 'mission.keyPoint.explain',
