@@ -43,6 +43,8 @@ import {
   GraduationCap,
   BarChart3,
   RefreshCw,
+  FoldVertical,
+  UnfoldVertical,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -122,6 +124,8 @@ export function UnifiedSidebar() {
   const { isSignedIn, isLoaded } = useAuth();
   const { isMobile, setOpenMobile } = useSidebar();
   const [expandedCvs, setExpandedCvs] = useState<Set<string>>(new Set());
+  /** Quand true, les sous-listes (positionnements sous chaque CV) sont masquées. */
+  const [nestedListsCollapsed, setNestedListsCollapsed] = useState(true);
   const [showNewMission, setShowNewMission] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newCompany, setNewCompany] = useState('');
@@ -179,12 +183,15 @@ export function UnifiedSidebar() {
   );
   const isLoading = !isDemoMode && (isLoadingCandidates || isLoadingPositionings || isLoadingMissions);
 
-  const activeCvId = params?.id as string | undefined;
+  /** Sur `/review/[id]` uniquement — sur `/positions/[id]`, `params.id` est une mission, pas un CV. */
+  const activeCvId = pathname.startsWith('/review/')
+    ? (params?.id as string | undefined)
+    : undefined;
   const activePositioningId = params?.positioningId as string | undefined;
   const isOnPositions = pathname.startsWith('/positions');
   const activePositionId = isOnPositions ? (params?.id as string | undefined) : undefined;
 
-  // Derive expanded set: always include the active CV
+  // Derive expanded set: always include the active CV (review)
   const effectiveExpandedCvs = useMemo(() => {
     if (!activeCvId) return expandedCvs;
     if (expandedCvs.has(activeCvId)) return expandedCvs;
@@ -203,6 +210,26 @@ export function UnifiedSidebar() {
     }
     return map;
   }, [positionings]);
+
+  const toggleNestedListsCollapsed = () => {
+    setNestedListsCollapsed((wasCollapsed) => {
+      if (wasCollapsed) {
+        setExpandedCvs((prev) => {
+          const next = new Set(prev);
+          for (const c of candidates) {
+            if ((positioningsByCandidate.get(c.id)?.length ?? 0) > 0) {
+              next.add(c.id);
+            }
+          }
+          if (activeCvId) next.add(activeCvId);
+          return next;
+        });
+      } else {
+        setExpandedCvs(new Set());
+      }
+      return !wasCollapsed;
+    });
+  };
 
   /** Navigate and close sidebar on mobile */
   const navigate = (href: string) => {
@@ -328,45 +355,26 @@ export function UnifiedSidebar() {
             }}
             className="flex min-h-0 min-w-0 flex-1 flex-col px-3 pt-3"
           >
-            <div className="mb-2 flex shrink-0 items-center gap-1">
-              <TabsList
-                variant="segmented"
-                className="min-h-8 min-w-0 flex-1 max-w-full grid grid-cols-2"
-              >
-                <TabsTrigger value="cvs" className="min-w-0 text-xs">
-                  <User className="h-3 w-3 shrink-0" />
-                  <span className="truncate">CVs</span>
-                </TabsTrigger>
-                <TabsTrigger value="positions" className="min-w-0 text-xs">
-                  <Briefcase className="h-3 w-3 shrink-0" />
-                  <span className="truncate">Positions</span>
-                </TabsTrigger>
-              </TabsList>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                onClick={handleRefreshLists}
-                disabled={isDemoMode}
-                title="Rafraîchir les listes"
-                aria-label="Rafraîchir les listes"
-              >
-                <RefreshCw
-                  className={cn(
-                    'h-3.5 w-3.5',
-                    isRefreshingLists && !isLoading && 'animate-spin',
-                  )}
-                />
-              </Button>
-            </div>
+            <TabsList
+              variant="segmented"
+              className="mb-2 w-full min-w-0 max-w-full grid grid-cols-2 shrink-0"
+            >
+              <TabsTrigger value="cvs" className="min-w-0 text-xs">
+                <User className="h-3 w-3 shrink-0" />
+                <span className="truncate">CVs</span>
+              </TabsTrigger>
+              <TabsTrigger value="positions" className="min-w-0 text-xs">
+                <Briefcase className="h-3 w-3 shrink-0" />
+                <span className="truncate">Positions</span>
+              </TabsTrigger>
+            </TabsList>
 
             <div className="min-h-0 min-w-0 flex-1 px-2 pb-2">
               <TabsContent value="cvs" className="mt-0 focus-visible:outline-none">
                 <>
-                {/* Upload */}
-                <div className="px-1 py-2">
-                  <label className="relative block cursor-pointer">
+                {/* Upload + rafraîchir + replier les sous-listes */}
+                <div className="flex items-stretch gap-1.5 px-1 py-2">
+                  <label className="relative block min-w-0 flex-1 cursor-pointer">
                     <Input
                       type="file"
                       onChange={handleFileChange}
@@ -374,17 +382,50 @@ export function UnifiedSidebar() {
                       accept=".pdf,.docx,.doc"
                       disabled={isUploading}
                     />
-                    <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-overlay/12 bg-overlay/[0.03] px-3 py-2 text-sm text-muted-foreground transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent">
+                    <div className="flex h-full min-h-8 items-center justify-center gap-2 rounded-lg border border-dashed border-overlay/12 bg-overlay/[0.03] px-2 py-2 text-sm text-muted-foreground transition hover:border-accent/40 hover:bg-accent/5 hover:text-accent">
                       {isUploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
                       ) : (
-                        <Upload className="h-4 w-4" />
+                        <Upload className="h-4 w-4 shrink-0" />
                       )}
-                      <span className="text-xs font-medium">
+                      <span className="truncate text-xs font-medium">
                         {isUploading ? 'Upload en cours...' : 'Importer un CV'}
                       </span>
                     </div>
                   </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-auto min-h-8 w-8 shrink-0 border-dashed border-overlay/12 bg-overlay/[0.03] text-muted-foreground hover:text-foreground"
+                    onClick={handleRefreshLists}
+                    disabled={isDemoMode}
+                    title="Rafraîchir les listes"
+                    aria-label="Rafraîchir les listes"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        'h-3.5 w-3.5',
+                        isRefreshingLists && !isLoading && 'animate-spin',
+                      )}
+                    />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-auto min-h-8 w-8 shrink-0 border-dashed border-overlay/12 bg-overlay/[0.03] text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    onClick={toggleNestedListsCollapsed}
+                    disabled={isDemoMode || candidates.length === 0}
+                    title={nestedListsCollapsed ? 'Développer les listes' : 'Replier les listes'}
+                    aria-label={nestedListsCollapsed ? 'Développer les listes' : 'Replier les listes'}
+                  >
+                    {nestedListsCollapsed ? (
+                      <UnfoldVertical className="h-3.5 w-3.5" />
+                    ) : (
+                      <FoldVertical className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
                 </div>
 
                 {isLoading ? (
@@ -407,7 +448,9 @@ export function UnifiedSidebar() {
                       const title = getCandidateTitle(c);
                       const st = cvStatusConfig[c.status] ?? cvStatusConfig.uploaded;
                       const isActive = c.id === activeCvId && !activePositioningId && !isOnPositions;
-                      const isExpanded = effectiveExpandedCvs.has(c.id);
+                      const isExpanded = nestedListsCollapsed
+                        ? expandedCvs.has(c.id)
+                        : effectiveExpandedCvs.has(c.id);
                       const cvPositionings = positioningsByCandidate.get(c.id) ?? [];
                       const hasPositionings = cvPositionings.length > 0;
 
@@ -444,18 +487,9 @@ export function UnifiedSidebar() {
                                   : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
                               }`}
                             >
-                              <div
-                                className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-                                  isActive
-                                    ? 'bg-accent/15 text-accent'
-                                    : 'bg-card/50 text-muted-foreground'
-                                }`}
-                              >
-                                <User className="h-3.5 w-3.5" />
-                              </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="truncate text-xs font-medium">{name}</span>
+                                  <span className="truncate text-xs text-white font-bold">{name}</span>
                                   <Badge
                                     variant={st.variant}
                                     className="shrink-0 text-[9px] px-1 py-0 leading-tight"
@@ -609,16 +643,33 @@ export function UnifiedSidebar() {
 
               <TabsContent value="positions" className="mt-0 focus-visible:outline-none">
                 <>
-                {/* Create position button */}
-                <div className="px-1 py-2">
+                {/* Nouvelle position + rafraîchir */}
+                <div className="flex items-stretch gap-1.5 px-1 py-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setShowNewMission(true)}
-                    className="w-full gap-2 rounded-lg border-dashed border-overlay/12 bg-overlay/[0.03] py-2 text-sm text-muted-foreground hover:border-violet/40 hover:bg-violet/5 hover:text-violet"
+                    className="min-h-8 min-w-0 flex-1 gap-2 rounded-lg border-dashed border-overlay/12 bg-overlay/[0.03] py-2 text-sm text-muted-foreground hover:border-violet/40 hover:bg-violet/5 hover:text-violet"
                   >
-                    <Plus className="h-4 w-4" />
-                    <span className="text-xs font-medium">Nouvelle position</span>
+                    <Plus className="h-4 w-4 shrink-0" />
+                    <span className="truncate text-xs font-medium">Nouvelle position</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-auto min-h-8 w-8 shrink-0 border-dashed border-overlay/12 bg-overlay/[0.03] text-muted-foreground hover:text-foreground"
+                    onClick={handleRefreshLists}
+                    disabled={isDemoMode}
+                    title="Rafraîchir les listes"
+                    aria-label="Rafraîchir les listes"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        'h-3.5 w-3.5',
+                        isRefreshingLists && !isLoading && 'animate-spin',
+                      )}
+                    />
                   </Button>
                 </div>
 
@@ -655,18 +706,9 @@ export function UnifiedSidebar() {
                               : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
                           }`}
                         >
-                          <div
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-                              isActive
-                                ? 'bg-violet/15 text-violet'
-                                : 'bg-card/50 text-muted-foreground'
-                            }`}
-                          >
-                            <Briefcase className="h-3.5 w-3.5" />
-                          </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="truncate text-xs font-medium">{m.title}</span>
+                              <span className="truncate text-xs text-white font-bold">{m.title}</span>
                             </div>
                             {m.company && (
                               <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
@@ -696,19 +738,6 @@ export function UnifiedSidebar() {
         <SidebarFooter className="p-0">
           <SidebarGroup className="gap-0.5">
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={isOnTemplates}
-                  onClick={() => navigate('/templates')}
-                  className={cn(
-                    'text-xs',
-                    isOnTemplates && 'bg-primary/10 text-foreground'
-                  )}
-                >
-                  <Palette className="h-4 w-4" />
-                  <span className="font-medium">Templates</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={pathname.startsWith('/settings/profile')}
