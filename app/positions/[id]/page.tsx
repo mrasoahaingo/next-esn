@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo, type MouseEvent } from 'react';
+import { useState, useRef, useMemo, useEffect, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, JobPostingAnalysis } from '@/lib/schema';
 import { MissionJobAnalysis } from '@/components/mission-job-analysis';
@@ -1239,6 +1239,17 @@ export default function PositionDetailPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+
+  /** Ouvre la modale « Positionner des CVs » si l’URL contient ?positionner=1 (puis retire le paramètre). */
+  useEffect(() => {
+    if (searchParams.get('positionner') !== '1') return;
+    setIsModalOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('positionner');
+    const qs = next.toString();
+    const base = `/positions/${missionId}`;
+    router.replace(qs ? `${base}?${qs}` : base, { scroll: false });
+  }, [missionId, router, searchParams]);
 
   const { data: mission, isLoading } = useMission(missionId) as {
     data: MissionDetail | undefined;

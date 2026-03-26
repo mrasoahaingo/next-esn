@@ -86,6 +86,10 @@ interface Positioning {
     title: string;
     company: string | null;
   } | null;
+  candidates?: {
+    id: string;
+    extracted_data: Candidate['extracted_data'];
+  } | null;
   created_at: string;
 }
 
@@ -126,6 +130,9 @@ export function UnifiedSidebar() {
   const [expandedCvs, setExpandedCvs] = useState<Set<string>>(new Set());
   /** Quand true, les sous-listes (positionnements sous chaque CV) sont masquées. */
   const [nestedListsCollapsed, setNestedListsCollapsed] = useState(true);
+  const [expandedMissions, setExpandedMissions] = useState<Set<string>>(new Set());
+  /** Quand true, les candidats sous chaque mission sont masqués (onglet Positions). */
+  const [nestedMissionListsCollapsed, setNestedMissionListsCollapsed] = useState(true);
   const [showNewMission, setShowNewMission] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newCompany, setNewCompany] = useState('');
@@ -191,6 +198,16 @@ export function UnifiedSidebar() {
   const isOnPositions = pathname.startsWith('/positions');
   const activePositionId = isOnPositions ? (params?.id as string | undefined) : undefined;
 
+  /** Mission active (page mission ou mission du positionnement ouvert en revue). */
+  const activeMissionId = useMemo(() => {
+    if (activePositionId) return activePositionId;
+    if (activePositioningId && pathname.startsWith('/review/')) {
+      const row = positionings.find((x) => x.id === activePositioningId);
+      return row?.mission_id ?? undefined;
+    }
+    return undefined;
+  }, [activePositionId, activePositioningId, pathname, positionings]);
+
   // Derive expanded set: always include the active CV (review)
   const effectiveExpandedCvs = useMemo(() => {
     if (!activeCvId) return expandedCvs;
@@ -200,6 +217,14 @@ export function UnifiedSidebar() {
     return next;
   }, [expandedCvs, activeCvId]);
 
+  const effectiveExpandedMissions = useMemo(() => {
+    if (!activeMissionId) return expandedMissions;
+    if (expandedMissions.has(activeMissionId)) return expandedMissions;
+    const next = new Set(expandedMissions);
+    next.add(activeMissionId);
+    return next;
+  }, [expandedMissions, activeMissionId]);
+
   // Group positionings by candidate
   const positioningsByCandidate = useMemo(() => {
     const map = new Map<string, Positioning[]>();
@@ -207,6 +232,22 @@ export function UnifiedSidebar() {
       const existing = map.get(p.candidate_id) ?? [];
       existing.push(p);
       map.set(p.candidate_id, existing);
+    }
+    return map;
+  }, [positionings]);
+
+  const positioningsByMission = useMemo(() => {
+    const map = new Map<string, Positioning[]>();
+    for (const p of positionings) {
+      if (!p.mission_id) continue;
+      const existing = map.get(p.mission_id) ?? [];
+      existing.push(p);
+      map.set(p.mission_id, existing);
+    }
+    for (const arr of map.values()) {
+      arr.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
     }
     return map;
   }, [positionings]);
@@ -226,6 +267,26 @@ export function UnifiedSidebar() {
         });
       } else {
         setExpandedCvs(new Set());
+      }
+      return !wasCollapsed;
+    });
+  };
+
+  const toggleNestedMissionListsCollapsed = () => {
+    setNestedMissionListsCollapsed((wasCollapsed) => {
+      if (wasCollapsed) {
+        setExpandedMissions((prev) => {
+          const next = new Set(prev);
+          for (const m of missions) {
+            if ((positioningsByMission.get(m.id)?.length ?? 0) > 0) {
+              next.add(m.id);
+            }
+          }
+          if (activeMissionId) next.add(activeMissionId);
+          return next;
+        });
+      } else {
+        setExpandedMissions(new Set());
       }
       return !wasCollapsed;
     });
@@ -269,11 +330,28 @@ export function UnifiedSidebar() {
   const getCandidateTitle = (c: Candidate) =>
     c.extracted_data?.personalInfo?.title ?? null;
 
+  const getPositioningCandidateName = (p: Positioning) => {
+    const pi = p.candidates?.extracted_data?.personalInfo;
+    if (pi?.firstName || pi?.lastName) {
+      return `${pi.firstName ?? ''} ${pi.lastName ?? ''}`.trim();
+    }
+    return 'Candidat';
+  };
+
   const toggleExpand = (id: string) => {
     setExpandedCvs((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleExpandMission = (missionId: string) => {
+    setExpandedMissions((prev) => {
+      const next = new Set(prev);
+      if (next.has(missionId)) next.delete(missionId);
+      else next.add(missionId);
       return next;
     });
   };
@@ -643,7 +721,7 @@ export function UnifiedSidebar() {
 
               <TabsContent value="positions" className="mt-0 focus-visible:outline-none">
                 <>
-                {/* Nouvelle position + rafraîchir */}
+                {/* Nouvelle position + rafraîchir + replier */}
                 <div className="flex items-stretch gap-1.5 px-1 py-2">
                   <Button
                     type="button"
@@ -671,6 +749,22 @@ export function UnifiedSidebar() {
                       )}
                     />
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-auto min-h-8 w-8 shrink-0 border-dashed border-overlay/12 bg-overlay/[0.03] text-muted-foreground hover:text-foreground disabled:opacity-40"
+                    onClick={toggleNestedMissionListsCollapsed}
+                    disabled={isDemoMode || missions.length === 0}
+                    title={nestedMissionListsCollapsed ? 'Développer les listes' : 'Replier les listes'}
+                    aria-label={nestedMissionListsCollapsed ? 'Développer les listes' : 'Replier les listes'}
+                  >
+                    {nestedMissionListsCollapsed ? (
+                      <UnfoldVertical className="h-3.5 w-3.5" />
+                    ) : (
+                      <FoldVertical className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
                 </div>
 
                 {isLoading ? (
@@ -689,38 +783,166 @@ export function UnifiedSidebar() {
                 ) : (
                   <div className="flex flex-col gap-0.5">
                     {missions.map((m) => {
-                      const isActive = m.id === activePositionId;
+                      const missionPositionings = positioningsByMission.get(m.id) ?? [];
+                      const isMissionExpanded = nestedMissionListsCollapsed
+                        ? expandedMissions.has(m.id)
+                        : effectiveExpandedMissions.has(m.id);
+                      const isMissionRowActive =
+                        m.id === activePositionId ||
+                        (!!activePositioningId &&
+                          positionings.some(
+                            (p) => p.id === activePositioningId && p.mission_id === m.id,
+                          ));
+                      const count = missionPositionings.length;
 
                       return (
-                        <div
-                          key={m.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => navigate(`/positions/${m.id}`)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') navigate(`/positions/${m.id}`);
-                          }}
-                          className={`group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition cursor-pointer ${
-                            isActive
-                              ? 'bg-violet/10 text-foreground'
-                              : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5">
-                              <span className="truncate text-xs text-white font-bold">{m.title}</span>
+                        <div key={m.id}>
+                          <div className="group flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-xs"
+                              onClick={() => toggleExpandMission(m.id)}
+                              className="shrink-0 text-muted-foreground/50 hover:text-foreground"
+                              aria-expanded={isMissionExpanded}
+                              aria-label={isMissionExpanded ? 'Réduire la liste' : 'Développer la liste'}
+                            >
+                              <ChevronRight
+                                className={`h-3 w-3 transition-transform ${isMissionExpanded ? 'rotate-90' : ''}`}
+                              />
+                            </Button>
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => navigate(`/positions/${m.id}`)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') navigate(`/positions/${m.id}`);
+                              }}
+                              className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-2 text-left transition cursor-pointer ${
+                                isMissionRowActive
+                                  ? 'bg-violet/10 text-foreground'
+                                  : 'text-muted-foreground hover:bg-card/60 hover:text-foreground'
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="truncate text-xs font-bold text-foreground">{m.title}</span>
+                                </div>
+                                {m.company && (
+                                  <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
+                                    <Building2 className="h-2.5 w-2.5 shrink-0" />
+                                    {m.company}
+                                  </p>
+                                )}
+                              </div>
+                              {count > 0 && (
+                                <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-violet/15 px-1 text-[9px] font-semibold text-violet">
+                                  {count}
+                                </span>
+                              )}
                             </div>
-                            {m.company && (
-                              <p className="mt-0.5 flex items-center gap-1 truncate text-[10px] text-muted-foreground">
-                                <Building2 className="h-2.5 w-2.5 shrink-0" />
-                                {m.company}
-                              </p>
-                            )}
                           </div>
-                          {m.positioning_count > 0 && (
-                            <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-violet/15 px-1 text-[9px] font-semibold text-violet">
-                              {m.positioning_count}
-                            </span>
+
+                          {isMissionExpanded && (
+                            <div className="ml-6 mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-border/60 pl-2">
+                              {missionPositionings.map((p) => {
+                                const candName = getPositioningCandidateName(p);
+                                const pst =
+                                  posStatusConfig[p.status] ?? {
+                                    label: 'Brouillon',
+                                    variant: 'secondary' as const,
+                                  };
+                                const matchScore = p.analysis?.matchScore;
+                                const isPosActive = p.id === activePositioningId;
+
+                                return (
+                                  <div
+                                    key={p.id}
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() =>
+                                      navigate(`/review/${p.candidate_id}/positioning/${p.id}`)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ')
+                                        navigate(`/review/${p.candidate_id}/positioning/${p.id}`);
+                                    }}
+                                    className={`group/pos flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition cursor-pointer ${
+                                      isPosActive
+                                        ? 'bg-violet/10 text-foreground'
+                                        : 'text-muted-foreground hover:bg-card/40 hover:text-foreground'
+                                    }`}
+                                  >
+                                    <div
+                                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
+                                        isPosActive
+                                          ? 'bg-violet/20 text-violet'
+                                          : 'text-muted-foreground/60'
+                                      }`}
+                                    >
+                                      {matchScore != null ? (
+                                        <span
+                                          className={`text-[9px] font-bold ${
+                                            matchScore >= 70
+                                              ? 'text-neon'
+                                              : matchScore >= 40
+                                                ? 'text-amber-400'
+                                                : 'text-destructive'
+                                          }`}
+                                        >
+                                          {matchScore}%
+                                        </span>
+                                      ) : (
+                                        <User className="h-3 w-3" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="truncate text-[11px]">{candName}</span>
+                                        <Badge
+                                          variant={pst.variant}
+                                          className="shrink-0 text-[8px] px-1 py-0 leading-tight"
+                                        >
+                                          {pst.label}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                    {(p.status === 'analyzing' || p.status === 'generating') &&
+                                      p.workflow_run_id && (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon-xs"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            cancelWorkflow.mutate({
+                                              runId: p.workflow_run_id!,
+                                              table: 'positionings',
+                                              recordId: p.id,
+                                              resetStatus:
+                                                p.status === 'analyzing' ? 'draft' : 'analyzed',
+                                            });
+                                          }}
+                                          className="shrink-0 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+                                          title="Annuler"
+                                        >
+                                          <Square className="h-2.5 w-2.5" />
+                                        </Button>
+                                      )}
+                                  </div>
+                                );
+                              })}
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                onClick={() => navigate(`/positions/${m.id}?positionner=1`)}
+                                className="h-auto w-full justify-start gap-2 rounded-md px-2 py-1.5 text-[11px] font-normal text-muted-foreground/50 hover:text-violet"
+                              >
+                                <Plus className="h-3 w-3" />
+                                <span>Ouvrir la position</span>
+                              </Button>
+                            </div>
                           )}
                         </div>
                       );
