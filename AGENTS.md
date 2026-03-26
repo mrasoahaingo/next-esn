@@ -32,8 +32,8 @@ Required in `.env`:
 
 ### Flow
 
-1. **Upload** (`/` → `POST /api/upload`): File uploaded to Supabase Storage bucket `cv-original`, candidate row created in `candidates` table with status `uploaded`
-2. **Extract** (`/review/[id]` → `POST /api/extract`): Starts `extractCvWorkflow` (Vercel Workflow). File is read from storage: PDF → optional transcription step via `streamText` (file attachment), then parallel `streamText` + `Output.object` branches with Zod sub-schemas; DOCX → mammoth text then same parallel extraction. Progress streamed to the client as NDJSON. Result saved to `candidates.extracted_data`, snapshot logged to `extraction_history`, usage to `ai_usage_log` (see below)
+1. **Upload** (`/` → `POST /api/upload`): File uploaded to Supabase Storage bucket `cv-original`, candidate row created, then **`extractCvWorkflow` is started on the server** (same pattern as mission upload): `workflow_run_id` + status `extracting`. The client only **reconnects** to the NDJSON stream via `useWorkflowStream` + `GET /api/workflow/:runId/stream`.
+2. **Extract (relance manuelle)** (`POST /api/extract`): Used when the user explicitly retries extraction (e.g. after cancel or legacy `uploaded` row). Same workflow as above; **never** triggered from a mount `useEffect` / `useLayoutEffect` on `/review/[id]`.
 3. **Review** (`/review/[id]`): Split-screen builder — editable form on left, live PDF preview on right. During AI streaming, form fills in progressively (read-only). After streaming, form becomes editable and PDF updates on every change (debounced 600ms)
 4. **PDF Preview** (`POST /api/pdf-preview`): Receives partial `ExtractedCV` data, builds a json-render spec via `pdf.template.ts`, renders to PDF buffer via `@json-render/react-pdf`, returns binary PDF
 5. **Export** (`POST /api/generate`): Same PDF generation, uploads to Supabase `cv-formatted` bucket
@@ -43,6 +43,7 @@ Required in `.env`:
 - **AI model config** is centralized in `lib/ai.ts` — uses Vercel AI Gateway (`createGateway` from `ai`) with `AI_GATEWAY_API_KEY`. Single place to change the model provider/name
 - **CV schema** (`lib/schema.ts`) is a single Zod schema (`extractionSchema`) shared across AI extraction, streaming validation, form editing, and PDF generation
 - **Streaming extraction** uses the workflow in `workflows/extract-cv.ts` (`streamText` + `Output.object` on the server, NDJSON stream to the client) so partial structured data updates the review UI as branches complete
+- **Démarrage des workflows LLM longs (extraction CV, analyse de positionnement)** : **toujours côté API** au moment de la création de l’entité (upload candidat, création de positionnement mission, upload CV sur mission, etc.), **pas** dans un `useEffect` / `useLayoutEffect` au montage d’une page. Côté client : **reconnexion** au flux existant (`useWorkflowStream` avec `runId` + statut actif) et **relance uniquement** sur action utilisateur (bouton « Regénérer » / « Relancer l’analyse » → `submit` / `submitAnalysis` ou équivalent). **Interdit** : appeler `submit(…)` ou `submitAnalysis(…)` depuis un effet du type « si pas encore fait ».
 - **Zustand store** (`lib/stores/cv-builder.store.ts`) is the single source of truth for CV data, shared between the form, streaming hook, and PDF preview
 - **PDF preview** (`lib/hooks/usePdfPreview.ts`) debounces 600ms, aborts in-flight requests, manages blob URLs with proper cleanup
 - **PDF template** (`lib/services/pdf.template.ts`) builds a json-render `Spec` from `Partial<ExtractedCV>`, handling missing sections gracefully during streaming

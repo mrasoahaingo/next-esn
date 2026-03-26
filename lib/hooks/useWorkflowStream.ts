@@ -8,6 +8,11 @@ interface UseWorkflowStreamOptions {
   runStatus?: string | null;
   activeStatuses: string[];
   onFinish?: () => void;
+  /**
+   * Après POST avec `submit({ startOnly: true })` : réponse JSON `{ runId }` sans NDJSON.
+   * Rafraîchir le cache pour que la reconnexion GET soit le seul lecteur du flux.
+   */
+  onStartOnly?: () => void | Promise<void>;
 }
 
 interface UseWorkflowStreamReturn<T, M = unknown> {
@@ -74,6 +79,9 @@ export function useWorkflowStream<T, M = unknown>(
 ): UseWorkflowStreamReturn<T, M> {
   const { api, runId, runStatus, activeStatuses, onFinish } = options;
 
+  const onStartOnlyRef = useRef(options.onStartOnly);
+  onStartOnlyRef.current = options.onStartOnly;
+
   const [object, setObject] = useState<Partial<T> | null>(null);
   const [streamMeta, setStreamMeta] = useState<M | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +96,8 @@ export function useWorkflowStream<T, M = unknown>(
 
   // Track whether we already attempted reconnection for this runId
   const reconnectedRunIdRef = useRef<string | null>(null);
+  /** Incrémenté après POST { startOnly: true } pour relancer la reconnexion même si runId inchangé (reprise du même run). */
+  const [reconnectNonce, setReconnectNonce] = useState(0);
 
   /** En priorité le run issu du POST en cours : le cache React Query peut encore avoir un ancien `workflow_run_id`. */
   const activeRunId = pendingRunId ?? runId ?? null;
@@ -116,7 +126,9 @@ export function useWorkflowStream<T, M = unknown>(
   }, []);
 
   // Submit: start a new workflow
-  const submit = useCallback(async (body: Record<string, unknown>) => {
+  const submit = useCallback(async (payload: Record<string, unknown>) => {
+    const startOnly = payload.startOnly === true;
+
     // Abort any previous stream
     abortControllerRef.current?.abort();
     const controller = new AbortController();
@@ -128,17 +140,28 @@ export function useWorkflowStream<T, M = unknown>(
     setStreamMeta(null);
     chunkIndexRef.current = 0;
 
+    let delegatedToReconnect = false;
+
     try {
       const response = await fetch(api, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({ error: 'Unknown error' }));
         throw new Error(err.error ?? `HTTP ${response.status}`);
+      }
+
+      const contentType = response.headers.get('Content-Type') ?? '';
+      if (startOnly && contentType.includes('application/json')) {
+        await onStartOnlyRef.current?.();
+        reconnectedRunIdRef.current = null;
+        setReconnectNonce((n) => n + 1);
+        delegatedToReconnect = true;
+        return;
       }
 
       const headerRunId = response.headers.get('x-workflow-run-id')?.trim();
@@ -151,6 +174,9 @@ export function useWorkflowStream<T, M = unknown>(
       if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
+      if (delegatedToReconnect) {
+        return;
+      }
       setIsLoading(false);
       setPendingRunId(null);
       if (!controller.signal.aborted) {
@@ -159,13 +185,19 @@ export function useWorkflowStream<T, M = unknown>(
     }
   }, [api, startConsuming]);
 
-  // Reconnect to an existing workflow run on mount
+  // Reconnect to an existing workflow run on mount (ex. rechargement de page).
+  // Ne pas ouvrir un second flux si submit() consomme déjà le POST pour le même runId :
+  // deux lecteurs entrelacent les setObject (UI qui saute, clés / textes dupliqués).
   useLayoutEffect(() => {
     if (!runId) {
       reconnectedRunIdRef.current = null;
       return;
     }
     if (!runStatus || !activeStatuses.includes(runStatus)) return;
+    if (pendingRunId && pendingRunId === runId) {
+      reconnectedRunIdRef.current = runId;
+      return;
+    }
     if (reconnectedRunIdRef.current === runId) return;
 
     reconnectedRunIdRef.current = runId;
@@ -188,8 +220,6 @@ export function useWorkflowStream<T, M = unknown>(
           const data = await response.json().catch(() => ({}));
           // Workflow already finished
           if (data.status === 'completed' || data.status === 'failed') {
-            setIsLoading(false);
-            onFinishRef.current?.();
             return;
           }
           throw new Error(data.error ?? `HTTP ${response.status}`);
@@ -198,8 +228,6 @@ export function useWorkflowStream<T, M = unknown>(
         // Check if it's a JSON status response (workflow finished)
         const contentType = response.headers.get('Content-Type') ?? '';
         if (contentType.includes('application/json')) {
-          setIsLoading(false);
-          onFinishRef.current?.();
           return;
         }
 
@@ -217,7 +245,7 @@ export function useWorkflowStream<T, M = unknown>(
 
     return () => controller.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId, runStatus]);
+  }, [runId, runStatus, pendingRunId, reconnectNonce]);
 
   // Stop: abort the client-side stream (used before calling cancel API)
   const stop = useCallback(() => {

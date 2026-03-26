@@ -221,9 +221,6 @@ export default function PositioningWizardPage() {
   const aiGenerationDurationMs = positioningData?.ai_generation_duration_ms ?? null;
   const userTimeSeconds = positioningData?.user_time_seconds ?? null;
 
-  // Track if we already auto-launched analysis on mount
-  const autoAnalyzedRef = useRef(false);
-
   const debouncedSave = useAutoSave(positioningIdParam);
 
   const pdfTemplateId =
@@ -399,38 +396,8 @@ export default function PositioningWizardPage() {
     candidateData?.template_id,
   ]);
 
-  // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning).
-  // Si l’analyse a déjà été lancée depuis la mission (stream en cours), on ne refait pas un POST.
-  useLayoutEffect(() => {
-    if (!isLoaded || autoAnalyzedRef.current) return;
-    if (isAnalysisLoading) return;
-    if (positioningData?.status === 'analyzing') return;
-    if (positioningData?.status === 'analyzed' || positioningData?.analysis) return;
-
-    const isCandidateReadyForAnalysis = !!candidateData?.extracted_data
-      && ['reviewing', 'ready', 'generated'].includes(candidateData.status ?? '');
-
-    if (currentStep === 1 && !analysis && canRunPositioningAnalysis && isCandidateReadyForAnalysis) {
-      autoAnalyzedRef.current = true;
-      setIsAnalyzing(true);
-      submitAnalysis({ positioningId: positioningIdParam });
-      refreshMissionCards();
-    }
-  }, [
-    isLoaded,
-    currentStep,
-    analysis,
-    canRunPositioningAnalysis,
-    positioningIdParam,
-    setIsAnalyzing,
-    submitAnalysis,
-    isAnalysisLoading,
-    positioningData?.status,
-    positioningData?.analysis,
-    candidateData?.status,
-    candidateData?.extracted_data,
-    refreshMissionCards,
-  ]);
+  // Analyse : démarrage côté API à la création du positionnement ; ici uniquement reconnexion (useWorkflowStream)
+  // ou relance manuelle (handleReAnalyze). Pas de submitAnalysis depuis un effet de montage.
 
   // Sync streaming analysis to store
   useLayoutEffect(() => {
@@ -564,6 +531,9 @@ export default function PositioningWizardPage() {
 
   const handleGenerate = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
+    if (isGenerating || isGenerateLoading) return;
+    if (positioningData?.status === 'generating') return;
+    if (updatePositioning.isPending) return;
 
     const st = usePositioningStore.getState();
     const answers = mergePositioningAnswersForPersistence({
@@ -600,6 +570,9 @@ export default function PositioningWizardPage() {
     setCandidateEmail,
     submitGenerate,
     refreshMissionCards,
+    isGenerating,
+    isGenerateLoading,
+    positioningData?.status,
   ]);
 
   const handleExport = useCallback(() => {

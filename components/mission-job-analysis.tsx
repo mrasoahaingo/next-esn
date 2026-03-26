@@ -111,6 +111,9 @@ export function MissionJobAnalysis({
     runStatus: jobAnalyzeActive ? 'extracting' : undefined,
     activeStatuses: ['extracting'],
     onFinish: invalidate,
+    onStartOnly: async () => {
+      await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(missionId) });
+    },
   });
 
   const cancelRunId = stream.activeRunId;
@@ -247,7 +250,7 @@ export function MissionJobAnalysis({
                 size="sm"
                 className="bg-neon text-neutral-950 hover:bg-neon/90"
                 disabled={stream.isLoading}
-                onClick={() => stream.submit({})}
+                onClick={() => stream.submit({ startOnly: true })}
               >
                 Analyser la fiche
               </Button>
@@ -258,7 +261,7 @@ export function MissionJobAnalysis({
                 variant="outline"
                 className="border-neon/40 text-neon hover:bg-neon/10"
                 disabled={stream.isLoading}
-                onClick={() => stream.submit({})}
+                onClick={() => stream.submit({ startOnly: true })}
               >
                 {job_analysis_stale ? 'Relancer l’analyse' : 'Réanalyser la fiche'}
               </Button>
@@ -298,7 +301,7 @@ export function MissionJobAnalysis({
       <AnalysisScrollBody>
       {effectiveAnalysis?.expectedExpertiseLevel &&
         effectiveAnalysis.expectedExpertiseLevel.summary?.trim() && (
-        <div className="rounded-xl border border-violet/35 bg-violet/10 p-4 mb-4 neon-ring">
+        <div className="rounded-xl border border-violet/35 bg-violet/10 p-4 mb-4">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-violet">
               Niveau d&apos;expertise attendu

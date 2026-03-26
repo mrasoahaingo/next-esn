@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { start } from 'workflow/api';
+import { extractCvWorkflow } from '@/workflows/extract-cv';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 
@@ -61,7 +63,24 @@ export async function POST(req: NextRequest) {
 
     if (dbError) throw dbError;
 
-    return NextResponse.json(candidate);
+    const run = await start(extractCvWorkflow, [candidate.id]);
+
+    const { error: candidateUpdateError } = await supabase
+      .from('candidates')
+      .update({ workflow_run_id: run.runId, status: 'extracting' })
+      .eq('id', candidate.id);
+
+    if (candidateUpdateError) throw candidateUpdateError;
+
+    const { data: refreshed, error: refreshError } = await supabase
+      .from('candidates')
+      .select()
+      .eq('id', candidate.id)
+      .single();
+
+    if (refreshError) throw refreshError;
+
+    return NextResponse.json(refreshed);
   } catch (error) {
     if (error instanceof NextResponse) return error;
     console.error('Upload error:', error);

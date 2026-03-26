@@ -1,4 +1,4 @@
-import { start } from 'workflow/api';
+import { start, getRun } from 'workflow/api';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
@@ -13,12 +13,28 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase();
     const { data: positioning, error: positioningError } = await supabase
       .from('positionings')
-      .select('id, analysis, candidate_id, candidates(status, extracted_data)')
+      .select('id, status, workflow_run_id, analysis, candidate_id, candidates(status, extracted_data)')
       .eq('id', positioningId)
       .single();
 
     if (positioningError || !positioning) {
       throw new Error('Positioning not found');
+    }
+
+    /** Comme POST /api/positioning/analyze : ne pas démarrer un second workflow si un run est déjà actif. */
+    if (positioning.status === 'generating' && positioning.workflow_run_id) {
+      const run = getRun(positioning.workflow_run_id as string);
+      if (await run.exists) {
+        const st = await run.status;
+        if (st !== 'completed' && st !== 'failed' && st !== 'cancelled') {
+          return new Response(run.getReadable({ startIndex: 0 }), {
+            headers: {
+              'Content-Type': 'application/x-ndjson',
+              'x-workflow-run-id': positioning.workflow_run_id as string,
+            },
+          });
+        }
+      }
     }
 
     const candidate = positioning.candidates as { status?: string; extracted_data?: Record<string, unknown> | null } | null;
@@ -36,6 +52,13 @@ export async function POST(req: NextRequest) {
     if (!hasAnalysis) {
       return NextResponse.json(
         { error: "L'analyse du positionnement n'est pas encore terminée." },
+        { status: 409 },
+      );
+    }
+
+    if (positioning.status === 'generating') {
+      return NextResponse.json(
+        { error: 'Génération en cours ou état incohérent. Rafraîchissez la page.' },
         { status: 409 },
       );
     }

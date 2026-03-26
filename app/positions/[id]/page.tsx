@@ -8,7 +8,7 @@ import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
 import { queryKeys } from '@/lib/queries/keys';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Briefcase,
   Building2,
@@ -1233,6 +1233,7 @@ function PositioningRow({
 export default function PositionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const missionId = params?.id as string;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [compareIds, setCompareIds] = useState<Set<string>>(new Set());
@@ -1277,6 +1278,12 @@ export default function PositionDetailPage() {
     () => ready.filter((p) => compareIds.has(p.id)),
     [ready, compareIds]
   );
+
+  const missionTab = useMemo(() => {
+    const t = searchParams.get('tab');
+    if (t === 'analysis' || t === 'positionings') return t;
+    return (positionings.length > 0 ? 'positionings' : 'analysis') as 'analysis' | 'positionings';
+  }, [searchParams, positionings.length]);
 
   if (isLoading) {
     return (
@@ -1334,7 +1341,11 @@ export default function PositionDetailPage() {
 
         <Tabs
           key={missionId}
-          defaultValue={positionings.length > 0 ? 'positionings' : 'analysis'}
+          value={missionTab}
+          onValueChange={(v) => {
+            const next = v as 'analysis' | 'positionings';
+            router.replace(`/positions/${missionId}?tab=${next}`);
+          }}
           className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
         >
           <TabsList

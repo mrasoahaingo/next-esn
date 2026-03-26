@@ -240,7 +240,7 @@ export function UnifiedSidebar() {
           setNewCompany('');
           setNewJobDescription('');
           if (mission.id) {
-            navigate(`/positions/${mission.id}`);
+            navigate(`/positions/${mission.id}?tab=analysis`);
           }
         },
       }

@@ -173,7 +173,9 @@ export async function launchMissionJobPostingAnalysisAfterContentChange(
 export async function respondMissionJobAnalyzePost(
   supabase: SupabaseClient,
   missionId: string,
+  options?: { startOnly?: boolean },
 ): Promise<Response> {
+  const startOnly = options?.startOnly === true;
   const { data: mission, error } = await supabase
     .from('missions')
     .select('id, org_id, job_description, job_analysis_workflow_run_id')
@@ -196,6 +198,9 @@ export async function respondMissionJobAnalyzePost(
     if (await run.exists) {
       const st = await run.status;
       if (st !== 'completed' && st !== 'failed' && st !== 'cancelled') {
+        if (startOnly) {
+          return Response.json({ runId: seenRunId });
+        }
         return new Response(run.getReadable({ startIndex: 0 }), {
           headers: {
             'Content-Type': 'application/x-ndjson',
@@ -223,6 +228,9 @@ export async function respondMissionJobAnalyzePost(
     if (await run.exists) {
       const st = await run.status;
       if (st !== 'completed' && st !== 'failed' && st !== 'cancelled') {
+        if (startOnly) {
+          return Response.json({ runId: concurrentRunId });
+        }
         return new Response(run.getReadable({ startIndex: 0 }), {
           headers: {
             'Content-Type': 'application/x-ndjson',
@@ -262,6 +270,9 @@ export async function respondMissionJobAnalyzePost(
       console.error('logMissionJobAnalysisRunSuperseded:', e);
     }
     if (winnerId) {
+      if (startOnly) {
+        return Response.json({ runId: winnerId });
+      }
       const winnerRun = getRun(winnerId);
       return new Response(winnerRun.getReadable({ startIndex: 0 }), {
         headers: {
@@ -271,6 +282,10 @@ export async function respondMissionJobAnalyzePost(
       });
     }
     return Response.json({ error: 'Impossible d’attribuer l’analyse (conflit)' }, { status: 503 });
+  }
+
+  if (startOnly) {
+    return Response.json({ runId: run.runId });
   }
 
   return new Response(run.readable, {

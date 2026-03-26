@@ -23,7 +23,10 @@ export async function POST(
       return NextResponse.json({ error: 'Mission introuvable' }, { status: 404 });
     }
 
-    return await respondMissionJobAnalyzePost(supabase, missionId);
+    const body = await req.json().catch(() => ({}));
+    const startOnly = body.startOnly === true;
+
+    return await respondMissionJobAnalyzePost(supabase, missionId, { startOnly });
   } catch (error: unknown) {
     if (error instanceof NextResponse) return error;
     console.error('Mission job analyze error:', error);

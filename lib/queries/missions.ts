@@ -59,9 +59,10 @@ export function useCreateMission() {
       if (!res.ok) throw new Error('Failed to create mission');
       return res.json();
     },
-    onSuccess: (data: { id?: string }) => {
+    onSuccess: (data: Record<string, unknown> & { id?: string }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
       if (data?.id) {
+        queryClient.setQueryData(queryKeys.missions.detail(data.id as string), data);
         queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(data.id) });
       }
     },

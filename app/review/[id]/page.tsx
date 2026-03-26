@@ -123,10 +123,7 @@ export default function ReviewPage() {
       return;
     }
 
-    // Not yet extracted — start extraction
-    if (candidateData.status === 'uploaded' && isNewCandidate) {
-      submit({ candidateId: params?.id });
-    }
+    // Legacy `uploaded` (annulation, échec workflow, ancienne donnée) : lancer via handleRetryExtraction uniquement
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candidateData?.id, candidateData?.status]);
 
@@ -232,11 +229,24 @@ export default function ReviewPage() {
   const canPosition = !isLoading && !!cvData;
 
   if (!cvData && !isLoading) {
+    const needsManualExtraction = candidateData?.status === 'uploaded';
     return (
       <div className="flex flex-col items-center justify-center gap-4 h-full bg-background text-foreground">
-        <div className="flex items-center text-muted-foreground">
-          <Loader2 className="animate-spin mr-2" /> Chargement...
-        </div>
+        {needsManualExtraction ? (
+          <div className="flex max-w-md flex-col items-center gap-3 text-center text-muted-foreground">
+            <p className="text-sm">
+              L&apos;extraction n&apos;a pas encore été lancée ou a été interrompue. Lancez-la pour continuer.
+            </p>
+            <Button type="button" onClick={handleRetryExtraction}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Lancer l&apos;extraction
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center text-muted-foreground">
+            <Loader2 className="animate-spin mr-2" /> Chargement...
+          </div>
+        )}
         <div className="flex items-center gap-2">
           {candidateData?.status === 'extracting' && extractionCancelRunId && (
             <Button
