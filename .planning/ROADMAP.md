@@ -13,7 +13,7 @@ This milestone closes execution gaps in the existing async AI workflow architect
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Server Contract & Core UI Reliability** - Fix workflow error status writes, derive button disabled state from Supabase, surface errors and success feedback, fix cache invalidation scope
-- [ ] **Phase 2: Sub-Step Progress & Step Error Attribution** - Display per-step progress during AI runs, show individual step status badges, attribute errors to the specific step that failed
+- [x] **Phase 2: Sub-Step Progress & Step Error Attribution** - Display per-step progress during AI runs, show individual step status badges, attribute errors to the specific step that failed
 
 ## Phase Details
 
@@ -41,7 +41,11 @@ Plans:
   1. During an active workflow, the user sees a step-by-step progress indicator ("Étape 2/4 : Analyse des compétences") that updates in real time
   2. Each visible sub-step has its own status badge (`pending` / `running` / `done` / `error`)
   3. When a step fails, the error message names the failing step ("Extraction CV échouée — fichier corrompu ?") rather than a generic workflow-level error
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [x] 02-01-PLAN.md — Persist workflow_last_error, NDJSON stepKey, hook errorStepKey
+- [x] 02-02-PLAN.md — workflow-step-labels, compute-step-status, WorkflowStepList
+- [x] 02-03-PLAN.md — Wire four streaming UIs + step-prefixed toasts
 **UI hint**: yes
 
 ## Progress
@@ -52,4 +56,4 @@ Phases execute in numeric order: 1 → 2
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Server Contract & Core UI Reliability | 2/2 | Complete | 2026-03-26 |
-| 2. Sub-Step Progress & Step Error Attribution | 0/TBD | Not started | - |
+| 2. Sub-Step Progress & Step Error Attribution | 3/3 | Complete | 2026-03-26 |
