@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, RefreshCw, Mail, UserCheck, List, Building2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 
 const EmailEditor = dynamic(
   () => import('./EmailEditor').then((m) => m.EmailEditor),
@@ -57,6 +59,8 @@ interface EmailsGenerationStepProps {
   streamMeta?: PositioningGenerateStreamMeta | null;
   onGenerateEmails: () => void;
   positioningStatus?: string | null;
+  workflowStepRows?: StepStateRow[];
+  workflowSummaryLine?: string | null;
 }
 
 export function EmailsGenerationStep({
@@ -64,6 +68,8 @@ export function EmailsGenerationStep({
   streamMeta,
   onGenerateEmails,
   positioningStatus,
+  workflowStepRows,
+  workflowSummaryLine,
 }: EmailsGenerationStepProps) {
   const {
     email,
@@ -139,7 +145,9 @@ export function EmailsGenerationStep({
         </div>
 
         <div className="p-4">
-          {isStreaming && generateMode === 'cv' ? (
+          {workflowStepRows && workflowStepRows.length > 0 ? (
+            <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
+          ) : isStreaming && generateMode === 'cv' ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               Cette exécution ne régénère que le CV — ouvrez l&apos;étape « CV retravaillé ».
             </p>

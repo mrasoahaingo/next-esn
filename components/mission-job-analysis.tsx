@@ -16,7 +16,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
+import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import type { JobPostingAnalysisStreamMeta } from '@/lib/types/job-posting-analysis-stream';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import { computeJobPostingStepStates, formatStepSummaryLine } from '@/lib/workflow/compute-step-status';
+import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
 import type {
   JobPostingAnalysis,
   JobPostingExpertiseBand,
@@ -69,6 +73,7 @@ interface MissionJobAnalysisProps {
   job_analysis: JobPostingAnalysis | null;
   job_analysis_workflow_run_id: string | null;
   job_analysis_stale: boolean;
+  workflow_last_error?: WorkflowLastError | null;
   /** Clés skills marquées « comprises » par le recruteur (toutes missions de l’org). */
   global_skill_keys_understood: string[];
   /** Classes sur le conteneur (ex. grille 2 colonnes : retirer mb-6, overflow). */
@@ -89,6 +94,7 @@ export function MissionJobAnalysis({
   job_analysis,
   job_analysis_workflow_run_id,
   job_analysis_stale,
+  workflow_last_error = null,
   global_skill_keys_understood,
   className,
 }: MissionJobAnalysisProps) {
@@ -122,10 +128,11 @@ export function MissionJobAnalysis({
   const cancelRunId = stream.activeRunId;
 
   useEffect(() => {
-    if (stream.error) {
-      toast.error('Analyse echouee. Reessayez ou contactez le support.', { duration: 8000 });
-    }
-  }, [stream.error]);
+    if (!stream.error) return;
+    const key = stream.errorStepKey ?? workflow_last_error?.stepKey;
+    const label = key ? getFrenchStepShortLabel('jobPosting', key) : 'Analyse fiche';
+    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
+  }, [stream.error, stream.errorStepKey, workflow_last_error?.stepKey]);
 
   const effectiveAnalysis = useMemo(() => {
     const raw =
@@ -162,11 +169,6 @@ export function MissionJobAnalysis({
     });
   }, [effectiveAnalysis?.keyPoints]);
 
-  /** N’utiliser le détail du flux que pendant la consommation active : sinon meta restée en mémoire affichait « Analyse… » à tort. */
-  const streamHint = stream.isLoading
-    ? formatJobPostingStreamHint(stream.streamMeta)
-    : null;
-
   /** Analyse déjà persistée en base : ne pas afficher le bandeau « en cours » si le run est obsolète. */
   const hasPersistedJobAnalysis =
     !!job_analysis &&
@@ -176,6 +178,35 @@ export function MissionJobAnalysis({
 
   const showAnalysisProgressHint =
     stream.isLoading || (jobAnalyzeActive && !hasPersistedJobAnalysis);
+
+  const jobPostingRows = useMemo(
+    () =>
+      computeJobPostingStepStates({
+        streamMeta: stream.streamMeta,
+        partialData: stream.object ?? job_analysis ?? null,
+        isStreaming: stream.isLoading,
+        errorStepKey: stream.errorStepKey,
+        persistedError: workflow_last_error,
+        workflowFailed: !!(workflow_last_error ?? stream.error),
+      }),
+    [
+      stream.streamMeta,
+      stream.object,
+      stream.isLoading,
+      stream.errorStepKey,
+      stream.error,
+      job_analysis,
+      workflow_last_error,
+    ],
+  );
+
+  const jobPostingSummary = useMemo(
+    () => formatStepSummaryLine('jobPosting', jobPostingRows),
+    [jobPostingRows],
+  );
+
+  const showJobStepList =
+    stream.isLoading || (jobAnalyzeActive && !hasPersistedJobAnalysis) || !!workflow_last_error;
 
   const toggleUnderstood = useMutation({
     mutationFn: async ({ pointId, understood }: { pointId: string; understood: boolean }) => {
@@ -240,13 +271,19 @@ export function MissionJobAnalysis({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-neon" />
           <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
-          {showAnalysisProgressHint && (
+          {showAnalysisProgressHint && !showJobStepList && (
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              {streamHint ?? 'Analyse de la fiche…'}
+              {formatJobPostingStreamHint(stream.streamMeta) ?? 'Analyse de la fiche…'}
             </span>
           )}
         </div>
+
+        {showJobStepList && (
+          <div className="mb-4 rounded-xl border border-border/60 bg-card/30 px-3 py-3">
+            <WorkflowStepList rows={jobPostingRows} summaryLine={jobPostingSummary} />
+          </div>
+        )}
 
         {!hasDescription && (
           <p className="text-xs text-muted-foreground">Ajoutez du texte à la fiche de poste pour lancer une analyse.</p>

@@ -31,6 +31,8 @@ import type {
   PositioningAnalysisBranch,
   PositioningAnalysisStreamMeta,
 } from '@/lib/types/positioning-analysis-stream';
+import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
+import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 
@@ -127,49 +129,53 @@ async function fetchAndAnalyze(positioningId: string) {
     taskKey: TaskKey,
     gatewayModelId: string,
   ): Promise<void> {
-    const branchStart = Date.now();
-    const result = streamText({
-      ...llmFactualGenerationSettings,
-      model: languageModel,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-      output: Output.object({ schema, name: outputName }),
-    });
+    try {
+      const branchStart = Date.now();
+      const result = streamText({
+        ...llmFactualGenerationSettings,
+        model: languageModel,
+        system,
+        messages: [{ role: 'user', content: userContent }],
+        output: Output.object({ schema, name: outputName }),
+      });
 
-    let branchStarted = false;
+      let branchStarted = false;
 
-    for await (const partial of result.partialOutputStream) {
+      for await (const partial of result.partialOutputStream) {
+        await runLocked(async () => {
+          if (!branchStarted) {
+            branchStarted = true;
+            activeBranches.add(branch);
+          }
+          mergePositioningPartial(acc, partial as Partial<PositioningAnalysis>);
+          await emit();
+        });
+      }
+
       await runLocked(async () => {
-        if (!branchStarted) {
-          branchStarted = true;
-          activeBranches.add(branch);
-        }
-        mergePositioningPartial(acc, partial as Partial<PositioningAnalysis>);
+        activeBranches.delete(branch);
         await emit();
       });
+
+      const usage = await result.usage;
+      const output = await result.output;
+
+      await logAiUsage(supabase, {
+        operation: 'analysis',
+        positioningId: positioningRowId,
+        candidateId: candidateRowId,
+        orgId: orgId ?? undefined,
+        aiModel: gatewayModelId,
+        taskKey,
+        durationMs: Date.now() - branchStart,
+        usage,
+        inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+        outputPayload: output,
+        workflowRunId,
+      });
+    } catch (e) {
+      throw attachWorkflowStepKey(e, branch);
     }
-
-    await runLocked(async () => {
-      activeBranches.delete(branch);
-      await emit();
-    });
-
-    const usage = await result.usage;
-    const output = await result.output;
-
-    await logAiUsage(supabase, {
-      operation: 'analysis',
-      positioningId: positioningRowId,
-      candidateId: candidateRowId,
-      orgId: orgId ?? undefined,
-      aiModel: gatewayModelId,
-      taskKey,
-      durationMs: Date.now() - branchStart,
-      usage,
-      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
-      outputPayload: output,
-      workflowRunId,
-    });
   }
 
   try {
@@ -235,70 +241,74 @@ async function fetchAndAnalyze(positioningId: string) {
       ),
     ]);
 
-    const rSyn = await resolveLlmTask(supabase, {
-      taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
-      orgId: orgId ?? null,
-      context: brandCtx,
-    });
+    try {
+      const rSyn = await resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      });
 
-    const synthesisUserText = buildPositioningSynthesisUserContent(
-      cv,
-      jobDescription,
-      acc,
-      jobAnalysis,
-      matchingWeights,
-      promptOptions,
-      priorAnswers,
-    );
-    const synStart = Date.now();
-    const synthesisResult = streamText({
-      ...llmFactualGenerationSettings,
-      model: createGatewayLanguageModel(rSyn.gatewayModelId, rSyn.useExtractJson),
-      system: rSyn.systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: synthesisUserText,
-        },
-      ],
-      output: Output.object({ schema: positioningSynthesisSchema, name: 'positioning_synthesis' }),
-    });
+      const synthesisUserText = buildPositioningSynthesisUserContent(
+        cv,
+        jobDescription,
+        acc,
+        jobAnalysis,
+        matchingWeights,
+        promptOptions,
+        priorAnswers,
+      );
+      const synStart = Date.now();
+      const synthesisResult = streamText({
+        ...llmFactualGenerationSettings,
+        model: createGatewayLanguageModel(rSyn.gatewayModelId, rSyn.useExtractJson),
+        system: rSyn.systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: synthesisUserText,
+          },
+        ],
+        output: Output.object({ schema: positioningSynthesisSchema, name: 'positioning_synthesis' }),
+      });
 
-    let synStarted = false;
-    for await (const partial of synthesisResult.partialOutputStream) {
+      let synStarted = false;
+      for await (const partial of synthesisResult.partialOutputStream) {
+        await runLocked(async () => {
+          if (!synStarted) {
+            synStarted = true;
+            activeBranches.add('synthesis');
+          }
+          mergePositioningPartial(acc, partial as Partial<PositioningAnalysis>);
+          await emit();
+        });
+      }
+
       await runLocked(async () => {
-        if (!synStarted) {
-          synStarted = true;
-          activeBranches.add('synthesis');
-        }
-        mergePositioningPartial(acc, partial as Partial<PositioningAnalysis>);
+        activeBranches.delete('synthesis');
         await emit();
       });
+
+      const synUsage = await synthesisResult.usage;
+      const synOutput = await synthesisResult.output;
+      await logAiUsage(supabase, {
+        operation: 'analysis',
+        positioningId: positioningRowId,
+        candidateId: candidateRowId,
+        orgId: orgId ?? undefined,
+        aiModel: rSyn.gatewayModelId,
+        taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
+        durationMs: Date.now() - synStart,
+        usage: synUsage,
+        inputPayload: {
+          system: rSyn.systemPrompt,
+          messages: [{ role: 'user', content: synthesisUserText }],
+        },
+        outputPayload: synOutput,
+        workflowRunId,
+      });
+    } catch (e) {
+      throw attachWorkflowStepKey(e, 'synthesis');
     }
-
-    await runLocked(async () => {
-      activeBranches.delete('synthesis');
-      await emit();
-    });
-
-    const synUsage = await synthesisResult.usage;
-    const synOutput = await synthesisResult.output;
-    await logAiUsage(supabase, {
-      operation: 'analysis',
-      positioningId: positioningRowId,
-      candidateId: candidateRowId,
-      orgId: orgId ?? undefined,
-      aiModel: rSyn.gatewayModelId,
-      taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
-      durationMs: Date.now() - synStart,
-      usage: synUsage,
-      inputPayload: {
-        system: rSyn.systemPrompt,
-        messages: [{ role: 'user', content: synthesisUserText }],
-      },
-      outputPayload: synOutput,
-      workflowRunId,
-    });
 
     const parsed = positioningAnalysisSchema.safeParse(acc);
     const object = parsed.success ? parsed.data : acc;
@@ -343,6 +353,7 @@ async function saveAnalysis(
         status: 'analyzed',
         ai_analysis_duration_ms: result.durationMs,
         workflow_run_id: null,
+        workflow_last_error: null,
         analysis_recruiter_answers: result.analysisRecruiterAnswers,
       })
       .eq('id', positioningId);
@@ -356,17 +367,24 @@ async function handleWorkflowError(
   recordId: string,
   table: 'candidates' | 'positionings',
   error: unknown,
+  ctx?: { stepKey?: string },
 ) {
   'use step';
 
   const supabase = getSupabase();
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const stepKey = ctx?.stepKey ?? readWorkflowStepKey(error) ?? 'unknown';
+  const workflowLastError = workflowLastErrorSchema.parse({
+    stepKey,
+    message: errorMessage,
+  });
 
   await supabase
     .from(table)
     .update({
       status: 'error',
       workflow_run_id: null,
+      workflow_last_error: workflowLastError,
     })
     .eq('id', recordId);
 
@@ -376,7 +394,12 @@ async function handleWorkflowError(
   const encoder = new TextEncoder();
   try {
     await writer.write(
-      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+      encoder.encode(
+        JSON.stringify({
+          error: errorMessage,
+          ...(stepKey !== 'unknown' ? { stepKey } : {}),
+        }) + '\n',
+      ),
     );
   } finally {
     writer.releaseLock();

@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import { queryKeys } from './keys';
+
+/** Champs diagnostic workflow renvoyés par l’API positionnement (phase 2 / ERR-03). */
+export type PositioningWorkflowDiagnostics = {
+  workflow_last_error: WorkflowLastError | null;
+};
 
 const ACTIVE_POS_STATUSES = ['analyzing', 'generating'];
 

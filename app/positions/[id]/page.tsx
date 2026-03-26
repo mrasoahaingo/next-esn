@@ -8,6 +8,14 @@ import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
+import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import {
+  computeCvStepStates,
+  computePositioningAnalysisStepStates,
+  formatStepSummaryLine,
+} from '@/lib/workflow/compute-step-status';
+import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
 import { queryKeys } from '@/lib/queries/keys';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -63,6 +71,7 @@ import {
 interface PositioningCandidate {
   id: string;
   workflow_run_id?: string | null;
+  workflow_last_error?: WorkflowLastError | null;
   extracted_data: {
     personalInfo?: {
       firstName?: string;
@@ -105,6 +114,7 @@ interface MissionPositioning {
   candidate_id: string;
   status: string;
   workflow_run_id: string | null;
+  workflow_last_error?: WorkflowLastError | null;
   added_via?: 'cv_upload' | 'existing_candidate' | null;
   analysis: {
     matchScore?: number;
@@ -128,6 +138,7 @@ interface MissionDetail {
   job_analysis_input_hash?: string | null;
   job_analysis_workflow_run_id?: string | null;
   job_analysis_stale?: boolean;
+  workflow_last_error?: WorkflowLastError | null;
   global_skill_keys_understood?: string[];
 }
 
@@ -1006,16 +1017,18 @@ function PositioningRow({
   });
 
   useEffect(() => {
-    if (extractStream.error) {
-      toast.error('Extraction echouee. Reessayez ou contactez le support.', { duration: 8000 });
-    }
-  }, [extractStream.error]);
+    if (!extractStream.error) return;
+    const key = extractStream.errorStepKey ?? candidate?.workflow_last_error?.stepKey;
+    const label = key ? getFrenchStepShortLabel('cv', key) : 'Extraction CV';
+    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
+  }, [extractStream.error, extractStream.errorStepKey, candidate?.workflow_last_error?.stepKey]);
 
   useEffect(() => {
-    if (analysisStream.error) {
-      toast.error('Analyse echouee. Reessayez ou contactez le support.', { duration: 8000 });
-    }
-  }, [analysisStream.error]);
+    if (!analysisStream.error) return;
+    const key = analysisStream.errorStepKey ?? p.workflow_last_error?.stepKey;
+    const label = key ? getFrenchStepShortLabel('positioningAnalysis', key) : 'Analyse de matching';
+    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
+  }, [analysisStream.error, analysisStream.errorStepKey, p.workflow_last_error?.stepKey]);
 
   const extractCancelRunId = candidate?.workflow_run_id ?? extractStream.activeRunId ?? null;
   const analyzeCancelRunId = p.workflow_run_id ?? analysisStream.activeRunId ?? null;
@@ -1032,6 +1045,64 @@ function PositioningRow({
   const extractStepActive = extractActive || extractStream.isLoading;
   const analyzeStepActive =
     p.status === 'analyzing' || analysisStream.isLoading || (p.status === 'draft' && extractionPhaseDone && !analysisComplete);
+
+  const showExtractStepList =
+    addedVia === 'cv_upload' && (extractStepActive || candidate?.status === 'error');
+  const showAnalysisStepList =
+    p.status === 'analyzing' || analysisStream.isLoading || p.status === 'error';
+
+  const missionExtractRows = useMemo(
+    () =>
+      computeCvStepStates({
+        streamMeta: extractStream.streamMeta,
+        partialData:
+          extractStream.object ?? (candidate?.extracted_data as Partial<ExtractedCV> | null) ?? null,
+        isStreaming: extractStream.isLoading,
+        errorStepKey: extractStream.errorStepKey,
+        persistedError: candidate?.workflow_last_error ?? null,
+        workflowFailed: candidate?.status === 'error',
+      }),
+    [
+      extractStream.streamMeta,
+      extractStream.object,
+      extractStream.isLoading,
+      extractStream.errorStepKey,
+      candidate?.extracted_data,
+      candidate?.workflow_last_error,
+      candidate?.status,
+    ],
+  );
+
+  const missionExtractSummary = useMemo(
+    () => formatStepSummaryLine('cv', missionExtractRows),
+    [missionExtractRows],
+  );
+
+  const missionAnalysisRows = useMemo(
+    () =>
+      computePositioningAnalysisStepStates({
+        streamMeta: analysisStream.streamMeta,
+        partialData: analysisStream.object ?? (p.analysis as Partial<PositioningAnalysis> | null) ?? null,
+        isStreaming: analysisStream.isLoading,
+        errorStepKey: analysisStream.errorStepKey,
+        persistedError: p.workflow_last_error ?? null,
+        workflowFailed: p.status === 'error',
+      }),
+    [
+      analysisStream.streamMeta,
+      analysisStream.object,
+      analysisStream.isLoading,
+      analysisStream.errorStepKey,
+      p.analysis,
+      p.workflow_last_error,
+      p.status,
+    ],
+  );
+
+  const missionAnalysisSummary = useMemo(
+    () => formatStepSummaryLine('positioningAnalysis', missionAnalysisRows),
+    [missionAnalysisRows],
+  );
 
   const streamHint =
     formatCvExtractionHint(extractStream.streamMeta) ?? formatAnalysisStreamHint(analysisStream.streamMeta);
@@ -1183,7 +1254,20 @@ function PositioningRow({
           </div>
         )}
 
-        {streamHint && (extractStepActive || analyzeStepActive) && (
+        {showExtractStepList && (
+          <div className="mt-2 w-full max-w-full" onClick={(e) => e.stopPropagation()}>
+            <WorkflowStepList rows={missionExtractRows} summaryLine={missionExtractSummary} />
+          </div>
+        )}
+        {showAnalysisStepList && (
+          <div className="mt-2 w-full max-w-full" onClick={(e) => e.stopPropagation()}>
+            <WorkflowStepList rows={missionAnalysisRows} summaryLine={missionAnalysisSummary} />
+          </div>
+        )}
+        {streamHint &&
+          (extractStepActive || analyzeStepActive) &&
+          !showExtractStepList &&
+          !showAnalysisStepList && (
           <p className="mt-1 text-[10px] text-violet/80 truncate">{streamHint}</p>
         )}
 
@@ -1426,6 +1510,7 @@ export default function PositionDetailPage() {
                   job_analysis={mission.job_analysis ?? null}
                   job_analysis_workflow_run_id={mission.job_analysis_workflow_run_id ?? null}
                   job_analysis_stale={mission.job_analysis_stale ?? false}
+                  workflow_last_error={mission.workflow_last_error ?? null}
                   global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
                   className="mb-0 flex min-h-0 flex-1 flex-col overflow-hidden"
                 />

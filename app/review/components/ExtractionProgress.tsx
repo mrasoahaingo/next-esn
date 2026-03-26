@@ -3,6 +3,8 @@
 import { User, FileText, Briefcase, GraduationCap, Wrench, FileSearch, ScanText } from 'lucide-react';
 import type { ExtractedCV } from '@/lib/schema';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 
 interface Step {
   key: string;
@@ -65,6 +67,9 @@ interface ExtractionProgressProps {
   data: Partial<ExtractedCV> | null;
   isStreaming: boolean;
   streamMeta?: CvExtractionStreamMeta | null;
+  /** Si fourni, remplace la rangée de pilules par la liste d’étapes unifiée (phase 2 / SUB-01). */
+  workflowStepRows?: StepStateRow[];
+  workflowSummaryLine?: string | null;
 }
 
 function branchPulsesStep(branchMeta: CvExtractionStreamMeta | null | undefined, stepKey: string): boolean {
@@ -77,7 +82,13 @@ function branchPulsesStep(branchMeta: CvExtractionStreamMeta | null | undefined,
   return false;
 }
 
-export function ExtractionProgress({ data, isStreaming, streamMeta }: ExtractionProgressProps) {
+export function ExtractionProgress({
+  data,
+  isStreaming,
+  streamMeta,
+  workflowStepRows,
+  workflowSummaryLine,
+}: ExtractionProgressProps) {
   const completedCount = steps.filter((s) => s.check(data)).length;
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0;
 
@@ -85,8 +96,14 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
   const parallelExtracting =
     isStreaming && streamMeta?.phase === 'extracting' && (streamMeta.activeBranches?.length ?? 0) > 0;
 
+  const useUnifiedSteps = workflowStepRows && workflowStepRows.length > 0;
+
   return (
-    <div className="flex flex-col gap-3" aria-live="polite" aria-atomic="false">
+    <div
+      className="flex flex-col gap-3"
+      aria-live={useUnifiedSteps ? undefined : 'polite'}
+      aria-atomic={useUnifiedSteps ? undefined : 'false'}
+    >
       {isStreaming && streamMeta?.phase === 'transcription' && (
         <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-accent-foreground">
           <ScanText className="h-3.5 w-3.5 shrink-0 animate-pulse" />
@@ -121,32 +138,35 @@ export function ExtractionProgress({ data, isStreaming, streamMeta }: Extraction
         </span>
       </div>
 
-      {/* Step pills */}
-      <div className="flex flex-wrap gap-1.5">
-        {steps.map((step) => {
-          const done = step.check(data);
-          const activeParallel = parallelExtracting && branchPulsesStep(streamMeta, step.key);
-          const activeSequential = isStreaming && !parallelExtracting && activeStep?.key === step.key;
-          const active = activeParallel || activeSequential;
-          const Icon = step.icon;
+      {useUnifiedSteps ? (
+        <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {steps.map((step) => {
+            const done = step.check(data);
+            const activeParallel = parallelExtracting && branchPulsesStep(streamMeta, step.key);
+            const activeSequential = isStreaming && !parallelExtracting && activeStep?.key === step.key;
+            const active = activeParallel || activeSequential;
+            const Icon = step.icon;
 
-          return (
-            <div
-              key={step.key}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-300 ${
-                done
-                  ? 'bg-neon/15 text-neon border border-neon/25'
-                  : active
-                    ? 'bg-violet/15 text-violet dark:text-violet-200 border border-violet/30 animate-pulse'
-                    : 'bg-overlay/[0.04] text-muted-foreground border border-border'
-              }`}
-            >
-              <Icon className="h-3 w-3" />
-              {active ? step.streamingLabel : step.label}
-            </div>
-          );
-        })}
-      </div>
+            return (
+              <div
+                key={step.key}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-300 ${
+                  done
+                    ? 'bg-neon/15 text-neon border border-neon/25'
+                    : active
+                      ? 'bg-violet/15 text-violet dark:text-violet-200 border border-violet/30 animate-pulse'
+                      : 'bg-overlay/[0.04] text-muted-foreground border border-border'
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+                {active ? step.streamingLabel : step.label}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

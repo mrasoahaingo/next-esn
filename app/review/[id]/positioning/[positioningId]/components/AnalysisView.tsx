@@ -17,6 +17,8 @@ import {
 } from '@/lib/utils/match-score-confidence';
 import { MessageCircle, Building2, Trash2 } from 'lucide-react';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 
 interface AnalysisViewProps {
   analysis: Partial<PositioningAnalysis> | null;
@@ -33,6 +35,8 @@ interface AnalysisViewProps {
   onRemoveRecruiterAnswerEntry?: (key: string, entryId: string) => void;
   /** Affinage modifié par rapport au snapshot : relancer pour intégrer au score. */
   recruiterDraftsDifferFromSnapshot?: boolean;
+  workflowStepRows?: StepStateRow[];
+  workflowSummaryLine?: string | null;
 }
 
 function getRelevanceBadge(relevance: string) {
@@ -222,6 +226,8 @@ export function AnalysisView({
   hideRecruiterSnapshot,
   onRemoveRecruiterAnswerEntry,
   recruiterDraftsDifferFromSnapshot,
+  workflowStepRows,
+  workflowSummaryLine,
 }: AnalysisViewProps) {
   if (!analysis && !isAnalyzing) return null;
 
@@ -237,7 +243,12 @@ export function AnalysisView({
 
   return (
     <div className="space-y-4">
-      {activeHint && (
+      {workflowStepRows && workflowStepRows.length > 0 && (
+        <div className="rounded-xl border border-border/60 bg-card/30 px-3 py-3">
+          <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
+        </div>
+      )}
+      {activeHint && !(workflowStepRows && workflowStepRows.length > 0) && (
         <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-accent-foreground">
           <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
           <span>

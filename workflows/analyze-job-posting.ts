@@ -20,6 +20,8 @@ import type {
   JobPostingAnalysisBranch,
   JobPostingAnalysisStreamMeta,
 } from '@/lib/types/job-posting-analysis-stream';
+import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
+import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { hashJobDescription } from '@/lib/utils/job-description-hash';
 import { normalizeSkillKey } from '@/lib/utils/skill-key';
 
@@ -143,7 +145,8 @@ async function fetchAndAnalyze(missionId: string) {
         branch,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const tagged = attachWorkflowStepKey(err, branch);
+      const message = tagged.message;
       await logAiUsage(supabase, {
         operation: 'analysis',
         missionId: missionRowId,
@@ -158,7 +161,7 @@ async function fetchAndAnalyze(missionId: string) {
         callStatus: 'failed',
         branch,
       });
-      throw err;
+      throw tagged;
     }
   }
 
@@ -250,6 +253,7 @@ async function saveJobPostingAnalysis(
         job_analysis: result.object,
         job_analysis_input_hash: result.inputHash,
         job_analysis_workflow_run_id: null,
+        workflow_last_error: null,
       })
       .eq('id', missionId);
   }
@@ -258,18 +262,23 @@ async function saveJobPostingAnalysis(
   await writable.close();
 }
 
-async function handleWorkflowError(
-  missionId: string,
-  error: unknown,
-) {
+async function handleWorkflowError(missionId: string, error: unknown, ctx?: { stepKey?: string }) {
   'use step';
 
   const supabase = getSupabase();
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const stepKey = ctx?.stepKey ?? readWorkflowStepKey(error) ?? 'unknown';
+  const workflowLastError = workflowLastErrorSchema.parse({
+    stepKey,
+    message: errorMessage,
+  });
 
   await supabase
     .from('missions')
-    .update({ job_analysis_workflow_run_id: null })
+    .update({
+      job_analysis_workflow_run_id: null,
+      workflow_last_error: workflowLastError,
+    })
     .eq('id', missionId);
 
   const writable = getWritable<Uint8Array>();
@@ -277,7 +286,12 @@ async function handleWorkflowError(
   const encoder = new TextEncoder();
   try {
     await writer.write(
-      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+      encoder.encode(
+        JSON.stringify({
+          error: errorMessage,
+          ...(stepKey !== 'unknown' ? { stepKey } : {}),
+        }) + '\n',
+      ),
     );
   } finally {
     writer.releaseLock();

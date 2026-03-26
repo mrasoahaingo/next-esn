@@ -21,6 +21,8 @@ interface UseWorkflowStreamReturn<T, M = unknown> {
   streamMeta: M | null;
   isLoading: boolean;
   error: Error | null;
+  /** Dernière clé d’étape reçue sur une ligne NDJSON `{ error, stepKey? }` — pour attribution ERR-03 */
+  errorStepKey: string | null;
   submit: (body: Record<string, unknown>) => void;
   stop: () => void;
   /**
@@ -33,7 +35,7 @@ interface UseWorkflowStreamReturn<T, M = unknown> {
 async function consumeNdjsonStream<T, M>(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onChunk: (chunk: { data?: Partial<T>; meta?: M }) => void,
-  onError: (error: Error) => void,
+  onError: (error: Error, stepKey?: string) => void,
   chunkIndexRef: { current: number },
   abortSignal: AbortSignal,
 ) {
@@ -58,9 +60,10 @@ async function consumeNdjsonStream<T, M>(
             data?: Partial<T>;
             meta?: M;
             error?: string;
+            stepKey?: string;
           };
           if (chunk.error) {
-            onError(new Error(chunk.error));
+            onError(new Error(chunk.error), chunk.stepKey);
             return;
           }
           if (chunk.index !== undefined) {
@@ -92,6 +95,7 @@ export function useWorkflowStream<T, M = unknown>(
   const [streamMeta, setStreamMeta] = useState<M | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [errorStepKey, setErrorStepKey] = useState<string | null>(null);
   /** Run id issu du POST tant que React Query n’a pas encore le `workflow_run_id` en base */
   const [pendingRunId, setPendingRunId] = useState<string | null>(null);
 
@@ -126,7 +130,10 @@ export function useWorkflowStream<T, M = unknown>(
           setStreamMeta(chunk.meta);
         }
       },
-      (err) => setError(err),
+      (err, stepKey) => {
+        setError(err);
+        setErrorStepKey(stepKey ?? null);
+      },
       chunkIndexRef,
       signal,
     );
@@ -143,6 +150,7 @@ export function useWorkflowStream<T, M = unknown>(
 
     setIsLoading(true);
     setError(null);
+    setErrorStepKey(null);
     setObject(null);
     setStreamMeta(null);
     chunkIndexRef.current = 0;
@@ -180,6 +188,7 @@ export function useWorkflowStream<T, M = unknown>(
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(err instanceof Error ? err : new Error(String(err)));
+      setErrorStepKey(null);
     } finally {
       if (delegatedToReconnect) {
         return;
@@ -214,6 +223,7 @@ export function useWorkflowStream<T, M = unknown>(
 
     setIsLoading(true);
     setError(null);
+    setErrorStepKey(null);
     setStreamMeta(null);
 
     (async () => {
@@ -242,6 +252,7 @@ export function useWorkflowStream<T, M = unknown>(
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setError(err instanceof Error ? err : new Error(String(err)));
+        setErrorStepKey(null);
       } finally {
         setIsLoading(false);
         if (!controller.signal.aborted) {
@@ -259,6 +270,7 @@ export function useWorkflowStream<T, M = unknown>(
     abortControllerRef.current?.abort();
     setIsLoading(false);
     setPendingRunId(null);
+    setErrorStepKey(null);
   }, []);
 
   // Cleanup on unmount
@@ -268,5 +280,5 @@ export function useWorkflowStream<T, M = unknown>(
     };
   }, []);
 
-  return { object, streamMeta, isLoading, error, submit, stop, activeRunId };
+  return { object, streamMeta, isLoading, error, errorStepKey, submit, stop, activeRunId };
 }

@@ -1,5 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import { queryKeys } from './keys';
+
+/** Champs diagnostic workflow renvoyés par l’API mission (phase 2 / ERR-03). */
+export type MissionWorkflowDiagnostics = {
+  workflow_last_error: WorkflowLastError | null;
+};
 
 const ACTIVE_POSITIONING_STATUSES = ['analyzing', 'generating'];
 const ACTIVE_CANDIDATE_STATUSES = ['uploaded', 'extracting'];

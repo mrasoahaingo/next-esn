@@ -12,6 +12,9 @@ import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import { useCandidate, useUpdateCandidate, useDeleteCandidate, useCancelWorkflow } from '@/lib/queries';
+import type { CandidateWorkflowDiagnostics } from '@/lib/queries/candidates';
+import { computeCvStepStates, formatStepSummaryLine } from '@/lib/workflow/compute-step-status';
+import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
@@ -55,10 +58,8 @@ export default function ReviewPage() {
   const cancelWorkflow = useCancelWorkflow();
   const router = useRouter();
 
-  const { object, streamMeta, submit, isLoading, error, stop, activeRunId } = useWorkflowStream<
-    ExtractedCV,
-    CvExtractionStreamMeta
-  >({
+  const { object, streamMeta, submit, isLoading, error, errorStepKey, stop, activeRunId } =
+    useWorkflowStream<ExtractedCV, CvExtractionStreamMeta>({
     api: '/api/extract',
     runId: candidateData?.workflow_run_id,
     runStatus: candidateData?.status,
@@ -72,11 +73,40 @@ export default function ReviewPage() {
     },
   });
 
+  const persistedWorkflowError =
+    (candidateData as CandidateWorkflowDiagnostics | undefined)?.workflow_last_error ?? null;
+
   useEffect(() => {
-    if (error) {
-      toast.error('Extraction echouee. Reessayez ou contactez le support.', { duration: 8000 });
-    }
-  }, [error]);
+    if (!error) return;
+    const key = errorStepKey ?? persistedWorkflowError?.stepKey;
+    const label = key ? getFrenchStepShortLabel('cv', key) : 'Extraction CV';
+    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
+  }, [error, errorStepKey, persistedWorkflowError?.stepKey]);
+
+  const cvWorkflowRows = useMemo(
+    () =>
+      computeCvStepStates({
+        streamMeta,
+        partialData: cvData,
+        isStreaming: isLoading,
+        errorStepKey,
+        persistedError: persistedWorkflowError,
+        workflowFailed: candidateData?.status === 'error',
+      }),
+    [
+      streamMeta,
+      cvData,
+      isLoading,
+      errorStepKey,
+      persistedWorkflowError,
+      candidateData?.status,
+    ],
+  );
+
+  const cvWorkflowSummary = useMemo(
+    () => formatStepSummaryLine('cv', cvWorkflowRows),
+    [cvWorkflowRows],
+  );
 
   const isExtractionWorkflowActive =
     isLoading || candidateData?.status === 'extracting';
@@ -504,7 +534,13 @@ export default function ReviewPage() {
           </div>
 
           {/* Extraction progress */}
-          <ExtractionProgress data={cvData} isStreaming={isLoading} streamMeta={streamMeta} />
+          <ExtractionProgress
+            data={cvData}
+            isStreaming={isLoading}
+            streamMeta={streamMeta}
+            workflowStepRows={cvWorkflowRows}
+            workflowSummaryLine={cvWorkflowSummary}
+          />
         </div>
 
       </div>

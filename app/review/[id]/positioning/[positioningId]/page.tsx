@@ -15,6 +15,13 @@ import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning, useCancelWorkflow } from '@/lib/queries';
+import type { PositioningWorkflowDiagnostics } from '@/lib/queries/positionings';
+import {
+  computePositioningAnalysisStepStates,
+  computePositioningGenerateStepStates,
+  formatStepSummaryLine,
+} from '@/lib/workflow/compute-step-status';
+import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import {
@@ -178,6 +185,7 @@ export default function PositioningWizardPage() {
     submit: submitAnalysis,
     isLoading: isAnalysisLoading,
     error: analysisError,
+    errorStepKey: analysisErrorStepKey,
     stop: stopAnalysis,
     activeRunId: analysisStreamRunId,
   } = useWorkflowStream<PositioningAnalysis, PositioningAnalysisStreamMeta>({
@@ -200,6 +208,7 @@ export default function PositioningWizardPage() {
     submit: submitGenerate,
     isLoading: isGenerateLoading,
     error: generateError,
+    errorStepKey: generateErrorStepKey,
     stop: stopGenerate,
     activeRunId: generateStreamRunId,
   } = useWorkflowStream<PositioningOutput, PositioningGenerateStreamMeta>({
@@ -219,17 +228,107 @@ export default function PositioningWizardPage() {
   const analysisBusy = isServerAnalyzing || isAnalysisLoading;
   const genBusy = isServerGenerating || isGenerateLoading;
 
-  useEffect(() => {
-    if (analysisError) {
-      toast.error('Analyse echouee. Reessayez ou contactez le support.', { duration: 8000 });
-    }
-  }, [analysisError]);
+  const persistedPositioningWorkflowError =
+    (positioningData as PositioningWorkflowDiagnostics | undefined)?.workflow_last_error ?? null;
 
   useEffect(() => {
-    if (generateError) {
-      toast.error('Generation echouee. Reessayez ou contactez le support.', { duration: 8000 });
-    }
-  }, [generateError]);
+    if (!analysisError) return;
+    const key = analysisErrorStepKey ?? persistedPositioningWorkflowError?.stepKey;
+    const label = key ? getFrenchStepShortLabel('positioningAnalysis', key) : 'Analyse de matching';
+    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
+  }, [analysisError, analysisErrorStepKey, persistedPositioningWorkflowError?.stepKey]);
+
+  useEffect(() => {
+    if (!generateError) return;
+    const key = generateErrorStepKey ?? persistedPositioningWorkflowError?.stepKey;
+    const gm = generateStreamMeta?.generateMode ?? 'all';
+    const label = key ? getFrenchStepShortLabel('positioningGenerate', key, gm) : 'Génération';
+    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
+  }, [
+    generateError,
+    generateErrorStepKey,
+    persistedPositioningWorkflowError?.stepKey,
+    generateStreamMeta?.generateMode,
+  ]);
+
+  const analysisWorkflowRows = useMemo(
+    () =>
+      computePositioningAnalysisStepStates({
+        streamMeta: analysisStreamMeta,
+        partialData: analysisObject ?? analysis ?? null,
+        isStreaming: isAnalysisLoading,
+        errorStepKey: analysisErrorStepKey,
+        persistedError: persistedPositioningWorkflowError,
+        workflowFailed: positioningData?.status === 'error',
+      }),
+    [
+      analysisStreamMeta,
+      analysisObject,
+      analysis,
+      isAnalysisLoading,
+      analysisErrorStepKey,
+      persistedPositioningWorkflowError,
+      positioningData?.status,
+    ],
+  );
+
+  const analysisWorkflowSummary = useMemo(
+    () => formatStepSummaryLine('positioningAnalysis', analysisWorkflowRows),
+    [analysisWorkflowRows],
+  );
+
+  const generatePartialMerged = useMemo(
+    () =>
+      ({
+        tailoredCv: generateObject?.tailoredCv ?? tailoredCv,
+        email: generateObject?.email ?? email,
+        emailFirstContact: generateObject?.emailFirstContact ?? emailFirstContact,
+        emailBulletPoints: generateObject?.emailBulletPoints ?? emailBulletPoints,
+        candidateEmail: generateObject?.candidateEmail ?? candidateEmail,
+      }) as Partial<PositioningOutput>,
+    [
+      generateObject,
+      tailoredCv,
+      email,
+      emailFirstContact,
+      emailBulletPoints,
+      candidateEmail,
+    ],
+  );
+
+  const generateWorkflowRows = useMemo(
+    () =>
+      computePositioningGenerateStepStates({
+        streamMeta: generateStreamMeta,
+        partialData: generatePartialMerged,
+        generateMode: generateStreamMeta?.generateMode ?? 'all',
+        isStreaming: isGenerateLoading,
+        errorStepKey: generateErrorStepKey,
+        persistedError: persistedPositioningWorkflowError,
+        workflowFailed: positioningData?.status === 'error',
+      }),
+    [
+      generateStreamMeta,
+      generatePartialMerged,
+      isGenerateLoading,
+      generateErrorStepKey,
+      persistedPositioningWorkflowError,
+      positioningData?.status,
+    ],
+  );
+
+  const generateWorkflowSummary = useMemo(
+    () =>
+      formatStepSummaryLine(
+        'positioningGenerate',
+        generateWorkflowRows,
+        generateStreamMeta?.generateMode ?? 'all',
+      ),
+    [generateWorkflowRows, generateStreamMeta?.generateMode],
+  );
+
+  const showAnalysisWorkflowUi = analysisBusy || positioningData?.status === 'error';
+  const showGenerateWorkflowUi = genBusy || positioningData?.status === 'error';
 
   const prevPositioningIdRef = useRef(positioningIdParam);
   useEffect(() => {
@@ -952,6 +1051,8 @@ export default function PositioningWizardPage() {
                       analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
                       hideRecruiterSnapshot
                       recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
+                      workflowStepRows={showAnalysisWorkflowUi ? analysisWorkflowRows : undefined}
+                      workflowSummaryLine={showAnalysisWorkflowUi ? analysisWorkflowSummary : undefined}
                     />
                   </div>
                 )}
@@ -975,6 +1076,12 @@ export default function PositioningWizardPage() {
                         analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
                         onRemoveRecruiterAnswerEntry={handleRemoveRecruiterAnswerEntry}
                         recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
+                        workflowStepRows={
+                          positioningData?.status === 'error' ? analysisWorkflowRows : undefined
+                        }
+                        workflowSummaryLine={
+                          positioningData?.status === 'error' ? analysisWorkflowSummary : undefined
+                        }
                       />
                     </TabsContent>
                     <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden">
@@ -999,6 +1106,8 @@ export default function PositioningWizardPage() {
                   streamMeta={generateStreamMeta}
                   onGenerateEmails={handleGenerateEmails}
                   positioningStatus={positioningData?.status}
+                  workflowStepRows={showGenerateWorkflowUi ? generateWorkflowRows : undefined}
+                  workflowSummaryLine={showGenerateWorkflowUi ? generateWorkflowSummary : undefined}
                 />
               </div>
             )}
@@ -1012,6 +1121,8 @@ export default function PositioningWizardPage() {
                   onExport={handleExport}
                   exportPending={exportPositioning.isPending}
                   positioningStatus={positioningData?.status}
+                  workflowStepRows={showGenerateWorkflowUi ? generateWorkflowRows : undefined}
+                  workflowSummaryLine={showGenerateWorkflowUi ? generateWorkflowSummary : undefined}
                 />
               </div>
             )}

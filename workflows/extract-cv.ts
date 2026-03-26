@@ -17,6 +17,8 @@ import {
   extractionSkillsStrengthsSchema,
 } from '@/lib/schema';
 import type { CvExtractionBranch, CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
+import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
+import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import mammoth from 'mammoth';
 
 type PrepareCvTextResult = {
@@ -67,7 +69,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
 
     if (downloadError) {
       console.error('Download error:', downloadError);
-      throw downloadError;
+      throw attachWorkflowStepKey(downloadError, 'transcription');
     }
 
     const arrayBuffer = await fileBlob.arrayBuffer();
@@ -79,6 +81,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
     let transcriptionUsage: LanguageModelUsage | undefined;
 
     if (isPdf) {
+      try {
       await writeLine({ meta: { phase: 'transcription', transcriptionChars: 0 } });
 
       const resolvedTx = await resolveLlmTask(supabase, {
@@ -159,8 +162,12 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
         durationMs: Date.now() - startTime,
         nextChunkIndex: chunkIndex,
       };
+    } catch (e) {
+      throw attachWorkflowStepKey(e, 'transcription');
+    }
     }
 
+    try {
     await writeLine({ meta: { phase: 'reading' } });
     const { value } = await mammoth.extractRawText({ buffer });
     cvText = value;
@@ -177,6 +184,9 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
       durationMs: Date.now() - startTime,
       nextChunkIndex: chunkIndex,
     };
+    } catch (e) {
+      throw attachWorkflowStepKey(e, 'reading');
+    }
   } finally {
     writer.releaseLock();
   }
@@ -245,48 +255,52 @@ async function parallelExtractAndStream(
     taskKey: TaskKey,
     gatewayModelId: string,
   ): Promise<void> {
-    const branchStart = Date.now();
-    const result = streamText({
-      ...llmFactualGenerationSettings,
-      model: languageModel,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-      output: Output.object({ schema, name: outputName }),
-    });
+    try {
+      const branchStart = Date.now();
+      const result = streamText({
+        ...llmFactualGenerationSettings,
+        model: languageModel,
+        system,
+        messages: [{ role: 'user', content: userContent }],
+        output: Output.object({ schema, name: outputName }),
+      });
 
-    let branchStarted = false;
+      let branchStarted = false;
 
-    for await (const partial of result.partialOutputStream) {
+      for await (const partial of result.partialOutputStream) {
+        await runLocked(async () => {
+          if (!branchStarted) {
+            branchStarted = true;
+            activeBranches.add(branch);
+          }
+          mergeExtractedPartial(acc, partial as Partial<ExtractedCV>);
+          await emit();
+        });
+      }
+
       await runLocked(async () => {
-        if (!branchStarted) {
-          branchStarted = true;
-          activeBranches.add(branch);
-        }
-        mergeExtractedPartial(acc, partial as Partial<ExtractedCV>);
+        activeBranches.delete(branch);
         await emit();
       });
+
+      const usage = await result.usage;
+      const output = await result.output;
+
+      await logAiUsage(supabase, {
+        operation: 'extraction',
+        candidateId,
+        orgId: orgId ?? undefined,
+        aiModel: gatewayModelId,
+        taskKey,
+        durationMs: Date.now() - branchStart,
+        usage,
+        inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+        outputPayload: output,
+        workflowRunId,
+      });
+    } catch (e) {
+      throw attachWorkflowStepKey(e, branch);
     }
-
-    await runLocked(async () => {
-      activeBranches.delete(branch);
-      await emit();
-    });
-
-    const usage = await result.usage;
-    const output = await result.output;
-
-    await logAiUsage(supabase, {
-      operation: 'extraction',
-      candidateId,
-      orgId: orgId ?? undefined,
-      aiModel: gatewayModelId,
-      taskKey,
-      durationMs: Date.now() - branchStart,
-      usage,
-      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
-      outputPayload: output,
-      workflowRunId,
-    });
   }
 
   try {
@@ -377,6 +391,7 @@ async function saveResult(
         status: 'reviewing',
         ai_extraction_duration_ms: result.durationMs,
         workflow_run_id: null,
+        workflow_last_error: null,
       })
       .eq('id', candidateId);
 
@@ -403,17 +418,24 @@ async function handleWorkflowError(
   recordId: string,
   table: 'candidates' | 'positionings',
   error: unknown,
+  ctx?: { stepKey?: string },
 ) {
   'use step';
 
   const supabase = getSupabase();
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const stepKey = ctx?.stepKey ?? readWorkflowStepKey(error) ?? 'unknown';
+  const workflowLastError = workflowLastErrorSchema.parse({
+    stepKey,
+    message: errorMessage,
+  });
 
   await supabase
     .from(table)
     .update({
       status: 'error',
       workflow_run_id: null,
+      workflow_last_error: workflowLastError,
     })
     .eq('id', recordId);
 
@@ -423,7 +445,12 @@ async function handleWorkflowError(
   const encoder = new TextEncoder();
   try {
     await writer.write(
-      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+      encoder.encode(
+        JSON.stringify({
+          error: errorMessage,
+          ...(stepKey !== 'unknown' ? { stepKey } : {}),
+        }) + '\n',
+      ),
     );
   } finally {
     writer.releaseLock();

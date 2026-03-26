@@ -6,6 +6,8 @@ import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, FileText, Download } from 'lucide-react';
 import { TailoredCvForm } from './TailoredCvForm';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 
 const CV_BRANCHES = ['tailoredCv'] as const;
 
@@ -48,6 +50,8 @@ interface CvGenerationStepProps {
   onExport: () => void;
   exportPending: boolean;
   positioningStatus?: string | null;
+  workflowStepRows?: StepStateRow[];
+  workflowSummaryLine?: string | null;
 }
 
 export function CvGenerationStep({
@@ -57,6 +61,8 @@ export function CvGenerationStep({
   onExport,
   exportPending,
   positioningStatus,
+  workflowStepRows,
+  workflowSummaryLine,
 }: CvGenerationStepProps) {
   const { tailoredCv, updateTailoredCvField } = usePositioningStore();
 
@@ -136,7 +142,9 @@ export function CvGenerationStep({
           </div>
         </div>
         <div className="p-4">
-          {isStreaming && !tailoredCv && generateMode === 'emails' ? (
+          {workflowStepRows && workflowStepRows.length > 0 ? (
+            <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
+          ) : isStreaming && !tailoredCv && generateMode === 'emails' ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               Cette exécution ne régénère pas le CV — ouvrez l&apos;étape « Emails » pour les propositions.
             </p>

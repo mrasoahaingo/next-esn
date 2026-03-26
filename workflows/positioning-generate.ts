@@ -33,6 +33,8 @@ import type {
   PositioningGenerateMode,
   PositioningGenerateStreamMeta,
 } from '@/lib/types/positioning-generate-stream';
+import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
+import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 
@@ -133,49 +135,53 @@ async function fetchAndGenerate(
     taskKey: TaskKey,
     gatewayModelId: string,
   ): Promise<void> {
-    const branchStart = Date.now();
-    const result = streamText({
-      ...llmFactualGenerationSettings,
-      model: languageModel,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-      output: Output.object({ schema, name: outputName }),
-    });
+    try {
+      const branchStart = Date.now();
+      const result = streamText({
+        ...llmFactualGenerationSettings,
+        model: languageModel,
+        system,
+        messages: [{ role: 'user', content: userContent }],
+        output: Output.object({ schema, name: outputName }),
+      });
 
-    let branchStarted = false;
+      let branchStarted = false;
 
-    for await (const partial of result.partialOutputStream) {
+      for await (const partial of result.partialOutputStream) {
+        await runLocked(async () => {
+          if (!branchStarted) {
+            branchStarted = true;
+            activeBranches.add(branch);
+          }
+          mergePositioningOutputPartial(acc, partial as Partial<PositioningOutput>);
+          await emit();
+        });
+      }
+
       await runLocked(async () => {
-        if (!branchStarted) {
-          branchStarted = true;
-          activeBranches.add(branch);
-        }
-        mergePositioningOutputPartial(acc, partial as Partial<PositioningOutput>);
+        activeBranches.delete(branch);
         await emit();
       });
+
+      const usage = await result.usage;
+      const output = await result.output;
+
+      await logAiUsage(supabase, {
+        operation: 'generation',
+        positioningId: positioningRowId,
+        candidateId: candidateRowId,
+        orgId: orgId ?? undefined,
+        aiModel: gatewayModelId,
+        taskKey,
+        durationMs: Date.now() - branchStart,
+        usage,
+        inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+        outputPayload: output,
+        workflowRunId,
+      });
+    } catch (e) {
+      throw attachWorkflowStepKey(e, branch);
     }
-
-    await runLocked(async () => {
-      activeBranches.delete(branch);
-      await emit();
-    });
-
-    const usage = await result.usage;
-    const output = await result.output;
-
-    await logAiUsage(supabase, {
-      operation: 'generation',
-      positioningId: positioningRowId,
-      candidateId: candidateRowId,
-      orgId: orgId ?? undefined,
-      aiModel: gatewayModelId,
-      taskKey,
-      durationMs: Date.now() - branchStart,
-      usage,
-      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
-      outputPayload: output,
-      workflowRunId,
-    });
   }
 
   try {
@@ -398,6 +404,7 @@ async function saveGeneration(
         status: 'generated',
         ai_generation_duration_ms: result.durationMs,
         workflow_run_id: null,
+        workflow_last_error: null,
       })
       .eq('id', positioningId);
   } else {
@@ -420,6 +427,7 @@ async function saveGeneration(
           status: 'generated',
           ai_generation_duration_ms: nextDuration,
           workflow_run_id: null,
+          workflow_last_error: null,
         })
         .eq('id', positioningId);
     } else {
@@ -433,6 +441,7 @@ async function saveGeneration(
           status: 'generated',
           ai_generation_duration_ms: nextDuration,
           workflow_run_id: null,
+          workflow_last_error: null,
         })
         .eq('id', positioningId);
     }
@@ -446,17 +455,24 @@ async function handleWorkflowError(
   recordId: string,
   table: 'candidates' | 'positionings',
   error: unknown,
+  ctx?: { stepKey?: string },
 ) {
   'use step';
 
   const supabase = getSupabase();
   const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  const stepKey = ctx?.stepKey ?? readWorkflowStepKey(error) ?? 'unknown';
+  const workflowLastError = workflowLastErrorSchema.parse({
+    stepKey,
+    message: errorMessage,
+  });
 
   await supabase
     .from(table)
     .update({
       status: 'error',
       workflow_run_id: null,
+      workflow_last_error: workflowLastError,
     })
     .eq('id', recordId);
 
@@ -466,7 +482,12 @@ async function handleWorkflowError(
   const encoder = new TextEncoder();
   try {
     await writer.write(
-      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+      encoder.encode(
+        JSON.stringify({
+          error: errorMessage,
+          ...(stepKey !== 'unknown' ? { stepKey } : {}),
+        }) + '\n',
+      ),
     );
   } finally {
     writer.releaseLock();
