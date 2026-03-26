@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { JobDescriptionInput } from '@/components/job-description-input';
@@ -23,11 +24,13 @@ import {
   Building2,
   FileText,
   ChevronRight,
+  ExternalLink,
   Users,
 } from 'lucide-react';
 import { PositioningMissionAnalysisInline } from '@/components/positioning-mission-analysis-inline';
 import { useMissions, useMission, useCreateMission, useCreatePositioning } from '@/lib/queries';
 import { getPositioningMatchingCtaState } from '@/lib/utils/mission-positioning-gate';
+import { cn } from '@/lib/utils';
 
 interface Mission {
   id: string;
@@ -253,11 +256,23 @@ export default function PositioningNewPage() {
                     {isSelected && (
                       <div className="border-t border-border/40 px-4 pb-4 pt-0">
                         <div className="ml-8 mt-3 rounded-lg bg-foreground/[0.04] border border-border/60 p-3">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <FileText className="h-3 w-3 text-violet/60" />
-                            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                              Fiche de poste
-                            </span>
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <FileText className="h-3 w-3 text-violet/60" />
+                              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                                Fiche de poste
+                              </span>
+                            </div>
+                            <Link
+                              href={`/positions/${mission.id}`}
+                              className={cn(
+                                buttonVariants({ variant: 'outline', size: 'sm' }),
+                                'h-7 gap-1 text-[11px]',
+                              )}
+                            >
+                              Voir la fiche
+                              <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
+                            </Link>
                           </div>
                           <JobDescriptionMarkdown
                             content={mission.job_description}
