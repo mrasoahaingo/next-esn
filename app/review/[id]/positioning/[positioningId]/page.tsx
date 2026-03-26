@@ -1,6 +1,7 @@
 'use client';
 
-import { useLayoutEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useLayoutEffect, useCallback, useState, useRef, useMemo, useEffect } from 'react';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -68,8 +69,6 @@ export default function PositioningWizardPage() {
     emailBulletPoints,
     candidateEmail,
     currentStep,
-    isAnalyzing,
-    isGenerating,
     pdfBlobUrl,
     isPdfLoading,
     originalPdfBlobUrl,
@@ -82,8 +81,6 @@ export default function PositioningWizardPage() {
     setEmailBulletPoints,
     setCandidateEmail,
     setCurrentStep,
-    setIsAnalyzing,
-    setIsGenerating,
     setOriginalPdfBlobUrl,
     setPdfBlobUrl,
     setIsPdfLoading,
@@ -98,6 +95,9 @@ export default function PositioningWizardPage() {
 
   const { data: positioningData } = usePositioning(positioningIdParam);
   const { data: candidateData } = useCandidate(candidateId);
+
+  const isServerAnalyzing = positioningData?.status === 'analyzing';
+  const isServerGenerating = positioningData?.status === 'generating';
 
   const missionRecord = positioningData?.missions as
     | { title?: string | null; company?: string | null; job_analysis?: unknown }
@@ -177,6 +177,7 @@ export default function PositioningWizardPage() {
     streamMeta: analysisStreamMeta,
     submit: submitAnalysis,
     isLoading: isAnalysisLoading,
+    error: analysisError,
     stop: stopAnalysis,
     activeRunId: analysisStreamRunId,
   } = useWorkflowStream<PositioningAnalysis, PositioningAnalysisStreamMeta>({
@@ -185,8 +186,11 @@ export default function PositioningWizardPage() {
     runStatus: positioningData?.status,
     activeStatuses: ['analyzing'],
     onFinish: () => {
-      setIsAnalyzing(false);
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      toast.success('Analyse terminee avec succes');
     },
   });
 
@@ -195,6 +199,7 @@ export default function PositioningWizardPage() {
     streamMeta: generateStreamMeta,
     submit: submitGenerate,
     isLoading: isGenerateLoading,
+    error: generateError,
     stop: stopGenerate,
     activeRunId: generateStreamRunId,
   } = useWorkflowStream<PositioningOutput, PositioningGenerateStreamMeta>({
@@ -204,8 +209,35 @@ export default function PositioningWizardPage() {
     activeStatuses: ['generating'],
     onFinish: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      toast.success('Generation terminee avec succes');
     },
   });
+
+  const analysisBusy = isServerAnalyzing || isAnalysisLoading;
+  const genBusy = isServerGenerating || isGenerateLoading;
+
+  useEffect(() => {
+    if (analysisError) {
+      toast.error('Analyse echouee. Reessayez ou contactez le support.', { duration: 8000 });
+    }
+  }, [analysisError]);
+
+  useEffect(() => {
+    if (generateError) {
+      toast.error('Generation echouee. Reessayez ou contactez le support.', { duration: 8000 });
+    }
+  }, [generateError]);
+
+  const prevPositioningIdRef = useRef(positioningIdParam);
+  useEffect(() => {
+    if (prevPositioningIdRef.current !== positioningIdParam) {
+      prevPositioningIdRef.current = positioningIdParam;
+      reset();
+    }
+  }, [positioningIdParam, reset]);
 
   // Derive time tracking from server data (no useState + layout effect sync)
   const aiAnalysisDurationMs = positioningData?.ai_analysis_duration_ms ?? null;
@@ -226,7 +258,7 @@ export default function PositioningWizardPage() {
 
   useSessionTimer({
     endpoint: `/api/positioning/${positioningIdParam}/time`,
-    enabled: isLoaded && !isAnalyzing && !isAnalysisLoading && !isGenerating && !isGenerateLoading,
+    enabled: isLoaded && !analysisBusy && !genBusy,
   });
 
   // Track the last positioning id we initialized for
@@ -267,12 +299,7 @@ export default function PositioningWizardPage() {
     }
 
     // Don't reset while we're actively streaming ou relance d'analyse (évite de réinjecter l'ancienne analyse depuis le cache)
-    if (
-      isAnalysisLoading ||
-      isGenerateLoading ||
-      isAnalyzing ||
-      positioningData.status === 'analyzing'
-    ) {
+    if (isAnalysisLoading || isGenerateLoading || isServerAnalyzing) {
       // useWorkflowStream met isGenerateLoading / isAnalysisLoading à true (POST ou reconnexion) avant que ce bloc ne tourne :
       // sans setIsLoaded, on reste sur l'écran plein « Chargement » au lieu du wizard (blocs step 1 / 2 en loading).
       if (isNewPositioning) {
@@ -347,7 +374,7 @@ export default function PositioningWizardPage() {
     candidateData?.id,
     isAnalysisLoading,
     isGenerateLoading,
-    isAnalyzing,
+    isServerAnalyzing,
     setPositioningId,
     setTemplateConfig,
     setJobDescription,
@@ -394,12 +421,6 @@ export default function PositioningWizardPage() {
     setCandidateEmail,
   ]);
 
-  useLayoutEffect(() => {
-    if (!isGenerateLoading && isGenerating) {
-      setIsGenerating(false);
-    }
-  }, [isGenerateLoading, isGenerating, setIsGenerating]);
-
   // Persist answers (affinage analyse) — ne pas mélanger avec l’édition du CV
   useLayoutEffect(() => {
     if (!isLoaded) return;
@@ -414,48 +435,46 @@ export default function PositioningWizardPage() {
   useLayoutEffect(() => {
     if (!isLoaded) return;
     if (positioningData?.status !== 'draft') return;
-    if (isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading) return;
+    if (analysisBusy || genBusy) return;
     debouncedSave({ job_description: jobDescription });
   }, [
     isLoaded,
     jobDescription,
     positioningData?.status,
-    isAnalyzing,
-    isAnalysisLoading,
-    isGenerating,
-    isGenerateLoading,
+    analysisBusy,
+    genBusy,
     debouncedSave,
   ]);
 
   // Persist tailoredCv edits to DB (debounced)
   useLayoutEffect(() => {
-    if (!isLoaded || !tailoredCv || isGenerating || isGenerateLoading) return;
+    if (!isLoaded || !tailoredCv || genBusy) return;
     debouncedSave({ tailored_cv: tailoredCv });
-  }, [isLoaded, tailoredCv, isGenerating, isGenerateLoading, debouncedSave]);
+  }, [isLoaded, tailoredCv, genBusy, debouncedSave]);
 
   // Persist email edits to DB (debounced)
   useLayoutEffect(() => {
-    if (!isLoaded || !email || isGenerating || isGenerateLoading) return;
+    if (!isLoaded || !email || genBusy) return;
     debouncedSave({ email });
-  }, [isLoaded, email, isGenerating, isGenerateLoading, debouncedSave]);
+  }, [isLoaded, email, genBusy, debouncedSave]);
 
   // Persist emailFirstContact edits to DB (debounced)
   useLayoutEffect(() => {
-    if (!isLoaded || !emailFirstContact || isGenerating || isGenerateLoading) return;
+    if (!isLoaded || !emailFirstContact || genBusy) return;
     debouncedSave({ email_first_contact: emailFirstContact });
-  }, [isLoaded, emailFirstContact, isGenerating, isGenerateLoading, debouncedSave]);
+  }, [isLoaded, emailFirstContact, genBusy, debouncedSave]);
 
   // Persist emailBulletPoints edits to DB (debounced)
   useLayoutEffect(() => {
-    if (!isLoaded || !emailBulletPoints || isGenerating || isGenerateLoading) return;
+    if (!isLoaded || !emailBulletPoints || genBusy) return;
     debouncedSave({ email_bullet_points: emailBulletPoints });
-  }, [isLoaded, emailBulletPoints, isGenerating, isGenerateLoading, debouncedSave]);
+  }, [isLoaded, emailBulletPoints, genBusy, debouncedSave]);
 
   // Persist candidate email edits to DB (debounced)
   useLayoutEffect(() => {
-    if (!isLoaded || !candidateEmail || isGenerating || isGenerateLoading) return;
+    if (!isLoaded || !candidateEmail || genBusy) return;
     debouncedSave({ candidate_email: candidateEmail });
-  }, [isLoaded, candidateEmail, isGenerating, isGenerateLoading, debouncedSave]);
+  }, [isLoaded, candidateEmail, genBusy, debouncedSave]);
 
   // Reset store on unmount
   useLayoutEffect(() => {
@@ -483,7 +502,6 @@ export default function PositioningWizardPage() {
       {
         onSuccess: () => {
           setCurrentStep(1);
-          setIsAnalyzing(true);
           setAnalysis(null);
           submitAnalysis({ positioningId: positioningIdParam, answers: mergedAnswers });
           refreshMissionCards();
@@ -497,7 +515,6 @@ export default function PositioningWizardPage() {
     positioningIdParam,
     updatePositioning,
     setCurrentStep,
-    setIsAnalyzing,
     setAnalysis,
     submitAnalysis,
     refreshMissionCards,
@@ -505,7 +522,7 @@ export default function PositioningWizardPage() {
 
   const handleGenerateCv = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
-    if (isGenerating || isGenerateLoading) return;
+    if (genBusy) return;
     if (positioningData?.status === 'generating') return;
     if (updatePositioning.isPending) return;
 
@@ -519,7 +536,6 @@ export default function PositioningWizardPage() {
       { id: positioningIdParam, answers },
       {
         onSuccess: () => {
-          setIsGenerating(true);
           setTailoredCv(null);
           submitGenerate({ positioningId: positioningIdParam, answers, generateMode: 'cv' });
           refreshMissionCards();
@@ -531,18 +547,16 @@ export default function PositioningWizardPage() {
     analysis,
     positioningData?.answers,
     updatePositioning,
-    setIsGenerating,
     setTailoredCv,
     submitGenerate,
     refreshMissionCards,
-    isGenerating,
-    isGenerateLoading,
+    genBusy,
     positioningData?.status,
   ]);
 
   const handleGenerateEmails = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
-    if (isGenerating || isGenerateLoading) return;
+    if (genBusy) return;
     if (positioningData?.status === 'generating') return;
     if (updatePositioning.isPending) return;
 
@@ -556,7 +570,6 @@ export default function PositioningWizardPage() {
       { id: positioningIdParam, answers },
       {
         onSuccess: () => {
-          setIsGenerating(true);
           setEmail(null);
           setEmailFirstContact(null);
           setEmailBulletPoints(null);
@@ -571,15 +584,13 @@ export default function PositioningWizardPage() {
     analysis,
     positioningData?.answers,
     updatePositioning,
-    setIsGenerating,
     setEmail,
     setEmailFirstContact,
     setEmailBulletPoints,
     setCandidateEmail,
     submitGenerate,
     refreshMissionCards,
-    isGenerating,
-    isGenerateLoading,
+    genBusy,
     positioningData?.status,
   ]);
 
@@ -600,19 +611,17 @@ export default function PositioningWizardPage() {
 
   const positioningCancelRunId =
     positioningData?.workflow_run_id ??
-    (isGenerating || isGenerateLoading ? generateStreamRunId : analysisStreamRunId) ??
+    (genBusy ? generateStreamRunId : analysisStreamRunId) ??
     null;
 
   const handleCancelWorkflow = useCallback(() => {
     const runId = positioningCancelRunId;
     if (!runId) return;
-    const isAnalyzingNow = isAnalyzing || isAnalysisLoading;
+    const isAnalyzingNow = analysisBusy;
     if (isAnalyzingNow) {
       stopAnalysis();
-      setIsAnalyzing(false);
     } else {
       stopGenerate();
-      setIsGenerating(false);
     }
     cancelWorkflow.mutate({
       runId,
@@ -623,18 +632,15 @@ export default function PositioningWizardPage() {
   }, [
     positioningCancelRunId,
     positioningIdParam,
-    isAnalyzing,
-    isAnalysisLoading,
+    analysisBusy,
     stopAnalysis,
     stopGenerate,
-    setIsAnalyzing,
-    setIsGenerating,
     cancelWorkflow,
   ]);
 
   // Navigation
-  const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
-  const analysisComplete = !!analysis?.matchScore && !isAnalyzing && !isAnalysisLoading;
+  const isStreaming = analysisBusy || genBusy;
+  const analysisComplete = !!analysis?.matchScore && !analysisBusy;
 
   const canGoToStep = (step: 1 | 2 | 3) => {
     if (isStreaming) return false;
@@ -737,7 +743,7 @@ export default function PositioningWizardPage() {
                   <div className="flex items-center gap-2 rounded-lg border border-violet/20 bg-violet/10 px-3 py-1.5">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-violet" />
                     <span className="text-xs font-medium text-violet">
-                      {isAnalyzing || isAnalysisLoading ? 'Analyse en cours...' : 'Génération en cours...'}
+                      {analysisBusy ? 'Analyse en cours...' : 'Génération en cours...'}
                     </span>
                   </div>
                   {positioningCancelRunId && (
@@ -760,7 +766,7 @@ export default function PositioningWizardPage() {
               )}
             </div>
             {/* Key metrics — score + fiabilité, compétences + lacunes */}
-            {analysis?.matchScore != null && !isAnalyzing && !isAnalysisLoading && (
+            {analysis?.matchScore != null && !analysisBusy && (
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
                   <div className="flex items-center gap-2">
@@ -915,13 +921,14 @@ export default function PositioningWizardPage() {
             {currentStep === 1 && (
               <div className="flex flex-col min-h-0 gap-3 h-full">
                 {/* Job description — editable before analysis, read-only after */}
-                {(isAnalyzing || isAnalysisLoading || analysisComplete) ? (
+                {(analysisBusy || analysisComplete) ? (
                   <JobInput
                     jobDescription={jobDescription}
                     onJobDescriptionChange={setJobDescription}
                     onAnalyze={handleReAnalyze}
                     onReAnalyze={analysisComplete ? handleReAnalyze : undefined}
-                    isAnalyzing={isAnalyzing || isAnalysisLoading}
+                    isAnalyzing={analysisBusy}
+                    positioningStatus={positioningData?.status}
                     readOnly
                     missionHeadline={missionHeadlineForUi}
                   />
@@ -930,16 +937,17 @@ export default function PositioningWizardPage() {
                     jobDescription={jobDescription}
                     onJobDescriptionChange={setJobDescription}
                     onAnalyze={handleReAnalyze}
-                    isAnalyzing={isAnalyzing || isAnalysisLoading}
+                    isAnalyzing={analysisBusy}
+                    positioningStatus={positioningData?.status}
                   />
                 )}
 
                 {/* Analysis results during streaming — no tabs yet */}
-                {(isAnalyzing || isAnalysisLoading) && (
+                {analysisBusy && (
                   <div className="flex-1 overflow-y-auto">
                     <AnalysisView
                       analysis={analysis}
-                      isAnalyzing={isAnalyzing || isAnalysisLoading}
+                      isAnalyzing={analysisBusy}
                       streamMeta={analysisStreamMeta}
                       analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
                       hideRecruiterSnapshot
@@ -987,9 +995,10 @@ export default function PositioningWizardPage() {
             {currentStep === 2 && (
               <div className="flex-1 overflow-y-auto">
                 <EmailsGenerationStep
-                  isStreaming={isGenerating || isGenerateLoading}
+                  isStreaming={genBusy}
                   streamMeta={generateStreamMeta}
                   onGenerateEmails={handleGenerateEmails}
+                  positioningStatus={positioningData?.status}
                 />
               </div>
             )}
@@ -997,11 +1006,12 @@ export default function PositioningWizardPage() {
             {currentStep === 3 && (
               <div className="flex-1 overflow-y-auto">
                 <CvGenerationStep
-                  isStreaming={isGenerating || isGenerateLoading}
+                  isStreaming={genBusy}
                   streamMeta={generateStreamMeta}
                   onGenerateCv={handleGenerateCv}
                   onExport={handleExport}
                   exportPending={exportPositioning.isPending}
+                  positioningStatus={positioningData?.status}
                 />
               </div>
             )}
@@ -1078,7 +1088,7 @@ export default function PositioningWizardPage() {
                   <div className="relative overflow-y-auto flex-1 bg-shell">
                     <AnalysisCharts
                       analysis={analysis}
-                      isAnalyzing={isAnalyzing || isAnalysisLoading}
+                      isAnalyzing={analysisBusy}
                     />
                   </div>
                 </>

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-26T20:48:08.110Z"
+stopped_at: Completed phase 01 — 01-02-PLAN.md implemented; optional Task 3 UAT pending
+last_updated: "2026-03-26T21:11:33.478Z"
 last_activity: 2026-03-26
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille
-**Current focus:** Phase 01 — server-contract-core-ui-reliability
+**Current focus:** Phase 02 — sub-step progress & step error attribution
 
 ## Current Position
 
-Phase: 01 (server-contract-core-ui-reliability) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
+Phase: 2 (sub-step-progress-&-step-error-attribution) — Ready to plan
+Plan: Not started
+Status: Phase 1 complete — next: plan or discuss phase 2
 Last activity: 2026-03-26
 
 Progress: [░░░░░░░░░░] 0%
@@ -77,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-26T20:48:08.107Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-03-26
+Stopped at: Phase 01 execution — code + 01-02-SUMMARY.md; run Task 3 manual UAT when convenient
 Resume file: None

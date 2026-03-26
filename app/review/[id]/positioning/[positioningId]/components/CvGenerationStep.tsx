@@ -17,11 +17,15 @@ function RegenButton({
   onClick,
   disabled,
   hasContent,
+  positioningStatus,
 }: {
   onClick: () => void;
   disabled: boolean;
   hasContent: boolean;
+  positioningStatus?: string | null;
 }) {
+  const relaunchLabel =
+    positioningStatus === 'error' ? 'Relancer la génération' : hasContent ? 'Relancer' : 'Générer';
   return (
     <Button
       type="button"
@@ -32,7 +36,7 @@ function RegenButton({
       className="shrink-0 text-violet hover:text-violet hover:bg-violet/10 h-7 px-2.5 text-xs"
     >
       <RefreshCw className="mr-1.5 h-3 w-3" />
-      {hasContent ? 'Relancer' : 'Générer'}
+      {relaunchLabel}
     </Button>
   );
 }
@@ -43,6 +47,7 @@ interface CvGenerationStepProps {
   onGenerateCv: () => void;
   onExport: () => void;
   exportPending: boolean;
+  positioningStatus?: string | null;
 }
 
 export function CvGenerationStep({
@@ -51,6 +56,7 @@ export function CvGenerationStep({
   onGenerateCv,
   onExport,
   exportPending,
+  positioningStatus,
 }: CvGenerationStepProps) {
   const { tailoredCv, updateTailoredCvField } = usePositioningStore();
 
@@ -99,7 +105,12 @@ export function CvGenerationStep({
           </div>
           <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0 ml-auto">
             {!isStreaming && (
-              <RegenButton onClick={onGenerateCv} disabled={isStreaming} hasContent={hasCv} />
+              <RegenButton
+                onClick={onGenerateCv}
+                disabled={isStreaming}
+                hasContent={hasCv}
+                positioningStatus={positioningStatus}
+              />
             )}
             <Button
               type="button"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, type ReactNode } from 'react';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Loader2, Sparkles, BookOpen, AlertTriangle, XCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -110,13 +110,22 @@ export function MissionJobAnalysis({
     runId: jobAnalyzeActive ? job_analysis_workflow_run_id ?? undefined : undefined,
     runStatus: jobAnalyzeActive ? 'extracting' : undefined,
     activeStatuses: ['extracting'],
-    onFinish: invalidate,
+    onFinish: () => {
+      invalidate();
+      toast.success('Analyse terminee avec succes');
+    },
     onStartOnly: async () => {
       await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(missionId) });
     },
   });
 
   const cancelRunId = stream.activeRunId;
+
+  useEffect(() => {
+    if (stream.error) {
+      toast.error('Analyse echouee. Reessayez ou contactez le support.', { duration: 8000 });
+    }
+  }, [stream.error]);
 
   const effectiveAnalysis = useMemo(() => {
     const raw =

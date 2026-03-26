@@ -12,7 +12,7 @@ This milestone closes execution gaps in the existing async AI workflow architect
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Server Contract & Core UI Reliability** - Fix workflow error status writes, derive button disabled state from Supabase, surface errors and success feedback, fix cache invalidation scope
+- [x] **Phase 1: Server Contract & Core UI Reliability** - Fix workflow error status writes, derive button disabled state from Supabase, surface errors and success feedback, fix cache invalidation scope
 - [ ] **Phase 2: Sub-Step Progress & Step Error Attribution** - Display per-step progress during AI runs, show individual step status badges, attribute errors to the specific step that failed
 
 ## Phase Details
@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2 plans
 Plans:
 - [x] 01-01-PLAN.md — Server contract: workflow error handlers + NDJSON error frame parsing
-- [ ] 01-02-PLAN.md — UI reliability: server-derived button state, toast feedback, cache invalidation, store reset
+- [x] 01-02-PLAN.md — UI reliability: server-derived button state, toast feedback, cache invalidation, store reset
 **UI hint**: yes
 
 ### Phase 2: Sub-Step Progress & Step Error Attribution
@@ -51,5 +51,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Server Contract & Core UI Reliability | 0/2 | Planning complete | - |
+| 1. Server Contract & Core UI Reliability | 2/2 | Complete | 2026-03-26 |
 | 2. Sub-Step Progress & Step Error Attribution | 0/TBD | Not started | - |

@@ -28,11 +28,15 @@ function RegenButton({
   onClick,
   disabled,
   hasContent,
+  positioningStatus,
 }: {
   onClick: () => void;
   disabled: boolean;
   hasContent: boolean;
+  positioningStatus?: string | null;
 }) {
+  const relaunchLabel =
+    positioningStatus === 'error' ? 'Relancer la génération' : hasContent ? 'Relancer' : 'Générer';
   return (
     <Button
       type="button"
@@ -43,7 +47,7 @@ function RegenButton({
       className="shrink-0 text-violet hover:text-violet hover:bg-violet/10 h-7 px-2.5 text-xs"
     >
       <RefreshCw className="mr-1.5 h-3 w-3" />
-      {hasContent ? 'Relancer' : 'Générer'}
+      {relaunchLabel}
     </Button>
   );
 }
@@ -52,12 +56,14 @@ interface EmailsGenerationStepProps {
   isStreaming: boolean;
   streamMeta?: PositioningGenerateStreamMeta | null;
   onGenerateEmails: () => void;
+  positioningStatus?: string | null;
 }
 
 export function EmailsGenerationStep({
   isStreaming,
   streamMeta,
   onGenerateEmails,
+  positioningStatus,
 }: EmailsGenerationStepProps) {
   const {
     email,
@@ -117,7 +123,12 @@ export function EmailsGenerationStep({
             </p>
           </div>
           {!isStreaming && (
-            <RegenButton onClick={onGenerateEmails} disabled={isStreaming} hasContent={hasEmails} />
+            <RegenButton
+              onClick={onGenerateEmails}
+              disabled={isStreaming}
+              hasContent={hasEmails}
+              positioningStatus={positioningStatus}
+            />
           )}
           {showEmailsHeaderBusy && (
             <div className="ml-2 flex items-center gap-1.5 text-xs text-violet shrink-0">

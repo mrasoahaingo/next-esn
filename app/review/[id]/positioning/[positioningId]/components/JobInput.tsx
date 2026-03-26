@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { JobDescriptionInput } from '@/components/job-description-input';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
@@ -13,6 +14,8 @@ interface JobInputProps {
   onAnalyze: () => void;
   onReAnalyze?: () => void;
   isAnalyzing: boolean;
+  /** Statut positionnement côté serveur (retry label si `error`). */
+  positioningStatus?: string | null;
   readOnly?: boolean;
   disabled?: boolean;
   /** Si défini en lecture seule, l’aperçu mission est dans le header de la page (composant ne rend rien). */
@@ -25,6 +28,7 @@ export function JobInput({
   onAnalyze,
   onReAnalyze,
   isAnalyzing,
+  positioningStatus = null,
   readOnly = false,
   disabled,
   missionHeadline = null,
@@ -112,11 +116,15 @@ export function JobInput({
           disabled={!jobDescription.trim() || isAnalyzing || disabled || isImportingFile}
         >
           {isAnalyzing ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Spinner className="mr-2 h-4 w-4" data-icon="inline-start" />
           ) : (
             <Search className="mr-2 h-4 w-4" />
           )}
-          {isAnalyzing ? 'Analyse en cours...' : 'Analyser le matching'}
+          {isAnalyzing
+            ? 'Analyse en cours...'
+            : positioningStatus === 'error'
+              ? "Relancer l'analyse"
+              : 'Analyser le matching'}
         </Button>
       </div>
     </section>

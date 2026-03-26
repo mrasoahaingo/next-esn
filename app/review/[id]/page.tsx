@@ -1,6 +1,7 @@
 'use client';
 
-import { useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import { useLayoutEffect, useCallback, useMemo, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { ExtractedCV } from '@/lib/schema';
@@ -14,10 +15,11 @@ import { useCandidate, useUpdateCandidate, useDeleteCandidate, useCancelWorkflow
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, RefreshCw, Square, Save, CheckCircle2, Trash2 } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, Square, Save, CheckCircle2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PersonalInfo } from '../components/PersonalInfo';
@@ -63,9 +65,21 @@ export default function ReviewPage() {
     activeStatuses: ['extracting'],
     onFinish: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      toast.success('Extraction terminee avec succes');
       setDirty(false);
     },
   });
+
+  useEffect(() => {
+    if (error) {
+      toast.error('Extraction echouee. Reessayez ou contactez le support.', { duration: 8000 });
+    }
+  }, [error]);
+
+  const isExtractionWorkflowActive =
+    isLoading || candidateData?.status === 'extracting';
 
   // Derive time tracking from candidateData during render (no useState + layout effect sync)
   const aiDurationMs = candidateData?.ai_extraction_duration_ms ?? null;
@@ -237,9 +251,15 @@ export default function ReviewPage() {
             <p className="text-sm">
               L&apos;extraction n&apos;a pas encore été lancée ou a été interrompue. Lancez-la pour continuer.
             </p>
-            <Button type="button" onClick={handleRetryExtraction}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Lancer l&apos;extraction
+            <Button
+              type="button"
+              onClick={handleRetryExtraction}
+              disabled={isExtractionWorkflowActive}
+            >
+              {isExtractionWorkflowActive && <Spinner data-icon="inline-start" />}
+              {candidateData?.status === 'error'
+                ? "Relancer l'extraction"
+                : "Lancer l'extraction"}
             </Button>
           </div>
         ) : (
@@ -497,8 +517,14 @@ export default function ReviewPage() {
             <div className="flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
               <AlertCircle className="mr-2 h-5 w-5" />
               {error.message}
-              <Button variant="ghost" size="sm" onClick={handleRetryExtraction} className="ml-auto">
-                <RefreshCw className="mr-2 h-4 w-4" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRetryExtraction}
+                disabled={isExtractionWorkflowActive}
+                className="ml-auto"
+              >
+                {isExtractionWorkflowActive && <Spinner data-icon="inline-start" />}
                 Réessayer
               </Button>
             </div>

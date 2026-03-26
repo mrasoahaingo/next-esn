@@ -979,6 +979,8 @@ function PositioningRow({
 
   const invalidateMission = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(missionId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
   };
 
   const extractStream = useWorkflowStream<Partial<ExtractedCV>, CvExtractionStreamMeta>({
@@ -986,7 +988,10 @@ function PositioningRow({
     runId: extractActive ? (candidate?.workflow_run_id ?? undefined) : undefined,
     runStatus: extractActive ? 'extracting' : undefined,
     activeStatuses: ['extracting'],
-    onFinish: invalidateMission,
+    onFinish: () => {
+      invalidateMission();
+      toast.success('Extraction terminee avec succes');
+    },
   });
 
   const analysisStream = useWorkflowStream<Partial<PositioningAnalysis>, PositioningAnalysisStreamMeta>({
@@ -994,8 +999,23 @@ function PositioningRow({
     runId: analyzeActive ? (p.workflow_run_id ?? undefined) : undefined,
     runStatus: analyzeActive ? 'analyzing' : undefined,
     activeStatuses: ['analyzing'],
-    onFinish: invalidateMission,
+    onFinish: () => {
+      invalidateMission();
+      toast.success('Analyse terminee avec succes');
+    },
   });
+
+  useEffect(() => {
+    if (extractStream.error) {
+      toast.error('Extraction echouee. Reessayez ou contactez le support.', { duration: 8000 });
+    }
+  }, [extractStream.error]);
+
+  useEffect(() => {
+    if (analysisStream.error) {
+      toast.error('Analyse echouee. Reessayez ou contactez le support.', { duration: 8000 });
+    }
+  }, [analysisStream.error]);
 
   const extractCancelRunId = candidate?.workflow_run_id ?? extractStream.activeRunId ?? null;
   const analyzeCancelRunId = p.workflow_run_id ?? analysisStream.activeRunId ?? null;
