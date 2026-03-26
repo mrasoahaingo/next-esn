@@ -617,7 +617,7 @@ export function UnifiedSidebar() {
                           {/* Nested positionings */}
                           {isExpanded && (
                             <div className="ml-6 mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-border/60 pl-2">
-                              {cvPositionings.map((p) => {
+                              {cvPositionings.sort((a, b) => (b.analysis?.matchScore ?? 0) - (a.analysis?.matchScore ?? 0)).map((p) => {
                                 const label = p.missions?.title ?? p.job_description.trim().split('\n')[0].slice(0, 40);
                                 const pst = posStatusConfig[p.status] ?? { label: 'Brouillon', variant: 'secondary' as const };
                                 const matchScore = p.analysis?.matchScore;
@@ -845,7 +845,7 @@ export function UnifiedSidebar() {
 
                           {isMissionExpanded && (
                             <div className="ml-6 mt-0.5 mb-1 flex flex-col gap-0.5 border-l border-border/60 pl-2">
-                              {missionPositionings.map((p) => {
+                              {missionPositionings.sort((a, b) => (b.analysis?.matchScore ?? 0) - (a.analysis?.matchScore ?? 0)).map((p) => {
                                 const candName = getPositioningCandidateName(p);
                                 const pst =
                                   posStatusConfig[p.status] ?? {

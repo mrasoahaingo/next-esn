@@ -901,7 +901,7 @@ function CompareCvsModal({
             </div>
             {/* Candidate color legend */}
             <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 md:border-t-0 md:border-l md:border-overlay/10 md:pl-6 md:pt-0">
-              {positionings.map((p, i) => (
+              {positionings.sort((a, b) => (b.analysis?.matchScore ?? 0) - (a.analysis?.matchScore ?? 0)).map((p, i) => (
                 <span key={p.id} className="flex items-center gap-1.5 text-[11px] text-foreground/55">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: CANDIDATE_COLORS[i].stroke }} />
                   {getCandidateName(p.candidates).split(' ')[0]}
@@ -928,7 +928,7 @@ function CompareCvsModal({
             </div>
           ) : (
             <div className={`grid gap-4 items-start pt-4 ${gridCols}`}>
-              {positionings.map((p, i) => (
+              {positionings.sort((a, b) => (b.analysis?.matchScore ?? 0) - (a.analysis?.matchScore ?? 0)).map((p, i) => (
                 <CandidateCompareColumn
                   key={p.id}
                   p={p}
@@ -1370,7 +1370,7 @@ export default function PositionDetailPage() {
   const ready = positionings.filter((p) => READY_STATUSES.has(p.status));
 
   const existingCandidateIds = useMemo(
-    () => new Set(positionings.map((p) => p.candidate_id)),
+    () => new Set(positionings.sort((a, b) => (b.analysis?.matchScore ?? 0) - (a.analysis?.matchScore ?? 0)).map((p) => p.candidate_id)),
     [positionings]
   );
 

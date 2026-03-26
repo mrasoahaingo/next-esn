@@ -87,7 +87,7 @@ export function PositioningListSidebar() {
           </div>
         ) : (
           <div className="flex flex-col gap-0.5">
-            {positionings.map((p) => {
+            {positionings.sort((a, b) => (b.analysis?.matchScore ?? 0) - (a.analysis?.matchScore ?? 0)).map((p) => {
               const candidateName = getCandidateName(p);
               const jobTitle = getPositioningLabel(p);
               const st = statusConfig[p.status] ?? statusConfig.draft;
