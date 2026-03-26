@@ -567,7 +567,7 @@ export function UnifiedSidebar() {
                             >
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="truncate text-xs text-white font-bold">{name}</span>
+                                  <span className="truncate text-xs text-foreground font-bold">{name}</span>
                                   <Badge
                                     variant={st.variant}
                                     className="shrink-0 text-[9px] px-1 py-0 leading-tight"
