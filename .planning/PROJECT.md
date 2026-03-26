@@ -20,62 +20,45 @@ L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il
 - ✓ Dashboard avec statistiques (scores, compétences) — existing
 - ✓ Export CV en PDF — existing
 - ✓ Suivi des coûts IA (ai_usage_log) — existing
+- ✓ Boutons de génération IA désactivés pendant un workflow ; état dérivé du serveur — v1.0
+- ✓ Progression par sous-étape et badges par étape ; erreurs attribuées à l’étape — v1.0
+- ✓ Erreurs workflow remontées à l’UI avec messages actionnables — v1.0
+- ✓ Synchro React Query + reset store positionnement sur changement de contexte — v1.0
 
 ### Active
 
-- [ ] Les boutons de génération IA sont désactivés pendant qu'un workflow tourne — empêcher les doublons
-- [ ] Chaque workflow IA affiche un état de progression clair (pending → running → done/error)
-- [ ] Les erreurs de workflow remontent à l'UI avec un message compréhensible
-- [ ] Le state UI (React Query + Zustand) se synchronise correctement avec l'état réel des workflows
-- [ ] Les sous-workflows (étapes intermédiaires visibles dans l'UI) affichent leur progression individuelle
-- [ ] Aucun crash silencieux — toute erreur est visible par l'utilisateur
+- [ ] Prochaine milestone : à définir (`/gsd-new-milestone`) — ex. latence Realtime, résilience partielle (voir `REQUIREMENTS.md` v2 candidates)
 
 ### Out of Scope
 
-- Nouvelles features (matching avancé, CRM, notifications) — on fiabilise d'abord l'existant
-- Refonte UX complète — on corrige la synchro, pas le design
-- Tests automatisés — dette identifiée mais hors scope de ce milestone
-- Refactoring de la structure (split des gros fichiers) — hors scope sauf si nécessaire pour corriger un bug
+- Nouvelles features métier lourdes (matching avancé, CRM, notifications) — prioriser la fiabilité jusqu’à décision produit
+- Refonte UX complète — hors scope sauf décision milestone
+- Tests automatisés — dette connue
+- Refactoring structurel global — hors scope sauf besoin bugfix
 
 ## Context
 
-- App brownfield Next.js 16 + React 19 + Supabase + Clerk + Vercel AI SDK + Gemini 2.5 Flash
-- 3 workflows IA principaux : extraction CV, analyse mission, positionnement — chacun avec des sous-étapes
-- Le workflow runtime est en beta (`@workflow/next 4.0.1-beta`) — source potentielle d'instabilité
-- Le store Zustand du positionnement est complexe (25+ champs) et fragile
-- Les patterns d'erreurs sont inconsistants entre les routes API (mix throw/safeParse/catch silencieux)
-- Aucun test existant dans la codebase
-- Codebase map complète disponible dans `.planning/codebase/`
+- Stack : Next.js 16, React 19, Supabase, Clerk, Vercel AI SDK, `@workflow/next` beta
+- v1.0 fiabilité : statuts workflow persistés, flux NDJSON avec erreurs structurées, UI alignée sur Supabase, `workflow_last_error` + progression par étape
+- Carte codebase : `.planning/codebase/`
 
 ## Constraints
 
-- **Tech stack**: Next.js 16 + Supabase + Clerk + Vercel AI SDK — pas de changement de stack
-- **Workflow runtime**: `@workflow/next` beta — travailler avec ses limitations, pas le remplacer
-- **Scope**: Fiabilisation uniquement — pas de nouvelles features fonctionnelles
+- **Tech stack** : Next.js 16 + Supabase + Clerk + Vercel AI SDK — pas de changement de stack imposé
+- **Workflow runtime** : `@workflow/next` beta — travailler avec ses limites
+- **Scope** : éviter les features fonctionnelles non planifiées en milestone
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Focus fiabilité avant features | L'UX de base doit être solide avant d'ajouter des fonctionnalités | — Pending |
-| Garder le workflow runtime beta | Pas d'alternative mature équivalente, on travaille avec | — Pending |
+| Focus fiabilité avant features | L’UX de base doit être solide | ✓ v1.0 — workflows et UI alignés sur la vérité serveur |
+| Garder le workflow runtime beta | Pas d’alternative mature équivalente | ✓ Accepté — handlers d’erreur + persistance compensent |
+| `handleWorkflowError` colocalisé par fichier | Orchestrateurs `@workflow/next` | ✓ Statuts `error` + `workflow_last_error` cohérents |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd:transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd:complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
-*Last updated: 2026-03-26 after initialization*
+*Last updated: 2026-03-26 after v1.0 AI Workflow Reliability milestone*
