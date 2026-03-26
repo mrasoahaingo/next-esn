@@ -33,6 +33,7 @@ interface UseWorkflowStreamReturn<T, M = unknown> {
 async function consumeNdjsonStream<T, M>(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onChunk: (chunk: { data?: Partial<T>; meta?: M }) => void,
+  onError: (error: Error) => void,
   chunkIndexRef: { current: number },
   abortSignal: AbortSignal,
 ) {
@@ -56,7 +57,12 @@ async function consumeNdjsonStream<T, M>(
             index?: number;
             data?: Partial<T>;
             meta?: M;
+            error?: string;
           };
+          if (chunk.error) {
+            onError(new Error(chunk.error));
+            return;
+          }
           if (chunk.index !== undefined) {
             chunkIndexRef.current = chunk.index;
           }
@@ -120,6 +126,7 @@ export function useWorkflowStream<T, M = unknown>(
           setStreamMeta(chunk.meta);
         }
       },
+      (err) => setError(err),
       chunkIndexRef,
       signal,
     );

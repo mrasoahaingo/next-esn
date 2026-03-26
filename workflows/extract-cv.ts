@@ -399,26 +399,64 @@ async function runMissionAnalysesAfterExtract(candidateId: string) {
   await triggerMissionAnalysesAfterExtract(supabase, candidateId);
 }
 
+async function handleWorkflowError(
+  recordId: string,
+  table: 'candidates' | 'positionings',
+  error: unknown,
+) {
+  'use step';
+
+  const supabase = getSupabase();
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+  await supabase
+    .from(table)
+    .update({
+      status: 'error',
+      workflow_run_id: null,
+    })
+    .eq('id', recordId);
+
+  // Write error frame to NDJSON stream so connected clients see it
+  const writable = getWritable<Uint8Array>();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  try {
+    await writer.write(
+      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+    );
+  } finally {
+    writer.releaseLock();
+    await writable.close();
+  }
+}
+handleWorkflowError.maxRetries = 0;
+
 export async function extractCvWorkflow(candidateId: string, jobDescription?: string) {
   'use workflow';
 
-  const prep = await prepareCvText(candidateId);
-  const ext = await parallelExtractAndStream(
-    candidateId,
-    prep.cvText,
-    jobDescription,
-    prep.nextChunkIndex,
-    prep.orgId,
-    prep.workflowRunId,
-  );
+  try {
+    const prep = await prepareCvText(candidateId);
+    const ext = await parallelExtractAndStream(
+      candidateId,
+      prep.cvText,
+      jobDescription,
+      prep.nextChunkIndex,
+      prep.orgId,
+      prep.workflowRunId,
+    );
 
-  const result = {
-    object: ext.object,
-    durationMs: prep.durationMs + ext.durationMs,
-    orgId: prep.orgId,
-  };
+    const result = {
+      object: ext.object,
+      durationMs: prep.durationMs + ext.durationMs,
+      orgId: prep.orgId,
+    };
 
-  await saveResult(candidateId, result);
-  await runMissionAnalysesAfterExtract(candidateId);
-  return result.object;
+    await saveResult(candidateId, result);
+    await runMissionAnalysesAfterExtract(candidateId);
+    return result.object;
+  } catch (error) {
+    await handleWorkflowError(candidateId, 'candidates', error);
+    throw error;
+  }
 }
