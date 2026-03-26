@@ -43,7 +43,12 @@ Archive : `.planning/milestones/v1.0-ROADMAP.md`
 2. La mission concernée montre un état « analyse en cours » puis « prête » ou « erreur » de façon lisible sans ouvrir une autre page.
 3. Le bouton ou lien de positionnement pour cette mission est désactivé ou absent tant que l’analyse n’a pas réussi ; il s’active automatiquement quand le statut serveur le permet.
 
-**Plans** : TBD (viser 2 plans : comportement navigation + état UI / queries)
+**Plans** : 2 plans
+
+Plans:
+
+- [ ] `03-01-PLAN.md` — FLOW-01 : audit navigation hub positionnement (pas de redirection obligatoire vers `/positions/[id]`) + commentaire d’invariant
+- [ ] `03-02-PLAN.md` — FLOW-02 + FLOW-03 : `useMission` sélection, bloc inline analyse (`WorkflowStepList`), gating CTA « Analyser le matching » + `aria-describedby`
 
 **UI hint** : yes
 
@@ -92,6 +97,6 @@ Archive : `.planning/milestones/v1.0-ROADMAP.md`
 | Phase | Milestone | Plans complete | Status | Completed |
 | ----- | --------- | ---------------- | ------ | --------- |
 | 1–2 | v1.0 | 5/5 | Complete | 2026-03-26 |
-| 3 | v1.1 | 0/TBD | Not started | — |
+| 3 | v1.1 | 0/2 | Not started | — |
 | 4 | v1.1 | 0/TBD | Not started | — |
 | 5 | v1.1 | 0/TBD | Not started | — |
