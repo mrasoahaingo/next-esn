@@ -4,8 +4,8 @@ import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import { Upload, Loader2, FileUp, PenLine } from 'lucide-react';
 import { toast } from 'sonner';
+import { MarkdownEditor } from '@/components/markdown-editor';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +55,20 @@ export function JobDescriptionInput({
   );
   const [isExtracting, setIsExtracting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  const handleMarkdownChange = useCallback(
+    (md: string) => {
+      if (md.length > MAX_JOB_DESCRIPTION_CHARS) {
+        onChange(md.slice(0, MAX_JOB_DESCRIPTION_CHARS));
+        toast.warning(
+          `Texte tronqué à ${MAX_JOB_DESCRIPTION_CHARS.toLocaleString('fr-FR')} caractères (limite fiche de poste).`,
+        );
+        return;
+      }
+      onChange(md);
+    },
+    [onChange],
+  );
 
   const applyExtractedText = useCallback(
     (raw: string) => {
@@ -199,14 +213,20 @@ export function JobDescriptionInput({
         </TabsContent>
 
         <TabsContent value="manual" className="mt-0 flex flex-col gap-1.5 data-[state=inactive]:hidden">
-          <Textarea
-            id={id}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className={cn('text-sm', textareaClassName)}
-            disabled={disabled || isExtracting}
-          />
+          {mode === 'manual' ? (
+            <MarkdownEditor
+              id={id}
+              value={value}
+              onChange={handleMarkdownChange}
+              disabled={disabled || isExtracting}
+              placeholder={placeholder}
+              className="border-overlay/15 bg-panel/30"
+              editorClassName={cn(
+                'overflow-y-auto text-sm',
+                textareaClassName,
+              )}
+            />
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>

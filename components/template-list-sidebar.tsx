@@ -41,7 +41,7 @@ export function TemplateListSidebar() {
   };
 
   return (
-    <aside className="flex h-screen w-72 flex-col border-r border-border bg-panel">
+    <aside className="flex h-full min-h-0 w-72 shrink-0 flex-col border-r border-border bg-panel">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-foreground">Templates</h2>
         <Button

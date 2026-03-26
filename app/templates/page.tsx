@@ -20,10 +20,11 @@ export default function TemplatesPage() {
               <EmptyMedia variant="icon">
                 <Palette />
               </EmptyMedia>
-              <EmptyTitle>Sélectionne un template ou crée-en un nouveau</EmptyTitle>
+              <EmptyTitle>Sélectionne un gabarit ou crée-en un nouveau</EmptyTitle>
               <EmptyDescription>
-                Les templates définissent couleurs, logo, pied de page, ordre des sections et préfixe
-                d&apos;export PDF
+                Les gabarits définissent couleurs, logo, pied de page, ordre des sections et préfixe
+                d&apos;export PDF. Utilise le bouton + dans la colonne « Templates » à gauche pour en
+                créer un, puis clique sur son nom pour l&apos;éditer.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

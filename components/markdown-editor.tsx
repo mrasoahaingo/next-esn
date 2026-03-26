@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useLayoutEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
 import Placeholder from '@tiptap/extension-placeholder';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,9 @@ import {
   List,
   ListOrdered,
   Quote,
+  Table,
 } from 'lucide-react';
+import { markdownDisplay, markdownEditorContentClass } from '@/lib/markdown-display-classes';
 import { cn } from '@/lib/utils';
 
 function ToolbarButton({
@@ -60,7 +63,7 @@ export type MarkdownEditorProps = {
 
 /**
  * Éditeur riche avec persistance **Markdown** (Tiptap + @tiptap/markdown).
- * Gras, italique, titres ##, listes, citation.
+ * Gras, italique, titres ##, listes, citation, tableaux GFM.
  */
 export function MarkdownEditor({
   value,
@@ -75,6 +78,30 @@ export function MarkdownEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
+      TableKit.configure({
+        table: {
+          // Table non redimensionnable : pas de TableView → pas de .tableWrapper par défaut ; requis pour le même cadre arrondi que la fiche.
+          renderWrapper: true,
+          HTMLAttributes: {
+            class: markdownDisplay.table,
+          },
+        },
+        tableCell: {
+          HTMLAttributes: {
+            class: cn(markdownDisplay.td, '[&_p]:my-0'),
+          },
+        },
+        tableHeader: {
+          HTMLAttributes: {
+            class: cn(markdownDisplay.th, '[&_p]:my-0'),
+          },
+        },
+        tableRow: {
+          HTMLAttributes: {
+            class: '',
+          },
+        },
+      }),
       Markdown.configure({
         markedOptions: { gfm: true, breaks: true },
       }),
@@ -85,11 +112,7 @@ export function MarkdownEditor({
     editable: !disabled,
     editorProps: {
       attributes: {
-        class: cn(
-          'prose prose-sm max-w-none min-h-[180px] px-3 py-2 text-foreground focus:outline-none dark:prose-invert',
-          '[&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5',
-          editorClassName,
-        ),
+        class: cn(markdownEditorContentClass, editorClassName),
       },
     },
     onUpdate: ({ editor: ed }) => {
@@ -167,6 +190,16 @@ export function MarkdownEditor({
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
           >
             <Quote className="h-4 w-4" />
+          </ToolbarButton>
+          <div className="mx-1 h-4 w-px bg-border" />
+          <ToolbarButton
+            active={editor.isActive('table')}
+            disabled={disabled}
+            onClick={() =>
+              editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+            }
+          >
+            <Table className="h-4 w-4" />
           </ToolbarButton>
         </div>
       ) : null}
