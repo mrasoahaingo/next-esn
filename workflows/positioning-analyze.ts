@@ -352,10 +352,48 @@ async function saveAnalysis(
   await writable.close();
 }
 
+async function handleWorkflowError(
+  recordId: string,
+  table: 'candidates' | 'positionings',
+  error: unknown,
+) {
+  'use step';
+
+  const supabase = getSupabase();
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+  await supabase
+    .from(table)
+    .update({
+      status: 'error',
+      workflow_run_id: null,
+    })
+    .eq('id', recordId);
+
+  // Write error frame to NDJSON stream so connected clients see it
+  const writable = getWritable<Uint8Array>();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  try {
+    await writer.write(
+      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+    );
+  } finally {
+    writer.releaseLock();
+    await writable.close();
+  }
+}
+handleWorkflowError.maxRetries = 0;
+
 export async function positioningAnalyzeWorkflow(positioningId: string) {
   'use workflow';
 
-  const result = await fetchAndAnalyze(positioningId);
-  await saveAnalysis(positioningId, result);
-  return result.object;
+  try {
+    const result = await fetchAndAnalyze(positioningId);
+    await saveAnalysis(positioningId, result);
+    return result.object;
+  } catch (error) {
+    await handleWorkflowError(positioningId, 'positionings', error);
+    throw error;
+  }
 }

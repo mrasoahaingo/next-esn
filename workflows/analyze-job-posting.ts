@@ -258,10 +258,43 @@ async function saveJobPostingAnalysis(
   await writable.close();
 }
 
+async function handleWorkflowError(
+  missionId: string,
+  error: unknown,
+) {
+  'use step';
+
+  const supabase = getSupabase();
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+  await supabase
+    .from('missions')
+    .update({ job_analysis_workflow_run_id: null })
+    .eq('id', missionId);
+
+  const writable = getWritable<Uint8Array>();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  try {
+    await writer.write(
+      encoder.encode(JSON.stringify({ error: errorMessage }) + '\n'),
+    );
+  } finally {
+    writer.releaseLock();
+    await writable.close();
+  }
+}
+handleWorkflowError.maxRetries = 0;
+
 export async function analyzeJobPostingWorkflow(missionId: string) {
   'use workflow';
 
-  const result = await fetchAndAnalyze(missionId);
-  await saveJobPostingAnalysis(missionId, result);
-  return result.object;
+  try {
+    const result = await fetchAndAnalyze(missionId);
+    await saveJobPostingAnalysis(missionId, result);
+    return result.object;
+  } catch (error) {
+    await handleWorkflowError(missionId, error);
+    throw error;
+  }
 }
