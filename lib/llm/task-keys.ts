@@ -14,6 +14,7 @@ export const TASK_KEY = {
   POSITIONING_ANALYSIS_SYNTHESIS: 'positioning.analysis.synthesis',
 
   POSITIONING_GENERATE_TAILORED_CV: 'positioning.generate.tailoredCv',
+  POSITIONING_GENERATE_EXPERTISE_CONFIRMATIONS: 'positioning.generate.expertiseConfirmations',
   POSITIONING_GENERATE_EMAIL: 'positioning.generate.email',
   POSITIONING_GENERATE_EMAIL_FIRST_CONTACT: 'positioning.generate.emailFirstContact',
   POSITIONING_GENERATE_EMAIL_BULLETS: 'positioning.generate.emailBullets',
@@ -21,6 +22,8 @@ export const TASK_KEY = {
 
   MISSION_JOB_POSTING_EXECUTIVE: 'mission.jobPosting.executive',
   MISSION_JOB_POSTING_KEY_POINTS: 'mission.jobPosting.keyPoints',
+  /** Audit : run workflow annulé (doublon, autre requête a gagné le claim). */
+  MISSION_JOB_POSTING_WORKFLOW_DEDUP: 'mission.jobPosting.workflowDedup',
   MISSION_KEY_POINT_EXPLAIN: 'mission.keyPoint.explain',
 } as const;
 

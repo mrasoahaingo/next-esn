@@ -17,6 +17,11 @@ export type ModelPricingUsd = {
 
 /** Clés = valeur exacte de `ai_model` en base */
 export const MODEL_PRICING_USD: Record<string, ModelPricingUsd> = {
+  /** Lignes d’audit sans appel modèle (ex. run workflow annulé car doublon). */
+  'workflow/no-llm': {
+    inputUsdPer1M: 0,
+    outputUsdPer1M: 0,
+  },
   'google/gemini-2.5-flash': {
     // Ordre de grandeur type « Flash » — à ajuster selon la facturation réelle
     inputUsdPer1M: 0.075,

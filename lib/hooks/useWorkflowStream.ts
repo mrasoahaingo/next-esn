@@ -18,6 +18,11 @@ interface UseWorkflowStreamReturn<T, M = unknown> {
   error: Error | null;
   submit: (body: Record<string, unknown>) => void;
   stop: () => void;
+  /**
+   * Run workflow courant : `runId` serveur (props) ou id lu sur la réponse POST tant que la ligne
+   * n’est pas encore rafraîchie — permet d’afficher « Annuler » pendant tout le flux.
+   */
+  activeRunId: string | null;
 }
 
 async function consumeNdjsonStream<T, M>(
@@ -73,6 +78,8 @@ export function useWorkflowStream<T, M = unknown>(
   const [streamMeta, setStreamMeta] = useState<M | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  /** Run id issu du POST tant que React Query n’a pas encore le `workflow_run_id` en base */
+  const [pendingRunId, setPendingRunId] = useState<string | null>(null);
 
   const chunkIndexRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -81,6 +88,9 @@ export function useWorkflowStream<T, M = unknown>(
 
   // Track whether we already attempted reconnection for this runId
   const reconnectedRunIdRef = useRef<string | null>(null);
+
+  /** En priorité le run issu du POST en cours : le cache React Query peut encore avoir un ancien `workflow_run_id`. */
+  const activeRunId = pendingRunId ?? runId ?? null;
 
   const startConsuming = useCallback(async (
     response: Response,
@@ -131,13 +141,19 @@ export function useWorkflowStream<T, M = unknown>(
         throw new Error(err.error ?? `HTTP ${response.status}`);
       }
 
+      const headerRunId = response.headers.get('x-workflow-run-id')?.trim();
+      if (headerRunId) {
+        setPendingRunId(headerRunId);
+      }
+
       await startConsuming(response, controller.signal);
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(err instanceof Error ? err : new Error(String(err)));
     } finally {
+      setIsLoading(false);
+      setPendingRunId(null);
       if (!controller.signal.aborted) {
-        setIsLoading(false);
         onFinishRef.current?.();
       }
     }
@@ -145,7 +161,10 @@ export function useWorkflowStream<T, M = unknown>(
 
   // Reconnect to an existing workflow run on mount
   useLayoutEffect(() => {
-    if (!runId) return;
+    if (!runId) {
+      reconnectedRunIdRef.current = null;
+      return;
+    }
     if (!runStatus || !activeStatuses.includes(runStatus)) return;
     if (reconnectedRunIdRef.current === runId) return;
 
@@ -189,8 +208,8 @@ export function useWorkflowStream<T, M = unknown>(
         if (err instanceof DOMException && err.name === 'AbortError') return;
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
+        setIsLoading(false);
         if (!controller.signal.aborted) {
-          setIsLoading(false);
           onFinishRef.current?.();
         }
       }
@@ -204,6 +223,7 @@ export function useWorkflowStream<T, M = unknown>(
   const stop = useCallback(() => {
     abortControllerRef.current?.abort();
     setIsLoading(false);
+    setPendingRunId(null);
   }, []);
 
   // Cleanup on unmount
@@ -213,5 +233,5 @@ export function useWorkflowStream<T, M = unknown>(
     };
   }, []);
 
-  return { object, streamMeta, isLoading, error, submit, stop };
+  return { object, streamMeta, isLoading, error, submit, stop, activeRunId };
 }

@@ -98,6 +98,12 @@ Defined in `tailwind.config.ts` — dark-first palette with custom colors: `shel
 
 See the ./docs/FEATURES.md file
 
+### Matching CV ↔ mission (barème, récence, règles métier)
+
+**Référence normative** : `./docs/MATCHING_RULES.md` — décrit le barème mission, la fusion des branches LLM, les listes obligatoires (à clarifier / vigilance), la pondération par récence (`organization_settings.matching_weights`) et la traçabilité LLM utile au diagnostic. **Toute évolution de ces règles doit mettre à jour ce document dans le même changement.**
+
+La spécification longue et le contexte produit restent dans `./docs/REFACTO.md` ; `MATCHING_RULES.md` concentre ce qui est effectivement implémenté et attendu dans le code.
+
 ### Auth
 
 See the ./docs/AUTH.md file

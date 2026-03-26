@@ -6,11 +6,15 @@ import { respondPositioningAnalyzePost } from '@/lib/services/positioning-analyz
 export async function POST(req: NextRequest) {
   try {
     await requireOrgId();
-    const { positioningId } = await req.json();
+    const body = (await req.json()) as {
+      positioningId?: string;
+      answers?: Record<string, string>;
+    };
+    const { positioningId, answers } = body;
     if (!positioningId) throw new Error('positioningId is required');
 
     const supabase = getSupabase();
-    return await respondPositioningAnalyzePost(supabase, positioningId);
+    return await respondPositioningAnalyzePost(supabase, positioningId, answers);
   } catch (error: unknown) {
     if (error instanceof NextResponse) return error;
     console.error('Positioning analysis error:', error);

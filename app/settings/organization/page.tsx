@@ -16,8 +16,22 @@ import {
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field';
+import { Label } from '@/components/ui/label';
 import { Building2, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  DEFAULT_MATCHING_WEIGHTS,
+  mergeMatchingWeights,
+  type MatchingWeightsConfig,
+} from '@/lib/config/matching-weights';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type SettingsForm = {
   display_name: string;
@@ -25,6 +39,8 @@ type SettingsForm = {
   website_url: string;
   app_logo_url: string;
   positioning_brand_context: string;
+  matching: MatchingWeightsConfig;
+  explicitWeightsText: string;
 };
 
 const emptyForm: SettingsForm = {
@@ -33,6 +49,8 @@ const emptyForm: SettingsForm = {
   website_url: '',
   app_logo_url: '',
   positioning_brand_context: '',
+  matching: { ...DEFAULT_MATCHING_WEIGHTS },
+  explicitWeightsText: '',
 };
 
 export default function OrganizationSettingsPage() {
@@ -55,12 +73,15 @@ export default function OrganizationSettingsPage() {
     if (!settings) return;
     if (seededForOrg.current === orgId) return;
     seededForOrg.current = orgId;
+    const mw = mergeMatchingWeights(settings.matching_weights);
     setForm({
       display_name: settings.display_name ?? '',
       contact_email: settings.contact_email ?? '',
       website_url: settings.website_url ?? '',
       app_logo_url: settings.app_logo_url ?? '',
       positioning_brand_context: settings.positioning_brand_context ?? '',
+      matching: mw,
+      explicitWeightsText: mw.recencyExplicitWeights?.join(', ') ?? '',
     });
   }, [orgId, settings]);
 
@@ -83,6 +104,16 @@ export default function OrganizationSettingsPage() {
           website_url: form.website_url,
           app_logo_url: form.app_logo_url,
           positioning_brand_context: form.positioning_brand_context,
+          matching_weights: {
+            ...form.matching,
+            recencyExplicitWeights:
+              form.matching.recencyMode === 'explicit' && form.explicitWeightsText.trim()
+                ? form.explicitWeightsText
+                    .split(/[,;]+/)
+                    .map((s) => parseFloat(s.trim()))
+                    .filter((n) => !Number.isNaN(n))
+                : undefined,
+          },
         }),
       });
       if (!res.ok) {
@@ -90,6 +121,7 @@ export default function OrganizationSettingsPage() {
         throw new Error(err.error?.message ?? err.error ?? 'Erreur serveur');
       }
       const data = await res.json();
+      const mw = mergeMatchingWeights(data.matching_weights);
       setForm((prev) => ({
         ...prev,
         ...data,
@@ -98,6 +130,8 @@ export default function OrganizationSettingsPage() {
         website_url: data.website_url ?? '',
         app_logo_url: data.app_logo_url ?? '',
         positioning_brand_context: data.positioning_brand_context ?? '',
+        matching: mw,
+        explicitWeightsText: mw.recencyExplicitWeights?.join(', ') ?? '',
       }));
       toast.success('Paramètres enregistrés');
       await refetchBranding();
@@ -272,6 +306,163 @@ export default function OrganizationSettingsPage() {
                   className="min-h-[120px] resize-y text-sm"
                 />
               </Field>
+            </div>
+
+            <div className="rounded-xl glass-panel flex flex-col gap-4 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">Pondération du matching</h2>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xl">
+                    Paramètres par organisation pour l&apos;analyse CV ↔ fiche : les missions récentes peuvent
+                    compter plus que les anciennes (sortie de poste similaire, mission précédente).
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 shrink-0 text-xs"
+                  onClick={() =>
+                    setForm((p) => ({
+                      ...p,
+                      matching: { ...DEFAULT_MATCHING_WEIGHTS },
+                      explicitWeightsText: '',
+                    }))
+                  }
+                >
+                  Défauts
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between gap-4 rounded-lg border border-overlay/10 bg-overlay/[0.04] px-3 py-2">
+                <div className="space-y-0.5">
+                  <Label htmlFor="recency-enabled" className="text-sm font-medium text-foreground">
+                    Pondération par récence des expériences
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Si désactivé, aucun poids automatique par ancienneté de poste n&apos;est injecté dans les
+                    prompts.
+                  </p>
+                </div>
+                <Switch
+                  id="recency-enabled"
+                  checked={form.matching.experienceRecencyEnabled}
+                  onCheckedChange={(checked) =>
+                    setForm((p) => ({
+                      ...p,
+                      matching: { ...p.matching, experienceRecencyEnabled: checked },
+                    }))
+                  }
+                />
+              </div>
+
+              {form.matching.experienceRecencyEnabled && (
+                <div className="flex flex-col gap-4">
+                  <Field>
+                    <FieldLabel className="text-xs text-muted-foreground">Mode de calcul des poids</FieldLabel>
+                    <Select
+                      value={form.matching.recencyMode}
+                      onValueChange={(v: string | null) => {
+                        if (v === 'exponential' || v === 'explicit') {
+                          setForm((p) => ({
+                            ...p,
+                            matching: { ...p.matching, recencyMode: v },
+                          }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9 w-full max-w-md text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="exponential">Décroissance exponentielle (facteur + plancher)</SelectItem>
+                        <SelectItem value="explicit">Poids explicites par rang (liste)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+
+                  {form.matching.recencyMode === 'exponential' ? (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor="recency-decay" className="text-xs text-muted-foreground">
+                          Facteur par rang (0,1–0,99)
+                        </FieldLabel>
+                        <Input
+                          id="recency-decay"
+                          type="number"
+                          step={0.01}
+                          min={0.1}
+                          max={0.99}
+                          value={form.matching.recencyDecayPerRank}
+                          onChange={(e) => {
+                            const n = parseFloat(e.target.value);
+                            setForm((p) => ({
+                              ...p,
+                              matching: {
+                                ...p.matching,
+                                recencyDecayPerRank: Number.isNaN(n)
+                                  ? p.matching.recencyDecayPerRank
+                                  : Math.min(0.99, Math.max(0.1, n)),
+                              },
+                            }));
+                          }}
+                          className="h-9 text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Poids relatif du rang suivant (ex. 0,74 : chaque poste plus ancien vaut ~74 % du
+                          précédent).
+                        </p>
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor="recency-floor" className="text-xs text-muted-foreground">
+                          Plancher (0–1)
+                        </FieldLabel>
+                        <Input
+                          id="recency-floor"
+                          type="number"
+                          step={0.01}
+                          min={0}
+                          max={1}
+                          value={form.matching.recencyWeightFloor}
+                          onChange={(e) => {
+                            const n = parseFloat(e.target.value);
+                            setForm((p) => ({
+                              ...p,
+                              matching: {
+                                ...p.matching,
+                                recencyWeightFloor: Number.isNaN(n)
+                                  ? p.matching.recencyWeightFloor
+                                  : Math.min(1, Math.max(0, n)),
+                              },
+                            }));
+                          }}
+                          className="h-9 text-sm"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Minimum pour les postes très anciens.
+                        </p>
+                      </Field>
+                    </div>
+                  ) : (
+                    <Field>
+                      <FieldLabel htmlFor="recency-explicit" className="text-xs text-muted-foreground">
+                        Poids par rang (séparés par des virgules)
+                      </FieldLabel>
+                      <Textarea
+                        id="recency-explicit"
+                        value={form.explicitWeightsText}
+                        onChange={(e) => setForm((p) => ({ ...p, explicitWeightsText: e.target.value }))}
+                        placeholder="1, 0.85, 0.7, 0.55, 0.4"
+                        rows={3}
+                        className="font-mono text-xs resize-y min-h-[72px]"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Rang 1 = expérience la plus récente, puis poste précédent, etc. Valeurs entre 0 et 1.
+                      </p>
+                    </Field>
+                  )}
+                </div>
+              )}
             </div>
 
             <Button

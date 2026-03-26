@@ -4,6 +4,9 @@ import { serializeLlmLogPayload } from '@/lib/utils/llm-log-payload';
 
 export type AiOperation = 'extraction' | 'analysis' | 'generation';
 
+/** État enregistré avec la ligne de log (corrélation workflow / échecs). */
+export type AiUsageCallStatus = 'completed' | 'failed' | 'cancelled';
+
 export async function logAiUsage(
   supabase: SupabaseClient,
   params: {
@@ -20,6 +23,10 @@ export async function logAiUsage(
     inputPayload?: unknown;
     outputPayload?: unknown;
     workflowRunId?: string | null;
+    /** completed = appel modèle terminé normalement ; failed / cancelled pour diagnostic. */
+    callStatus?: AiUsageCallStatus;
+    /** Sous-flux parallèle (ex. executive, keyPoints pour l’analyse fiche mission). */
+    branch?: string | null;
   },
 ) {
   const {
@@ -35,6 +42,8 @@ export async function logAiUsage(
     inputPayload,
     outputPayload,
     workflowRunId,
+    callStatus = 'completed',
+    branch = null,
   } = params;
 
   await supabase.from('ai_usage_log').insert({
@@ -55,5 +64,7 @@ export async function logAiUsage(
     input_payload: inputPayload !== undefined ? serializeLlmLogPayload(inputPayload) : null,
     output_payload: outputPayload !== undefined ? serializeLlmLogPayload(outputPayload) : null,
     workflow_run_id: workflowRunId ?? null,
+    call_status: callStatus,
+    branch,
   });
 }

@@ -25,4 +25,10 @@ export function mergePositioningPartial(
   if (patch.matchSummary !== undefined) {
     acc.matchSummary = patch.matchSummary;
   }
+  if (patch.matchScoreConfidence !== undefined) {
+    acc.matchScoreConfidence = patch.matchScoreConfidence;
+  }
+  if (patch.matchScoreConfidenceNote !== undefined) {
+    acc.matchScoreConfidenceNote = patch.matchScoreConfidenceNote;
+  }
 }

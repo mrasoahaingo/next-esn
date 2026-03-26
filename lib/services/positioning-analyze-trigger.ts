@@ -1,6 +1,10 @@
 import { start, getRun } from 'workflow/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { positioningAnalyzeWorkflow } from '@/workflows/positioning-analyze';
+import {
+  mergeIncomingPositioningAnswers,
+  parsePositioningAnswers,
+} from '@/lib/services/positioning.service';
 
 type PositioningRow = {
   id: string;
@@ -67,10 +71,11 @@ export async function triggerMissionAnalysesAfterExtract(
 export async function respondPositioningAnalyzePost(
   supabase: SupabaseClient,
   positioningId: string,
+  bodyAnswers?: Record<string, string> | null,
 ): Promise<Response> {
   const { data: positioning, error: positioningError } = await supabase
     .from('positionings')
-    .select('id, status, workflow_run_id, candidate_id, candidates(status, extracted_data)')
+    .select('id, status, workflow_run_id, candidate_id, answers, candidates(status, extracted_data)')
     .eq('id', positioningId)
     .single();
 
@@ -105,6 +110,19 @@ export async function respondPositioningAnalyzePost(
       { error: "Le CV est en cours d'extraction. L'analyse du positionnement est en attente." },
       { status: 409 },
     );
+  }
+
+  const incoming = parsePositioningAnswers(bodyAnswers ?? null);
+  if (Object.keys(incoming).length > 0) {
+    const existing = parsePositioningAnswers(positioning.answers);
+    const merged = mergeIncomingPositioningAnswers(existing, incoming);
+    const { error: ansErr } = await supabase
+      .from('positionings')
+      .update({ answers: merged })
+      .eq('id', positioningId);
+    if (ansErr) {
+      return Response.json({ error: ansErr.message }, { status: 500 });
+    }
   }
 
   const run = await start(positioningAnalyzeWorkflow, [positioningId]);

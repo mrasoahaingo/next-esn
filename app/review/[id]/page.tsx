@@ -53,7 +53,7 @@ export default function ReviewPage() {
   const cancelWorkflow = useCancelWorkflow();
   const router = useRouter();
 
-  const { object, streamMeta, submit, isLoading, error, stop } = useWorkflowStream<
+  const { object, streamMeta, submit, isLoading, error, stop, activeRunId } = useWorkflowStream<
     ExtractedCV,
     CvExtractionStreamMeta
   >({
@@ -162,8 +162,10 @@ export default function ReviewPage() {
     submit({ candidateId: params?.id });
   }, [setCvData, submit, params?.id]);
 
+  const extractionCancelRunId = candidateData?.workflow_run_id ?? activeRunId;
+
   const handleCancelExtraction = useCallback(() => {
-    const runId = candidateData?.workflow_run_id;
+    const runId = extractionCancelRunId;
     if (!runId) return;
     stop();
     cancelWorkflow.mutate({
@@ -172,10 +174,10 @@ export default function ReviewPage() {
       recordId: candidateId,
       resetStatus: 'uploaded',
     });
-  }, [candidateData?.workflow_run_id, candidateId, stop, cancelWorkflow]);
+  }, [extractionCancelRunId, candidateId, stop, cancelWorkflow]);
 
   const handleDelete = useCallback(() => {
-    const runId = candidateData?.workflow_run_id;
+    const runId = candidateData?.workflow_run_id ?? activeRunId;
     if (runId && isLoading) {
       stop();
       cancelWorkflow.mutate({
@@ -188,7 +190,7 @@ export default function ReviewPage() {
     deleteCandidate.mutate(candidateId, {
       onSuccess: () => router.push('/'),
     });
-  }, [candidateData?.workflow_run_id, candidateId, isLoading, stop, cancelWorkflow, deleteCandidate, router]);
+  }, [candidateData?.workflow_run_id, activeRunId, candidateId, isLoading, stop, cancelWorkflow, deleteCandidate, router]);
 
   const safeData = cvData as Partial<ExtractedCV> | undefined;
 
@@ -236,7 +238,7 @@ export default function ReviewPage() {
           <Loader2 className="animate-spin mr-2" /> Chargement...
         </div>
         <div className="flex items-center gap-2">
-          {candidateData?.status === 'extracting' && candidateData?.workflow_run_id && (
+          {candidateData?.status === 'extracting' && extractionCancelRunId && (
             <Button
               variant="ghost"
               size="sm"
@@ -315,7 +317,7 @@ export default function ReviewPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {/* Cancel extraction */}
-              {isLoading && candidateData?.workflow_run_id && (
+              {isLoading && extractionCancelRunId && (
                 <Button
                   variant="ghost"
                   size="sm"

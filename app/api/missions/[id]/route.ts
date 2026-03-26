@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgContext, requireOrgId } from '@/lib/utils/auth';
 import { hashJobDescription } from '@/lib/utils/job-description-hash';
+import { launchMissionJobPostingAnalysisAfterContentChange } from '@/lib/services/job-posting-analyze-trigger';
 
 export async function GET(
   _req: NextRequest,
@@ -73,7 +74,18 @@ export async function PATCH(
       .single();
 
     if (error) throw error;
-    return NextResponse.json(data);
+
+    if (body.jobDescription !== undefined) {
+      try {
+        await launchMissionJobPostingAnalysisAfterContentChange(supabase, id);
+      } catch (e) {
+        console.error('Mission job analysis auto-start:', e);
+      }
+    }
+
+    const { data: refreshed } = await supabase.from('missions').select().eq('id', id).single();
+
+    return NextResponse.json(refreshed ?? data);
   } catch (error: unknown) {
     if (error instanceof NextResponse) return error;
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });

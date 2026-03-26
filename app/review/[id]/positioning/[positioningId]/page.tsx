@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect, useCallback, useState, useRef } from 'react';
+import { useLayoutEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
@@ -15,7 +15,22 @@ import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning, useCancelWorkflow } from '@/lib/queries';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
+import {
+  matchScoreConfidenceBadgeClass,
+  matchScoreConfidenceShortLabel,
+} from '@/lib/utils/match-score-confidence';
 import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
+import {
+  analysisPhaseAffinageDiffersFromSnapshotForCurrentQuestions,
+  analysisPhaseAnswersOnly,
+  buildMissionPositionHeadline,
+  extractRecruiterEntriesFromParsed,
+  hasUsableJobAnalysisForPositioning,
+  mergePositioningAnswersForPersistence,
+  normalizeStoredExpertisePrompts,
+  parsePositioningAnswers,
+  removeEntryFromAnalysisRecruiterSnapshot,
+} from '@/lib/services/positioning.service';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -73,15 +88,89 @@ export default function PositioningWizardPage() {
     setOriginalPdfBlobUrl,
     setPdfBlobUrl,
     setIsPdfLoading,
-    updateAnswer,
     reset,
+    generationExpertiseResponses,
+    setGenerationExpertisePrompts,
+    setGenerationExpertiseResponses,
+    recruiterAnswerEntries,
+    setRecruiterAnswerEntries,
+    appendRecruiterAnswer,
+    removeRecruiterAnswerEntry,
   } = store;
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
   const { data: positioningData } = usePositioning(positioningIdParam);
   const { data: candidateData } = useCandidate(candidateId);
+
+  const generationExpertiseRaw = positioningData
+    ? (positioningData as { generation_expertise_prompts?: unknown }).generation_expertise_prompts
+    : undefined;
+
+  const missionRecord = positioningData?.missions as
+    | { title?: string | null; company?: string | null; job_analysis?: unknown }
+    | null
+    | undefined;
+
+  const missionHeadlineForUi =
+    positioningData?.mission_id && missionRecord
+      ? buildMissionPositionHeadline(missionRecord) ?? 'Mission liée'
+      : null;
+
+  const usesStructuredMissionAnalysis = hasUsableJobAnalysisForPositioning(
+    missionRecord?.job_analysis ?? null,
+  );
+
+  const canRunPositioningAnalysis = useMemo(
+    () =>
+      jobDescription.trim().length > 0 || usesStructuredMissionAnalysis,
+    [jobDescription, usesStructuredMissionAnalysis],
+  );
+
+  const mergedPhaseAnswersForCompare = useMemo(() => {
+    return mergePositioningAnswersForPersistence({
+      baseAnswers: parsePositioningAnswers(positioningData?.answers),
+      recruiterAnswerEntries,
+      generationExpertiseResponses,
+    });
+  }, [positioningData?.answers, recruiterAnswerEntries, generationExpertiseResponses]);
+
+  const recruiterDraftsDifferFromSnapshot = useMemo(() => {
+    const raw = (positioningData as { analysis_recruiter_answers?: unknown } | undefined)
+      ?.analysis_recruiter_answers;
+    if (raw == null) return false;
+    return analysisPhaseAffinageDiffersFromSnapshotForCurrentQuestions({
+      snapshot: parsePositioningAnswers(raw),
+      mergedPhaseAnswers: mergedPhaseAnswersForCompare,
+      analysis,
+    });
+  }, [positioningData, mergedPhaseAnswersForCompare, analysis]);
+
+  const analysisSnapshotRecruiterEntries = useMemo(() => {
+    const raw = (positioningData as { analysis_recruiter_answers?: unknown } | undefined)
+      ?.analysis_recruiter_answers;
+    return extractRecruiterEntriesFromParsed(
+      analysisPhaseAnswersOnly(parsePositioningAnswers(raw)),
+    );
+  }, [positioningData]);
+
   const updatePositioning = useUpdatePositioning();
+
+  const handleRemoveRecruiterAnswerEntry = useCallback(
+    (key: string, entryId: string) => {
+      removeRecruiterAnswerEntry(key, entryId);
+      const raw = (positioningData as { analysis_recruiter_answers?: unknown } | undefined)
+        ?.analysis_recruiter_answers;
+      const nextSnap = removeEntryFromAnalysisRecruiterSnapshot(raw, key, entryId);
+      if (nextSnap !== null && positioningIdParam) {
+        updatePositioning.mutate({
+          id: positioningIdParam,
+          analysis_recruiter_answers: nextSnap,
+        });
+      }
+    },
+    [removeRecruiterAnswerEntry, positioningData, positioningIdParam, updatePositioning],
+  );
   const exportPositioning = useExportPositioning();
   const cancelWorkflow = useCancelWorkflow();
 
@@ -98,12 +187,14 @@ export default function PositioningWizardPage() {
     submit: submitAnalysis,
     isLoading: isAnalysisLoading,
     stop: stopAnalysis,
+    activeRunId: analysisStreamRunId,
   } = useWorkflowStream<PositioningAnalysis, PositioningAnalysisStreamMeta>({
     api: '/api/positioning/analyze',
     runId: positioningData?.workflow_run_id,
     runStatus: positioningData?.status,
     activeStatuses: ['analyzing'],
     onFinish: () => {
+      setIsAnalyzing(false);
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
     },
   });
@@ -114,6 +205,7 @@ export default function PositioningWizardPage() {
     submit: submitGenerate,
     isLoading: isGenerateLoading,
     stop: stopGenerate,
+    activeRunId: generateStreamRunId,
   } = useWorkflowStream<PositioningOutput, PositioningGenerateStreamMeta>({
     api: '/api/positioning/generate',
     runId: positioningData?.workflow_run_id,
@@ -156,8 +248,23 @@ export default function PositioningWizardPage() {
   useLayoutEffect(() => {
     if (!positioningData || !candidateData) return;
 
-    // Don't reset while we're actively streaming
-    if (isAnalysisLoading || isGenerateLoading) return;
+    // Don't reset while we're actively streaming ou relance d'analyse (évite de réinjecter l'ancienne analyse depuis le cache)
+    if (
+      isAnalysisLoading ||
+      isGenerateLoading ||
+      isAnalyzing ||
+      positioningData.status === 'analyzing'
+    ) {
+      // useWorkflowStream met isGenerateLoading / isAnalysisLoading à true (POST ou reconnexion) avant que ce bloc ne tourne :
+      // sans setIsLoaded, on reste sur l'écran plein « Chargement » au lieu du wizard (blocs step 1 / 2 en loading).
+      if (positioningData.status === 'generating' || isGenerateLoading) {
+        setCurrentStep(2);
+      } else {
+        setCurrentStep(1);
+      }
+      setIsLoaded(true);
+      return;
+    }
 
     const isNewPositioning = initializedForId.current !== positioningData.id;
 
@@ -206,21 +313,33 @@ export default function PositioningWizardPage() {
       return;
     }
 
-    if (data.analysis) setAnalysis(data.analysis);
     if (data.tailored_cv) setTailoredCv(data.tailored_cv);
     if (data.email) setEmail(data.email);
     if (data.email_first_contact) setEmailFirstContact(data.email_first_contact);
     if (data.email_bullet_points) setEmailBulletPoints(data.email_bullet_points);
     if (data.candidate_email) setCandidateEmail(data.candidate_email);
 
-    // Restore answers into analysis questions if available
-    if (data.analysis && data.answers) {
+    const storedExpertise = normalizeStoredExpertisePrompts(generationExpertiseRaw);
+    setGenerationExpertisePrompts(storedExpertise.length > 0 ? storedExpertise : null);
+    const parsedAnswers = parsePositioningAnswers(data.answers);
+    const genResp: Record<string, string> = {};
+    for (const p of storedExpertise) {
+      const pid = p.id;
+      if (!pid) continue;
+      const v = parsedAnswers[`generationExpertise:${pid}`];
+      if (typeof v === 'string' && v) genResp[pid] = v;
+    }
+    setGenerationExpertiseResponses(genResp);
+
+    setRecruiterAnswerEntries(extractRecruiterEntriesFromParsed(parsedAnswers));
+
+    if (data.analysis) {
       const restored = { ...data.analysis };
       if (restored.candidateQuestions) {
         restored.candidateQuestions = restored.candidateQuestions.map(
           (q: { question: string; context: string; answer?: string }) => ({
             ...q,
-            answer: data.answers[`candidat:${q.question}`] ?? data.answers[q.question] ?? q.answer ?? '',
+            answer: '',
           }),
         );
       }
@@ -228,7 +347,7 @@ export default function PositioningWizardPage() {
         restored.clientQuestions = restored.clientQuestions.map(
           (q: { question: string; context: string; answer?: string }) => ({
             ...q,
-            answer: data.answers[`client:${q.question}`] ?? data.answers[q.question] ?? q.answer ?? '',
+            answer: '',
           }),
         );
       }
@@ -243,8 +362,42 @@ export default function PositioningWizardPage() {
     }
 
     setIsLoaded(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [positioningData?.id, positioningData?.status, candidateData?.id]);
+  // Dépendances ciblées : inclure isAnalyzing / statut analyzing pour ne pas réécraser l’état pendant un « Relancer ».
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- éviter de dépendre de tout `positioningData` / `candidateData` (risque de resets)
+  }, [
+    positioningData?.id,
+    positioningData?.status,
+    positioningData?.analysis,
+    positioningData?.job_description,
+    positioningData?.tailored_cv,
+    positioningData?.email,
+    positioningData?.email_first_contact,
+    positioningData?.email_bullet_points,
+    positioningData?.candidate_email,
+    positioningData?.answers,
+    generationExpertiseRaw,
+    candidateData?.id,
+    isAnalysisLoading,
+    isGenerateLoading,
+    isAnalyzing,
+    setPositioningId,
+    setTemplateConfig,
+    setJobDescription,
+    setCurrentStep,
+    setAnalysis,
+    setTailoredCv,
+    setEmail,
+    setEmailFirstContact,
+    setEmailBulletPoints,
+    setCandidateEmail,
+    setGenerationExpertisePrompts,
+    setGenerationExpertiseResponses,
+    setRecruiterAnswerEntries,
+    setIsLoaded,
+    positioningIdParam,
+    candidateData?.extracted_data,
+    candidateData?.template_id,
+  ]);
 
   // Auto-launch analysis when landing on step 1 with no analysis (fresh positioning).
   // Si l’analyse a déjà été lancée depuis la mission (stream en cours), on ne refait pas un POST.
@@ -257,7 +410,7 @@ export default function PositioningWizardPage() {
     const isCandidateReadyForAnalysis = !!candidateData?.extracted_data
       && ['reviewing', 'ready', 'generated'].includes(candidateData.status ?? '');
 
-    if (currentStep === 1 && !analysis && jobDescription.trim() && isCandidateReadyForAnalysis) {
+    if (currentStep === 1 && !analysis && canRunPositioningAnalysis && isCandidateReadyForAnalysis) {
       autoAnalyzedRef.current = true;
       setIsAnalyzing(true);
       submitAnalysis({ positioningId: positioningIdParam });
@@ -267,7 +420,7 @@ export default function PositioningWizardPage() {
     isLoaded,
     currentStep,
     analysis,
-    jobDescription,
+    canRunPositioningAnalysis,
     positioningIdParam,
     setIsAnalyzing,
     submitAnalysis,
@@ -286,13 +439,6 @@ export default function PositioningWizardPage() {
     }
   }, [analysisObject, setAnalysis]);
 
-  // Derive: when analysis loading finishes, clear isAnalyzing flag
-  useLayoutEffect(() => {
-    if (!isAnalysisLoading && isAnalyzing) {
-      setIsAnalyzing(false);
-    }
-  }, [isAnalysisLoading, isAnalyzing, setIsAnalyzing]);
-
   // Sync streaming generation to store
   useLayoutEffect(() => {
     if (generateObject) {
@@ -302,8 +448,19 @@ export default function PositioningWizardPage() {
       if (obj.emailFirstContact) setEmailFirstContact(obj.emailFirstContact);
       if (obj.emailBulletPoints) setEmailBulletPoints(obj.emailBulletPoints);
       if (obj.candidateEmail) setCandidateEmail(obj.candidateEmail);
+      if (obj.expertiseConfirmations?.length) {
+        setGenerationExpertisePrompts(normalizeStoredExpertisePrompts(obj.expertiseConfirmations));
+      }
     }
-  }, [generateObject, setTailoredCv, setEmail, setEmailFirstContact, setEmailBulletPoints, setCandidateEmail]);
+  }, [
+    generateObject,
+    setTailoredCv,
+    setEmail,
+    setEmailFirstContact,
+    setEmailBulletPoints,
+    setCandidateEmail,
+    setGenerationExpertisePrompts,
+  ]);
 
   useLayoutEffect(() => {
     if (!isGenerateLoading && isGenerating) {
@@ -311,19 +468,22 @@ export default function PositioningWizardPage() {
     }
   }, [isGenerateLoading, isGenerating, setIsGenerating]);
 
-  // Persist answers to DB when they change (debounced)
+  // Persist answers (analyse + confirmations génération) — ne pas mélanger avec l’édition du CV
   useLayoutEffect(() => {
     if (!isLoaded) return;
-    if (!analysis?.candidateQuestions && !analysis?.clientQuestions) return;
-    const answers: Record<string, string> = {};
-    for (const q of analysis.candidateQuestions ?? []) {
-      if (q.answer) answers[`candidat:${q.question}`] = q.answer;
-    }
-    for (const q of analysis.clientQuestions ?? []) {
-      if (q.answer) answers[`client:${q.question}`] = q.answer;
-    }
+    const answers = mergePositioningAnswersForPersistence({
+      baseAnswers: parsePositioningAnswers(positioningData?.answers),
+      recruiterAnswerEntries,
+      generationExpertiseResponses,
+    });
     debouncedSave({ answers });
-  }, [isLoaded, analysis?.candidateQuestions, analysis?.clientQuestions, debouncedSave]);
+  }, [
+    isLoaded,
+    generationExpertiseResponses,
+    recruiterAnswerEntries,
+    positioningData?.answers,
+    debouncedSave,
+  ]);
 
   // Persist tailoredCv edits to DB (debounced)
   useLayoutEffect(() => {
@@ -362,41 +522,55 @@ export default function PositioningWizardPage() {
   }, []);
 
   const handleReAnalyze = useCallback(() => {
-    if (!jobDescription.trim()) return;
+    if (!canRunPositioningAnalysis) return;
 
-    // Preserve current answers so the API can use them as context
-    const savedAnswers: Record<string, string> = {};
-    for (const q of analysis?.candidateQuestions ?? []) {
-      if (q.answer) savedAnswers[`candidat:${q.question}`] = q.answer;
-    }
-    for (const q of analysis?.clientQuestions ?? []) {
-      if (q.answer) savedAnswers[`client:${q.question}`] = q.answer;
-    }
+    const st = usePositioningStore.getState();
+    const mergedAnswers = mergePositioningAnswersForPersistence({
+      baseAnswers: parsePositioningAnswers(positioningData?.answers),
+      recruiterAnswerEntries: st.recruiterAnswerEntries,
+      generationExpertiseResponses: st.generationExpertiseResponses,
+    });
 
     updatePositioning.mutate(
-      { id: positioningIdParam, job_description: jobDescription },
+      {
+        id: positioningIdParam,
+        job_description: jobDescription,
+        analysis: null,
+        archiveAnalysisBeforeClear: true,
+        answers: mergedAnswers,
+      },
       {
         onSuccess: () => {
           setCurrentStep(1);
           setIsAnalyzing(true);
           setAnalysis(null);
-          submitAnalysis({ positioningId: positioningIdParam, answers: savedAnswers });
+          submitAnalysis({ positioningId: positioningIdParam, answers: mergedAnswers });
           refreshMissionCards();
         },
       }
     );
-  }, [jobDescription, analysis, positioningIdParam, updatePositioning, setCurrentStep, setIsAnalyzing, setAnalysis, submitAnalysis, refreshMissionCards]);
+  }, [
+    canRunPositioningAnalysis,
+    jobDescription,
+    positioningData?.answers,
+    positioningIdParam,
+    updatePositioning,
+    setCurrentStep,
+    setIsAnalyzing,
+    setAnalysis,
+    submitAnalysis,
+    refreshMissionCards,
+  ]);
 
   const handleGenerate = useCallback(() => {
     if (!positioningIdParam || !analysis) return;
 
-    const answers: Record<string, string> = {};
-    for (const q of analysis.candidateQuestions ?? []) {
-      if (q.answer) answers[`candidat:${q.question}`] = q.answer;
-    }
-    for (const q of analysis.clientQuestions ?? []) {
-      if (q.answer) answers[`client:${q.question}`] = q.answer;
-    }
+    const st = usePositioningStore.getState();
+    const answers = mergePositioningAnswersForPersistence({
+      baseAnswers: parsePositioningAnswers(positioningData?.answers),
+      recruiterAnswerEntries: st.recruiterAnswerEntries,
+      generationExpertiseResponses: st.generationExpertiseResponses,
+    });
 
     updatePositioning.mutate(
       { id: positioningIdParam, answers },
@@ -416,6 +590,7 @@ export default function PositioningWizardPage() {
   }, [
     positioningIdParam,
     analysis,
+    positioningData?.answers,
     updatePositioning,
     setIsGenerating,
     setTailoredCv,
@@ -442,8 +617,13 @@ export default function PositioningWizardPage() {
     });
   }, [positioningIdParam, tailoredCv, email, candidateEmail, exportPositioning]);
 
+  const positioningCancelRunId =
+    positioningData?.workflow_run_id ??
+    (isGenerating || isGenerateLoading ? generateStreamRunId : analysisStreamRunId) ??
+    null;
+
   const handleCancelWorkflow = useCallback(() => {
-    const runId = positioningData?.workflow_run_id;
+    const runId = positioningCancelRunId;
     if (!runId) return;
     const isAnalyzingNow = isAnalyzing || isAnalysisLoading;
     if (isAnalyzingNow) {
@@ -459,7 +639,17 @@ export default function PositioningWizardPage() {
       recordId: positioningIdParam,
       resetStatus: isAnalyzingNow ? 'draft' : 'analyzed',
     });
-  }, [positioningData?.workflow_run_id, positioningIdParam, isAnalyzing, isAnalysisLoading, stopAnalysis, stopGenerate, setIsAnalyzing, setIsGenerating, cancelWorkflow]);
+  }, [
+    positioningCancelRunId,
+    positioningIdParam,
+    isAnalyzing,
+    isAnalysisLoading,
+    stopAnalysis,
+    stopGenerate,
+    setIsAnalyzing,
+    setIsGenerating,
+    cancelWorkflow,
+  ]);
 
   // Navigation
   const isStreaming = isAnalyzing || isAnalysisLoading || isGenerating || isGenerateLoading;
@@ -514,6 +704,21 @@ export default function PositioningWizardPage() {
                   </span>
                   <span className="hidden md:block text-xs text-muted-foreground">Score</span>
                 </div>
+                <Tooltip>
+                  <TooltipTrigger
+                    className={`flex cursor-help items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium outline-none ${matchScoreConfidenceBadgeClass(analysis.matchScoreConfidence)}`}
+                  >
+                    <span className="text-muted-foreground">Fiabilité</span>
+                    <span>{matchScoreConfidenceShortLabel(analysis.matchScoreConfidence)}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-xs">
+                    {analysis.matchScoreConfidenceNote?.trim()
+                      ? analysis.matchScoreConfidenceNote
+                      : analysis.matchScoreConfidence
+                        ? 'Indicateur produit par la synthèse d’analyse pour contextualiser le score.'
+                        : 'Analyse antérieure : la fiabilité du score n’était pas encore calculée. Relancez l’analyse pour l’obtenir.'}
+                  </TooltipContent>
+                </Tooltip>
                 {analysis.skillMatches && (
                   <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/[0.06] px-3 py-1.5">
                     <CheckCircle2 className="h-4 w-4 text-neon" />
@@ -583,7 +788,7 @@ export default function PositioningWizardPage() {
                       {isAnalyzing || isAnalysisLoading ? 'Analyse en cours...' : 'Génération en cours...'}
                     </span>
                   </div>
-                  {positioningData?.workflow_run_id && (
+                  {positioningCancelRunId && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -651,6 +856,8 @@ export default function PositioningWizardPage() {
                     onReAnalyze={analysisComplete ? handleReAnalyze : undefined}
                     isAnalyzing={isAnalyzing || isAnalysisLoading}
                     readOnly
+                    missionHeadline={missionHeadlineForUi}
+                    usesStructuredMissionAnalysis={usesStructuredMissionAnalysis}
                   />
                 ) : (
                   <JobInput
@@ -668,6 +875,9 @@ export default function PositioningWizardPage() {
                       analysis={analysis}
                       isAnalyzing={isAnalyzing || isAnalysisLoading}
                       streamMeta={analysisStreamMeta}
+                      analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
+                      hideRecruiterSnapshot
+                      recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
                     />
                   </div>
                 )}
@@ -688,15 +898,19 @@ export default function PositioningWizardPage() {
                         analysis={analysis}
                         isAnalyzing={false}
                         onReAnalyze={handleReAnalyze}
+                        analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
+                        onRemoveRecruiterAnswerEntry={handleRemoveRecruiterAnswerEntry}
+                        recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
                       />
                     </TabsContent>
                     <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden">
                       <QuestionsPanel
                         analysis={analysis}
-                        onUpdateAnswer={updateAnswer}
                         onNext={() => setCurrentStep(2)}
                         onReAnalyze={handleReAnalyze}
                         isAnalyzing={false}
+                        recruiterAnswerEntries={recruiterAnswerEntries}
+                        appendRecruiterAnswer={appendRecruiterAnswer}
                       />
                     </TabsContent>
                   </Tabs>

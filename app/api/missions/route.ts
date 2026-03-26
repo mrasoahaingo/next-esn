@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { launchMissionJobPostingAnalysisAfterContentChange } from '@/lib/services/job-posting-analyze-trigger';
 
 const createMissionSchema = z.object({
   title: z.string().min(1).max(500),
@@ -57,7 +58,18 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) throw error;
-    return NextResponse.json(data);
+
+    try {
+      await launchMissionJobPostingAnalysisAfterContentChange(supabase, data.id as string, {
+        skipIfAlreadyCurrent: false,
+      });
+    } catch (e) {
+      console.error('Mission job analysis auto-start:', e);
+    }
+
+    const { data: refreshed } = await supabase.from('missions').select().eq('id', data.id).single();
+
+    return NextResponse.json(refreshed ?? data);
   } catch (error: unknown) {
     if (error instanceof NextResponse) return error;
     console.error('Create mission error:', error);

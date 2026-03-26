@@ -1,4 +1,9 @@
-import type { ExtractedCV, PositioningEmail, PositioningOutput } from '@/lib/schema';
+import type {
+  ExtractedCV,
+  PositioningEmail,
+  PositioningExpertiseConfirmationItem,
+  PositioningOutput,
+} from '@/lib/schema';
 import { mergeExtractedPartial } from '@/lib/services/extraction-merge';
 
 /** Accumulateur streaming (partiels imbriqués) avant safeParse(positioningOutputSchema). */
@@ -8,6 +13,7 @@ export type PositioningGenerateAccumulator = {
   emailFirstContact?: Partial<PositioningEmail>;
   emailBulletPoints?: Partial<PositioningEmail>;
   candidateEmail?: Partial<PositioningEmail>;
+  expertiseConfirmations?: PositioningExpertiseConfirmationItem[];
 };
 
 export function mergePositioningOutputPartial(
@@ -27,5 +33,12 @@ export function mergePositioningOutputPartial(
         ...patch[key],
       };
     }
+  }
+
+  if (patch.expertiseConfirmations !== undefined) {
+    acc.expertiseConfirmations = patch.expertiseConfirmations.map((x, i) => ({
+      ...x,
+      id: x.id && x.id.trim() ? x.id.trim() : `ec-${i}`,
+    }));
   }
 }

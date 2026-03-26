@@ -50,7 +50,7 @@ function PayloadDialog({ row }: { row: AdminLlmUsageRow }) {
           Détails
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden flex flex-col gap-0 p-0">
+      <DialogContent className="max-h-[85vh] sm:max-w-[90vw] sm:w-200 overflow-hidden flex flex-col gap-0 p-0">
         <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle className="text-sm font-medium">Entrées / sorties</DialogTitle>
         </DialogHeader>
@@ -118,8 +118,17 @@ export function LlmUsageHistoryTab({
           <History className="h-4 w-4 text-neon" />
           Historique des appels LLM
         </CardTitle>
-        <CardDescription>
-          Une ligne par appel modèle — entrées / sorties tronquées au-delà du plafond technique.
+        <CardDescription className="space-y-1">
+          <span>
+            Une ligne par appel modèle — entrées / sorties tronquées au-delà du plafond technique.
+          </span>
+          <span className="block text-[10px] text-muted-foreground leading-snug">
+            Le statut <span className="font-mono">completed</span> correspond à une seule branche
+            LLM terminée (ex. fiche mission : <span className="font-mono">executive</span> et{' '}
+            <span className="font-mono">keyPoints</span> en parallèle). L’interface peut encore indiquer un
+            chargement tant que l’autre branche ou l’enregistrement n’est pas fini — regroupez par{' '}
+            <span className="font-mono">workflow_run_id</span> pour voir tout le run.
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -279,6 +288,9 @@ export function LlmUsageHistoryTab({
                   <TableHead>Org</TableHead>
                   <TableHead>Op.</TableHead>
                   <TableHead className="min-w-[140px]">task_key</TableHead>
+                  <TableHead className="whitespace-nowrap">Statut</TableHead>
+                  <TableHead className="whitespace-nowrap">Branche</TableHead>
+                  <TableHead className="max-w-[100px] truncate">Run</TableHead>
                   <TableHead>Modèle</TableHead>
                   <TableHead className="text-right">ms</TableHead>
                   <TableHead className="text-right">in</TableHead>
@@ -298,6 +310,18 @@ export function LlmUsageHistoryTab({
                     <TableCell className="text-xs">{row.operation}</TableCell>
                     <TableCell className="font-mono text-[10px] leading-tight" title={row.task_key ?? ''}>
                       {row.task_key ?? '—'}
+                    </TableCell>
+                    <TableCell className="text-xs capitalize" title={row.call_status ?? ''}>
+                      {row.call_status ?? '—'}
+                    </TableCell>
+                    <TableCell className="font-mono text-[10px]" title={row.branch ?? ''}>
+                      {row.branch ?? '—'}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-[100px] truncate font-mono text-[10px] text-muted-foreground"
+                      title={row.workflow_run_id ?? ''}
+                    >
+                      {row.workflow_run_id ? `${row.workflow_run_id.slice(0, 10)}…` : '—'}
                     </TableCell>
                     <TableCell className="max-w-[120px] truncate font-mono text-[10px]" title={row.ai_model}>
                       {row.ai_model}

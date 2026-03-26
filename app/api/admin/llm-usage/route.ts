@@ -53,6 +53,8 @@ export async function GET(req: NextRequest) {
         'mission_id',
         'org_id',
         'workflow_run_id',
+        'call_status',
+        'branch',
         'input_payload',
         'output_payload',
       ].join(','),

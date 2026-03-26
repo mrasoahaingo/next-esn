@@ -14,6 +14,10 @@ interface JobInputProps {
   isAnalyzing: boolean;
   readOnly?: boolean;
   disabled?: boolean;
+  /** Titre affiché à la place du texte brut quand le positionnement est lié à une mission */
+  missionHeadline?: string | null;
+  /** True si le matching côté serveur utilise le barème `job_analysis` (pas la fiche brute) */
+  usesStructuredMissionAnalysis?: boolean;
 }
 
 const PREVIEW_LENGTH = 180;
@@ -26,10 +30,45 @@ export function JobInput({
   isAnalyzing,
   readOnly = false,
   disabled,
+  missionHeadline = null,
+  usesStructuredMissionAnalysis = false,
 }: JobInputProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (readOnly) {
+    if (missionHeadline) {
+      return (
+        <div className="flex items-start gap-3 rounded-xl border border-overlay/10 bg-overlay/[0.06] px-4 py-3">
+          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-violet/80" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground leading-snug">{missionHeadline}</p>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              {usesStructuredMissionAnalysis
+                ? 'Le matching utilise l’analyse structurée de la mission (barème « Comprendre la fiche »), pas le texte brut de la fiche.'
+                : 'Lancez l’analyse de la fiche sur la mission pour enrichir le barème ; en attendant, le matching peut s’appuyer sur le texte associé au positionnement.'}
+            </p>
+          </div>
+          {onReAnalyze && !isAnalyzing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onReAnalyze}
+              className="ml-2 shrink-0 text-violet hover:text-violet hover:bg-violet/10 h-7 px-2.5 text-xs"
+            >
+              <RefreshCw className="mr-1.5 h-3 w-3" />
+              Relancer
+            </Button>
+          )}
+          {isAnalyzing && (
+            <div className="ml-2 flex items-center gap-1.5 text-xs text-violet shrink-0">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              En cours…
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const isTruncated = jobDescription.length > PREVIEW_LENGTH;
     const displayText = isTruncated && !expanded
       ? jobDescription.slice(0, PREVIEW_LENGTH) + '…'

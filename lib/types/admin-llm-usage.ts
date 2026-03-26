@@ -14,6 +14,8 @@ export type AdminLlmUsageRow = {
   mission_id: string | null
   org_id: string | null
   workflow_run_id: string | null
+  call_status: string | null
+  branch: string | null
   input_payload: unknown
   output_payload: unknown
 }

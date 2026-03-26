@@ -1,5 +1,5 @@
 import { getWritable } from 'workflow';
-import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
+import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
@@ -10,7 +10,10 @@ import {
   jobPostingExecutiveSchema,
   jobPostingKeyPointsBlockSchema,
 } from '@/lib/schema';
-import { buildJobPostingAnalysisUserContent } from '@/lib/services/job-posting-analysis.service';
+import {
+  buildJobPostingAnalysisUserContent,
+  withMandatoryJobPostingLists,
+} from '@/lib/services/job-posting-analysis.service';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import type {
@@ -93,46 +96,69 @@ async function fetchAndAnalyze(missionId: string) {
     orgId: string | null,
   ): Promise<void> {
     const branchStart = Date.now();
-    const result = streamText({
-      model: languageModel,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-      output: Output.object({ schema, name: outputName }),
-    });
+    const sharedInput = { system, messages: [{ role: 'user', content: userContent }] };
 
-    let branchStarted = false;
+    try {
+      const result = streamText({
+        model: languageModel,
+        system,
+        messages: [{ role: 'user', content: userContent }],
+        output: Output.object({ schema, name: outputName }),
+      });
 
-    for await (const partial of result.partialOutputStream) {
+      let branchStarted = false;
+
+      for await (const partial of result.partialOutputStream) {
+        await runLocked(async () => {
+          if (!branchStarted) {
+            branchStarted = true;
+            activeBranches.add(branch);
+          }
+          mergeJobPostingPartial(acc, partial as Partial<JobPostingAnalysis>, branch);
+          await emit();
+        });
+      }
+
       await runLocked(async () => {
-        if (!branchStarted) {
-          branchStarted = true;
-          activeBranches.add(branch);
-        }
-        mergeJobPostingPartial(acc, partial as Partial<JobPostingAnalysis>);
+        activeBranches.delete(branch);
         await emit();
       });
+
+      const usage = await result.usage;
+      const output = await result.output;
+
+      await logAiUsage(supabase, {
+        operation: 'analysis',
+        missionId: missionRowId,
+        orgId: orgId ?? undefined,
+        aiModel: gatewayModelId,
+        taskKey,
+        durationMs: Date.now() - branchStart,
+        usage,
+        inputPayload: sharedInput,
+        outputPayload: output,
+        workflowRunId,
+        callStatus: 'completed',
+        branch,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await logAiUsage(supabase, {
+        operation: 'analysis',
+        missionId: missionRowId,
+        orgId: orgId ?? undefined,
+        aiModel: gatewayModelId,
+        taskKey,
+        durationMs: Date.now() - branchStart,
+        usage: {} as LanguageModelUsage,
+        inputPayload: sharedInput,
+        outputPayload: { error: message },
+        workflowRunId,
+        callStatus: 'failed',
+        branch,
+      });
+      throw err;
     }
-
-    await runLocked(async () => {
-      activeBranches.delete(branch);
-      await emit();
-    });
-
-    const usage = await result.usage;
-    const output = await result.output;
-
-    await logAiUsage(supabase, {
-      operation: 'analysis',
-      missionId: missionRowId,
-      orgId: orgId ?? undefined,
-      aiModel: gatewayModelId,
-      taskKey,
-      durationMs: Date.now() - branchStart,
-      usage,
-      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
-      outputPayload: output,
-      workflowRunId,
-    });
   }
 
   try {
@@ -173,17 +199,19 @@ async function fetchAndAnalyze(missionId: string) {
       ),
     ]);
 
+    const finalized = withMandatoryJobPostingLists({ ...acc });
+
     await runLocked(async () => {
       const meta: JobPostingAnalysisStreamMeta = { phase: 'finalizing', activeBranches: [] };
       await writer.write(
-        encoder.encode(JSON.stringify({ index: chunkIndex++, data: { ...acc }, meta }) + '\n'),
+        encoder.encode(JSON.stringify({ index: chunkIndex++, data: finalized, meta }) + '\n'),
       );
     });
 
-    const parsed = jobPostingAnalysisSchema.safeParse(acc);
+    const parsed = jobPostingAnalysisSchema.safeParse(finalized);
     const object: JobPostingAnalysis | Partial<JobPostingAnalysis> = parsed.success
-      ? sortKeyPoints(parsed.data)
-      : acc;
+      ? withMandatoryJobPostingLists(sortKeyPoints(parsed.data))
+      : finalized;
     if (!parsed.success) {
       console.warn('Job posting analysis schema warning:', parsed.error.flatten());
     }

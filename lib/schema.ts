@@ -68,6 +68,19 @@ export const extractionSchema = z.object({
     location: z.string().optional(),
     yearsOfExperience: z.string().optional().describe("Total years of professional experience (e.g. '8 ans')"),
     availability: z.string().optional().describe("Availability (e.g. 'Immédiate', 'Préavis 3 mois')"),
+    /** Estimation prudente pour le matching (titres, durées, descriptions) — pas un jugement définitif */
+    inferredSeniorityBand: z
+      .enum(['junior', 'confirmed', 'senior', 'expert_lead', 'unknown'])
+      .optional()
+      .describe(
+        "Fourchette de niveau déduite du CV uniquement ; « unknown » si données insuffisantes ou ambiguës.",
+      ),
+    seniorityInferenceNote: z
+      .string()
+      .optional()
+      .describe(
+        "1–2 phrases FR : sur quels faits du CV la fourchette repose ; vide ou absente si unknown.",
+      ),
   }),
   summary: z.string().describe("Professional summary (3-4 sentences). Use **double asterisks** around key skills, technologies, and achievements to highlight them in bold."),
   experiences: z.array(z.object({
@@ -129,10 +142,14 @@ export type ExtractionSkillsStrengths = z.infer<typeof extractionSkillsStrengths
 export const positioningAnalysisSchema = z.object({
   skillMatches: z.array(z.object({
     skill: z.string(),
+    /** Si la mission fournit des points clés avec `id`, lier l’évaluation à ce point */
+    keyPointId: z.string().optional(),
     category: z.string().describe("Catégorie libre de la compétence, choisie par l'IA pour regrouper les compétences de manière pertinente (ex: 'Backend', 'Cloud & DevOps', 'Leadership', 'Data', 'Frontend', 'Méthodologie'...). Utiliser des noms courts et parlants en français."),
     relevance: z.enum(['strong', 'partial', 'missing']),
     comment: z.string(),
     note: z.string().describe("Note détaillée expliquant pourquoi cette compétence match ou ne match pas, avec références concrètes au CV"),
+    /** Citation littérale extraite du CV, ou la chaîne NO_EVIDENCE si aucune preuve */
+    evidenceQuote: z.string().optional(),
   })),
   experienceRelevance: z.array(z.object({
     experience: z.string(),
@@ -156,6 +173,12 @@ export const positioningAnalysisSchema = z.object({
   })),
   matchScore: z.number().min(0).max(100),
   matchSummary: z.string(),
+  /** Fiabilité du score pour l’aide à la décision (souvent absent sur analyses antérieures) */
+  matchScoreConfidence: z.enum(['low', 'medium', 'high']).optional(),
+  matchScoreConfidenceNote: z
+    .string()
+    .optional()
+    .describe('Pourquoi le score est plus ou moins fiable (incertitudes, contradictions, barème incomplet).'),
 });
 
 export type PositioningAnalysis = z.infer<typeof positioningAnalysisSchema>;
@@ -170,9 +193,12 @@ export const positioningQuestionsSchema = positioningAnalysisSchema.pick({
   candidateQuestions: true,
   clientQuestions: true,
 });
-export const positioningSynthesisSchema = positioningAnalysisSchema.pick({
-  matchScore: true,
-  matchSummary: true,
+/** Sortie obligatoire de la branche synthèse (le merge alimente aussi confidence sur l’analyse complète). */
+export const positioningSynthesisSchema = z.object({
+  matchScore: z.number().min(0).max(100),
+  matchSummary: z.string(),
+  matchScoreConfidence: z.enum(['low', 'medium', 'high']),
+  matchScoreConfidenceNote: z.string().min(1),
 });
 
 export const positioningEmailSchema = z.object({
@@ -182,12 +208,25 @@ export const positioningEmailSchema = z.object({
 
 export type PositioningEmail = z.infer<typeof positioningEmailSchema>;
 
+/** Questions de confirmation d’expertise (phase génération) — saisie recruteur, suggestions LLM. */
+export const positioningExpertiseConfirmationItemSchema = z.object({
+  id: z.string().optional(),
+  question: z.string(),
+  context: z.string(),
+  suggestedAnswers: z.array(z.string()).min(1).max(5),
+});
+
+export type PositioningExpertiseConfirmationItem = z.infer<
+  typeof positioningExpertiseConfirmationItemSchema
+>;
+
 export const positioningOutputSchema = z.object({
   tailoredCv: extractionSchema,
   email: positioningEmailSchema,
   emailFirstContact: positioningEmailSchema,
   emailBulletPoints: positioningEmailSchema,
   candidateEmail: positioningEmailSchema,
+  expertiseConfirmations: z.array(positioningExpertiseConfirmationItemSchema).optional(),
 });
 
 export type PositioningOutput = z.infer<typeof positioningOutputSchema>;
@@ -204,6 +243,10 @@ export const positioningEmailBulletPointsPartSchema = positioningOutputSchema.pi
 export const positioningCandidateEmailPartSchema = positioningOutputSchema.pick({
   candidateEmail: true,
 });
+/** Branche LLM dédiée : uniquement les questions de confirmation d’expertise. */
+export const positioningExpertiseConfirmationsPartSchema = z.object({
+  expertiseConfirmations: z.array(positioningExpertiseConfirmationItemSchema).min(1).max(8),
+});
 
 // ─── Analyse fiche de poste (mission) — recruteur ─────────────────
 
@@ -218,6 +261,153 @@ export const jobPostingKeyPointAspectSchema = z.enum([
 ]);
 
 export type JobPostingKeyPointAspect = z.infer<typeof jobPostingKeyPointAspectSchema>;
+
+/** Bande normalisée du niveau attendu sur la mission (analyse fiche) */
+export const jobPostingExpertiseBandSchema = z.enum([
+  'junior',
+  'confirmed',
+  'senior',
+  'expert_lead',
+  'unclear',
+]);
+
+export type JobPostingExpertiseBand = z.infer<typeof jobPostingExpertiseBandSchema>;
+
+function asTrimmedStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter((s) => s.length > 0);
+  if (typeof v === 'string' && v.trim()) return [v.trim()];
+  return [];
+}
+
+/** Tolère les libellés du LLM (ex. « expert », « lead ») pour éviter AI_NoObjectGeneratedError. */
+export function normalizeJobPostingExpertiseBand(val: unknown): JobPostingExpertiseBand {
+  if (
+    val === 'junior' ||
+    val === 'confirmed' ||
+    val === 'senior' ||
+    val === 'expert_lead' ||
+    val === 'unclear'
+  ) {
+    return val;
+  }
+  const s = String(val ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  if (!s || s === 'unknown' || s === 'inconnu' || s === 'na' || s === 'n a') return 'unclear';
+  if (s.includes('junior') || s.includes('debutant') || s.includes('intern')) return 'junior';
+  if (
+    s.includes('confirme') ||
+    s.includes('intermediaire') ||
+    s.includes('medior') ||
+    s.includes('middle')
+  ) {
+    return 'confirmed';
+  }
+  if (s.includes('expert') || s.includes('lead') || s.includes('principal') || s.includes('staff')) {
+    return 'expert_lead';
+  }
+  if (s.includes('senior')) return 'senior';
+  return 'unclear';
+}
+
+function coerceBooleanLoose(v: unknown): boolean {
+  if (typeof v === 'boolean') return v;
+  if (v === 'true' || v === 1) return true;
+  if (v === 'false' || v === 0) return false;
+  return false;
+}
+
+function coerceMinYearsHint(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  const n = typeof v === 'number' ? v : Number.parseFloat(String(v).replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0 || n > 80) return undefined;
+  return Math.round(n);
+}
+
+/**
+ * Niveau d’expertise attendu — prioritaire sur technos et récence pour le matching et l’aide à la décision.
+ * Schéma **tolérant** : le LLM renvoie souvent des enums / tableaux hors contrat strict ; on normalise pour que `Output.object` valide.
+ */
+export const jobPostingExpectedExpertiseLevelSchema = z.object({
+  summary: z
+    .unknown()
+    .describe(
+      'Synthèse recruteur : ce que le niveau attendu implique concrètement sur cette mission (autonomie, périmètre, criticité).',
+    )
+    .transform((v) => {
+      const s = v == null ? '' : String(v).trim();
+      return s.length > 0
+        ? s
+        : 'Niveau attendu : se référer à la fiche et aux points clés pour le détail.';
+    }),
+  statedLevel: z
+    .unknown()
+    .describe('Libellé repris de la fiche (ex. « Développeur senior », « Expert API »).')
+    .transform((v) => {
+      const s = v == null ? '' : String(v).trim();
+      return s.length > 0 ? s : 'Non précisé dans la fiche.';
+    }),
+  interpretedBand: z
+    .unknown()
+    .describe(
+      'Interprétation normalisée : junior | confirmed | senior | expert_lead | unclear (synonymes acceptés).',
+    )
+    .transform((v) => normalizeJobPostingExpertiseBand(v)),
+  signalsFromPosting: z
+    .unknown()
+    .describe('Signaux factuels tirés du texte (responsabilités, mentoring, taille d’équipe, etc.).')
+    .transform((v) => {
+      const arr = asTrimmedStringArray(v);
+      return arr.length > 0
+        ? arr
+        : ['Aucun signal structuré extrait ; se référer au résumé du niveau ci-dessus.'];
+    }),
+  hardOnLevel: z
+    .unknown()
+    .describe('True si le niveau est clairement non négociable pour cette mission.')
+    .transform(coerceBooleanLoose),
+  minYearsHint: z
+    .any()
+    .optional()
+    .describe(
+      "Années d'expérience minimales suggérées par la fiche, uniquement si l'indication est claire ; sinon omettre.",
+    )
+    .transform((v) => (v === undefined ? undefined : coerceMinYearsHint(v))),
+  recruiterCalibrationQuestions: z
+    .unknown()
+    .describe('1 à 4 questions courtes pour calibrer le niveau avec le client (complément de openQuestions).')
+    .transform((v) => {
+      const arr = asTrimmedStringArray(v);
+      const q =
+        arr.length > 0
+          ? arr
+          : ['Comment le client valide-t-il qu’un profil a le niveau attendu sur cette mission ?'];
+      return q.slice(0, 4);
+    }),
+});
+
+export type JobPostingExpectedExpertiseLevel = z.infer<typeof jobPostingExpectedExpertiseLevelSchema>;
+
+/** Niveau d’exigence REFACTO (rubric) — optionnel pour rétrocompatibilité */
+export const jobPostingRequirementTierSchema = z.enum([
+  'hard_constraint',
+  'must_have',
+  'should_have',
+  'nice_to_have',
+]);
+
+export type JobPostingRequirementTier = z.infer<typeof jobPostingRequirementTierSchema>;
+
+export const jobPostingEvidenceTypeExpectedSchema = z.enum([
+  'explicit',
+  'implicit_acceptable',
+  'transferable_proven',
+]);
+
+export type JobPostingEvidenceTypeExpected = z.infer<typeof jobPostingEvidenceTypeExpectedSchema>;
 
 export const jobPostingKeyPointSchema = z
   .object({
@@ -238,6 +428,28 @@ export const jobPostingKeyPointSchema = z
     category: z.string().describe('Libellé court FR pour regroupement visuel (ex. Backend, Contexte client)'),
     importanceRank: z.number().int().min(1).describe('1 = le plus critique pour répondre au besoin mission'),
     roleInMission: z.string().describe('Ce que ce point change concrètement pour le recruteur ou le candidat'),
+    /** Rubric REFACTO : bloquant vs négociable */
+    requirementTier: jobPostingRequirementTierSchema.optional().describe(
+      'hard_constraint = éliminatoire si non satisfait ; les autres se pondèrent entre eux (somme des importanceWeight ≈ 1)',
+    ),
+    /** Poids 0–1 pour critères non hard_constraint (somme ≈ 1 entre eux) */
+    importanceWeight: z
+      .number()
+      .min(0)
+      .max(1)
+      .optional()
+      .describe('Uniquement pour must_have / should_have / nice_to_have'),
+    evidenceTypeExpected: jobPostingEvidenceTypeExpectedSchema.optional().describe(
+      'Type de preuve attendu sur le CV pour scorer ce critère',
+    ),
+    valueSought: z
+      .string()
+      .optional()
+      .describe('Formulation courte de l’exigence vérifiable (ex. "Python confirmé 3+ ans", "Anglais C1")'),
+    scoringRubricHint: z
+      .string()
+      .optional()
+      .describe('Indication brève pour le scoring 0 / 50 / 100 (barème métier)'),
   })
   .superRefine((data, ctx) => {
     if (data.aspect === 'technical') {
@@ -256,6 +468,16 @@ export const jobPostingAnalysisSchema = z.object({
   executiveSummary: z
     .string()
     .describe('3 à 5 phrases : besoin, contexte, enjeux, non-négociable vs secondaire'),
+  /**
+   * Niveau d’expertise attendu : prime sur les correspondances technos et la récence dans les prompts de positionnement.
+   * Optionnel pour rétrocompat ; les nouvelles analyses mission doivent le remplir (consigne LLM).
+   */
+  expectedExpertiseLevel: jobPostingExpectedExpertiseLevelSchema.optional(),
+  /** Mots-clés prioritaires pour sélectionner le contexte CV au scoring (REFACTO §3.2) */
+  cvSearchKeywords: z
+    .array(z.string())
+    .optional()
+    .describe('10 à 15 termes techniques ou métiers à prioriser pour le matching CV'),
   keyPoints: z
     .array(jobPostingKeyPointSchema)
     .describe('Points clés triés par importanceRank croissant (rang 1 en premier)'),
@@ -274,6 +496,8 @@ export const jobPostingKeyPointsBlockSchema = jobPostingAnalysisSchema.pick({
   keyPoints: true,
   openQuestions: true,
   redFlags: true,
+  cvSearchKeywords: true,
+  expectedExpertiseLevel: true,
 });
 
 export const jobPostingKeyPointExplainSchema = z.object({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId, requireOrgAdmin } from '@/lib/utils/auth';
 import { organizationSettingsPatchSchema } from '@/lib/validation/org-settings';
+import { patchMatchingWeights } from '@/lib/config/matching-weights';
 
 function emptyToNull(v: string | undefined): string | null | undefined {
   if (v === undefined) return undefined;
@@ -30,6 +31,7 @@ export async function GET() {
         app_logo_url: null,
         positioning_brand_context: null,
         cv_code_template: 'himeo',
+        matching_weights: null,
         extra: {},
         created_at: null,
         updated_at: null,
@@ -73,6 +75,15 @@ export async function PATCH(req: NextRequest) {
       .eq('org_id', orgId)
       .maybeSingle();
 
+    if (p.matching_weights === null) {
+      patch.matching_weights = null;
+    } else if (p.matching_weights !== undefined) {
+      patch.matching_weights = patchMatchingWeights(
+        existing?.matching_weights ?? null,
+        p.matching_weights,
+      );
+    }
+
     const base = existing ?? {
       org_id: orgId,
       display_name: '',
@@ -81,6 +92,7 @@ export async function PATCH(req: NextRequest) {
       app_logo_url: null,
       positioning_brand_context: null,
       cv_code_template: 'himeo',
+      matching_weights: null,
       extra: {},
     };
 

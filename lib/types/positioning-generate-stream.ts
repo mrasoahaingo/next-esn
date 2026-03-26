@@ -3,7 +3,8 @@ export type PositioningGenerateBranch =
   | 'email'
   | 'emailFirstContact'
   | 'emailBulletPoints'
-  | 'candidateEmail';
+  | 'candidateEmail'
+  | 'expertiseConfirmations';
 
 export type PositioningGenerateStreamMeta = {
   phase?: 'generating';

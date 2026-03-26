@@ -996,6 +996,9 @@ function PositioningRow({
     onFinish: invalidateMission,
   });
 
+  const extractCancelRunId = candidate?.workflow_run_id ?? extractStream.activeRunId ?? null;
+  const analyzeCancelRunId = p.workflow_run_id ?? analysisStream.activeRunId ?? null;
+
   const analysisComplete = READY_STATUSES.has(p.status);
   const isCandidateReady = ['reviewing', 'ready', 'generated'].includes(candidateStatus);
   const extractionPhaseDone = addedVia === 'existing_candidate' || isCandidateReady;
@@ -1018,16 +1021,17 @@ function PositioningRow({
     analyzeStepActive ||
     (p.status === 'draft' && addedVia === 'cv_upload' && !isCandidateReady);
 
-  const showCancelExtract =
-    extractActive && candidate?.workflow_run_id && candidate?.id;
+  const showCancelExtract = extractStepActive && !!extractCancelRunId && !!candidate?.id;
   const showCancelPositioning =
-    p.workflow_run_id && (p.status === 'analyzing' || p.status === 'generating');
+    (p.status === 'analyzing' || p.status === 'generating' || analysisStream.isLoading) &&
+    !!analyzeCancelRunId;
 
   const handleCancel = (e: MouseEvent) => {
     e.stopPropagation();
-    if (showCancelExtract && candidate?.workflow_run_id && candidate?.id) {
+    if (showCancelExtract && extractCancelRunId && candidate?.id) {
+      extractStream.stop();
       onCancelWorkflow({
-        runId: candidate.workflow_run_id,
+        runId: extractCancelRunId,
         table: 'candidates',
         recordId: candidate.id,
         resetStatus: 'uploaded',
@@ -1035,9 +1039,10 @@ function PositioningRow({
       });
       return;
     }
-    if (showCancelPositioning && p.workflow_run_id) {
+    if (showCancelPositioning && analyzeCancelRunId) {
+      analysisStream.stop();
       onCancelWorkflow({
-        runId: p.workflow_run_id,
+        runId: analyzeCancelRunId,
         table: 'positionings',
         recordId: p.id,
         resetStatus: p.status === 'analyzing' ? 'draft' : 'analyzed',

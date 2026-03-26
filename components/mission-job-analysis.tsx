@@ -17,20 +17,45 @@ import {
 } from '@/components/ui/dialog';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { JobPostingAnalysisStreamMeta } from '@/lib/types/job-posting-analysis-stream';
-import type { JobPostingAnalysis, JobPostingKeyPointExplain, JobPostingKeyPointAspect } from '@/lib/schema';
+import type {
+  JobPostingAnalysis,
+  JobPostingExpertiseBand,
+  JobPostingKeyPointExplain,
+  JobPostingKeyPointAspect,
+  JobPostingRequirementTier,
+} from '@/lib/schema';
 
 type JobKeyPoint = NonNullable<JobPostingAnalysis['keyPoints']>[number];
-import { jobPostingAspectLabel } from '@/lib/services/job-posting-analysis.service';
+
+const INTERPRETED_BAND_LABEL: Record<JobPostingExpertiseBand, string> = {
+  junior: 'Junior',
+  confirmed: 'Confirmé',
+  senior: 'Senior',
+  expert_lead: 'Expert / lead',
+  unclear: 'Indéterminé',
+};
+
+const REQUIREMENT_TIER_LABEL: Record<JobPostingRequirementTier, string> = {
+  hard_constraint: 'Bloquant',
+  must_have: 'Indispensable',
+  should_have: 'Important',
+  nice_to_have: 'Souhaitable',
+};
+import {
+  jobPostingAspectLabel,
+  withMandatoryJobPostingLists,
+} from '@/lib/services/job-posting-analysis.service';
 import { normalizeSkillKey } from '@/lib/utils/skill-key';
 import { queryKeys } from '@/lib/queries/keys';
 import { useCancelWorkflow } from '@/lib/queries/workflow';
 import { cn } from '@/lib/utils';
 
 function formatJobPostingStreamHint(meta: JobPostingAnalysisStreamMeta | null): string | null {
-  if (!meta?.activeBranches?.length && meta?.phase === 'finalizing') {
+  if (!meta) return null;
+  if (!meta.activeBranches?.length && meta.phase === 'finalizing') {
     return 'Finalisation…';
   }
-  if (!meta?.activeBranches?.length) return 'Analyse de la fiche…';
+  if (!meta.activeBranches?.length) return 'Analyse de la fiche…';
   const labels: Record<string, string> = {
     executive: 'Synthèse cadre',
     keyPoints: 'Points clés',
@@ -88,9 +113,20 @@ export function MissionJobAnalysis({
     onFinish: invalidate,
   });
 
+  const cancelRunId = stream.activeRunId;
+
   const effectiveAnalysis = useMemo(() => {
-    if (stream.isLoading && stream.object) return stream.object;
-    return job_analysis ?? stream.object ?? null;
+    const raw =
+      stream.isLoading && stream.object ? stream.object : job_analysis ?? stream.object ?? null;
+    if (!raw) return null;
+    const hasAnyContent =
+      !!raw.expectedExpertiseLevel ||
+      !!raw.executiveSummary?.trim() ||
+      (raw.keyPoints?.length ?? 0) > 0 ||
+      (raw.openQuestions?.length ?? 0) > 0 ||
+      (raw.redFlags?.length ?? 0) > 0;
+    if (!hasAnyContent) return raw;
+    return withMandatoryJobPostingLists(raw);
   }, [stream.isLoading, stream.object, job_analysis]);
 
   /** Regroupe par `category` ; ordre des blocs = importance la plus forte (min rank) dans la catégorie. */
@@ -114,7 +150,20 @@ export function MissionJobAnalysis({
     });
   }, [effectiveAnalysis?.keyPoints]);
 
-  const streamHint = formatJobPostingStreamHint(stream.streamMeta);
+  /** N’utiliser le détail du flux que pendant la consommation active : sinon meta restée en mémoire affichait « Analyse… » à tort. */
+  const streamHint = stream.isLoading
+    ? formatJobPostingStreamHint(stream.streamMeta)
+    : null;
+
+  /** Analyse déjà persistée en base : ne pas afficher le bandeau « en cours » si le run est obsolète. */
+  const hasPersistedJobAnalysis =
+    !!job_analysis &&
+    (!!job_analysis.expectedExpertiseLevel ||
+      !!job_analysis.executiveSummary?.trim() ||
+      (job_analysis.keyPoints?.length ?? 0) > 0);
+
+  const showAnalysisProgressHint =
+    stream.isLoading || (jobAnalyzeActive && !hasPersistedJobAnalysis);
 
   const toggleUnderstood = useMutation({
     mutationFn: async ({ pointId, understood }: { pointId: string; understood: boolean }) => {
@@ -179,10 +228,10 @@ export function MissionJobAnalysis({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-neon" />
           <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
-          {streamHint && (stream.isLoading || jobAnalyzeActive) && (
+          {showAnalysisProgressHint && (
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
-              {streamHint}
+              {streamHint ?? 'Analyse de la fiche…'}
             </span>
           )}
         </div>
@@ -214,23 +263,24 @@ export function MissionJobAnalysis({
                 {job_analysis_stale ? 'Relancer l’analyse' : 'Réanalyser la fiche'}
               </Button>
             )}
-            {jobAnalyzeActive && job_analysis_workflow_run_id && (
+            {cancelRunId && (stream.isLoading || jobAnalyzeActive) && (
               <Button
                 size="sm"
                 variant="ghost"
                 className="text-muted-foreground"
-                onClick={() =>
+                onClick={() => {
+                  stream.stop();
                   cancelWorkflow.mutate({
-                    runId: job_analysis_workflow_run_id,
+                    runId: cancelRunId,
                     table: 'missions',
                     recordId: missionId,
                     missionId,
-                  })
-                }
+                  });
+                }}
                 disabled={cancelWorkflow.isPending}
               >
                 <XCircle className="mr-1 h-3.5 w-3.5" />
-                Annuler
+                Annuler l’analyse
               </Button>
             )}
           </div>
@@ -246,6 +296,67 @@ export function MissionJobAnalysis({
 
       {hasDescription && (
       <AnalysisScrollBody>
+      {effectiveAnalysis?.expectedExpertiseLevel &&
+        effectiveAnalysis.expectedExpertiseLevel.summary?.trim() && (
+        <div className="rounded-xl border border-violet/35 bg-violet/10 p-4 mb-4 neon-ring">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-violet">
+              Niveau d&apos;expertise attendu
+            </p>
+            {effectiveAnalysis.expectedExpertiseLevel.interpretedBand && (
+              <Badge variant="secondary" className="text-[10px] font-normal">
+                {INTERPRETED_BAND_LABEL[effectiveAnalysis.expectedExpertiseLevel.interpretedBand]}
+              </Badge>
+            )}
+            {effectiveAnalysis.expectedExpertiseLevel.hardOnLevel && (
+              <Badge variant="outline" className="border-destructive/40 text-[10px] text-destructive">
+                Non négociable
+              </Badge>
+            )}
+          </div>
+          {effectiveAnalysis.expectedExpertiseLevel.statedLevel?.trim() && (
+            <p className="text-xs font-medium text-foreground/95 mb-1">
+              {effectiveAnalysis.expectedExpertiseLevel.statedLevel}
+            </p>
+          )}
+          <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed mb-3">
+            {effectiveAnalysis.expectedExpertiseLevel.summary}
+          </p>
+          {effectiveAnalysis.expectedExpertiseLevel.minYearsHint != null && (
+            <p className="text-xs text-muted-foreground mb-2">
+              Indication d&apos;ancienneté (fiche) :{' '}
+              <span className="font-medium text-foreground">
+                {effectiveAnalysis.expectedExpertiseLevel.minYearsHint} an(s) ou équivalent
+              </span>
+            </p>
+          )}
+          {(effectiveAnalysis.expectedExpertiseLevel.signalsFromPosting?.length ?? 0) > 0 && (
+            <>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                Signaux dans la fiche
+              </p>
+              <ul className="mb-3 list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
+                {(effectiveAnalysis.expectedExpertiseLevel.signalsFromPosting ?? []).map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {(effectiveAnalysis.expectedExpertiseLevel.recruiterCalibrationQuestions?.length ?? 0) > 0 && (
+            <>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                Questions pour calibrer avec le client
+              </p>
+              <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
+                {(effectiveAnalysis.expectedExpertiseLevel.recruiterCalibrationQuestions ?? []).map((q, i) => (
+                  <li key={i}>{q}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
       {effectiveAnalysis?.executiveSummary && (
         <div className="rounded-xl bg-overlay/20 border border-overlay/6 p-4 mb-4">
           <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
@@ -254,6 +365,25 @@ export function MissionJobAnalysis({
           <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
             {effectiveAnalysis.executiveSummary}
           </p>
+        </div>
+      )}
+
+      {effectiveAnalysis?.cvSearchKeywords && effectiveAnalysis.cvSearchKeywords.length > 0 && (
+        <div className="mb-4">
+          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+            Mots-clés matching (priorité CV)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {effectiveAnalysis.cvSearchKeywords.map((kw, i) => (
+              <Badge
+                key={`${kw}-${i}`}
+                variant="secondary"
+                className="text-[10px] font-normal px-2 py-0.5 font-mono text-muted-foreground"
+              >
+                {kw}
+              </Badge>
+            ))}
+          </div>
         </div>
       )}
 
@@ -316,6 +446,28 @@ export function MissionJobAnalysis({
                           <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
                             {jobPostingAspectLabel(aspect)}
                           </Badge>
+                          {kp.requirementTier && (
+                            <Badge
+                              variant="outline"
+                              className={`text-[9px] px-1.5 py-0 ${
+                                kp.requirementTier === 'hard_constraint'
+                                  ? 'border-destructive/50 text-destructive/90'
+                                  : 'border-neon/40 text-neon/90'
+                              }`}
+                            >
+                              {REQUIREMENT_TIER_LABEL[kp.requirementTier]}
+                            </Badge>
+                          )}
+                          {kp.importanceWeight != null && kp.requirementTier !== 'hard_constraint' && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-white/20 text-white/60">
+                              poids {Math.round(kp.importanceWeight * 100)}%
+                            </Badge>
+                          )}
+                          {kp.evidenceTypeExpected && (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-white/15 text-muted-foreground">
+                              preuve : {kp.evidenceTypeExpected.replace(/_/g, ' ')}
+                            </Badge>
+                          )}
                           {understood && (
                             <Badge
                               variant="default"
@@ -327,6 +479,12 @@ export function MissionJobAnalysis({
                           )}
                         </div>
                         <p className="text-xs text-white/70 leading-relaxed">{kp.roleInMission}</p>
+                        {kp.valueSought?.trim() && (
+                          <p className="text-[10px] text-muted-foreground">
+                            <span className="text-white/50">Exigence : </span>
+                            {kp.valueSought}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         <div className="flex items-center gap-1.5">

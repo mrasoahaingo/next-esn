@@ -26,10 +26,29 @@ export async function POST(
 
     const world = getWorld();
     const run = await world.runs.get(runId, { resolveData: 'none' });
-    await world.events.create(runId, {
-      eventType: 'run_cancelled',
-      specVersion: run.specVersion ?? 1,
-    });
+    const runStatus = await run.status;
+
+    const isTerminal =
+      runStatus === 'completed' || runStatus === 'failed' || runStatus === 'cancelled';
+
+    if (!isTerminal) {
+      try {
+        await world.events.create(runId, {
+          eventType: 'run_cancelled',
+          specVersion: run.specVersion ?? 1,
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const httpStatus = (e as { status?: number }).status;
+        const alreadyTerminal =
+          httpStatus === 409 ||
+          msg.includes('terminal') ||
+          msg.includes('Cannot transition');
+        if (!alreadyTerminal) {
+          throw e;
+        }
+      }
+    }
 
     const supabase = getSupabase();
 

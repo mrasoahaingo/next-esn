@@ -6,8 +6,10 @@ import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { mergePositioningPartial } from '@/lib/services/positioning-analysis-merge';
 import {
   positioningAnalysisSchema,
+  jobPostingAnalysisSchema,
   type PositioningAnalysis,
   type ExtractedCV,
+  type JobPostingAnalysis,
   positioningSkillMatchesSchema,
   positioningExperienceRelevanceSchema,
   positioningGapsSchema,
@@ -15,9 +17,15 @@ import {
   positioningSynthesisSchema,
 } from '@/lib/schema';
 import {
+  analysisPhaseAnswersOnly,
   buildAnalysisUserContent,
+  buildMissionPositionHeadline,
   buildPositioningSynthesisUserContent,
+  parsePositioningAnswers,
+  type PositioningAnswerStoredValue,
 } from '@/lib/services/positioning.service';
+import { withMandatoryJobPostingLists } from '@/lib/services/job-posting-analysis.service';
+import { mergeMatchingWeights } from '@/lib/config/matching-weights';
 import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
 import type {
   PositioningAnalysisBranch,
@@ -33,7 +41,7 @@ async function fetchAndAnalyze(positioningId: string) {
 
   const { data: positioning, error: fetchError } = await supabase
     .from('positionings')
-    .select('*, candidates(*)')
+    .select('*, candidates(*), missions(job_analysis, title, company)')
     .eq('id', positioningId)
     .single();
 
@@ -45,15 +53,39 @@ async function fetchAndAnalyze(positioningId: string) {
   const cv = candidate.extracted_data as ExtractedCV;
   const jobDescription = positioning.job_description as string;
 
+  const missionRow = positioning.missions as
+    | { job_analysis: unknown; title?: string | null; company?: string | null }
+    | null
+    | undefined;
+  let jobAnalysis: JobPostingAnalysis | null = null;
+  if (missionRow?.job_analysis != null && typeof missionRow.job_analysis === 'object') {
+    const parsed = jobPostingAnalysisSchema.safeParse(missionRow.job_analysis);
+    jobAnalysis = withMandatoryJobPostingLists(
+      parsed.success ? parsed.data : (missionRow.job_analysis as JobPostingAnalysis),
+    );
+  }
+
+  const promptOptions = { positionHeadline: buildMissionPositionHeadline(missionRow) };
+
   const orgId = positioning.org_id as string | null | undefined;
   const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
+  const matchingWeights = mergeMatchingWeights(orgSettings?.matching_weights);
   const branding = toPositioningPromptBranding(orgSettings);
   const brandCtx = {
     displayName: branding.displayName,
     brandContextBlock: branding.brandContextBlock,
   };
 
-  const userContent = buildAnalysisUserContent(cv, jobDescription);
+  const priorAnswers = analysisPhaseAnswersOnly(parsePositioningAnswers(positioning.answers));
+
+  const userContent = buildAnalysisUserContent(
+    cv,
+    jobDescription,
+    jobAnalysis,
+    matchingWeights,
+    promptOptions,
+    priorAnswers,
+  );
 
   const workflowRunId = (positioning.workflow_run_id as string | null) ?? null;
   const positioningRowId = positioning.id as string;
@@ -208,7 +240,15 @@ async function fetchAndAnalyze(positioningId: string) {
       context: brandCtx,
     });
 
-    const synthesisUserText = buildPositioningSynthesisUserContent(cv, jobDescription, acc);
+    const synthesisUserText = buildPositioningSynthesisUserContent(
+      cv,
+      jobDescription,
+      acc,
+      jobAnalysis,
+      matchingWeights,
+      promptOptions,
+      priorAnswers,
+    );
     const synStart = Date.now();
     const synthesisResult = streamText({
       model: createGatewayLanguageModel(rSyn.gatewayModelId, rSyn.useExtractJson),
@@ -272,6 +312,7 @@ async function fetchAndAnalyze(positioningId: string) {
       durationMs,
       candidateId: positioning.candidate_id,
       orgId: positioning.org_id as string | null,
+      analysisRecruiterAnswers: priorAnswers,
     };
   } finally {
     writer.releaseLock();
@@ -280,7 +321,13 @@ async function fetchAndAnalyze(positioningId: string) {
 
 async function saveAnalysis(
   positioningId: string,
-  result: { object: unknown; durationMs: number; candidateId: string; orgId: string | null },
+  result: {
+    object: unknown;
+    durationMs: number;
+    candidateId: string;
+    orgId: string | null;
+    analysisRecruiterAnswers: Record<string, PositioningAnswerStoredValue>;
+  },
 ) {
   'use step';
 
@@ -294,6 +341,7 @@ async function saveAnalysis(
         status: 'analyzed',
         ai_analysis_duration_ms: result.durationMs,
         workflow_run_id: null,
+        analysis_recruiter_answers: result.analysisRecruiterAnswers,
       })
       .eq('id', positioningId);
   }

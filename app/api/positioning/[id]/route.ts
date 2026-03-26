@@ -10,6 +10,12 @@ const updatePositioningSchema = z.object({
   tailored_cv: z.record(z.string(), z.unknown()).nullable().optional(),
   cover_letter: z.string().nullable().optional(),
   email_body: z.string().nullable().optional(),
+  /** Réponses Q/R persistées (chaînes ou historique structuré par clé). */
+  answers: z.record(z.string(), z.unknown()).nullable().optional(),
+  /** Snapshot phase analyse au dernier run (prompts + bloc Résultats). */
+  analysis_recruiter_answers: z.record(z.string(), z.unknown()).nullable().optional(),
+  /** Si true avec analysis: null — archive l’analyse courante (DB) puis réinitialise pour une relance. */
+  archiveAnalysisBeforeClear: z.boolean().optional(),
 }).passthrough();
 
 export async function GET(
@@ -23,7 +29,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('positionings')
-      .select('*')
+      .select('*, missions(id, title, company, job_analysis)')
       .eq('id', id)
       .eq('org_id', orgId)
       .single();
@@ -53,9 +59,36 @@ export async function PATCH(
     }
     const supabase = getSupabase();
 
+    const { archiveAnalysisBeforeClear, ...rest } = parsed.data;
+    const payload: Record<string, unknown> = { ...rest };
+
+    if (archiveAnalysisBeforeClear && rest.analysis === null) {
+      const { data: current } = await supabase
+        .from('positionings')
+        .select('analysis, answers, org_id')
+        .eq('id', id)
+        .eq('org_id', orgId)
+        .single();
+
+      const prevAnalysis = current?.analysis;
+      if (prevAnalysis != null && typeof prevAnalysis === 'object') {
+        const rowOrg = (current?.org_id as string | null | undefined) ?? orgId;
+        const { error: histErr } = await supabase.from('positioning_analysis_history').insert({
+          positioning_id: id,
+          org_id: rowOrg,
+          analysis: prevAnalysis,
+          answers: current?.answers ?? null,
+        });
+        if (histErr) throw histErr;
+      }
+
+      payload.status = 'draft';
+      payload.workflow_run_id = null;
+    }
+
     const { data, error } = await supabase
       .from('positionings')
-      .update({ ...parsed.data, updated_at: new Date().toISOString() })
+      .update({ ...payload, updated_at: new Date().toISOString() })
       .eq('id', id)
       .eq('org_id', orgId)
       .select()

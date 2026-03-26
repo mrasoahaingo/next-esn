@@ -9,7 +9,9 @@ import {
 } from '@/lib/services/positioning-generate-merge';
 import {
   positioningOutputSchema,
+  jobPostingAnalysisSchema,
   type ExtractedCV,
+  type JobPostingAnalysis,
   type PositioningAnalysis,
   type PositioningOutput,
   positioningTailoredCvPartSchema,
@@ -17,8 +19,16 @@ import {
   positioningEmailFirstContactPartSchema,
   positioningEmailBulletPointsPartSchema,
   positioningCandidateEmailPartSchema,
+  positioningExpertiseConfirmationsPartSchema,
 } from '@/lib/schema';
-import { buildGenerateUserContent } from '@/lib/services/positioning.service';
+import {
+  buildGenerateUserContent,
+  buildMissionPositionHeadline,
+  normalizeStoredExpertisePrompts,
+  parsePositioningAnswers,
+} from '@/lib/services/positioning.service';
+import { withMandatoryJobPostingLists } from '@/lib/services/job-posting-analysis.service';
+import { mergeMatchingWeights } from '@/lib/config/matching-weights';
 import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
 import type {
   PositioningGenerateBranch,
@@ -27,14 +37,14 @@ import type {
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 
-async function fetchAndGenerate(positioningId: string, answers: Record<string, string>) {
+async function fetchAndGenerate(positioningId: string, answers: Record<string, unknown>) {
   'use step';
 
   const supabase = getSupabase();
 
   const { data: positioning, error: fetchError } = await supabase
     .from('positionings')
-    .select('*, candidates(*)')
+    .select('*, candidates(*), missions(job_analysis, title, company)')
     .eq('id', positioningId)
     .single();
 
@@ -48,15 +58,41 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   const jobDescription = positioning.job_description as string;
   const analysis = positioning.analysis as PositioningAnalysis;
 
+  const missionRow = positioning.missions as
+    | { job_analysis: unknown; title?: string | null; company?: string | null }
+    | null
+    | undefined;
+  let jobAnalysis: JobPostingAnalysis | null = null;
+  if (missionRow?.job_analysis != null && typeof missionRow.job_analysis === 'object') {
+    const parsed = jobPostingAnalysisSchema.safeParse(missionRow.job_analysis);
+    jobAnalysis = withMandatoryJobPostingLists(
+      parsed.success ? parsed.data : (missionRow.job_analysis as JobPostingAnalysis),
+    );
+  }
+
   const orgId = positioning.org_id as string | null | undefined;
   const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
+  const matchingWeights = mergeMatchingWeights(orgSettings?.matching_weights);
   const branding = toPositioningPromptBranding(orgSettings);
   const brandCtx = {
     displayName: branding.displayName,
     brandContextBlock: branding.brandContextBlock,
   };
 
-  const userContent = buildGenerateUserContent(cv, jobDescription, analysis, answers ?? {});
+  const expertisePromptsForGenerate = normalizeStoredExpertisePrompts(
+    positioning.generation_expertise_prompts,
+  );
+
+  const userContent = buildGenerateUserContent(
+    cv,
+    jobDescription,
+    analysis,
+    parsePositioningAnswers(answers ?? {}),
+    jobAnalysis,
+    matchingWeights,
+    { positionHeadline: buildMissionPositionHeadline(missionRow) },
+    expertisePromptsForGenerate.length > 0 ? expertisePromptsForGenerate : null,
+  );
 
   const workflowRunId = (positioning.workflow_run_id as string | null) ?? null;
   const positioningRowId = positioning.id as string;
@@ -143,7 +179,12 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
   }
 
   try {
-    const [rTc, rEm, rFc, rBp, rCe] = await Promise.all([
+    const [rEc, rTc, rEm, rFc, rBp, rCe] = await Promise.all([
+      resolveLlmTask(supabase, {
+        taskKey: TASK_KEY.POSITIONING_GENERATE_EXPERTISE_CONFIRMATIONS,
+        orgId: orgId ?? null,
+        context: brandCtx,
+      }),
       resolveLlmTask(supabase, {
         taskKey: TASK_KEY.POSITIONING_GENERATE_TAILORED_CV,
         orgId: orgId ?? null,
@@ -172,6 +213,15 @@ async function fetchAndGenerate(positioningId: string, answers: Record<string, s
     ]);
 
     await Promise.all([
+      consumeBranch(
+        createGatewayLanguageModel(rEc.gatewayModelId, rEc.useExtractJson),
+        rEc.systemPrompt,
+        positioningExpertiseConfirmationsPartSchema,
+        'positioning_expertise_confirmations',
+        'expertiseConfirmations',
+        TASK_KEY.POSITIONING_GENERATE_EXPERTISE_CONFIRMATIONS,
+        rEc.gatewayModelId,
+      ),
       consumeBranch(
         createGatewayLanguageModel(rTc.gatewayModelId, rTc.useExtractJson),
         rTc.systemPrompt,
@@ -248,6 +298,7 @@ async function saveGeneration(
       emailFirstContact?: unknown;
       emailBulletPoints?: unknown;
       candidateEmail?: unknown;
+      expertiseConfirmations?: unknown;
     };
     durationMs: number;
     candidateId: string;
@@ -259,6 +310,18 @@ async function saveGeneration(
   const supabase = getSupabase();
 
   if (result.object) {
+    const rawEc = result.object.expertiseConfirmations;
+    const expertiseStored = Array.isArray(rawEc)
+      ? rawEc.map((x: { question?: string; context?: string; suggestedAnswers?: string[] }, i: number) => ({
+          id: `ec-${i}`,
+          question: String(x.question ?? ''),
+          context: String(x.context ?? ''),
+          suggestedAnswers: Array.isArray(x.suggestedAnswers)
+            ? x.suggestedAnswers.map((s) => String(s)).filter(Boolean)
+            : [],
+        }))
+      : null;
+
     await supabase
       .from('positionings')
       .update({
@@ -267,6 +330,7 @@ async function saveGeneration(
         email_first_contact: result.object.emailFirstContact,
         email_bullet_points: result.object.emailBulletPoints,
         candidate_email: result.object.candidateEmail,
+        generation_expertise_prompts: expertiseStored,
         status: 'generated',
         ai_generation_duration_ms: result.durationMs,
         workflow_run_id: null,
@@ -278,7 +342,10 @@ async function saveGeneration(
   await writable.close();
 }
 
-export async function positioningGenerateWorkflow(positioningId: string, answers: Record<string, string>) {
+export async function positioningGenerateWorkflow(
+  positioningId: string,
+  answers: Record<string, unknown>,
+) {
   'use workflow';
 
   const result = await fetchAndGenerate(positioningId, answers);

@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import type { ExtractedCV, PositioningAnalysis, PositioningEmail } from '@/lib/schema';
+import type {
+  ExtractedCV,
+  PositioningAnalysis,
+  PositioningEmail,
+  PositioningExpertiseConfirmationItem,
+} from '@/lib/schema';
+import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
 
 interface PositioningState {
   positioningId: string | null;
@@ -16,6 +22,14 @@ interface PositioningState {
   pdfBlobUrl: string | null;
   isPdfLoading: boolean;
   originalPdfBlobUrl: string | null;
+  /** Questions + suggestions (phase génération), hors formulaire CV. */
+  generationExpertisePrompts: PositioningExpertiseConfirmationItem[] | null;
+  generationExpertiseResponses: Record<string, string>;
+  /**
+   * Historique recruteur par clé `candidat:…` / `client:…` (append-only côté affinage ;
+   * suppression d’une entrée depuis l’onglet Résultats).
+   */
+  recruiterAnswerEntries: Record<string, PositioningRecruiterAnswerEntry[]>;
 
   setPositioningId: (id: string | null) => void;
   setJobDescription: (text: string) => void;
@@ -31,8 +45,13 @@ interface PositioningState {
   setPdfBlobUrl: (url: string | null) => void;
   setIsPdfLoading: (loading: boolean) => void;
   setOriginalPdfBlobUrl: (url: string | null) => void;
-  updateAnswer: (type: 'candidate' | 'client', index: number, answer: string) => void;
   updateTailoredCvField: (field: keyof ExtractedCV, value: unknown) => void;
+  setGenerationExpertisePrompts: (v: PositioningExpertiseConfirmationItem[] | null) => void;
+  setGenerationExpertiseResponses: (v: Record<string, string>) => void;
+  setGenerationExpertiseResponse: (id: string, text: string) => void;
+  setRecruiterAnswerEntries: (v: Record<string, PositioningRecruiterAnswerEntry[]>) => void;
+  appendRecruiterAnswer: (key: string, text: string) => void;
+  removeRecruiterAnswerEntry: (key: string, entryId: string) => void;
   reset: () => void;
 }
 
@@ -51,6 +70,9 @@ const initialState = {
   pdfBlobUrl: null,
   isPdfLoading: false,
   originalPdfBlobUrl: null,
+  generationExpertisePrompts: null,
+  generationExpertiseResponses: {},
+  recruiterAnswerEntries: {} as Record<string, PositioningRecruiterAnswerEntry[]>,
 };
 
 export const usePositioningStore = create<PositioningState>((set, get) => ({
@@ -79,23 +101,46 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
     set({ originalPdfBlobUrl: url });
   },
 
-  updateAnswer: (type, index, answer) => {
-    const analysis = get().analysis;
-    if (!analysis) return;
-
-    const key = type === 'candidate' ? 'candidateQuestions' : 'clientQuestions';
-    const questions = [...(analysis[key] ?? [])];
-    if (questions[index]) {
-      questions[index] = { ...questions[index], answer };
-    }
-    set({ analysis: { ...analysis, [key]: questions } });
-  },
-
   updateTailoredCvField: (field, value) => {
     const current = get().tailoredCv;
     if (!current) return;
     set({ tailoredCv: { ...current, [field]: value } });
   },
+
+  setGenerationExpertisePrompts: (v) => set({ generationExpertisePrompts: v }),
+  setGenerationExpertiseResponses: (v) => set({ generationExpertiseResponses: v }),
+  setGenerationExpertiseResponse: (id, text) =>
+    set((s) => ({
+      generationExpertiseResponses: { ...s.generationExpertiseResponses, [id]: text },
+    })),
+
+  setRecruiterAnswerEntries: (v) => set({ recruiterAnswerEntries: v }),
+
+  appendRecruiterAnswer: (key, text) => {
+    const t = text.trim();
+    if (!t) return;
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    set((s) => {
+      const prev = s.recruiterAnswerEntries[key] ?? [];
+      return {
+        recruiterAnswerEntries: {
+          ...s.recruiterAnswerEntries,
+          [key]: [...prev, { id, text: t, createdAt }],
+        },
+      };
+    });
+  },
+
+  removeRecruiterAnswerEntry: (key, entryId) =>
+    set((s) => {
+      const prev = s.recruiterAnswerEntries[key] ?? [];
+      const next = prev.filter((e) => e.id !== entryId);
+      const nextMap = { ...s.recruiterAnswerEntries };
+      if (next.length === 0) delete nextMap[key];
+      else nextMap[key] = next;
+      return { recruiterAnswerEntries: nextMap };
+    }),
 
   reset: () => {
     const prev = get().pdfBlobUrl;

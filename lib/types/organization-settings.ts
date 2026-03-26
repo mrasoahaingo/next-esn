@@ -8,6 +8,8 @@ export type OrganizationSettingsRow = {
   /** Clé du layout PDF versionné (`templates/registry.ts`) */
   cv_code_template: string;
   positioning_brand_context: string | null;
+  /** Pondérations matching — voir `lib/config/matching-weights.ts` */
+  matching_weights?: unknown | null;
   extra: Record<string, unknown>;
   created_at: string;
   updated_at: string;

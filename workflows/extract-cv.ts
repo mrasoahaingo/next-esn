@@ -7,6 +7,7 @@ import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { mergeExtractedPartial } from '@/lib/services/extraction-merge';
+import { prepareCvForMatchingPrompt } from '@/lib/utils/cv-experience-time';
 import {
   extractionSchema,
   type ExtractedCV,
@@ -334,7 +335,11 @@ async function parallelExtractAndStream(
     ]);
 
     const parsed = extractionSchema.safeParse(acc);
-    const object = parsed.success ? parsed.data : acc;
+    let object: unknown = acc;
+    if (parsed.success) {
+      const referenceDate = new Date();
+      object = prepareCvForMatchingPrompt(parsed.data, referenceDate);
+    }
 
     if (!parsed.success) {
       console.warn('Extraction schema validation warning:', parsed.error.flatten());
