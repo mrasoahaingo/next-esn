@@ -188,6 +188,7 @@ export function MissionJobAnalysis({
         errorStepKey: stream.errorStepKey,
         persistedError: workflow_last_error,
         workflowFailed: !!(workflow_last_error ?? stream.error),
+        workflowRunActive: jobAnalyzeActive,
       }),
     [
       stream.streamMeta,
@@ -197,6 +198,7 @@ export function MissionJobAnalysis({
       stream.error,
       job_analysis,
       workflow_last_error,
+      jobAnalyzeActive,
     ],
   );
 

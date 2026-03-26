@@ -141,6 +141,12 @@ export function computeJobPostingStepStates(input: {
   errorStepKey: string | null;
   persistedError: WorkflowLastError | null;
   workflowFailed: boolean;
+  /**
+   * True tant que la mission a un `job_analysis_workflow_run_id` côté serveur.
+   * Sans ça, avant reconnexion au flux NDJSON `isStreaming` est souvent false alors que l’analyse
+   * tourne — le raccourci « tout terminé » produisait des badges « Terminé » incohérents.
+   */
+  workflowRunActive?: boolean;
 }): StepStateRow[] {
   const defs = JOB_POSTING_WORKFLOW_STEPS;
   const { key: errKey, message: persistedMsg } = resolveErrorKeys(
@@ -149,7 +155,8 @@ export function computeJobPostingStepStates(input: {
     input.workflowFailed,
   );
 
-  if (!input.isStreaming && !input.workflowFailed) {
+  const workflowRunActive = input.workflowRunActive ?? false;
+  if (!input.isStreaming && !input.workflowFailed && !workflowRunActive) {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
   }
 

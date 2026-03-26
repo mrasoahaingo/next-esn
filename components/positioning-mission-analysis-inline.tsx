@@ -80,6 +80,7 @@ export function PositioningMissionAnalysisInline({
         errorStepKey: stream.errorStepKey,
         persistedError: workflow_last_error,
         workflowFailed: !!(workflow_last_error ?? stream.error),
+        workflowRunActive: jobAnalyzeActive,
       }),
     [
       stream.streamMeta,
@@ -89,6 +90,7 @@ export function PositioningMissionAnalysisInline({
       stream.error,
       job_analysis,
       workflow_last_error,
+      jobAnalyzeActive,
     ],
   );
 
