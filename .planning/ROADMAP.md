@@ -23,7 +23,7 @@ Archive : `.planning/milestones/v1.0-ROADMAP.md`
 
 ### v1.1 — upcoming
 
-- [ ] **Phase 3: Positioning Mission Upload & Inline Status** — FLOW-01, FLOW-02, FLOW-03
+- [x] **Phase 3: Positioning Mission Upload & Inline Status** (2/2 plans) — FLOW-01, FLOW-02, FLOW-03 — completed 2026-03-26
 - [ ] **Phase 4: Realtime & Generation Freshness** — LAT-01, LAT-02
 - [ ] **Phase 5: Partial Failure & Targeted Retry** — RES-01, RES-02
 
@@ -47,8 +47,8 @@ Archive : `.planning/milestones/v1.0-ROADMAP.md`
 
 Plans:
 
-- [ ] `03-01-PLAN.md` — FLOW-01 : audit navigation hub positionnement (pas de redirection obligatoire vers `/positions/[id]`) + commentaire d’invariant
-- [ ] `03-02-PLAN.md` — FLOW-02 + FLOW-03 : `useMission` sélection, bloc inline analyse (`WorkflowStepList`), gating CTA « Analyser le matching » + `aria-describedby`
+- [x] `03-01-PLAN.md` — FLOW-01 : audit navigation hub positionnement (pas de redirection obligatoire vers `/positions/[id]`) + commentaire d’invariant
+- [x] `03-02-PLAN.md` — FLOW-02 + FLOW-03 : `useMission` sélection, bloc inline analyse (`WorkflowStepList`), gating CTA « Analyser le matching » + `aria-describedby`
 
 **UI hint** : yes
 
@@ -97,6 +97,6 @@ Plans:
 | Phase | Milestone | Plans complete | Status | Completed |
 | ----- | --------- | ---------------- | ------ | --------- |
 | 1–2 | v1.0 | 5/5 | Complete | 2026-03-26 |
-| 3 | v1.1 | 0/2 | Not started | — |
+| 3 | v1.1 | 2/2 | Complete | 2026-03-26 |
 | 4 | v1.1 | 0/TBD | Not started | — |
 | 5 | v1.1 | 0/TBD | Not started | — |

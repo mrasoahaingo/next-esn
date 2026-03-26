@@ -34,6 +34,7 @@ L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il
 - ✓ Progression par sous-étape et badges par étape ; erreurs attribuées à l’étape — v1.0
 - ✓ Erreurs workflow remontées à l’UI avec messages actionnables — v1.0
 - ✓ Synchro React Query + reset store positionnement sur changement de contexte — v1.0
+- ✓ Hub `/review/[id]/positioning` : pas de redirection `/positions` après création mission ; état d’analyse mission inline ; CTA matching selon vérité serveur (`FLOW-01`–`FLOW-03`) — Phase 3
 
 ### Active (v1.1)
 
@@ -73,4 +74,4 @@ Voir `.planning/REQUIREMENTS.md` — exigences FLOW-*, LAT-*, RES-*.
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-03-26 — milestone v1.1 scoped*
+*Last updated: 2026-03-26 — Phase 3 (flux hub positionnement) livrée*

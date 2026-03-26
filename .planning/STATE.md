@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
-status: phase_3_ui_spec_ready
-stopped_at: Phase 3 UI-SPEC approved
-last_updated: "2026-03-26T23:30:00.000Z"
+status: phase_4_next
+stopped_at: Phase 3 complete — ready to plan Phase 4
+last_updated: "2026-03-26T23:59:00.000Z"
 last_activity: 2026-03-26
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (milestone v1.1)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille  
-**Current focus:** v1.1 — flux positionnement (mission inline) + réactivité + résilience
+**Current focus:** Phase 4 — Realtime & Generation Freshness (next)
 
 ## Current Position
 
-Phase: 03 — Positioning Mission Upload & Inline Status  
-Plan: —  
-Status: UI-SPEC approved — ready to plan  
-Last activity: 2026-03-26 — `/gsd-ui-phase 3` completed
+Phase: 4
+Plan: Not started
+Status: Phase 3 complete
+Last activity: 2026-03-26
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -53,7 +53,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 ## Session continuity
 
 **Last session:** 2026-03-26  
-**Stopped at:** Phase 3 context gathered  
-**Resume file:** `.planning/phases/03-positioning-mission-upload-inline-status/03-UI-SPEC.md`
+**Stopped at:** Phase 3 executed (FLOW-01–03 hub)  
+**Resume file:** `.planning/phases/03-positioning-mission-upload-inline-status/03-VERIFICATION.md`
 
-**Next step:** `/gsd-plan-phase 3`
+**Next step:** `/gsd-plan-phase 4` or `/gsd-discuss-phase 4`

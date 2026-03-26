@@ -1,10 +1,24 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { JobPostingAnalysis } from '@/lib/schema';
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import { queryKeys } from './keys';
 
 /** Champs diagnostic workflow renvoyés par l’API mission (phase 2 / ERR-03). */
 export type MissionWorkflowDiagnostics = {
   workflow_last_error: WorkflowLastError | null;
+};
+
+/** Réponse `GET /api/missions/[id]` — champs nécessaires au hub positionnement (FLOW-02/03). */
+export type MissionDetail = MissionWorkflowDiagnostics & {
+  id: string;
+  title?: string;
+  company?: string | null;
+  job_description?: string;
+  job_analysis: JobPostingAnalysis | null;
+  job_analysis_workflow_run_id: string | null;
+  job_analysis_stale: boolean;
+  global_skill_keys_understood?: string[];
+  positionings?: unknown[];
 };
 
 const ACTIVE_POSITIONING_STATUSES = ['analyzing', 'generating'];
@@ -23,12 +37,12 @@ export function useMissions() {
 }
 
 export function useMission(id: string) {
-  return useQuery({
+  return useQuery<MissionDetail>({
     queryKey: queryKeys.missions.detail(id),
     queryFn: async () => {
       const res = await fetch(`/api/missions/${id}`);
       if (!res.ok) throw new Error('Failed to fetch mission');
-      return res.json();
+      return res.json() as Promise<MissionDetail>;
     },
     enabled: !!id,
     refetchInterval: (query) => {

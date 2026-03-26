@@ -25,7 +25,9 @@ import {
   ChevronRight,
   Users,
 } from 'lucide-react';
-import { useMissions, useCreateMission, useCreatePositioning } from '@/lib/queries';
+import { PositioningMissionAnalysisInline } from '@/components/positioning-mission-analysis-inline';
+import { useMissions, useMission, useCreateMission, useCreatePositioning } from '@/lib/queries';
+import { getPositioningMatchingCtaState } from '@/lib/utils/mission-positioning-gate';
 
 interface Mission {
   id: string;
@@ -46,6 +48,10 @@ export default function PositioningNewPage() {
 
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
 
+  const { data: missionDetail, isLoading: isMissionDetailLoading } = useMission(
+    selectedMissionId ?? '',
+  );
+
   // New mission dialog
   const [showNewMission, setShowNewMission] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -57,6 +63,8 @@ export default function PositioningNewPage() {
   const isCreatingMission = createMission.isPending;
   const isCreating = createPositioning.isPending;
 
+  // FLOW-01 / D-01 D-02: Ne pas rediriger vers /positions/[id] après création de mission depuis cet écran.
+  // Sélection locale uniquement (setSelectedMissionId). Lien « fiche mission » = action secondaire explicite utilisateur, pas parcours nominal.
   const handleCreateMission = async () => {
     if (!newTitle.trim() || !newJobDescription.trim()) return;
     createMission.mutate(
@@ -164,6 +172,7 @@ export default function PositioningNewPage() {
               ) : null}
               {missions.map((mission) => {
                 const isSelected = selectedMissionId === mission.id;
+                const cta = isSelected ? getPositioningMatchingCtaState(missionDetail) : null;
                 const previewLines = mission.job_description.split('\n').slice(1, 4).join(' ').trim();
                 const preview = previewLines.length > 140 ? previewLines.slice(0, 137) + '...' : previewLines;
 
@@ -256,15 +265,24 @@ export default function PositioningNewPage() {
                             className="text-muted-foreground/80"
                           />
                         </div>
+                        <PositioningMissionAnalysisInline
+                          missionId={mission.id}
+                          mission={missionDetail}
+                          isMissionDetailLoading={isMissionDetailLoading}
+                        />
                         <div className="ml-8 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-[11px] text-muted-foreground">
-                            Mission sélectionnée — lancez l&apos;analyse de matching sur cette fiche.
+                          <p
+                            id="positioning-matching-cta-help"
+                            className="text-[11px] text-muted-foreground"
+                          >
+                            {cta?.helpText ?? ''}
                           </p>
                           <Button
                             type="button"
                             className="w-full shrink-0 bg-violet hover:bg-violet/90 sm:w-auto"
                             onClick={handleStartPositioning}
-                            disabled={isCreating}
+                            disabled={!!cta?.disabled || isCreating}
+                            aria-describedby="positioning-matching-cta-help"
                           >
                             {isCreating ? (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
