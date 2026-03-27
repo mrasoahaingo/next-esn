@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
-import { generateHimeoPdf } from '@/lib/services/pdf.service';
+import { generateCvPdf } from '@/lib/services/pdf.service';
 import { getTemplateConfig, sanitizePdfExportPrefix } from '@/lib/utils/template';
 
 const generateSchema = z.object({
@@ -30,15 +30,8 @@ export async function POST(req: NextRequest) {
       if (updateError) throw updateError;
     }
 
-    const { data: candidate } = await supabase
-      .from('candidates')
-      .select('template_id')
-      .eq('id', candidateId)
-      .eq('org_id', orgId)
-      .single();
-
-    const templateConfig = await getTemplateConfig(orgId, candidate?.template_id);
-    const pdfBuffer = await generateHimeoPdf(data, templateConfig, orgId);
+    const templateConfig = await getTemplateConfig(orgId, undefined);
+    const pdfBuffer = await generateCvPdf(data, templateConfig);
     const prefix = sanitizePdfExportPrefix(templateConfig?.exportFilePrefix);
     const personalInfo = data.personalInfo as Record<string, unknown> | undefined;
     const safeLast = String(personalInfo?.lastName ?? 'cv').replace(/[^a-zA-Z0-9_-]+/g, '_');

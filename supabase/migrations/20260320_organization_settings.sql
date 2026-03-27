@@ -1,6 +1,6 @@
 -- Organization-level branding and defaults (Clerk org_id).
--- Schéma final : pas de colonnes CV sur l’org (gabarits = templates.config) ;
--- cv_code_template = clé du layout versionné dans le code (templates/registry.ts).
+-- `cv_code_template` : historique ; retiré par `20260417_organization_settings_drop_cv_code_template.sql`.
+-- Gabarits PDF : table `templates` (défaut org + repli plateforme).
 
 CREATE TABLE IF NOT EXISTS organization_settings (
     org_id TEXT PRIMARY KEY,

@@ -1,4 +1,4 @@
-import { View, Text, Image, Svg, Path, Rect, Circle } from '@react-pdf/renderer';
+import { View, Text, Image } from '@react-pdf/renderer';
 import type { RenderComponentRegistry } from '@json-render/react-pdf/render';
 
 /** Aligné sur @json-render/react-pdf (standard List) — retire les emoji des puces CV. */
@@ -31,6 +31,8 @@ function FixedViewComponent({ element, children }: { element: { props: Record<st
         borderWidth: (p.borderWidth as number) ?? undefined,
         borderColor: (p.borderColor as string) ?? undefined,
         borderRadius: (p.borderRadius as number) ?? undefined,
+        height: (p.height as number) ?? undefined,
+        minHeight: (p.minHeight as number) ?? undefined,
         flex: (p.flex as number) ?? undefined,
         alignItems: (p.alignItems as 'flex-start' | 'center' | 'flex-end' | 'stretch') ?? undefined,
         justifyContent: (p.justifyContent as 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around') ?? undefined,
@@ -141,6 +143,56 @@ function FixedColumnComponent({ element, children }: { element: { props: Record<
   );
 }
 
+function KeepTogetherViewComponent({ element, children }: { element: { props: Record<string, unknown> }; children?: React.ReactNode }) {
+  const p = element.props;
+  return (
+    <View
+      wrap={false}
+      style={{
+        padding: (p.padding as number) ?? undefined,
+        paddingTop: (p.paddingTop as number) ?? undefined,
+        paddingBottom: (p.paddingBottom as number) ?? undefined,
+        paddingLeft: (p.paddingLeft as number) ?? undefined,
+        paddingRight: (p.paddingRight as number) ?? undefined,
+        margin: (p.margin as number) ?? undefined,
+        backgroundColor: (p.backgroundColor as string) ?? undefined,
+        borderWidth: (p.borderWidth as number) ?? undefined,
+        borderColor: (p.borderColor as string) ?? undefined,
+        borderRadius: (p.borderRadius as number) ?? undefined,
+        flex: (p.flex as number) ?? undefined,
+        alignItems: (p.alignItems as 'flex-start' | 'center' | 'flex-end' | 'stretch') ?? undefined,
+        justifyContent: (p.justifyContent as 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around') ?? undefined,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+function KeepTogetherRowComponent({ element, children }: { element: { props: Record<string, unknown> }; children?: React.ReactNode }) {
+  const p = element.props;
+  return (
+    <View
+      wrap={false}
+      style={{
+        flexDirection: 'row',
+        gap: (p.gap as number) ?? undefined,
+        alignItems: (p.alignItems as 'flex-start' | 'center' | 'flex-end' | 'stretch') ?? undefined,
+        justifyContent: (p.justifyContent as 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around') ?? undefined,
+        padding: (p.padding as number) ?? undefined,
+        paddingTop: (p.paddingTop as number) ?? undefined,
+        paddingBottom: (p.paddingBottom as number) ?? undefined,
+        paddingLeft: (p.paddingLeft as number) ?? undefined,
+        paddingRight: (p.paddingRight as number) ?? undefined,
+        flex: (p.flex as number) ?? undefined,
+        flexWrap: p.wrap ? 'wrap' : undefined,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
 /** Rendu inline **gras** (même convention que l’extraction CV / synthèse). */
 function MarkdownInlineText({
   text,
@@ -209,25 +261,6 @@ function ListComponent({ element }: { element: { props: Record<string, unknown> 
   );
 }
 
-function HimeoLogoComponent({ element }: { element: { props: Record<string, unknown> } }) {
-  const p = element.props;
-  const width = (p.width as number) ?? 80;
-  const height = (p.height as number) ?? 18;
-  // Original viewBox: 0 0 158 36
-  return (
-    <Svg viewBox="0 0 158 36" width={width} height={height}>
-      <Path d="M28.7257 0H23.9381V14.9995H4.63563V0H0V13.3159L5.0156 17.2953L0 21.3513V35.0498H4.63563V19.6677H23.9381V35.0498H28.7257V0Z" fill="white" />
-      <Rect x="36.3518" y="0" width="4.55964" height="35.0498" fill="white" />
-      <Path d="M83.878 34.9729V12.2441L79.0144 20.8918V34.9729H83.878Z" fill="white" />
-      <Path d="M83.8747 0.078125V2.14438L67.536 30.5362H64.7242L53.3251 10.9451V35.0514H48.5375V0.078125H52.5652L66.2441 23.8018L79.923 0.078125H83.8747Z" fill="white" />
-      <Rect x="91.5039" y="0" width="24.1661" height="4.59167" fill="white" />
-      <Rect x="91.5039" y="15" width="24.1661" height="4.59167" fill="white" />
-      <Rect x="91.5039" y="30.459" width="24.1661" height="4.59167" fill="white" />
-      <Circle cx="140.648" cy="17.582" r="14.95" stroke="white" strokeWidth={5.03319} fill="none" />
-    </Svg>
-  );
-}
-
 /** Barre verticale (gabarit Esneo) — le View standard json-render ne mappe pas borderLeftWidth. */
 function CvAccentBarComponent({ element }: { element: { props: Record<string, unknown> } }) {
   const p = element.props;
@@ -287,6 +320,8 @@ export const fixedComponents: RenderComponentRegistry = {
   CvAccentBar: CvAccentBarComponent,
   BadgeList: BadgeListComponent,
   List: ListComponent,
+  KeepTogetherView: KeepTogetherViewComponent,
+  KeepTogetherRow: KeepTogetherRowComponent,
   FixedView: FixedViewComponent,
   FixedRow: FixedRowComponent,
   FixedColumn: FixedColumnComponent,
@@ -294,6 +329,5 @@ export const fixedComponents: RenderComponentRegistry = {
   FixedImage: FixedImageComponent,
   FixedDivider: FixedDividerComponent,
   FixedSpacer: FixedSpacerComponent,
-  HimeoLogo: HimeoLogoComponent,
   RichText: RichTextComponent,
 };

@@ -35,7 +35,6 @@ import { PdfPreview } from '../components/PdfPreview';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
-
 export default function ReviewPage() {
   const params = useParams();
   const queryClient = useQueryClient();
@@ -60,7 +59,6 @@ export default function ReviewPage() {
   const deleteCandidate = useDeleteCandidate();
   const cancelWorkflow = useCancelWorkflow();
   const router = useRouter();
-
   const { object, streamMeta, submit, isLoading, error, errorStepKey, stop, activeRunId } =
     useWorkflowStream<ExtractedCV, CvExtractionStreamMeta>({
     api: '/api/extract',
@@ -144,8 +142,9 @@ export default function ReviewPage() {
     return { byTask, label: uniqueModels || null };
   }, [candidateData]);
 
+  /** Gabarit toujours celui par défaut de l’org (pas de choix par candidat). */
   const pdfTemplateId =
-    candidateData?.id !== undefined ? (candidateData.template_id ?? null) : undefined;
+    candidateData?.id !== undefined ? null : undefined;
 
   usePdfPreview({
     data: cvData,
@@ -179,8 +178,7 @@ export default function ReviewPage() {
       setTemplateConfig(null);
       initializedForId.current = candidateData.id;
 
-      // Load template config (from candidate's template or default)
-      fetchTemplateConfig(candidateData.template_id).then((config) => {
+      fetchTemplateConfig(null).then((config) => {
         setTemplateConfig(config);
       });
     }

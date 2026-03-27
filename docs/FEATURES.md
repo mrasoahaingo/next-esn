@@ -136,7 +136,7 @@ Application **Next.js (App Router)** entièrement en **français** pour une ESN 
 | Fonctionnalité | Description |
 |----------------|-------------|
 | Liste | `/templates` : placeholder d’accueil ; édition par id. |
-| Éditeur `/templates/[id]` | Configuration **couleurs**, **logo**, **pied de page**, **ordre des sections**, **préfixe d’export** ; prévisualisation PDF sur données d’exemple. |
+| Éditeur `/templates/[id]` | Configuration du **thème**, **logo**, **en-tête**, **pied de page**, **blocs actifs**, **ordre des blocs**, **variantes de blocs** et **préfixe d’export** ; prévisualisation PDF sur données d’exemple. |
 | Config runtime | `GET/PATCH /api/template-config`, CRUD `/api/templates` — utilisé par les préviews et exports. |
 
 ---
@@ -168,10 +168,9 @@ Application **Next.js (App Router)** entièrement en **français** pour une ESN 
 | Fonctionnalité | Description |
 |----------------|-------------|
 | Vue d’ensemble | Statistiques globales : organisations, CVs, positionnements, **tokens** et **coûts estimés** (USD), répartition par org. |
-| Template CV code (par org) | Sélection du **template de code** CV (registre `templates/registry`) via API admin. |
 | Modèles & tâches LLM | Onglet dédié : CRUD **`llm_models`**, **`llm_tasks`**, surcharges **`llm_task_org_overrides`**. |
 
-**APIs** : `GET /api/admin/stats`, `PATCH /api/admin/organizations/[orgId]/cv-code-template`, `GET/POST/PATCH/DELETE` sur `/api/admin/llm-models`, `/api/admin/llm-tasks`, `/api/admin/org-llm-overrides`.
+**APIs** : `GET /api/admin/stats`, `GET/POST/PATCH/DELETE` sur `/api/admin/llm-models`, `/api/admin/llm-tasks`, `/api/admin/org-llm-overrides`.
 
 > Les prompts système et modèles résolus à l’exécution passent par `resolveLlmTask` et `createGatewayLanguageModel` — voir `lib/llm/`, `lib/ai.ts`.
 
@@ -202,7 +201,7 @@ Routes applicatives principales (hors workflow interne `.well-known`) :
 - **Templates** : `GET/POST /api/templates`, `GET/PATCH/DELETE /api/templates/[id]`, `GET/PATCH /api/template-config`
 - **Membres & invitations** : `/api/members`, `/api/members/[id]`, `/api/invitations`, `/api/invitations/[id]`
 - **Workflow** : `GET /api/workflow/[runId]/stream`, `POST /api/workflow/[runId]/cancel`
-- **Admin** : `/api/admin/stats`, `/api/admin/llm-*`, `/api/admin/org-llm-overrides`, `/api/admin/organizations/[orgId]/cv-code-template`
+- **Admin** : `/api/admin/stats`, `/api/admin/llm-*`, `/api/admin/org-llm-overrides`
 
 ---
 

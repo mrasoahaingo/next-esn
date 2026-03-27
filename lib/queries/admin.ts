@@ -25,7 +25,9 @@ export type AdminLlmUsageResponse = {
   offset: number
 }
 
-export interface AdminStats {
+export type AdminStats = {
+  /** Gabarits PDF globaux (table `templates`). */
+  globalTemplates: { id: string; name: string; is_default: boolean }[]
   totals: {
     organizations: number
     candidates: number
@@ -46,7 +48,8 @@ export interface AdminStats {
     inputTokens: number
     outputTokens: number
     estimatedCostUsd: number
-    cvCodeTemplate: string
+    /** `organization_settings.default_template_id` */
+    defaultTemplateId: string | null
   }[]
   recentCandidates: {
     id: string
@@ -69,6 +72,27 @@ export function useAdminStats() {
       const res = await fetch('/api/admin/stats')
       if (!res.ok) throw new Error('Failed to fetch admin stats')
       return res.json()
+    },
+  })
+}
+
+export function useSetOrgDefaultTemplate() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { orgId: string; templateId: string }) => {
+      const res = await fetch('/api/admin/org-templates/default', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error((err as { error?: string }).error ?? 'Failed to set default template')
+      }
+      return res.json() as Promise<{ ok: boolean }>
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.stats() })
     },
   })
 }
@@ -99,39 +123,5 @@ export function useAdminLlmUsage(
     },
     enabled: options?.enabled ?? true,
     refetchInterval: options?.refetchInterval ?? false,
-  })
-}
-
-export function useUpdateOrgCvCodeTemplate() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({
-      orgId,
-      cvCodeTemplate,
-    }: {
-      orgId: string
-      cvCodeTemplate: string
-    }) => {
-      const res = await fetch(
-        `/api/admin/organizations/${encodeURIComponent(orgId)}/cv-code-template`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvCodeTemplate }),
-        },
-      )
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        const msg =
-          typeof err.error === 'string'
-            ? err.error
-            : JSON.stringify(err.error ?? err)
-        throw new Error(msg || 'Mise à jour impossible')
-      }
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.stats() })
-    },
   })
 }

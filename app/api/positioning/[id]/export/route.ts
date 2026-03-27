@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
-import { generateHimeoPdf } from '@/lib/services/pdf.service';
+import { generateCvPdf } from '@/lib/services/pdf.service';
 import { getTemplateConfig, sanitizePdfExportPrefix } from '@/lib/utils/template';
 
 export async function POST(
@@ -16,7 +16,7 @@ export async function POST(
 
     const { data: positioning, error: fetchError } = await supabase
       .from('positionings')
-      .select('*, candidates(template_id)')
+      .select('*')
       .eq('id', id)
       .eq('org_id', orgId)
       .single();
@@ -26,8 +26,8 @@ export async function POST(
     const cvData = tailoredCv ?? positioning.tailored_cv;
     if (!cvData) throw new Error('No tailored CV data');
 
-    const templateConfig = await getTemplateConfig(orgId, positioning.candidates?.template_id);
-    const pdfBuffer = await generateHimeoPdf(cvData, templateConfig, orgId);
+    const templateConfig = await getTemplateConfig(orgId, undefined);
+    const pdfBuffer = await generateCvPdf(cvData, templateConfig);
     const prefix = sanitizePdfExportPrefix(templateConfig?.exportFilePrefix);
     const lastName = String(cvData.personalInfo?.lastName ?? 'candidat').replace(/[^a-zA-Z0-9_-]+/g, '_');
     const fileName = `${orgId}/${prefix}_${lastName}_positioning_${Date.now()}.pdf`;

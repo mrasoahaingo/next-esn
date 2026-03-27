@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTemplateStore } from '@/lib/stores/template.store';
 import type { ExtractedCV, TemplateConfig } from '@/lib/schema';
 
@@ -26,12 +26,28 @@ export function usePdfPreview({
 }: PdfPreviewOptions) {
   const storeConfig = useTemplateStore((s) => s.templateConfig);
   const templateConfig = templateConfigOverride !== undefined ? templateConfigOverride : storeConfig;
+  const requestKey = useMemo(
+    () =>
+      JSON.stringify({
+        data,
+        templateConfig: templateId === undefined ? templateConfig : undefined,
+        templateId,
+      }),
+    [data, templateConfig, templateId],
+  );
 
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestDataRef = useRef<typeof data>(data);
+  const latestTemplateConfigRef = useRef<typeof templateConfig>(templateConfig);
+  const latestTemplateIdRef = useRef<typeof templateId>(templateId);
 
-  useLayoutEffect(() => {
-    if (!data) return;
+  latestDataRef.current = data;
+  latestTemplateConfigRef.current = templateConfig;
+  latestTemplateIdRef.current = templateId;
+
+  useEffect(() => {
+    if (!latestDataRef.current) return;
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
@@ -42,11 +58,11 @@ export function usePdfPreview({
 
       setIsPdfLoading(true);
       try {
-        const body: Record<string, unknown> = { data };
-        if (templateId !== undefined) {
-          body.templateId = templateId;
+        const body: Record<string, unknown> = { data: latestDataRef.current };
+        if (latestTemplateIdRef.current !== undefined) {
+          body.templateId = latestTemplateIdRef.current;
         } else {
-          body.templateConfig = templateConfig;
+          body.templateConfig = latestTemplateConfigRef.current;
         }
 
         const res = await fetch('/api/pdf-preview', {
@@ -74,6 +90,7 @@ export function usePdfPreview({
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (abortRef.current) abortRef.current.abort();
     };
-  }, [data, templateConfig, templateId, setPdfBlobUrl, setIsPdfLoading, debounceMs]);
+  }, [requestKey, setPdfBlobUrl, setIsPdfLoading, debounceMs]);
 }

@@ -3,7 +3,31 @@ import { normalizeSkillKey } from '@/lib/utils/skill-key';
 
 // ─── Template config ─────────────────────────────────────────────
 
+/** Gabarit PDF unique ; les couleurs / logo viennent du `TemplateConfig`. */
+export const templateThemeIdSchema = z.literal('classic');
+
+export const templateBlockTypeSchema = z.enum([
+  'profile-info',
+  'summary',
+  'skills',
+  'education',
+  'experiences',
+]);
+
+export const templateBlockVariantSchema = z.enum([
+  'default',
+  'compact',
+  'detailed',
+]);
+
+export const templateBlockSchema = z.object({
+  type: templateBlockTypeSchema,
+  enabled: z.boolean(),
+  variant: templateBlockVariantSchema.optional(),
+});
+
 export const templateConfigSchema = z.object({
+  themeId: templateThemeIdSchema,
   colors: z.object({
     primary: z.string(),
     secondary: z.string(),
@@ -13,23 +37,45 @@ export const templateConfigSchema = z.object({
   }),
   logo: z.object({
     url: z.string(),
+    /** SVG collé (prioritaire sur `url` pour le rendu PDF si le contenu ressemble à du SVG). */
+    svgInline: z.string().max(524_288).optional(),
     width: z.number(),
     height: z.number(),
   }),
-  footer: z.object({
-    line1: z.string(),
-    line2: z.string(),
+  header: z.object({
+    companyName: z.string(),
+    documentTitle: z.string(),
+    tagLine: z.string(),
+    metaLine: z.string(),
+    showCandidateName: z.boolean(),
   }),
-  sections: z.array(z.enum([
-    'summary', 'skills', 'education', 'experiences',
-  ])),
+  footer: z.object({
+    leftText: z.string(),
+    centerText: z.string(),
+    rightText: z.string(),
+  }),
+  blocks: z.array(templateBlockSchema),
   /** Préfixe des noms de fichier PDF exportés (CV / positionnement) pour les candidats utilisant ce gabarit */
   exportFilePrefix: z.string().max(40).optional(),
 });
 
 export type TemplateConfig = z.infer<typeof templateConfigSchema>;
+export type TemplateThemeId = z.infer<typeof templateThemeIdSchema>;
+export type TemplateBlock = z.infer<typeof templateBlockSchema>;
+export type TemplateBlockType = z.infer<typeof templateBlockTypeSchema>;
+export type TemplateBlockVariant = z.infer<typeof templateBlockVariantSchema>;
 
+export const DEFAULT_TEMPLATE_BLOCKS: TemplateBlock[] = [
+  { type: 'profile-info', enabled: true, variant: 'default' },
+  { type: 'summary', enabled: true, variant: 'default' },
+  { type: 'skills', enabled: true, variant: 'default' },
+  { type: 'education', enabled: true, variant: 'default' },
+  { type: 'experiences', enabled: true, variant: 'detailed' },
+];
+
+/** Défaut PDF ; si tu modifies ce bloc, mets à jour `20260419_platform_template_canonical_config.sql`. */
 export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
+  themeId: 'classic',
   colors: {
     primary: '#010557',
     secondary: '#9bcaff',
@@ -42,11 +88,19 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
     width: 90,
     height: 20,
   },
-  footer: {
-    line1: '',
-    line2: '',
+  header: {
+    companyName: '',
+    documentTitle: 'Dossier de competences techniques',
+    tagLine: '',
+    metaLine: '',
+    showCandidateName: true,
   },
-  sections: ['summary', 'skills', 'education', 'experiences'],
+  footer: {
+    leftText: '',
+    centerText: '',
+    rightText: '',
+  },
+  blocks: DEFAULT_TEMPLATE_BLOCKS,
   exportFilePrefix: 'CV',
 };
 

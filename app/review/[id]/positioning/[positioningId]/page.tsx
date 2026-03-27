@@ -81,7 +81,6 @@ import { QuestionsPanel } from './components/QuestionsPanel';
 import { EmailsGenerationStep } from './components/EmailsGenerationStep';
 import { CvGenerationStep } from './components/CvGenerationStep';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
 const AnalysisCharts = dynamic(
   () => import('./components/AnalysisCharts').then((m) => m.AnalysisCharts),
   { loading: () => <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-violet" /></div> },
@@ -397,8 +396,8 @@ export default function PositioningWizardPage() {
 
   const debouncedSave = useAutoSave(positioningIdParam);
 
-  const pdfTemplateId =
-    candidateData?.id !== undefined ? (candidateData.template_id ?? null) : undefined;
+  /** Gabarit toujours celui par défaut de l’org (pas de choix par candidat). */
+  const pdfTemplateId = candidateData?.id !== undefined ? null : undefined;
 
   usePdfPreview({
     data: tailoredCv,
@@ -426,8 +425,7 @@ export default function PositioningWizardPage() {
       setPositioningId(positioningIdParam);
       setTemplateConfig(null);
 
-      const templateId = positioningData.candidates?.template_id;
-      fetchTemplateConfig(templateId).then((config) => {
+      fetchTemplateConfig(null).then((config) => {
         setTemplateConfig(config);
 
         if (candidateData.extracted_data) {
@@ -436,7 +434,7 @@ export default function PositioningWizardPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               data: candidateData.extracted_data,
-              templateId: templateId ?? null,
+              templateId: null,
             }),
           })
             .then((res) => res.blob())
@@ -540,7 +538,6 @@ export default function PositioningWizardPage() {
     setIsLoaded,
     positioningIdParam,
     candidateData?.extracted_data,
-    candidateData?.template_id,
   ]);
 
   // Analyse : démarrage côté API à la création du positionnement ; ici uniquement reconnexion (useWorkflowStream)
@@ -1243,7 +1240,7 @@ export default function PositioningWizardPage() {
             )}
 
             {currentStep === 3 && (
-              <div>
+              <div className="space-y-3">
                 <CvGenerationStep
                   isStreaming={genBusy}
                   streamMeta={generateStreamMeta}

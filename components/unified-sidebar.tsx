@@ -374,7 +374,6 @@ export function UnifiedSidebar() {
     );
   };
 
-  const isOnTemplates = pathname.startsWith('/templates');
   const activeTab = pathname.startsWith('/positions') ? 'positions' : 'cvs';
 
   if (!isLoaded || !isSignedIn) return null;
@@ -960,6 +959,21 @@ export function UnifiedSidebar() {
         <SidebarFooter className="p-0">
           <SidebarGroup className="gap-0.5">
             <SidebarMenu>
+              {isSuperAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname.startsWith('/templates')}
+                    onClick={() => navigate('/templates')}
+                    className={cn(
+                      'text-xs',
+                      pathname.startsWith('/templates') && 'bg-violet/10 text-violet'
+                    )}
+                  >
+                    <Palette className="h-4 w-4" />
+                    <span className="font-medium">Templates</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={pathname.startsWith('/settings/profile')}

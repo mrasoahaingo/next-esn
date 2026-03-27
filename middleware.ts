@@ -8,7 +8,7 @@ const isPublicRoute = createRouteMatcher([
   '/.well-known/(.*)',
 ])
 
-const isAdminRoute = createRouteMatcher(['/admin(.*)'])
+const isAdminRoute = createRouteMatcher(['/admin(.*)', '/templates(.*)'])
 
 export default clerkMiddleware(async (auth, request) => {
   if (isPublicRoute(request)) return

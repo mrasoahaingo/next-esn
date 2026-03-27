@@ -55,22 +55,31 @@ export async function GET() {
   const supabase = getSupabase()
   const clerk = await clerkClient()
 
-  const [{ data: candidates }, { data: positionings }, { data: llmModels }, clerkOrgsResult, aiUsage] =
-    await Promise.all([
-      supabase
-        .from('candidates')
-        .select('id, org_id, status, created_at')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('positionings')
-        .select('id, org_id, status, created_at')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('llm_models')
-        .select('gateway_model_id, input_usd_per_1m, output_usd_per_1m, cache_read_usd_per_1m'),
-      clerk.organizations.getOrganizationList({ limit: 200 }),
-      fetchAllAiUsageLogRows(supabase),
-    ])
+  const [
+    { data: candidates },
+    { data: positionings },
+    { data: llmModels },
+    { data: templateRows },
+    { data: orgSettingsRows },
+    clerkOrgsResult,
+    aiUsage,
+  ] = await Promise.all([
+    supabase
+      .from('candidates')
+      .select('id, org_id, status, created_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('positionings')
+      .select('id, org_id, status, created_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('llm_models')
+      .select('gateway_model_id, input_usd_per_1m, output_usd_per_1m, cache_read_usd_per_1m'),
+    supabase.from('templates').select('id, name, is_default').is('org_id', null).order('name'),
+    supabase.from('organization_settings').select('org_id, default_template_id'),
+    clerk.organizations.getOrganizationList({ limit: 200 }),
+    fetchAllAiUsageLogRows(supabase),
+  ])
 
   const dbPricingByGateway = new Map<string, ModelPricingUsd>()
   for (const m of llmModels ?? []) {
@@ -238,26 +247,25 @@ export async function GET() {
     orgMap.set(usageOrgId, entry)
   }
 
-  const orgIdList = Array.from(orgMap.keys())
-  const { data: orgSettingsRows } =
-    orgIdList.length > 0
-      ? await supabase
-          .from('organization_settings')
-          .select('org_id, cv_code_template')
-          .in('org_id', orgIdList)
-      : { data: [] as { org_id: string; cv_code_template: string }[] }
+  const defaultTemplateByOrg = new Map<string, string | null>();
+  for (const r of orgSettingsRows ?? []) {
+    defaultTemplateByOrg.set(r.org_id, r.default_template_id ?? null);
+  }
 
-  const cvTemplateByOrg = new Map(
-    (orgSettingsRows ?? []).map((r) => [r.org_id, r.cv_code_template ?? 'himeo']),
-  )
+  const globalTemplates = (templateRows ?? []).map((t) => ({
+    id: t.id,
+    name: t.name,
+    is_default: Boolean(t.is_default),
+  }));
 
   const organizations = Array.from(orgMap.entries()).map(([orgId, stats]) => ({
     orgId,
     ...stats,
-    cvCodeTemplate: cvTemplateByOrg.get(orgId) ?? 'himeo',
-  }))
+    defaultTemplateId: defaultTemplateByOrg.get(orgId) ?? null,
+  }));
 
   return NextResponse.json({
+    globalTemplates,
     totals: {
       organizations: orgMap.size,
       candidates: candidates?.length ?? 0,

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { TemplateConfig } from '@/lib/schema';
+import { normalizeTemplateConfig } from '@/lib/utils/template';
 
 interface TemplateState {
   templateConfig: Partial<TemplateConfig> | null;
@@ -12,16 +13,19 @@ export const useTemplateStore = create<TemplateState>((set) => ({
 }));
 
 /**
- * Fetches the template config for a candidate.
- * Falls back to the default template, then to null (uses DEFAULT_TEMPLATE_CONFIG).
+ * Gabarit PDF : `templateId` explicite ; sinon résolution serveur (`organization_settings.default_template_id`, puis repli plateforme).
+ * (Les CV n’associent plus de gabarit : passer `null`.)
  */
-export async function fetchTemplateConfig(candidateTemplateId?: string | null): Promise<Partial<TemplateConfig> | null> {
+export async function fetchTemplateConfig(templateId?: string | null): Promise<Partial<TemplateConfig> | null> {
   try {
-    const q = candidateTemplateId ? `?templateId=${encodeURIComponent(candidateTemplateId)}` : '';
+    const q =
+      templateId !== undefined && templateId !== null && templateId !== ''
+        ? `?templateId=${encodeURIComponent(templateId)}`
+        : '';
     const res = await fetch(`/api/template-config${q}`);
     if (!res.ok) return null;
     const data = await res.json();
-    return (data.config as Partial<TemplateConfig>) ?? null;
+    return data.config ? normalizeTemplateConfig(data.config) : null;
   } catch {
     return null;
   }

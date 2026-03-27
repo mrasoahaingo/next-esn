@@ -22,9 +22,9 @@ export default function TemplatesPage() {
               </EmptyMedia>
               <EmptyTitle>Sélectionne un gabarit ou crée-en un nouveau</EmptyTitle>
               <EmptyDescription>
-                Les gabarits définissent couleurs, logo, pied de page, ordre des sections et préfixe
-                d&apos;export PDF. Utilise le bouton + dans la colonne « Templates » à gauche pour en
-                créer un, puis clique sur son nom pour l&apos;éditer.
+                Les gabarits définissent le theme, le logo, l&apos;entete, le pied de page, les blocs
+                actifs, leur ordre et le prefixe d&apos;export PDF. Utilise le bouton + dans la colonne
+                « Templates » a gauche pour en creer un, puis clique sur son nom pour l&apos;editer.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

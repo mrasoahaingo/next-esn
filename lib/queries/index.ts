@@ -33,11 +33,12 @@ export { useTemplate, useUpdateTemplate, useTemplatesList, type TemplateListItem
 export { useOrgSettings } from './org-settings';
 export {
   useAdminStats,
-  useUpdateOrgCvCodeTemplate,
+  useSetOrgDefaultTemplate,
   useAdminLlmUsage,
   type AdminLlmUsageQueryParams,
   type AdminLlmUsageResponse,
 } from './admin';
+export type { AdminStats } from './admin';
 export type { AdminLlmUsageRow } from '@/lib/types/admin-llm-usage';
 export {
   useLlmModels,

@@ -1,24 +1,19 @@
 import { renderToBuffer } from '@json-render/react-pdf/render';
 import type { ExtractedCV, TemplateConfig } from '@/lib/schema';
+import { mergeTemplateWithDefaults } from '@/lib/utils/template';
+import { prepareTemplateConfigForPdf } from '@/lib/utils/prepare-template-for-pdf';
 import { buildCvSpec } from './pdf.template';
 import { fixedComponents } from './pdf.registry';
-import { getOrganizationSettings } from '@/lib/utils/org-settings';
 
-export async function generateHimeoPdf(
+export async function generateCvPdf(
   data: Partial<ExtractedCV>,
   templateConfig?: Partial<TemplateConfig>,
-  orgId?: string | null,
 ): Promise<Uint8Array> {
-  let codeTemplateKey = 'himeo';
-  if (orgId) {
-    try {
-      const settings = await getOrganizationSettings(orgId);
-      const k = settings?.cv_code_template?.trim();
-      if (k) codeTemplateKey = k;
-    } catch {
-      codeTemplateKey = 'himeo';
-    }
+  let resolved: TemplateConfig | undefined;
+  if (templateConfig !== undefined) {
+    const merged = mergeTemplateWithDefaults(templateConfig);
+    resolved = await prepareTemplateConfigForPdf(merged);
   }
-  const spec = buildCvSpec(data, templateConfig, codeTemplateKey);
+  const spec = buildCvSpec(data, resolved);
   return renderToBuffer(spec, { registry: fixedComponents });
 }

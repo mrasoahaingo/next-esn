@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateHimeoPdf } from '@/lib/services/pdf.service';
+import { generateCvPdf } from '@/lib/services/pdf.service';
 import { requireOrgId } from '@/lib/utils/auth';
 import { getTemplateConfig, mergeTemplateWithDefaults } from '@/lib/utils/template';
 
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       resolvedTemplate = mergeTemplateWithDefaults(fromDb);
     }
 
-    const buffer = await generateHimeoPdf(data, resolvedTemplate, orgId);
+    const buffer = await generateCvPdf(data, resolvedTemplate);
 
     return new Response(buffer, {
       headers: {

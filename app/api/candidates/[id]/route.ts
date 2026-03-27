@@ -6,7 +6,6 @@ import { requireOrgId } from '@/lib/utils/auth';
 const updateCandidateSchema = z.object({
   extracted_data: z.record(z.string(), z.unknown()).optional(),
   status: z.enum(['uploaded', 'extracting', 'reviewing', 'ready', 'generated']).optional(),
-  template_id: z.string().uuid().nullable().optional(),
 }).strict();
 
 export async function GET(

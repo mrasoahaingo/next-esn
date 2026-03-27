@@ -1,16 +1,26 @@
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 import type { Spec } from '@json-render/core';
-import type { ExtractedCV, TemplateConfig } from '@/lib/schema';
+import type {
+  ExtractedCV,
+  TemplateBlock,
+  TemplateBlockType,
+  TemplateConfig,
+} from '@/lib/schema';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
+import { mergeTemplateWithDefaults, resolvePdfLogoSrc } from '@/lib/utils/template';
 
-// ─── Thème visuel (tous les choix hors `TemplateConfig.colors` de l’org) ───
+const WORDMARK_FALLBACK_LOGO_SRC = pathToFileURL(
+  path.join(process.cwd(), 'public', 'esneo-full.svg'),
+).href;
 
-export type CvDossierResolvedTheme = {
+type CvTemplateTheme = {
   headerBackground: string;
   headerNameColor: string;
+  headerMetaColor: string;
   headerPadding: number;
-  headerFallbackWordmarkColor: string;
-
-  spacerAfterHeader: number;
+  headerUsesAccentBorder: boolean;
 
   docTitleFontSize: number;
   docTitleColor: string;
@@ -45,7 +55,6 @@ export type CvDossierResolvedTheme = {
   educationDegreeFontSize: number;
   educationSchoolFontSize: number;
   educationYearFontSize: number;
-  educationRowGapSpacer: number;
 
   experiencePaddingLeft: number;
   experienceLeftBorderWidth: number;
@@ -63,34 +72,30 @@ export type CvDossierResolvedTheme = {
   experienceBadgeText: string;
   experienceBadgeFontSize: number;
 
+  footerRuleColor: string;
+  footerRuleThickness: number;
+  footerRuleMarginBottom: number;
+  footerLineFontSize: number;
+
   pageMarginTop: number;
   pageMarginBottom: number;
   pageMarginLeft: number;
   pageMarginRight: number;
-
-  footerRuleColor: string;
-  footerRuleThickness: number;
-  footerRuleMarginBottom: number;
-  footerLine1FontSize: number;
-  footerLine2FontSize: number;
 };
 
-function resolveHimeoTheme(colors: TemplateConfig['colors']): CvDossierResolvedTheme {
+function resolveTheme(colors: TemplateConfig['colors']): CvTemplateTheme {
   return {
     headerBackground: colors.primary,
     headerNameColor: '#ffffff',
+    headerMetaColor: '#e2e8f0',
     headerPadding: 14,
-    headerFallbackWordmarkColor: '#ffffff',
-
-    spacerAfterHeader: 47,
-
+    headerUsesAccentBorder: false,
     docTitleFontSize: 12,
     docTitleColor: colors.primary,
     docTitleRuleColor: colors.secondary,
     docTitleRuleThickness: 2,
     docTitleRuleMarginTop: 8,
-    spacerAfterDocTitle: 16,
-
+    spacerAfterDocTitle: 28,
     infoTableBorderColor: '#E2E8F0',
     infoTableBorderWidth: 0.5,
     infoTableBorderRadius: 6,
@@ -98,168 +103,45 @@ function resolveHimeoTheme(colors: TemplateConfig['colors']): CvDossierResolvedT
     infoTableInnerDividerColor: '#E2E8F0',
     infoTableLabelFontSize: 8,
     infoTableValueFontSize: 9,
-
     sectionHeadingUppercase: true,
     sectionHeadingFontSize: 10,
     sectionRuleColor: colors.secondary,
     sectionRuleThickness: 1.5,
     sectionRuleMarginTop: 4,
-    sectionBlockPaddingBottom: 8,
-
+    sectionBlockPaddingBottom: 18,
     summaryFontSize: 9,
     summaryLineHeight: 1.7,
-    spacerAfterSummary: 20,
-
-    spacerAfterSkills: 20,
+    spacerAfterSummary: 34,
+    spacerAfterSkills: 34,
     spacerAfterEducationBlock: 6,
-    spacerAfterEducationSection: 14,
+    spacerAfterEducationSection: 26,
     educationDegreeFontSize: 9,
     educationSchoolFontSize: 8,
     educationYearFontSize: 8,
-    educationRowGapSpacer: 6,
-
     experiencePaddingLeft: 12,
     experienceLeftBorderWidth: 0,
     experienceLeftBorderColor: colors.secondary,
     experienceRoleFontSize: 10,
     experienceDateFontSize: 8,
     experienceBetweenBlockPaddingTop: 30,
-    experienceHeaderPaddingBottom: 15,
+    experienceHeaderPaddingBottom: 4,
     listFontSize: 8,
     listSpacing: 2,
-    spacerAfterExperienceBlock: 12,
-    spacerEndExperiences: 8,
-
+    spacerAfterExperienceBlock: 24,
+    spacerEndExperiences: 18,
     experienceBadgeBg: '#deeeff',
     experienceBadgeText: colors.primary,
     experienceBadgeFontSize: 7,
-
-    pageMarginTop: 56,
-    pageMarginBottom: 45,
-    pageMarginLeft: 48,
-    pageMarginRight: 48,
-
     footerRuleColor: colors.secondary,
     footerRuleThickness: 0.5,
     footerRuleMarginBottom: 8,
-    footerLine1FontSize: 7,
-    footerLine2FontSize: 7,
+    footerLineFontSize: 7,
+    pageMarginTop: 100,
+    pageMarginBottom: 69,
+    pageMarginLeft: 48,
+    pageMarginRight: 48,
   };
 }
-
-/** Esneo : surfaces claires façon shadcn — texte foncé sur fonds neutres / violet très léger. */
-function resolveEsneoTheme(colors: TemplateConfig['colors']): CvDossierResolvedTheme {
-  return {
-    headerBackground: '#f5f3ff',
-    headerNameColor: colors.text,
-    headerPadding: 16,
-    headerFallbackWordmarkColor: colors.primary,
-
-    spacerAfterHeader: 40,
-
-    docTitleFontSize: 13,
-    docTitleColor: colors.text,
-    docTitleRuleColor: colors.secondary,
-    docTitleRuleThickness: 2,
-    docTitleRuleMarginTop: 10,
-    spacerAfterDocTitle: 20,
-
-    infoTableBorderColor: '#e4e4e7',
-    infoTableBorderWidth: 1,
-    infoTableBorderRadius: 8,
-    infoTableAlternateRowBg: '#fafafa',
-    infoTableInnerDividerColor: '#e4e4e7',
-    infoTableLabelFontSize: 8,
-    infoTableValueFontSize: 9,
-
-    sectionHeadingUppercase: false,
-    sectionHeadingFontSize: 11,
-    sectionRuleColor: colors.secondary,
-    sectionRuleThickness: 2,
-    sectionRuleMarginTop: 6,
-    sectionBlockPaddingBottom: 10,
-
-    summaryFontSize: 9,
-    summaryLineHeight: 1.75,
-    spacerAfterSummary: 22,
-
-    spacerAfterSkills: 22,
-    spacerAfterEducationBlock: 8,
-    spacerAfterEducationSection: 16,
-    educationDegreeFontSize: 10,
-    educationSchoolFontSize: 8,
-    educationYearFontSize: 8,
-    educationRowGapSpacer: 8,
-
-    experiencePaddingLeft: 14,
-    experienceLeftBorderWidth: 3,
-    experienceLeftBorderColor: colors.secondary,
-    experienceRoleFontSize: 10,
-    experienceDateFontSize: 8,
-    experienceBetweenBlockPaddingTop: 28,
-    experienceHeaderPaddingBottom: 12,
-    listFontSize: 8,
-    listSpacing: 3,
-    spacerAfterExperienceBlock: 14,
-    spacerEndExperiences: 10,
-
-    experienceBadgeBg: '#d1fae5',
-    experienceBadgeText: '#047857',
-    experienceBadgeFontSize: 7,
-
-    pageMarginTop: 52,
-    pageMarginBottom: 48,
-    pageMarginLeft: 44,
-    pageMarginRight: 44,
-
-    footerRuleColor: '#e4e4e7',
-    footerRuleThickness: 1,
-    footerRuleMarginBottom: 10,
-    footerLine1FontSize: 7,
-    footerLine2FontSize: 7,
-  };
-}
-
-/** Variantes de marque pour la même trame « dossier de compétences » (Himeo vs Esneo). */
-export type CvDossierLayoutVariant = {
-  docTitle: string;
-  documentSubject: string;
-  /** Sans `logo.url` dans le template : composant Himeo SVG vs texte Esneo */
-  headerLogoFallback: 'himeo' | 'esneo';
-  /**
-   * Couleurs par défaut pour ce gabarit (avant fusion avec `templateConfig.colors` de l’org).
-   * L’org peut toujours surcharger via le template en base.
-   */
-  defaultColorOverrides?: Partial<TemplateConfig['colors']>;
-  resolveTheme: (colors: TemplateConfig['colors']) => CvDossierResolvedTheme;
-};
-
-export const HIMEO_DOSSIER_VARIANT: CvDossierLayoutVariant = {
-  docTitle: 'DOSSIER DE COMPÉTENCES TECHNIQUES',
-  documentSubject: 'Dossier de compétences techniques',
-  headerLogoFallback: 'himeo',
-  resolveTheme: resolveHimeoTheme,
-};
-
-/**
- * Esneo : palette claire type shadcn (`background`, `border` zinc-200, `foreground` / `muted-foreground`),
- * primary violet et secondary émeraude lisibles sur fond clair.
- */
-export const ESNEO_DOSSIER_VARIANT: CvDossierLayoutVariant = {
-  docTitle: 'Dossier de compétences',
-  documentSubject: 'Dossier de compétences techniques — Esneo',
-  headerLogoFallback: 'esneo',
-  defaultColorOverrides: {
-    primary: '#6d28d9',
-    secondary: '#10b981',
-    background: '#fafafa',
-    text: '#18181b',
-    lightText: '#71717a',
-  },
-  resolveTheme: resolveEsneoTheme,
-};
-
-// ─── Helpers ────────────────────────────────────────────────────
 
 function addSectionHeading(
   elements: Spec['elements'],
@@ -267,25 +149,13 @@ function addSectionHeading(
   text: string,
   children: string[],
   colors: TemplateConfig['colors'],
-  theme: CvDossierResolvedTheme,
+  theme: CvTemplateTheme,
 ) {
   const label = theme.sectionHeadingUppercase ? text.toUpperCase() : text;
   elements[`${id}-container`] = {
     type: 'View',
     props: {
-      padding: null,
-      paddingTop: null,
       paddingBottom: theme.sectionBlockPaddingBottom,
-      paddingLeft: null,
-      paddingRight: null,
-      margin: null,
-      backgroundColor: null,
-      borderWidth: null,
-      borderColor: null,
-      borderRadius: null,
-      flex: null,
-      alignItems: null,
-      justifyContent: null,
     },
     children: [`${id}-heading`, `${id}-line`],
   };
@@ -293,12 +163,9 @@ function addSectionHeading(
     type: 'Text',
     props: {
       text: label,
-      fontSize: theme.sectionHeadingFontSize,
+      fontSize: theme.sectionHeadingFontSize + 0.5,
       color: colors.primary,
       fontWeight: 'bold',
-      fontStyle: null,
-      align: null,
-      lineHeight: null,
     },
     children: [],
   };
@@ -321,7 +188,7 @@ function addInfoTable(
   rows: { label: string; value: string }[],
   children: string[],
   colors: TemplateConfig['colors'],
-  theme: CvDossierResolvedTheme,
+  theme: CvTemplateTheme,
 ) {
   if (rows.length === 0) return;
 
@@ -330,22 +197,15 @@ function addInfoTable(
     elements[`${id}-row-${i}`] = {
       type: 'Row',
       props: {
-        justifyContent: null,
         alignItems: 'flex-start',
         gap: 12,
-        padding: null,
-        flex: null,
-        wrap: null,
       },
       children: [`${id}-labelcol-${i}`, `${id}-valuecol-${i}`],
     };
     elements[`${id}-labelcol-${i}`] = {
       type: 'Column',
       props: {
-        gap: null,
-        alignItems: null,
         justifyContent: 'center',
-        padding: null,
         flex: 0.2,
       },
       children: [`${id}-label-${i}`],
@@ -353,31 +213,19 @@ function addInfoTable(
     elements[`${id}-valuecol-${i}`] = {
       type: 'Column',
       props: {
-        gap: null,
-        alignItems: null,
         justifyContent: 'center',
-        padding: null,
         flex: 0.8,
       },
       children: [`${id}-value-${i}`],
     };
-    const altBg = theme.infoTableAlternateRowBg;
     elements[`${id}-rowwrap-${i}`] = {
       type: 'View',
       props: {
-        padding: null,
         paddingTop: 7,
         paddingBottom: 7,
         paddingLeft: 14,
         paddingRight: 14,
-        margin: null,
-        backgroundColor: altBg != null && i % 2 === 0 ? altBg : null,
-        borderWidth: null,
-        borderColor: null,
-        borderRadius: null,
-        flex: null,
-        alignItems: null,
-        justifyContent: null,
+        backgroundColor: theme.infoTableAlternateRowBg != null && i % 2 === 0 ? theme.infoTableAlternateRowBg : null,
       },
       children: [`${id}-row-${i}`],
     };
@@ -388,9 +236,6 @@ function addInfoTable(
         fontSize: theme.infoTableLabelFontSize,
         color: colors.primary,
         fontWeight: 'bold',
-        fontStyle: null,
-        align: null,
-        lineHeight: null,
       },
       children: [],
     };
@@ -400,9 +245,6 @@ function addInfoTable(
         text: row.value,
         fontSize: theme.infoTableValueFontSize,
         color: colors.text,
-        fontWeight: null,
-        fontStyle: null,
-        align: null,
         lineHeight: 1.5,
       },
       children: [],
@@ -422,351 +264,378 @@ function addInfoTable(
   elements[`${id}-table`] = {
     type: 'View',
     props: {
-      padding: null,
-      paddingTop: 0,
-      paddingBottom: 0,
-      paddingLeft: 0,
-      paddingRight: 0,
-      margin: null,
-      backgroundColor: null,
       borderWidth: theme.infoTableBorderWidth,
       borderColor: theme.infoTableBorderColor,
       borderRadius: theme.infoTableBorderRadius,
-      flex: null,
-      alignItems: null,
-      justifyContent: null,
     },
     children: tableChildren,
   };
   children.push(`${id}-table`);
 }
 
-type SectionBuilder = (
+type BlockBuilder = (
   elements: Spec['elements'],
   pageChildren: string[],
   data: Partial<ExtractedCV>,
+  block: TemplateBlock,
   colors: TemplateConfig['colors'],
-  theme: CvDossierResolvedTheme,
+  theme: CvTemplateTheme,
 ) => void;
 
-function createSectionBuilders(): Record<string, SectionBuilder> {
-  return {
-    summary(elements, pageChildren, data, colors, theme) {
-      if (!data.summary) return;
-      addSectionHeading(elements, 'summary', 'Synthèse du profil', pageChildren, colors, theme);
-      elements['summary-text'] = {
-        type: 'RichText',
+function addProfileInfoBlock(
+  elements: Spec['elements'],
+  pageChildren: string[],
+  data: Partial<ExtractedCV>,
+  block: TemplateBlock,
+  colors: TemplateConfig['colors'],
+  theme: CvTemplateTheme,
+) {
+  if (!data.personalInfo) return;
+  const pi = data.personalInfo;
+  const rows: { label: string; value: string }[] = [];
+  if (pi.title) rows.push({ label: 'Poste', value: pi.title });
+  if (pi.yearsOfExperience) rows.push({ label: "Annees d'experience", value: pi.yearsOfExperience });
+  if (pi.location) rows.push({ label: 'Localisation', value: pi.location });
+  if (pi.availability) rows.push({ label: 'Disponibilite', value: pi.availability });
+  if (pi.email && block.variant === 'detailed') rows.push({ label: 'Email', value: pi.email });
+  if (pi.phone && block.variant === 'detailed') rows.push({ label: 'Telephone', value: pi.phone });
+  addInfoTable(elements, 'info', rows, pageChildren, colors, theme);
+  elements['spacer-info'] = { type: 'Spacer', props: { height: 34 }, children: [] };
+  pageChildren.push('spacer-info');
+}
+
+function addSummaryBlock(
+  elements: Spec['elements'],
+  pageChildren: string[],
+  data: Partial<ExtractedCV>,
+  _block: TemplateBlock,
+  colors: TemplateConfig['colors'],
+  theme: CvTemplateTheme,
+) {
+  if (!data.summary) return;
+  addSectionHeading(elements, 'summary', 'Synthese du profil', pageChildren, colors, theme);
+  elements['summary-text'] = {
+    type: 'RichText',
+    props: {
+      text: data.summary,
+      fontSize: theme.summaryFontSize,
+      color: colors.text,
+      lineHeight: theme.summaryLineHeight,
+    },
+    children: [],
+  };
+  pageChildren.push('summary-text');
+  elements['spacer-summary'] = {
+    type: 'Spacer',
+    props: { height: theme.spacerAfterSummary + (data.sectionSpacing?.summary ?? 0) },
+    children: [],
+  };
+  pageChildren.push('spacer-summary');
+}
+
+function addSkillsBlock(
+  elements: Spec['elements'],
+  pageChildren: string[],
+  data: Partial<ExtractedCV>,
+  block: TemplateBlock,
+  colors: TemplateConfig['colors'],
+  theme: CvTemplateTheme,
+) {
+  const skills = data.skills;
+  if (!skills) return;
+
+  const cats: { key: keyof typeof skills; label: string }[] = [
+    { key: 'technologies', label: 'Technologies' },
+    { key: 'softSkills', label: 'Soft skills' },
+    { key: 'expertises', label: 'Expertises' },
+    { key: 'methodologies', label: 'Methodologies' },
+  ];
+
+  const categoryRows = cats
+    .map(({ key, label }) => {
+      const rawItems = (skills[key] ?? []).filter(Boolean);
+      const names = rawItems
+        .filter((item) => typeof item === 'string' || item.added !== false)
+        .map((item) => (typeof item === 'string' ? item : item.name))
+        .filter(Boolean);
+      if (block.variant === 'compact' && names.length > 5) {
+        return { label, value: names.slice(0, 5).join(', ') };
+      }
+      if (names.length > 0) return { label, value: names.join(', ') };
+      return null;
+    })
+    .filter((row): row is { label: string; value: string } => row !== null);
+
+  if (categoryRows.length === 0) return;
+
+  addSectionHeading(elements, 'skills', 'Competences', pageChildren, colors, theme);
+  addInfoTable(elements, 'skills', categoryRows, pageChildren, colors, theme);
+  elements['spacer-skills'] = {
+    type: 'Spacer',
+    props: { height: theme.spacerAfterSkills + (data.sectionSpacing?.skills ?? 0) },
+    children: [],
+  };
+  pageChildren.push('spacer-skills');
+}
+
+function addEducationBlock(
+  elements: Spec['elements'],
+  pageChildren: string[],
+  data: Partial<ExtractedCV>,
+  block: TemplateBlock,
+  colors: TemplateConfig['colors'],
+  theme: CvTemplateTheme,
+) {
+  const education = (data.education ?? []).filter(Boolean);
+  if (education.length === 0) return;
+  addSectionHeading(elements, 'edu', 'Formations', pageChildren, colors, theme);
+
+  const visibleEducation = block.variant === 'compact' ? education.slice(0, 2) : education;
+  const itemHeadingColor = colors.text;
+
+  visibleEducation.forEach((edu, i) => {
+    elements[`edu-${i}-row`] = {
+      type: 'Row',
+      props: { justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+      children: [`edu-${i}-info`, `edu-${i}-year`],
+    };
+    elements[`edu-${i}-info`] = {
+      type: 'Column',
+      props: { gap: 1 },
+      children: [`edu-${i}-degree`, `edu-${i}-school`],
+    };
+    elements[`edu-${i}-degree`] = {
+      type: 'Text',
+      props: {
+        text: edu.degree ?? '',
+        fontSize: theme.educationDegreeFontSize,
+        color: itemHeadingColor,
+        fontWeight: 'bold',
+      },
+      children: [],
+    };
+    elements[`edu-${i}-school`] = {
+      type: 'Text',
+      props: {
+        text: edu.school ?? '',
+        fontSize: theme.educationSchoolFontSize,
+        color: colors.text,
+        fontStyle: 'italic',
+      },
+      children: [],
+    };
+    elements[`edu-${i}-year`] = {
+      type: 'Text',
+      props: {
+        text: edu.year ?? '',
+        fontSize: theme.educationYearFontSize,
+        color: colors.lightText,
+      },
+      children: [],
+    };
+    pageChildren.push(`edu-${i}-row`);
+    elements[`edu-${i}-spacer`] = {
+      type: 'Spacer',
+      props: { height: theme.spacerAfterEducationBlock + (edu.spacingAfter ?? 0) },
+      children: [],
+    };
+    pageChildren.push(`edu-${i}-spacer`);
+  });
+
+  elements['spacer-edu'] = { type: 'Spacer', props: { height: theme.spacerAfterEducationSection }, children: [] };
+  pageChildren.push('spacer-edu');
+}
+
+function addExperiencesBlock(
+  elements: Spec['elements'],
+  pageChildren: string[],
+  data: Partial<ExtractedCV>,
+  block: TemplateBlock,
+  colors: TemplateConfig['colors'],
+  theme: CvTemplateTheme,
+) {
+  const experiences = (data.experiences ?? []).filter(Boolean);
+  if (experiences.length === 0) return;
+  addSectionHeading(elements, 'exp', 'Experiences professionnelles', pageChildren, colors, theme);
+  const itemHeadingColor = colors.text;
+
+  experiences.forEach((exp, i) => {
+    const companyText = (exp.company ?? '').toUpperCase();
+    const roleText = exp.role ?? '';
+    const dateText = `${exp.startDate ?? ''} - ${exp.endDate ?? 'Present'}`;
+    const expSkills = block.variant === 'compact' ? [] : (exp.skills ?? []).filter(Boolean);
+    const descriptions =
+      block.variant === 'compact' ? (exp.description ?? []).filter(Boolean).slice(0, 3) : (exp.description ?? []).filter(Boolean);
+
+    const expInnerChildren = [
+      `exp-${i}-header-wrap`,
+      ...(descriptions.length > 0 ? [`exp-${i}-desc-spacer`, `exp-${i}-desc`] : []),
+      ...(expSkills.length > 0 ? [`exp-${i}-skills-spacer`, `exp-${i}-skills`] : []),
+    ];
+
+    if (theme.experienceLeftBorderWidth > 0) {
+      elements[`exp-${i}-wrapper`] = {
+        type: 'KeepTogetherRow',
+        props: { alignItems: 'stretch', gap: 10 },
+        children: [`exp-${i}-accent`, `exp-${i}-col`],
+      };
+      elements[`exp-${i}-accent`] = {
+        type: 'CvAccentBar',
         props: {
-          text: data.summary,
-          fontSize: theme.summaryFontSize,
-          color: colors.text,
-          lineHeight: theme.summaryLineHeight,
+          width: theme.experienceLeftBorderWidth,
+          backgroundColor: theme.experienceLeftBorderColor,
+          borderRadius: 1,
         },
         children: [],
       };
-      pageChildren.push('summary-text');
-      elements['spacer-summary'] = { type: 'Spacer', props: { height: theme.spacerAfterSummary + (data.sectionSpacing?.summary ?? 0) }, children: [] };
-      pageChildren.push('spacer-summary');
-    },
+      elements[`exp-${i}-col`] = {
+        type: 'Column',
+        props: { flex: 1 },
+        children: expInnerChildren,
+      };
+    } else {
+      elements[`exp-${i}-wrapper`] = {
+        type: 'KeepTogetherView',
+        props: {
+          paddingLeft: theme.experiencePaddingLeft,
+        },
+        children: expInnerChildren,
+      };
+    }
 
-    skills(elements, pageChildren, data, colors, theme) {
-      const skills = data.skills;
-      if (!skills) return;
+    elements[`exp-${i}-header-wrap`] = {
+      type: 'View',
+      props: {
+        paddingTop: i === 0 ? 0 : theme.experienceBetweenBlockPaddingTop,
+        paddingBottom: theme.experienceHeaderPaddingBottom,
+      },
+      children: [`exp-${i}-header`],
+    };
 
-      const categoryRows: { label: string; value: string }[] = [];
-      const cats: { key: keyof typeof skills; label: string }[] = [
-        { key: 'technologies', label: 'Technologies' },
-        { key: 'softSkills', label: 'Soft-skills' },
-        { key: 'expertises', label: 'Expertises' },
-        { key: 'methodologies', label: 'Méthodologies' },
-      ];
-      for (const cat of cats) {
-        const rawItems = (skills[cat.key] ?? []).filter(Boolean);
-        const names = rawItems
-          .filter((item) => typeof item === 'string' || item.added !== false)
-          .map((item) => (typeof item === 'string' ? item : item.name))
-          .filter(Boolean);
-        if (names.length > 0) {
-          categoryRows.push({ label: cat.label, value: names.join(', ') });
-        }
-      }
-      if (categoryRows.length === 0) return;
+    elements[`exp-${i}-header`] = {
+      type: 'Row',
+      props: { justifyContent: 'space-between', alignItems: 'flex-end', gap: 8 },
+      children: [
+        `exp-${i}-heading-left`,
+        `exp-${i}-date`,
+      ],
+    };
 
-      addSectionHeading(elements, 'skills', 'Compétences', pageChildren, colors, theme);
-      addInfoTable(elements, 'skills', categoryRows, pageChildren, colors, theme);
-      elements['spacer-skills'] = { type: 'Spacer', props: { height: theme.spacerAfterSkills + (data.sectionSpacing?.skills ?? 0) }, children: [] };
-      pageChildren.push('spacer-skills');
-    },
+    elements[`exp-${i}-heading-left`] = {
+      type: 'Row',
+      props: { alignItems: 'center', gap: 4 },
+      children: [
+        `exp-${i}-role`,
+        ...(companyText ? [`exp-${i}-company`] : []),
+      ],
+    };
 
-    education(elements, pageChildren, data, colors, theme) {
-      const education = (data.education ?? []).filter(Boolean);
-      if (education.length === 0) return;
-      addSectionHeading(elements, 'edu', 'Formations', pageChildren, colors, theme);
+    elements[`exp-${i}-role`] = {
+      type: 'Text',
+      props: {
+        text: roleText,
+        fontSize: theme.experienceRoleFontSize,
+        color: itemHeadingColor,
+        fontWeight: 'bold',
+      },
+      children: [],
+    };
+    if (companyText) {
+      elements[`exp-${i}-company`] = {
+        type: 'Text',
+        props: {
+          text: `- ${companyText}`,
+          fontSize: theme.experienceRoleFontSize,
+          color: colors.lightText,
+          fontWeight: null,
+        },
+        children: [],
+      };
+    }
+    elements[`exp-${i}-date`] = {
+      type: 'Text',
+      props: {
+        text: dateText,
+        fontSize: theme.experienceDateFontSize,
+        color: colors.lightText,
+      },
+      children: [],
+    };
 
-      education.forEach((edu, i) => {
-        elements[`edu-${i}-row`] = {
-          type: 'Row',
-          props: { justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: null, flex: null, wrap: null },
-          children: [`edu-${i}-info`, `edu-${i}-year`],
-        };
-        elements[`edu-${i}-info`] = {
-          type: 'Column',
-          props: { gap: 1, alignItems: null, justifyContent: null, padding: null, flex: null },
-          children: [`edu-${i}-degree`, `edu-${i}-school`],
-        };
-        elements[`edu-${i}-degree`] = {
-          type: 'Text',
-          props: {
-            text: edu.degree ?? '',
-            fontSize: theme.educationDegreeFontSize,
-            color: colors.primary,
-            fontWeight: 'bold',
-            fontStyle: null,
-            align: null,
-            lineHeight: null,
-          },
-          children: [],
-        };
-        elements[`edu-${i}-school`] = {
-          type: 'Text',
-          props: {
-            text: edu.school ?? '',
-            fontSize: theme.educationSchoolFontSize,
-            color: colors.text,
-            fontWeight: null,
-            fontStyle: 'italic',
-            align: null,
-            lineHeight: null,
-          },
-          children: [],
-        };
-        elements[`edu-${i}-year`] = {
-          type: 'Text',
-          props: {
-            text: edu.year ?? '',
-            fontSize: theme.educationYearFontSize,
-            color: colors.lightText,
-            fontWeight: null,
-            fontStyle: null,
-            align: null,
-            lineHeight: null,
-          },
-          children: [],
-        };
-        pageChildren.push(`edu-${i}-row`);
-        elements[`edu-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterEducationBlock + (edu.spacingAfter ?? 0) }, children: [] };
-        pageChildren.push(`edu-${i}-spacer`);
-      });
+    if (descriptions.length > 0) {
+      elements[`exp-${i}-desc-spacer`] = { type: 'Spacer', props: { height: 4 }, children: [] };
+      elements[`exp-${i}-desc`] = {
+        type: 'List',
+        props: {
+          items: descriptions,
+          ordered: false,
+          fontSize: theme.listFontSize,
+          color: colors.text,
+          spacing: theme.listSpacing,
+        },
+        children: [],
+      };
+    }
 
-      elements['spacer-edu'] = { type: 'Spacer', props: { height: theme.spacerAfterEducationSection }, children: [] };
-      pageChildren.push('spacer-edu');
-    },
+    if (expSkills.length > 0) {
+      elements[`exp-${i}-skills-spacer`] = { type: 'Spacer', props: { height: 10 }, children: [] };
+      elements[`exp-${i}-skills`] = {
+        type: 'BadgeList',
+        props: {
+          items: expSkills,
+          bgColor: theme.experienceBadgeBg,
+          textColor: theme.experienceBadgeText,
+          fontSize: theme.experienceBadgeFontSize,
+        },
+        children: [],
+      };
+    }
 
-    experiences(elements, pageChildren, data, colors, theme) {
-      const experiences = (data.experiences ?? []).filter(Boolean);
-      if (experiences.length === 0) return;
-      addSectionHeading(elements, 'exp', 'Expériences professionnelles', pageChildren, colors, theme);
+    pageChildren.push(`exp-${i}-wrapper`);
+    elements[`exp-${i}-spacer`] = {
+      type: 'Spacer',
+      props: { height: theme.spacerAfterExperienceBlock + (exp.spacingAfter ?? 0) },
+      children: [],
+    };
+    pageChildren.push(`exp-${i}-spacer`);
+  });
 
-      experiences.forEach((exp, i) => {
-        const roleText = exp.role ?? '';
-        const companyText = (exp.company ?? '').toUpperCase();
-        const dateText = `${exp.startDate ?? ''} – ${exp.endDate ?? 'Présent'}`;
-        const companyDomain = exp.companyDomain?.trim();
-        const expSkills = (exp.skills ?? []).filter(Boolean);
-
-        const expInnerChildren = [
-          `exp-${i}-header-wrap`,
-          ...((exp.description ?? []).filter(Boolean).length > 0 ? [`exp-${i}-desc-spacer`, `exp-${i}-desc`] : []),
-          ...(expSkills.length > 0 ? [`exp-${i}-skills-spacer`, `exp-${i}-skills`] : []),
-        ];
-
-        if (theme.experienceLeftBorderWidth > 0) {
-          elements[`exp-${i}-wrapper`] = {
-            type: 'Row',
-            props: {
-              justifyContent: null,
-              alignItems: 'stretch',
-              gap: 10,
-              padding: null,
-              flex: null,
-              wrap: null,
-            },
-            children: [`exp-${i}-accent`, `exp-${i}-col`],
-          };
-          elements[`exp-${i}-accent`] = {
-            type: 'CvAccentBar',
-            props: {
-              width: theme.experienceLeftBorderWidth,
-              backgroundColor: theme.experienceLeftBorderColor,
-              borderRadius: 1,
-            },
-            children: [],
-          };
-          elements[`exp-${i}-col`] = {
-            type: 'Column',
-            props: {
-              gap: null,
-              flex: 1,
-              alignItems: null,
-              justifyContent: null,
-              padding: null,
-            },
-            children: expInnerChildren,
-          };
-        } else {
-          elements[`exp-${i}-wrapper`] = {
-            type: 'View',
-            props: {
-              padding: null,
-              paddingTop: 0,
-              paddingBottom: 0,
-              paddingLeft: theme.experiencePaddingLeft,
-              paddingRight: 0,
-              margin: null,
-              backgroundColor: null,
-              borderWidth: null,
-              borderColor: theme.experienceLeftBorderColor,
-              borderRadius: null,
-              flex: null,
-              alignItems: null,
-              justifyContent: null,
-            },
-            children: expInnerChildren,
-          };
-        }
-
-        elements[`exp-${i}-header-wrap`] = {
-          type: 'View',
-          props: {
-            padding: null,
-            paddingTop: i === 0 ? 0 : theme.experienceBetweenBlockPaddingTop,
-            paddingBottom: theme.experienceHeaderPaddingBottom,
-            paddingLeft: 0,
-            paddingRight: 0,
-            margin: null,
-            backgroundColor: null,
-            borderWidth: null,
-            borderColor: null,
-            borderRadius: null,
-            flex: null,
-            alignItems: null,
-            justifyContent: null,
-          },
-          children: [`exp-${i}-header`],
-        };
-
-        const roleWithCompany = companyText ? `${roleText} – ${companyText}` : roleText;
-
-        elements[`exp-${i}-header`] = {
-          type: 'Row',
-          props: { justifyContent: 'space-between', alignItems: 'flex-end', gap: 8, padding: null, flex: null, wrap: null },
-          children: [
-            ...(companyDomain ? [`exp-${i}-role-with-logo`] : [`exp-${i}-role`]),
-            `exp-${i}-date`,
-          ],
-        };
-
-        if (companyDomain) {
-          elements[`exp-${i}-role-with-logo`] = {
-            type: 'Row',
-            props: { justifyContent: null, alignItems: 'center', gap: 5, padding: null, flex: null, wrap: null },
-            children: [`exp-${i}-logo`, `exp-${i}-role`],
-          };
-          elements[`exp-${i}-logo`] = {
-            type: 'Image',
-            props: { src: `https://logo.clearbit.com/${companyDomain}`, width: 12, height: 12, objectFit: 'contain' },
-            children: [],
-          };
-        }
-
-        elements[`exp-${i}-role`] = {
-          type: 'Text',
-          props: {
-            text: roleWithCompany,
-            fontSize: theme.experienceRoleFontSize,
-            color: colors.primary,
-            fontWeight: 'bold',
-            fontStyle: null,
-            align: null,
-            lineHeight: null,
-          },
-          children: [],
-        };
-        elements[`exp-${i}-date`] = {
-          type: 'Text',
-          props: {
-            text: dateText,
-            fontSize: theme.experienceDateFontSize,
-            color: colors.lightText,
-            fontWeight: null,
-            fontStyle: null,
-            align: null,
-            lineHeight: null,
-          },
-          children: [],
-        };
-
-        const descItems = (exp.description ?? []).filter(Boolean);
-        if (descItems.length > 0) {
-          elements[`exp-${i}-desc-spacer`] = { type: 'Spacer', props: { height: 4 }, children: [] };
-          elements[`exp-${i}-desc`] = {
-            type: 'List',
-            props: {
-              items: descItems,
-              ordered: false,
-              fontSize: theme.listFontSize,
-              color: colors.text,
-              spacing: theme.listSpacing,
-            },
-            children: [],
-          };
-        }
-
-        if (expSkills.length > 0) {
-          elements[`exp-${i}-skills-spacer`] = { type: 'Spacer', props: { height: 6 }, children: [] };
-          elements[`exp-${i}-skills`] = {
-            type: 'BadgeList',
-            props: {
-              items: expSkills,
-              bgColor: theme.experienceBadgeBg,
-              textColor: theme.experienceBadgeText,
-              fontSize: theme.experienceBadgeFontSize,
-            },
-            children: [],
-          };
-        }
-
-        pageChildren.push(`exp-${i}-wrapper`);
-        elements[`exp-${i}-spacer`] = { type: 'Spacer', props: { height: theme.spacerAfterExperienceBlock + (exp.spacingAfter ?? 0) }, children: [] };
-        pageChildren.push(`exp-${i}-spacer`);
-      });
-
-      elements['spacer-exp-end'] = { type: 'Spacer', props: { height: theme.spacerEndExperiences }, children: [] };
-      pageChildren.push('spacer-exp-end');
-    },
-  };
+  elements['spacer-exp-end'] = { type: 'Spacer', props: { height: theme.spacerEndExperiences }, children: [] };
+  pageChildren.push('spacer-exp-end');
 }
 
-const sectionBuilders = createSectionBuilders();
+const blockBuilders: Record<TemplateBlockType, BlockBuilder> = {
+  'profile-info': addProfileInfoBlock,
+  summary: addSummaryBlock,
+  skills: addSkillsBlock,
+  education: addEducationBlock,
+  experiences: addExperiencesBlock,
+};
+
+function buildActiveBlocks(config: TemplateConfig): TemplateBlock[] {
+  return config.blocks.filter((block) => block.enabled);
+}
 
 export function buildCvDossierLayoutSpec(
   data: Partial<ExtractedCV>,
-  templateConfig: Partial<TemplateConfig> | undefined,
-  variant: CvDossierLayoutVariant,
+  templateConfig?: Partial<TemplateConfig>,
 ): Spec {
-  const config = { ...DEFAULT_TEMPLATE_CONFIG, ...templateConfig };
+  const config = mergeTemplateWithDefaults(templateConfig);
   const colors = {
     ...DEFAULT_TEMPLATE_CONFIG.colors,
-    ...(variant.defaultColorOverrides ?? {}),
-    ...(templateConfig?.colors ?? {}),
+    ...config.colors,
   };
-  const theme = variant.resolveTheme(colors);
-  const logo = { ...DEFAULT_TEMPLATE_CONFIG.logo, ...config.logo };
-  const footer = { ...DEFAULT_TEMPLATE_CONFIG.footer, ...config.footer };
-  const sections = config.sections ?? DEFAULT_TEMPLATE_CONFIG.sections;
+  const theme = resolveTheme(colors);
+  const blocks = buildActiveBlocks(config);
 
   const elements: Spec['elements'] = {};
   const pageChildren: string[] = [];
+  const consultantName = data.personalInfo
+    ? `${data.personalInfo.firstName ?? ''} ${data.personalInfo.lastName ?? ''}`.trim()
+    : '';
+  const headerTextColor = theme.headerNameColor;
+  const companyName = config.header.companyName.trim();
+  const documentTitle = config.header.documentTitle.trim() || DEFAULT_TEMPLATE_CONFIG.header.documentTitle;
 
   elements['header-band'] = {
     type: 'FixedView',
@@ -775,92 +644,128 @@ export function buildCvDossierLayoutSpec(
       top: 0,
       left: 0,
       right: 0,
-      padding: null,
-      paddingTop: 0,
-      paddingBottom: 0,
-      paddingLeft: 0,
-      paddingRight: 0,
-      margin: null,
       backgroundColor: theme.headerBackground,
-      borderWidth: null,
-      borderColor: null,
-      borderRadius: null,
-      flex: null,
-      alignItems: null,
-      justifyContent: null,
+      ...(theme.headerUsesAccentBorder
+        ? {
+            borderWidth: 1,
+            borderColor: colors.secondary,
+          }
+        : {}),
     },
     children: ['header-inner'],
   };
-  const consultantName = data.personalInfo
-    ? `${data.personalInfo.firstName ?? ''} ${data.personalInfo.lastName ?? ''}`.trim()
-    : '';
   elements['header-inner'] = {
     type: 'Row',
     props: {
       justifyContent: 'space-between',
       alignItems: 'center',
-      gap: null,
       padding: theme.headerPadding,
-      flex: null,
-      wrap: null,
+      gap: 16,
     },
-    children: ['header-name', 'header-logo'],
+    children: ['header-left', 'header-right'],
   };
-  elements['header-name'] = {
+
+  elements['header-left'] = {
+    type: 'Column',
+    props: {
+      gap: 2,
+      flex: 1,
+    },
+    children: config.header.showCandidateName && consultantName ? ['header-name'] : [],
+  };
+  if (config.header.showCandidateName && consultantName) {
+    elements['header-name'] = {
+      type: 'Text',
+      props: {
+        text: consultantName.toUpperCase(),
+        fontSize: 10,
+        color: headerTextColor,
+        fontWeight: 'bold',
+      },
+      children: [],
+    };
+  }
+
+  const headerRightChildren = ['header-brand-top'];
+  if (config.header.tagLine.trim()) headerRightChildren.push('header-brand-tagline');
+  if (config.header.metaLine.trim()) headerRightChildren.push('header-brand-meta');
+
+  elements['header-right'] = {
+    type: 'Column',
+    props: {
+      gap: 2,
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    },
+    children: headerRightChildren,
+  };
+  elements['header-brand-top'] = {
+    type: 'Row',
+    props: {
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      gap: 8,
+    },
+    children: ['header-brand-name', 'header-logo'],
+  };
+  elements['header-brand-name'] = {
     type: 'Text',
     props: {
-      text: consultantName.toUpperCase(),
-      fontSize: 10,
-      color: theme.headerNameColor,
+      text: companyName || '',
+      fontSize: 9,
+      color: headerTextColor,
       fontWeight: 'bold',
-      fontStyle: null,
-      align: null,
-      lineHeight: null,
+      align: 'right',
     },
     children: [],
   };
-  if (logo.url) {
-    elements['header-logo'] = {
-      type: 'FixedImage',
-      props: { src: logo.url, width: logo.width, height: logo.height, objectFit: 'contain' },
-      children: [],
-    };
-  } else if (variant.headerLogoFallback === 'himeo') {
-    elements['header-logo'] = {
-      type: 'HimeoLogo',
-      props: { width: logo.width, height: logo.height },
-      children: [],
-    };
-  } else {
-    elements['header-logo'] = {
-      type: 'FixedText',
+
+  const logoSrc = resolvePdfLogoSrc(config.logo, WORDMARK_FALLBACK_LOGO_SRC);
+  elements['header-logo'] = {
+    type: 'FixedImage',
+    props: {
+      src: logoSrc,
+      width: config.logo.width,
+      height: config.logo.height,
+      objectFit: 'contain',
+    },
+    children: [],
+  };
+
+  if (config.header.tagLine.trim()) {
+    elements['header-brand-tagline'] = {
+      type: 'Text',
       props: {
-        text: 'ESNEO',
-        fontSize: 10,
-        color: theme.headerFallbackWordmarkColor,
-        fontWeight: 'bold',
-        fontStyle: null,
+        text: config.header.tagLine.trim(),
+        fontSize: 7,
+        color: theme.headerMetaColor,
         align: 'right',
-        lineHeight: null,
+      },
+      children: [],
+    };
+  }
+  if (config.header.metaLine.trim()) {
+    elements['header-brand-meta'] = {
+      type: 'Text',
+      props: {
+        text: config.header.metaLine.trim(),
+        fontSize: 7,
+        color: theme.headerMetaColor,
+        align: 'right',
       },
       children: [],
     };
   }
   pageChildren.push('header-band');
 
-  elements['spacer-after-header'] = { type: 'Spacer', props: { height: theme.spacerAfterHeader }, children: [] };
-  pageChildren.push('spacer-after-header');
-
   elements['doc-title'] = {
     type: 'Text',
     props: {
-      text: variant.docTitle,
+      text: documentTitle,
       fontSize: theme.docTitleFontSize,
       color: theme.docTitleColor,
       fontWeight: 'bold',
-      fontStyle: null,
       align: 'center',
-      lineHeight: null,
     },
     children: [],
   };
@@ -881,23 +786,8 @@ export function buildCvDossierLayoutSpec(
   elements['spacer-doc-title'] = { type: 'Spacer', props: { height: theme.spacerAfterDocTitle }, children: [] };
   pageChildren.push('spacer-doc-title');
 
-  if (data.personalInfo) {
-    const pi = data.personalInfo;
-    const infoRows: { label: string; value: string }[] = [];
-    if (pi.title) infoRows.push({ label: 'Poste', value: pi.title });
-    if (pi.yearsOfExperience) infoRows.push({ label: "Années d'expérience", value: pi.yearsOfExperience });
-    if (pi.location) infoRows.push({ label: 'Localisation', value: pi.location });
-    if (pi.availability) infoRows.push({ label: 'Disponibilité', value: pi.availability });
-
-    addInfoTable(elements, 'info', infoRows, pageChildren, colors, theme);
-
-    elements['spacer-info'] = { type: 'Spacer', props: { height: 20 }, children: [] };
-    pageChildren.push('spacer-info');
-  }
-
-  for (const section of sections) {
-    const builder = sectionBuilders[section];
-    if (builder) builder(elements, pageChildren, data, colors, theme);
+  for (const block of blocks) {
+    blockBuilders[block.type]?.(elements, pageChildren, data, block, colors, theme);
   }
 
   elements['footer-wrapper'] = {
@@ -907,19 +797,10 @@ export function buildCvDossierLayoutSpec(
       bottom: 0,
       left: 0,
       right: 0,
-      padding: null,
       paddingTop: 10,
       paddingBottom: 12,
       paddingLeft: theme.pageMarginLeft,
       paddingRight: theme.pageMarginRight,
-      margin: null,
-      backgroundColor: null,
-      borderWidth: null,
-      borderColor: null,
-      borderRadius: null,
-      flex: null,
-      alignItems: null,
-      justifyContent: null,
     },
     children: ['footer-divider', 'footer-content'],
   };
@@ -935,56 +816,48 @@ export function buildCvDossierLayoutSpec(
   };
   elements['footer-content'] = {
     type: 'Row',
-    props: { justifyContent: 'space-between', alignItems: 'center', gap: null, padding: null, flex: null, wrap: null },
-    children: ['footer-line1', 'footer-line2'],
+    props: { justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+    children: ['footer-left', 'footer-center', 'footer-right'],
   };
-  elements['footer-line1'] = {
-    type: 'Text',
-    props: {
-      text: footer.line1,
-      fontSize: theme.footerLine1FontSize,
-      color: colors.primary,
-      fontWeight: 'bold',
-      fontStyle: null,
-      align: null,
-      lineHeight: null,
-    },
-    children: [],
-  };
-  elements['footer-line2'] = {
-    type: 'Text',
-    props: {
-      text: footer.line2,
-      fontSize: theme.footerLine2FontSize,
-      color: colors.lightText,
-      fontWeight: null,
-      fontStyle: null,
-      align: null,
-      lineHeight: null,
-    },
-    children: [],
-  };
+
+  const footerLines: Array<{ id: string; text: string; align: 'left' | 'center' | 'right'; color: string; weight?: 'bold' }> = [
+    { id: 'footer-left', text: config.footer.leftText, align: 'left', color: colors.primary, weight: 'bold' },
+    { id: 'footer-center', text: config.footer.centerText, align: 'center', color: colors.lightText },
+    { id: 'footer-right', text: config.footer.rightText, align: 'right', color: colors.lightText },
+  ];
+  footerLines.forEach((line) => {
+    elements[line.id] = {
+      type: 'Text',
+      props: {
+        text: line.text,
+        fontSize: theme.footerLineFontSize,
+        color: line.color,
+        fontWeight: line.weight,
+        align: line.align,
+      },
+      children: [],
+    };
+  });
   pageChildren.push('footer-wrapper');
 
   elements['doc'] = {
     type: 'Document',
     props: {
-      title: data.personalInfo ? `CV ${data.personalInfo.firstName ?? ''} ${data.personalInfo.lastName ?? ''}` : 'CV',
-      author: footer.line1.split('–')[0]?.trim() || 'CV',
-      subject: variant.documentSubject,
+      title: consultantName ? `CV ${consultantName}` : 'CV',
+      author: companyName || config.footer.leftText || 'CV',
+      subject: documentTitle,
     },
     children: ['page'],
   };
   elements['page'] = {
     type: 'Page',
     props: {
-      size: 'A4',
-      orientation: null,
+      backgroundColor: colors.background,
       marginTop: theme.pageMarginTop,
       marginBottom: theme.pageMarginBottom,
       marginLeft: theme.pageMarginLeft,
       marginRight: theme.pageMarginRight,
-      backgroundColor: colors.background,
+      size: 'A4',
     },
     children: pageChildren,
   };

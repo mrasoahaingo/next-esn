@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgId } from '@/lib/utils/auth';
 import { getTemplateConfig, mergeTemplateWithDefaults } from '@/lib/utils/template';
 
-/** Merged template + organization_settings defaults for PDF preview and CV flows. */
+/** Gabarit PDF depuis `getTemplateConfig` (table `templates`, défaut org puis plateforme). */
 export async function GET(req: NextRequest) {
   try {
     const orgId = await requireOrgId();

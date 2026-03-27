@@ -282,7 +282,7 @@ const STEPS: Step[] = [
     description:
       'Téléchargez le PDF formaté aux couleurs de votre organisation et partagez-le avec vos clients.',
     details: [
-      'Template personnalisable : logo, couleurs, pied de page, sections',
+      'Template personnalisable : theme, logo, entete, pied de page, blocs',
       'Export PDF en un clic depuis la fiche candidat ou le positionnement',
       'Historique complet de tous vos positionnements et exports',
       'Statistiques de temps gagné et de score moyen sur le dashboard',

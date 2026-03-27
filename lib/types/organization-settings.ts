@@ -5,8 +5,8 @@ export type OrganizationSettingsRow = {
   contact_email: string | null;
   website_url: string | null;
   app_logo_url: string | null;
-  /** Clé du layout PDF versionné (`templates/registry.ts`) */
-  cv_code_template: string;
+  /** Gabarit PDF global (`templates.id`) choisi pour cette org (super_admin). */
+  default_template_id: string | null;
   positioning_brand_context: string | null;
   /** Pondérations matching — voir `lib/config/matching-weights.ts` */
   matching_weights?: unknown | null;

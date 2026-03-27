@@ -1,147 +1,199 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { FileText, GripVertical, Loader2, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import {
-  Loader2,
-  Save,
-  FileText,
-  GripVertical,
-  Star,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import type { TemplateConfig } from '@/lib/schema';
-import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
-
-function normalizeTemplateConfig(raw: Partial<TemplateConfig>): TemplateConfig {
-  return {
-    ...DEFAULT_TEMPLATE_CONFIG,
-    ...raw,
-    colors: { ...DEFAULT_TEMPLATE_CONFIG.colors, ...raw.colors },
-    logo: { ...DEFAULT_TEMPLATE_CONFIG.logo, ...raw.logo },
-    footer: { ...DEFAULT_TEMPLATE_CONFIG.footer, ...raw.footer },
-    sections: raw.sections ?? DEFAULT_TEMPLATE_CONFIG.sections,
-    exportFilePrefix: raw.exportFilePrefix ?? DEFAULT_TEMPLATE_CONFIG.exportFilePrefix,
-  };
-}
-import { useTemplate, useUpdateTemplate } from '@/lib/queries';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import {
+  DEFAULT_TEMPLATE_CONFIG,
+  type TemplateBlock,
+  type TemplateBlockType,
+  type TemplateConfig,
+} from '@/lib/schema';
 import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
+import { useTemplate, useUpdateTemplate } from '@/lib/queries';
+import { normalizeTemplateConfig } from '@/lib/utils/template';
 
-// Sample CV data for preview
 const SAMPLE_CV = {
   personalInfo: {
-    firstName: 'Marie',
-    lastName: 'Dupont',
-    title: 'Développeuse Full Stack Senior',
-    email: 'marie.dupont@email.com',
-    phone: '06 12 34 56 78',
-    location: 'Paris, France',
-    yearsOfExperience: '8 ans',
-    availability: 'Immédiate',
+    firstName: 'Sonia',
+    lastName: 'Benhamou',
+    title: 'Lead Developpeuse Java / React',
+    email: 'sonia.benhamou@email.com',
+    phone: '06 18 42 57 90',
+    location: 'Paris / Remote hybride',
+    yearsOfExperience: '11 ans',
+    availability: 'Preavis 1 mois',
   },
   summary:
-    'Développeuse full stack avec **8 ans d\'expérience** en conception et développement d\'applications web. Expertise en **React**, **Node.js** et **architectures cloud**. Passionnée par les bonnes pratiques et la qualité logicielle.',
+    "Consultante full stack avec **11 ans d'experience** en delivery de plateformes B2B et SI critiques pour des contextes **retail**, **banque** et **energie**. Expertise en **Java / Spring Boot**, **React**, **TypeScript**, **AWS** et modernisation d'applications legacy. Habitude des environnements ESN avec pilotage technique, cadrage, accompagnement d'equipe et forte attention a la qualite, la maintenabilite et la tenue des engagements client.",
   experiences: [
     {
-      role: 'Lead Développeuse Full Stack',
-      company: 'TechCorp',
-      companyDomain: 'techcorp.com',
+      role: 'Lead Developpeuse Java / React',
+      company: 'Groupe Retail Europe',
+      companyDomain: 'carrefour.com',
       location: 'Paris',
-      startDate: 'Jan 2021',
+      startDate: 'Fev 2022',
       endDate: '',
       isCurrent: true,
       description: [
-        'Pilotage technique d\'une équipe de 5 développeurs',
-        'Migration d\'une architecture monolithique vers des microservices',
-        'Mise en place de CI/CD avec GitHub Actions',
+        "Pilotage technique d'une squad de 7 personnes sur la refonte du portail fournisseurs europeen.",
+        'Decoupage progressif du monolithe vers une architecture de services Spring Boot exposes via API Gateway.',
+        "Mise en place d'un front React / TypeScript mutualise avec design system, feature flags et monitoring produit.",
+        'Cadrage des chantiers transverses avec le client, priorisation backlog et accompagnement des mises en production.',
       ],
+      skills: ['Java 21', 'Spring Boot', 'React', 'TypeScript', 'PostgreSQL', 'AWS', 'Docker', 'GitHub Actions'],
     },
     {
-      role: 'Développeuse Full Stack',
-      company: 'WebAgency',
-      location: 'Lyon',
-      startDate: 'Mars 2017',
-      endDate: 'Déc 2020',
+      role: 'Referente technique Full Stack',
+      company: 'Banque de financement',
+      companyDomain: 'societegenerale.com',
+      location: 'La Defense',
+      startDate: 'Jan 2020',
+      endDate: 'Jan 2022',
       isCurrent: false,
       description: [
-        'Développement d\'applications React / Node.js',
-        'Intégration d\'APIs REST et GraphQL',
+        "Conception et developpement d'une plateforme interne de suivi des risques et de production de reportings reglementaires.",
+        "Refonte de modules AngularJS vers React et exposition de services REST securises avec OAuth2.",
+        'Animation des revues de code, industrialisation Sonar / quality gates et support recette metier.',
       ],
+      skills: ['Java', 'Spring', 'React', 'Redux', 'Oracle', 'Kafka', 'Jenkins', 'SonarQube'],
+    },
+    {
+      role: 'Developpeuse Full Stack',
+      company: 'Operateur energie',
+      companyDomain: 'edf.fr',
+      location: 'Lyon',
+      startDate: 'Juin 2016',
+      endDate: 'Dec 2019',
+      isCurrent: false,
+      description: [
+        "Developpement d'applications de supervision et d'outils internes pour les equipes d'exploitation.",
+        'Participation a la migration progressive vers des stacks cloud-ready et conteneurisees.',
+        "Contribution aux ateliers d'architecture, documentation technique et transfert de competences vers les equipes internes.",
+      ],
+      skills: ['Node.js', 'React', 'TypeScript', 'MongoDB', 'Docker', 'Kubernetes', 'Azure DevOps'],
+    },
+    {
+      role: 'Ingenieure etudes et developpement',
+      company: 'ESN nationale',
+      location: 'Paris',
+      startDate: 'Sept 2013',
+      endDate: 'Mai 2016',
+      isCurrent: false,
+      description: [
+        'Interventions en TMA evolutive et corrective sur plusieurs applications metier Java.',
+        'Developpement de nouveaux modules, correction de bugs de production et support utilisateurs niveau 3.',
+      ],
+      skills: ['Java', 'Spring MVC', 'JavaScript', 'SQL', 'Maven'],
     },
   ],
   education: [
-    { degree: 'Master Informatique', school: 'Université Paris-Saclay', year: '2016' },
+    { degree: 'Master 2 Genie Logiciel', school: 'Universite Paris-Saclay', year: '2013' },
+    { degree: 'Licence Informatique', school: 'Universite d Evry', year: '2011' },
   ],
   skills: {
     technologies: [
+      { name: 'Java', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Spring Boot', source: 'extracted' as const, starred: true, added: true },
       { name: 'React', source: 'extracted' as const, starred: true, added: true },
       { name: 'TypeScript', source: 'extracted' as const, starred: true, added: true },
-      { name: 'Node.js', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Node.js', source: 'extracted' as const, starred: false, added: true },
       { name: 'PostgreSQL', source: 'extracted' as const, starred: true, added: true },
       { name: 'AWS', source: 'inferred' as const, starred: true, added: true },
-      { name: 'Docker', source: 'inferred' as const, starred: false, added: false },
-      { name: 'Git', source: 'extracted' as const, starred: false, added: false },
+      { name: 'Docker', source: 'inferred' as const, starred: true, added: true },
+      { name: 'Kubernetes', source: 'inferred' as const, starred: false, added: true },
+      { name: 'Kafka', source: 'extracted' as const, starred: false, added: true },
     ],
     softSkills: [
       { name: 'Leadership', source: 'extracted' as const, starred: true, added: true },
-      { name: 'Communication', source: 'inferred' as const, starred: false, added: false },
-      { name: 'Esprit d\'équipe', source: 'inferred' as const, starred: false, added: false },
+      { name: 'Communication client', source: 'inferred' as const, starred: true, added: true },
+      { name: 'Mentorat', source: 'inferred' as const, starred: false, added: true },
+      { name: 'Animation dateliers', source: 'inferred' as const, starred: false, added: true },
     ],
     expertises: [
       { name: 'Architecture microservices', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Modernisation legacy', source: 'inferred' as const, starred: true, added: true },
       { name: 'Cloud-native', source: 'inferred' as const, starred: true, added: true },
       { name: 'CI/CD', source: 'extracted' as const, starred: true, added: true },
+      { name: 'Cadrage technique', source: 'inferred' as const, starred: false, added: true },
     ],
     methodologies: [
       { name: 'Agile', source: 'extracted' as const, starred: true, added: true },
       { name: 'Scrum', source: 'extracted' as const, starred: true, added: true },
-      { name: 'DevOps', source: 'inferred' as const, starred: false, added: false },
+      { name: 'Kanban', source: 'inferred' as const, starred: false, added: true },
+      { name: 'TDD', source: 'inferred' as const, starred: false, added: true },
+      { name: 'DevOps', source: 'inferred' as const, starred: false, added: true },
     ],
   },
 };
 
-const SECTION_LABELS: Record<string, string> = {
-  summary: 'Synthèse du profil',
-  skills: 'Compétences',
+const BLOCK_LABELS: Record<TemplateBlockType, string> = {
+  'profile-info': 'Infos profil',
+  summary: 'Synthese',
+  skills: 'Competences',
   education: 'Formations',
-  experiences: 'Expériences',
+  experiences: 'Experiences',
 };
+
+const BLOCK_VARIANT_OPTIONS: Record<TemplateBlockType, Array<{ value: TemplateBlock['variant']; label: string }>> = {
+  'profile-info': [
+    { value: 'default', label: 'Standard' },
+    { value: 'detailed', label: 'Detaille' },
+  ],
+  summary: [{ value: 'default', label: 'Standard' }],
+  skills: [
+    { value: 'default', label: 'Standard' },
+    { value: 'compact', label: 'Compact' },
+  ],
+  education: [
+    { value: 'default', label: 'Standard' },
+    { value: 'compact', label: 'Compact' },
+  ],
+  experiences: [
+    { value: 'detailed', label: 'Detaille' },
+    { value: 'compact', label: 'Compact' },
+  ],
+};
+
+function getVariantValue(block: TemplateBlock): string {
+  if (block.variant) return block.variant;
+  return block.type === 'experiences' ? 'detailed' : 'default';
+}
 
 export default function TemplateEditorPage() {
   const params = useParams();
   const templateId = params?.id as string;
-
-  // React Query for template data
   const { data: template, isLoading } = useTemplate(templateId);
   const updateTemplateMutation = useUpdateTemplate();
-
-  // Local editable state derived from query data
   const [localName, setLocalName] = useState<string | null>(null);
   const [localConfig, setLocalConfig] = useState<TemplateConfig | null>(null);
-
-  // Derive current values: local edits override server data
-  const name = localName ?? template?.name ?? '';
-  const config =
-    localConfig ?? (template?.config ? normalizeTemplateConfig(template.config as Partial<TemplateConfig>) : null);
-
-  // PDF preview state
   const [pdfBlobUrl, setPdfBlobUrlRaw] = useState<string | null>(null);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  // Revoke previous blob URL before setting new one (fixes leak)
+  const name = localName ?? template?.name ?? '';
+  const config = localConfig ?? (template?.config ? normalizeTemplateConfig(template.config) : null);
+
   const setPdfBlobUrl = useCallback((url: string | null) => {
     setPdfBlobUrlRaw((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return url;
     });
   }, []);
-
-  // Drag state
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   usePdfPreview({
     data: config ? SAMPLE_CV : null,
@@ -152,28 +204,15 @@ export default function TemplateEditorPage() {
 
   const updateConfig = (patch: Partial<TemplateConfig>) => {
     if (!config) return;
-    setLocalConfig({ ...config, ...patch });
+    setLocalConfig(normalizeTemplateConfig({ ...config, ...patch }));
   };
 
-  const updateColors = (key: string, value: string) => {
+  const updateBlock = (index: number, patch: Partial<TemplateBlock>) => {
     if (!config) return;
-    updateConfig({
-      colors: { ...config.colors, [key]: value },
-    });
-  };
-
-  const updateFooter = (key: string, value: string) => {
-    if (!config) return;
-    updateConfig({
-      footer: { ...config.footer, [key]: value },
-    });
-  };
-
-  const updateLogo = (key: string, value: string | number) => {
-    if (!config) return;
-    updateConfig({
-      logo: { ...config.logo, [key]: value },
-    });
+    const blocks = config.blocks.map((block, currentIndex) =>
+      currentIndex === index ? { ...block, ...patch } : block,
+    );
+    updateConfig({ blocks });
   };
 
   const handleSave = () => {
@@ -181,31 +220,20 @@ export default function TemplateEditorPage() {
     updateTemplateMutation.mutate(
       { id: templateId, name, config },
       {
-        onSuccess: () => toast.success('Template sauvegardé'),
+        onSuccess: () => toast.success('Template sauvegarde'),
         onError: () => toast.error('Erreur lors de la sauvegarde'),
       },
     );
   };
 
-  const handleSetDefault = () => {
-    updateTemplateMutation.mutate(
-      { id: templateId, is_default: true },
-      {
-        onSuccess: () => toast.success('Défini comme template par défaut'),
-        onError: () => toast.error('Erreur'),
-      },
-    );
-  };
-
-  // Section drag & drop
   const handleDragStart = (index: number) => setDragIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     if (dragIndex === null || dragIndex === index || !config) return;
-    const newSections = [...config.sections];
-    const [moved] = newSections.splice(dragIndex, 1);
-    newSections.splice(index, 0, moved);
-    updateConfig({ sections: newSections });
+    const next = [...config.blocks];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(index, 0, moved);
+    updateConfig({ blocks: next });
     setDragIndex(index);
   };
   const handleDragEnd = () => setDragIndex(null);
@@ -223,7 +251,6 @@ export default function TemplateEditorPage() {
   return (
     <div className="flex h-full flex-col bg-background text-foreground">
       <div className="flex flex-1 flex-col px-4 py-4 md:px-6">
-        {/* Top bar */}
         <div className="mb-4 rounded-2xl glass-panel p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -236,26 +263,38 @@ export default function TemplateEditorPage() {
                   style={{ backgroundColor: config.colors.secondary }}
                 />
               </div>
-              <div className="min-w-0">
-                <Input
-                  value={name}
-                  onChange={(e) => setLocalName(e.target.value)}
-                  className="h-7 border-none bg-transparent px-0 text-lg font-semibold text-foreground focus-visible:ring-0"
+              <Input
+                value={name}
+                onChange={(e) => setLocalName(e.target.value)}
+                className="h-7 border-none bg-transparent px-0 text-lg font-semibold text-foreground focus-visible:ring-0"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="template-is-default" className="text-xs text-muted-foreground whitespace-nowrap">
+                  Gabarit de repli (plateforme)
+                </Label>
+                <Switch
+                  id="template-is-default"
+                  size="sm"
+                  checked={isDefault}
+                  onCheckedChange={(checked) => {
+                    updateTemplateMutation.mutate(
+                      { id: templateId, is_default: checked },
+                      {
+                        onSuccess: () =>
+                          toast.success(
+                            checked
+                              ? 'Gabarit defini comme repli plateforme'
+                              : 'Ce gabarit n’est plus le repli plateforme',
+                          ),
+                        onError: () => toast.error('Erreur'),
+                      },
+                    );
+                  }}
+                  disabled={updateTemplateMutation.isPending}
                 />
               </div>
-            </div>
-            <div className="flex gap-2">
-              {!isDefault && (
-                <Button variant="outline" size="sm" onClick={handleSetDefault} disabled={updateTemplateMutation.isPending}>
-                  <Star className="mr-1.5 h-3.5 w-3.5" />
-                  Défaut
-                </Button>
-              )}
-              {isDefault && (
-                <Badge variant="secondary" className="self-center">
-                  <Star className="mr-1 h-3 w-3" /> Par défaut
-                </Badge>
-              )}
               <Button size="sm" onClick={handleSave} disabled={updateTemplateMutation.isPending}>
                 {updateTemplateMutation.isPending ? (
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -268,91 +307,149 @@ export default function TemplateEditorPage() {
           </div>
         </div>
 
-        {/* Split layout */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-          {/* Left: Config form */}
-          <div className="w-full overflow-y-auto pr-0 space-y-4 lg:w-1/2 lg:pr-2">
-            {/* Colors */}
+          <div className="w-full space-y-4 overflow-y-auto pr-0 lg:w-1/2 lg:pr-2">
             <div className="rounded-xl glass-panel p-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Couleurs</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'primary', label: 'Principale' },
-                  { key: 'secondary', label: 'Secondaire' },
-                  { key: 'background', label: 'Fond' },
-                  { key: 'text', label: 'Texte' },
-                  { key: 'lightText', label: 'Texte léger' },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <Input
-                      type="color"
-                      value={config.colors[key as keyof typeof config.colors]}
-                      onChange={(e) => updateColors(key, e.target.value)}
-                      className="h-8 w-8 min-w-8 cursor-pointer rounded border border-border bg-transparent p-0 shadow-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-moz-color-swatch]:rounded-md"
-                    />
-                    <Label className="text-xs">{label}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="rounded-xl glass-panel p-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Pied de page</h3>
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs">Ligne 1</Label>
-                  <Input
-                    value={config.footer.line1}
-                    onChange={(e) => updateFooter('line1', e.target.value)}
-                    className="mt-1 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Ligne 2</Label>
-                  <Input
-                    value={config.footer.line2}
-                    onChange={(e) => updateFooter('line2', e.target.value)}
-                    className="mt-1 text-xs"
-                  />
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Theme global</h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'primary', label: 'Principale' },
+                    { key: 'secondary', label: 'Secondaire' },
+                    { key: 'background', label: 'Fond' },
+                    { key: 'text', label: 'Texte' },
+                    { key: 'lightText', label: 'Texte secondaire' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <Input
+                        type="color"
+                        value={config.colors[key as keyof typeof config.colors]}
+                        onChange={(e) =>
+                          updateConfig({
+                            colors: { ...config.colors, [key]: e.target.value },
+                          })
+                        }
+                        className="h-8 w-8 min-w-8 cursor-pointer rounded border border-border bg-transparent p-0 shadow-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-moz-color-swatch]:rounded-md"
+                      />
+                      <Label className="text-xs">{label}</Label>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Logo PDF */}
             <div className="rounded-xl glass-panel p-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Logo en-tête PDF</h3>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Entete</h3>
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-xs">Nom societe</Label>
+                  <Input
+                    value={config.header.companyName}
+                    onChange={(e) =>
+                      updateConfig({ header: { ...config.header, companyName: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Titre du document</Label>
+                  <Input
+                    value={config.header.documentTitle}
+                    onChange={(e) =>
+                      updateConfig({ header: { ...config.header, documentTitle: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Ligne secondaire</Label>
+                  <Input
+                    value={config.header.tagLine}
+                    onChange={(e) =>
+                      updateConfig({ header: { ...config.header, tagLine: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Ligne meta</Label>
+                  <Input
+                    value={config.header.metaLine}
+                    onChange={(e) =>
+                      updateConfig({ header: { ...config.header, metaLine: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={config.header.showCandidateName}
+                    onCheckedChange={(checked) =>
+                      updateConfig({
+                        header: { ...config.header, showCandidateName: checked === true },
+                      })
+                    }
+                  />
+                  <Label className="text-xs">Afficher le nom du consultant dans l&apos;entete</Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl glass-panel p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Logo en-tete PDF</h3>
               <p className="mb-2 text-[10px] text-muted-foreground">
-                URL publique (ex. fichier hébergé). Laisser vide pour le logo graphique par défaut.
+                SVG colle (converti en image pour le PDF), sinon URL publique, sinon le logo par defaut.
               </p>
               <div className="space-y-2">
                 <div>
-                  <Label className="text-xs">URL</Label>
+                  <Label className="text-xs">Code SVG (optionnel)</Label>
+                  <Textarea
+                    value={config.logo.svgInline ?? ''}
+                    onChange={(e) =>
+                      updateConfig({
+                        logo: { ...config.logo, svgInline: e.target.value || undefined },
+                      })
+                    }
+                    placeholder={'Coller ici le fichier .svg (balise <svg>...)'}
+                    rows={5}
+                    className="mt-1 max-h-48 min-h-20 resize-y overflow-y-auto font-mono text-[11px]"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">URL du logo</Label>
                   <Input
                     value={config.logo.url}
-                    onChange={(e) => updateLogo('url', e.target.value)}
-                    placeholder="https://…"
+                    onChange={(e) => updateConfig({ logo: { ...config.logo, url: e.target.value } })}
+                    placeholder="https://..."
                     className="mt-1 font-mono text-[11px]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <Label className="text-xs">Largeur (px)</Label>
+                    <Label className="text-xs">Largeur</Label>
                     <Input
                       type="number"
                       min={1}
                       value={config.logo.width}
-                      onChange={(e) => updateLogo('width', Number(e.target.value) || 90)}
+                      onChange={(e) =>
+                        updateConfig({
+                          logo: { ...config.logo, width: Number(e.target.value) || DEFAULT_TEMPLATE_CONFIG.logo.width },
+                        })
+                      }
                       className="mt-1 text-xs"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Hauteur (px)</Label>
+                    <Label className="text-xs">Hauteur</Label>
                     <Input
                       type="number"
                       min={1}
                       value={config.logo.height}
-                      onChange={(e) => updateLogo('height', Number(e.target.value) || 20)}
+                      onChange={(e) =>
+                        updateConfig({
+                          logo: { ...config.logo, height: Number(e.target.value) || DEFAULT_TEMPLATE_CONFIG.logo.height },
+                        })
+                      }
                       className="mt-1 text-xs"
                     />
                   </div>
@@ -360,14 +457,46 @@ export default function TemplateEditorPage() {
               </div>
             </div>
 
-            {/* Export filename */}
+            <div className="rounded-xl glass-panel p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Pied de page</h3>
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Colonne gauche</Label>
+                  <Input
+                    value={config.footer.leftText}
+                    onChange={(e) =>
+                      updateConfig({ footer: { ...config.footer, leftText: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Colonne centre</Label>
+                  <Input
+                    value={config.footer.centerText}
+                    onChange={(e) =>
+                      updateConfig({ footer: { ...config.footer, centerText: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Colonne droite</Label>
+                  <Input
+                    value={config.footer.rightText}
+                    onChange={(e) =>
+                      updateConfig({ footer: { ...config.footer, rightText: e.target.value } })
+                    }
+                    className="mt-1 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="rounded-xl glass-panel p-4">
               <h3 className="mb-3 text-sm font-semibold text-foreground">Export PDF</h3>
-              <p className="mb-2 text-[10px] text-muted-foreground">
-                Préfixe des noms de fichier pour les CV générés avec ce gabarit (caractères spéciaux exclus côté serveur).
-              </p>
               <div>
-                <Label className="text-xs">Préfixe</Label>
+                <Label className="text-xs">Prefixe</Label>
                 <Input
                   value={config.exportFilePrefix ?? 'CV'}
                   onChange={(e) => updateConfig({ exportFilePrefix: e.target.value })}
@@ -377,37 +506,80 @@ export default function TemplateEditorPage() {
               </div>
             </div>
 
-            {/* Sections order */}
             <div className="rounded-xl glass-panel p-4">
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Ordre des sections</h3>
-              <p className="mb-2 text-[10px] text-muted-foreground">Glisser pour réordonner</p>
-              <div className="space-y-1">
-                {config.sections.map((section, index) => (
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Blocs</h3>
+              <p className="mb-2 text-[10px] text-muted-foreground">
+                Active, desactive et reordonne les blocs du document.
+              </p>
+              <div className="space-y-2">
+                {config.blocks.map((block, index) => (
                   <div
-                    key={section}
+                    key={`${block.type}-${index}`}
                     draggable
                     onDragStart={() => handleDragStart(index)}
                     onDragOver={(e) => handleDragOver(e, index)}
                     onDragEnd={handleDragEnd}
-                    className={`flex items-center gap-2 rounded-lg border border-border bg-card/50 px-3 py-2 text-xs cursor-grab active:cursor-grabbing transition ${
+                    className={`rounded-lg border border-border bg-card/50 px-3 py-3 transition ${
                       dragIndex === index ? 'opacity-50' : ''
                     }`}
                   >
-                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="text-foreground">{SECTION_LABELS[section] ?? section}</span>
+                    <div className="flex items-start gap-3">
+                      <GripVertical className="mt-1 h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing" />
+                      <div className="flex min-w-0 flex-1 flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={block.enabled}
+                            onCheckedChange={(checked) =>
+                              updateBlock(index, { enabled: checked === true })
+                            }
+                          />
+                          <span className="text-xs font-medium text-foreground">
+                            {BLOCK_LABELS[block.type]}
+                          </span>
+                        </div>
+                        <div>
+                          <Label className="text-[10px]">Variante</Label>
+                          <Select
+                            value={getVariantValue(block)}
+                            onValueChange={(value) =>
+                              updateBlock(index, { variant: value as TemplateBlock['variant'] })
+                            }
+                          >
+                            <SelectTrigger className="mt-1 w-full text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {BLOCK_VARIANT_OPTIONS[block.type].map((option) => (
+                                <SelectItem key={option.value} value={option.value ?? 'default'}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
+
+            <div className="rounded-xl glass-panel p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Notes</h3>
+              <Textarea
+                value={`Blocs actifs: ${config.blocks.filter((block) => block.enabled).map((block) => BLOCK_LABELS[block.type]).join(', ')}`}
+                readOnly
+                className="min-h-20 resize-none text-[11px] text-muted-foreground"
+              />
+            </div>
           </div>
 
-          {/* Right: PDF preview */}
-          <div className="w-full sticky top-0 lg:w-1/2">
-            <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
+          <div className="sticky top-0 w-full lg:w-1/2">
+            <div className="flex h-full flex-col overflow-hidden rounded-2xl glass-panel">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <h2 className="flex items-center text-sm font-semibold text-foreground">
                   <FileText className="mr-2 h-4 w-4 text-primary" />
-                  Aperçu avec données d&apos;exemple
+                  Apercu avec donnees d&apos;exemple
                 </h2>
               </div>
               <div className="relative flex-1 bg-shell">
@@ -421,7 +593,7 @@ export default function TemplateEditorPage() {
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
                     <FileText className="mb-2 h-10 w-10" />
-                    <p className="text-sm">L&apos;aperçu apparaîtra ici</p>
+                    <p className="text-sm">L&apos;apercu apparaitra ici</p>
                   </div>
                 )}
               </div>

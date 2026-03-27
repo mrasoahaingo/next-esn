@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useAdminStats, useUpdateOrgCvCodeTemplate } from '@/lib/queries'
+import { useAdminStats, useSetOrgDefaultTemplate } from '@/lib/queries'
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin'
 import { redirect } from 'next/navigation'
 import {
@@ -14,15 +14,10 @@ import {
   TrendingUp,
   ShieldCheck,
   History,
+  LayoutTemplate,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -31,9 +26,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CV_CODE_TEMPLATE_IDS, CV_CODE_TEMPLATE_LABELS } from '@/templates/registry'
-import { toast } from 'sonner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { LlmSettingsTabs } from '@/components/admin/llm-settings-tabs'
 import { LlmUsageHistoryTab } from '@/components/admin/llm-usage-history'
 
@@ -56,7 +56,7 @@ export default function AdminPage() {
   const [adminTab, setAdminTab] = useState('overview')
   const { isSuperAdmin, isLoaded } = useSuperAdmin()
   const { data, isLoading } = useAdminStats()
-  const updateCvTemplate = useUpdateOrgCvCodeTemplate()
+  const setOrgDefaultTemplate = useSetOrgDefaultTemplate()
 
   if (isLoaded && !isSuperAdmin) {
     redirect('/')
@@ -72,7 +72,7 @@ export default function AdminPage() {
 
   if (!data) return null
 
-  const { totals, organizations } = data
+  const { totals, organizations, globalTemplates = [] } = data
   const sortedOrgs = [...organizations].sort(
     (a, b) => b.candidates + b.positionings - (a.candidates + a.positionings)
   )
@@ -195,7 +195,6 @@ export default function AdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Organisation</TableHead>
-                    <TableHead>Template CV (code)</TableHead>
                     <TableHead className="text-right">CVs</TableHead>
                     <TableHead className="text-right">
                       Positionnements
@@ -207,6 +206,7 @@ export default function AdminPage() {
                       Tokens sortie
                     </TableHead>
                     <TableHead className="text-right">Coût estimé</TableHead>
+                    <TableHead className="min-w-[220px]">Gabarit PDF par défaut</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -222,39 +222,6 @@ export default function AdminPage() {
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={org.cvCodeTemplate ?? 'himeo'}
-                          onValueChange={(v) => {
-                            if (v == null || v === '') return
-                            const oid = org.orgId
-                            if (typeof oid !== 'string' || !oid) return
-                            updateCvTemplate.mutate(
-                              { orgId: oid, cvCodeTemplate: v },
-                              {
-                                onSuccess: () =>
-                                  toast.success('Template CV mis à jour'),
-                                onError: (e) =>
-                                  toast.error(
-                                    e instanceof Error ? e.message : 'Erreur',
-                                  ),
-                              },
-                            )
-                          }}
-                          disabled={updateCvTemplate.isPending}
-                        >
-                          <SelectTrigger className="h-8 w-[min(100%,220px)] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {CV_CODE_TEMPLATE_IDS.map((id) => (
-                              <SelectItem key={id} value={id}>
-                                {CV_CODE_TEMPLATE_LABELS[id]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {org.candidates}
                       </TableCell>
@@ -269,6 +236,51 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-right tabular-nums text-emerald-400/90">
                         {formatUsd(org.estimatedCostUsd)}
+                      </TableCell>
+                      <TableCell>
+                        {globalTemplates.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">Aucun gabarit</span>
+                        ) : (
+                          <Select
+                            value={
+                              org.defaultTemplateId ??
+                              (globalTemplates.length === 1 ? globalTemplates[0].id : null) ??
+                              '__choose__'
+                            }
+                            onValueChange={(templateId) => {
+                              if (!templateId || templateId === '__choose__') return
+                              setOrgDefaultTemplate.mutate(
+                                { orgId: org.orgId, templateId },
+                                {
+                                  onSuccess: () =>
+                                    toast.success('Gabarit par défaut mis à jour'),
+                                  onError: (e) =>
+                                    toast.error(
+                                      e instanceof Error ? e.message : 'Erreur',
+                                    ),
+                                },
+                              )
+                            }}
+                            disabled={setOrgDefaultTemplate.isPending}
+                          >
+                            <SelectTrigger className="h-8 max-w-[260px] text-xs">
+                              <LayoutTemplate className="mr-1.5 h-3.5 w-3.5 shrink-0 opacity-70" />
+                              <SelectValue placeholder="Choisir" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {globalTemplates.length > 1 && !org.defaultTemplateId ? (
+                                <SelectItem value="__choose__" disabled>
+                                  Choisir le gabarit par défaut
+                                </SelectItem>
+                              ) : null}
+                              {globalTemplates.map((t) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

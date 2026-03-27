@@ -78,6 +78,7 @@ Do not add new `streamText` / `generateObject` / similar calls without this logg
 
 ### Supabase Tables
 
+- **Gabarits PDF** : après `20260418`, tous les gabarits sont globaux (`templates.org_id` NULL). Le défaut plateforme reçoit la config canonique en prod via `20260419_platform_template_canonical_config.sql` (à garder aligné avec `DEFAULT_TEMPLATE_CONFIG` dans `lib/schema.ts`). Le rendu utilise `templates/cv-dossier-layout.ts` ; `templates.config` pilote couleurs / blocs / en-tête.
 - `candidates`: id, original_file_url, formatted_file_url, extracted_data (JSONB), status (uploaded → extracting → reviewing → ready → generated)
 - Historique **extractions CV** : `ai_usage_log`, `task_key = cv.extraction.snapshot` (`output_payload` v1) — plus de `extraction_history` (migration `20260414_drop_extraction_history.sql`).
 - Historique **analyses de positionnement** : `ai_usage_log`, `task_key = positioning.analysis.snapshot` — plus de `positioning_analysis_history` (migration `20260413_positioning_history_ai_usage_log.sql`).
