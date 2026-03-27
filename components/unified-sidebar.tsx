@@ -386,7 +386,7 @@ export function UnifiedSidebar() {
         <SidebarHeader className="p-0">
           <Link
             href="/"
-            className="flex items-center px-4 py-10 transition-opacity hover:opacity-90"
+            className="flex items-center justify-center px-4 py-10 transition-opacity hover:opacity-90"
             onClick={() => { if (isMobile) setOpenMobile(false); }}
           >
             {appLogoUrl ? (
