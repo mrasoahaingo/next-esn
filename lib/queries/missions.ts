@@ -118,6 +118,24 @@ export function usePositionExistingCandidates() {
   });
 }
 
+export function useDeleteMission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/missions/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete mission');
+      return res.json();
+    },
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: queryKeys.missions.detail(id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    },
+  });
+}
+
 export function useUploadCvsForMission() {
   const queryClient = useQueryClient();
 

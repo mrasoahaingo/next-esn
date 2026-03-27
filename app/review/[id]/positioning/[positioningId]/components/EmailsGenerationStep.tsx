@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, RefreshCw, Mail, UserCheck, List, Building2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 
 const EmailEditor = dynamic(
@@ -123,7 +124,10 @@ export function EmailsGenerationStep({
         <div className="flex items-start gap-3 px-4 py-3 border-b border-border/60">
           <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-foreground">Propositions</h3>
+            <div className="flex items-center gap-1">
+              <h3 className="text-sm font-semibold text-foreground">Propositions</h3>
+              <AiGenerationInfoIcon variant="positioning_generate" className="h-6 w-6" />
+            </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               Propositions client (variantes) à gauche, proposition candidat à droite.
             </p>

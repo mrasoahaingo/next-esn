@@ -13,6 +13,7 @@ import {
 import { queryKeys } from '@/lib/queries/keys';
 import type { MissionDetail } from '@/lib/queries/missions';
 import { hasPersistedJobAnalysis } from '@/lib/utils/mission-positioning-gate';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import type { JobPostingAnalysis } from '@/lib/schema';
 
 function formatJobPostingStreamHint(meta: JobPostingAnalysisStreamMeta | null): string | null {
@@ -123,6 +124,7 @@ export function PositioningMissionAnalysisInline({
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Analyse de la fiche mission
         </span>
+        <AiGenerationInfoIcon variant="mission_job_analysis" className="h-6 w-6" />
         {showAnalysisProgressHint && !showJobStepList ? (
           <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />

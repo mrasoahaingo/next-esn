@@ -53,6 +53,7 @@ import { normalizeSkillKey } from '@/lib/utils/skill-key';
 import { queryKeys } from '@/lib/queries/keys';
 import { useCancelWorkflow } from '@/lib/queries/workflow';
 import { cn } from '@/lib/utils';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 
 function formatJobPostingStreamHint(meta: JobPostingAnalysisStreamMeta | null): string | null {
   if (!meta) return null;
@@ -273,6 +274,7 @@ export function MissionJobAnalysis({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-neon" />
           <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
+          <AiGenerationInfoIcon variant="mission_job_analysis" className="h-7 w-7" />
           {showAnalysisProgressHint && !showJobStepList && (
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />

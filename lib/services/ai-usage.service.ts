@@ -1,8 +1,14 @@
 import type { LanguageModelUsage } from 'ai';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { serializeLlmLogPayload } from '@/lib/utils/llm-log-payload';
+import {
+  LLM_LOG_MAX_STRING_CHARS,
+  serializeLlmLogPayload,
+} from '@/lib/utils/llm-log-payload';
 
 export type AiOperation = 'extraction' | 'analysis' | 'generation';
+
+/** Snapshots d’analyse (payload riche) : plafond plus haut que pour une sortie LLM brute. */
+export const AI_USAGE_SNAPSHOT_MAX_STRING_CHARS = 600 * 1024;
 
 /** État enregistré avec la ligne de log (corrélation workflow / échecs). */
 export type AiUsageCallStatus = 'completed' | 'failed' | 'cancelled';
@@ -27,6 +33,11 @@ export async function logAiUsage(
     callStatus?: AiUsageCallStatus;
     /** Sous-flux parallèle (ex. executive, keyPoints pour l’analyse fiche mission). */
     branch?: string | null;
+    /**
+     * Troncature des chaînes dans `output_payload` (défaut : `LLM_LOG_MAX_STRING_CHARS`).
+     * Les snapshots d’analyse utilisent `AI_USAGE_SNAPSHOT_MAX_STRING_CHARS`.
+     */
+    outputPayloadMaxChars?: number;
   },
 ) {
   const {
@@ -44,6 +55,7 @@ export async function logAiUsage(
     workflowRunId,
     callStatus = 'completed',
     branch = null,
+    outputPayloadMaxChars = LLM_LOG_MAX_STRING_CHARS,
   } = params;
 
   await supabase.from('ai_usage_log').insert({
@@ -62,7 +74,10 @@ export async function logAiUsage(
     reasoning_tokens: usage.outputTokenDetails?.reasoningTokens ?? null,
     raw_usage: usage,
     input_payload: inputPayload !== undefined ? serializeLlmLogPayload(inputPayload) : null,
-    output_payload: outputPayload !== undefined ? serializeLlmLogPayload(outputPayload) : null,
+    output_payload:
+      outputPayload !== undefined
+        ? serializeLlmLogPayload(outputPayload, outputPayloadMaxChars)
+        : null,
     workflow_run_id: workflowRunId ?? null,
     call_status: callStatus,
     branch,

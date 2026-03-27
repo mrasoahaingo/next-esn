@@ -19,6 +19,7 @@ import { MessageCircle, Building2, Trash2 } from 'lucide-react';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
 import type { StepStateRow } from '@/lib/workflow/compute-step-status';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 
 interface AnalysisViewProps {
   analysis: Partial<PositioningAnalysis> | null;
@@ -37,6 +38,11 @@ interface AnalysisViewProps {
   recruiterDraftsDifferFromSnapshot?: boolean;
   workflowStepRows?: StepStateRow[];
   workflowSummaryLine?: string | null;
+  /** Identifiants gateway des modèles utilisés pour ce calcul (colonne `ai_analysis_models`). */
+  modelsSummaryLabel?: string | null;
+  /** Lien vers le positionnement (historique dans l’onglet dédié). */
+  aiInfoHistoryHref?: string | null;
+  aiInfoHistoryLinkLabel?: string | null;
 }
 
 function getRelevanceBadge(relevance: string) {
@@ -228,6 +234,9 @@ export function AnalysisView({
   recruiterDraftsDifferFromSnapshot,
   workflowStepRows,
   workflowSummaryLine,
+  modelsSummaryLabel,
+  aiInfoHistoryHref,
+  aiInfoHistoryLinkLabel,
 }: AnalysisViewProps) {
   if (!analysis && !isAnalyzing) return null;
 
@@ -273,8 +282,16 @@ export function AnalysisView({
         label="Calcul du score..."
       >
         <section className="glass-panel p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold text-foreground">Score de matching</h3>
+          <div className="flex items-center justify-between mb-2 gap-2">
+            <div className="flex min-w-0 items-center gap-1">
+              <h3 className="text-lg font-semibold text-foreground truncate">Score de matching</h3>
+              <AiGenerationInfoIcon
+                variant="positioning_analysis"
+                modelsLabel={modelsSummaryLabel}
+                historyHref={aiInfoHistoryHref ?? undefined}
+                historyLinkLabel={aiInfoHistoryLinkLabel ?? undefined}
+              />
+            </div>
             <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
               {onReAnalyze && !isAnalyzing && analysis && (
                 <Button

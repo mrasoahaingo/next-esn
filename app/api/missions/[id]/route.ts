@@ -16,7 +16,9 @@ export async function GET(
     const [missionResult, globalSkillResult] = await Promise.all([
       supabase
         .from('missions')
-        .select('*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, added_via, candidates(id, extracted_data, original_file_url, status, workflow_run_id))')
+        .select(
+        '*, positionings(id, candidate_id, status, analysis, created_at, workflow_run_id, added_via, ai_analysis_models, candidates(id, extracted_data, original_file_url, status, workflow_run_id))',
+      )
         .eq('id', id)
         .eq('org_id', orgId)
         .single(),
@@ -100,6 +102,14 @@ export async function DELETE(
     const orgId = await requireOrgId();
     const { id } = await params;
     const supabase = getSupabase();
+
+    const { error: deletePosError } = await supabase
+      .from('positionings')
+      .delete()
+      .eq('mission_id', id)
+      .eq('org_id', orgId);
+
+    if (deletePosError) throw deletePosError;
 
     const { error } = await supabase
       .from('missions')

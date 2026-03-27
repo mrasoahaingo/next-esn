@@ -1,6 +1,7 @@
 'use client';
 
 import { User, FileText, Briefcase, GraduationCap, Wrench, FileSearch, ScanText } from 'lucide-react';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import type { ExtractedCV } from '@/lib/schema';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
@@ -70,6 +71,8 @@ interface ExtractionProgressProps {
   /** Si fourni, remplace la rangée de pilules par la liste d’étapes unifiée (phase 2 / SUB-01). */
   workflowStepRows?: StepStateRow[];
   workflowSummaryLine?: string | null;
+  /** Identifiants gateway des modèles (si enregistrés côté serveur). */
+  extractionModelsLabel?: string | null;
 }
 
 function branchPulsesStep(branchMeta: CvExtractionStreamMeta | null | undefined, stepKey: string): boolean {
@@ -88,6 +91,7 @@ export function ExtractionProgress({
   streamMeta,
   workflowStepRows,
   workflowSummaryLine,
+  extractionModelsLabel,
 }: ExtractionProgressProps) {
   const completedCount = steps.filter((s) => s.check(data)).length;
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0;
@@ -126,14 +130,19 @@ export function ExtractionProgress({
       )}
 
       {/* Progress bar */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <div className="flex-1 h-1.5 rounded-full bg-overlay/10 overflow-hidden">
           <div
             className="h-full rounded-full bg-neon transition-all duration-500 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
-        <span className="text-xs font-medium text-muted-foreground tabular-nums">
+        <AiGenerationInfoIcon
+          variant="cv_extraction"
+          modelsLabel={extractionModelsLabel}
+          className="h-7 w-7 shrink-0"
+        />
+        <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
           {completedCount}/{steps.length}
         </span>
       </div>

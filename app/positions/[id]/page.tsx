@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo, useEffect, type MouseEvent } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, JobPostingAnalysis } from '@/lib/schema';
 import { MissionJobAnalysis } from '@/components/mission-job-analysis';
@@ -17,6 +17,8 @@ import {
 } from '@/lib/workflow/compute-step-status';
 import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
 import { queryKeys } from '@/lib/queries/keys';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
+import { formatHistoryModelsDisplayLabel } from '@/lib/types/positioning-analysis-models';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Briefcase,
@@ -42,6 +44,7 @@ import {
   Clock,
   Calendar,
   Users,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +58,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useMission,
@@ -62,6 +76,8 @@ import {
   useCancelWorkflow,
   useCandidates,
   usePositionExistingCandidates,
+  useDeleteMission,
+  useDeletePositioning,
 } from '@/lib/queries';
 
 // ---------------------------------------------------------------------------
@@ -116,6 +132,8 @@ interface MissionPositioning {
   workflow_run_id: string | null;
   workflow_last_error?: WorkflowLastError | null;
   added_via?: 'cv_upload' | 'existing_candidate' | null;
+  /** Snapshot modèles gateway après dernière analyse (JSON). */
+  ai_analysis_models?: unknown;
   analysis: {
     matchScore?: number;
     matchSummary?: string;
@@ -953,6 +971,7 @@ function PositioningRow({
   missionId,
   onNavigate,
   onCancelWorkflow,
+  onPositioningDeleted,
   selectable,
   isSelected,
   onToggleSelect,
@@ -968,11 +987,13 @@ function PositioningRow({
     resetStatus: string;
     missionId?: string;
   }) => void;
+  onPositioningDeleted?: (positioningId: string) => void;
   selectable?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const deletePositioning = useDeletePositioning();
   const candidate = p.candidates;
   const name = getCandidateName(candidate);
   const title = candidate?.extracted_data?.personalInfo?.title;
@@ -1065,6 +1086,7 @@ function PositioningRow({
         errorStepKey: extractStream.errorStepKey,
         persistedError: candidate?.workflow_last_error ?? null,
         workflowFailed: candidate?.status === 'error',
+        workflowRunActive: extractActive,
       }),
     [
       extractStream.streamMeta,
@@ -1074,6 +1096,7 @@ function PositioningRow({
       candidate?.extracted_data,
       candidate?.workflow_last_error,
       candidate?.status,
+      extractActive,
     ],
   );
 
@@ -1091,6 +1114,7 @@ function PositioningRow({
         errorStepKey: analysisStream.errorStepKey,
         persistedError: p.workflow_last_error ?? null,
         workflowFailed: p.status === 'error',
+        workflowRunActive: p.status === 'analyzing',
       }),
     [
       analysisStream.streamMeta,
@@ -1211,8 +1235,23 @@ function PositioningRow({
       )}
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
           <span className="text-sm font-medium text-foreground truncate">{name}</span>
+          <span
+            className="shrink-0 inline-flex"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <AiGenerationInfoIcon
+              variant="positioning_analysis"
+              modelsLabel={formatHistoryModelsDisplayLabel(p.ai_analysis_models)}
+              historyHref={`/review/${candidateId}/positioning/${p.id}`}
+              historyLinkLabel="Positionnement et historique"
+              stopClickPropagation
+            />
+          </span>
         </div>
         {title && <p className="mt-0.5 text-xs text-muted-foreground truncate">{title}</p>}
 
@@ -1327,6 +1366,68 @@ function PositioningRow({
           </Button>
         )}
 
+        <AlertDialog>
+          <Tooltip>
+            <AlertDialogTrigger
+              render={
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={deletePositioning.isPending}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      {deletePositioning.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                  }
+                />
+              }
+            />
+            <TooltipContent side="bottom" className="text-xs">
+              Supprimer ce positionnement
+            </TooltipContent>
+          </Tooltip>
+          <AlertDialogContent className="bg-panel border-overlay/10" onClick={(e) => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Supprimer ce positionnement ?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Cette action est irréversible. Le dossier de positionnement sur cette mission sera définitivement
+                supprimé (le CV candidat reste dans la bibliothèque).
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deletePositioning.mutate(
+                    { id: p.id, candidateId: p.candidate_id, missionId },
+                    {
+                      onSuccess: () => {
+                        toast.success('Positionnement supprimé');
+                        onPositioningDeleted?.(p.id);
+                      },
+                      onError: () => {
+                        toast.error('Impossible de supprimer le positionnement');
+                      },
+                    },
+                  );
+                }}
+              >
+                Supprimer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {canNavigate && (
           <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 transition group-hover:text-muted-foreground" />
         )}
@@ -1364,6 +1465,15 @@ export default function PositionDetailPage() {
     isLoading: boolean;
   };
   const cancelWorkflow = useCancelWorkflow();
+  const deleteMission = useDeleteMission();
+
+  const handlePositioningDeleted = useCallback((positioningId: string) => {
+    setCompareIds((prev) => {
+      const next = new Set(prev);
+      next.delete(positioningId);
+      return next;
+    });
+  }, []);
 
   const positionings = useMemo(
     () => mission?.positionings ?? [],
@@ -1449,13 +1559,71 @@ export default function PositionDetailPage() {
                 </span>
               </div>
             </div>
-            <Button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-violet hover:bg-violet/90 text-white shrink-0"
-            >
-              <Plus className="mr-1.5 h-4 w-4" />
-              Positionner des CVs
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              <AlertDialog>
+                <Tooltip>
+                  <AlertDialogTrigger
+                    render={
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            disabled={deleteMission.isPending}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {deleteMission.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        }
+                      />
+                    }
+                  />
+                  <TooltipContent side="bottom" className="text-xs">
+                    Supprimer cette mission
+                  </TooltipContent>
+                </Tooltip>
+                <AlertDialogContent className="bg-panel border-overlay/10">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer cette mission ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. La fiche de poste et tous les positionnements associés seront
+                      définitivement supprimés.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() =>
+                        deleteMission.mutate(missionId, {
+                          onSuccess: () => {
+                            toast.success('Mission supprimée');
+                            router.push('/positions');
+                          },
+                          onError: () => {
+                            toast.error('Impossible de supprimer la mission');
+                          },
+                        })
+                      }
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                className="bg-violet hover:bg-violet/90 text-white shrink-0"
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Positionner des CVs
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -1582,6 +1750,7 @@ export default function PositionDetailPage() {
                             missionId={missionId}
                             onNavigate={(href) => router.push(href)}
                             onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
+                            onPositioningDeleted={handlePositioningDeleted}
                           />
                         ))}
                       </div>
@@ -1613,6 +1782,7 @@ export default function PositionDetailPage() {
                             missionId={missionId}
                             onNavigate={(href) => router.push(href)}
                             onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
+                            onPositioningDeleted={handlePositioningDeleted}
                             selectable={ready.length >= 2}
                             isSelected={compareIds.has(p.id)}
                             onToggleSelect={toggleCompare}

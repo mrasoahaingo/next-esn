@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { TASK_KEY } from '@/lib/llm/task-keys';
+import { parsePositioningAnalysisSnapshotPayload } from '@/lib/types/positioning-analysis-snapshot-payload';
 
 export async function GET(
   _req: NextRequest,
@@ -22,16 +24,33 @@ export async function GET(
       return NextResponse.json({ error: 'Positioning not found' }, { status: 404 });
     }
 
-    const { data, error } = await supabase
-      .from('positioning_analysis_history')
-      .select('id, created_at, analysis, answers')
+    const { data: rows, error } = await supabase
+      .from('ai_usage_log')
+      .select('id, created_at, output_payload')
       .eq('positioning_id', positioningId)
       .eq('org_id', orgId)
+      .eq('task_key', TASK_KEY.POSITIONING_ANALYSIS_SNAPSHOT)
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    return NextResponse.json(data ?? []);
+    const mapped =
+      rows?.flatMap((row) => {
+        const payload = parsePositioningAnalysisSnapshotPayload(row.output_payload);
+        if (!payload) return [];
+        return [
+          {
+            id: row.id as string,
+            created_at: row.created_at as string,
+            analysis: payload.analysis,
+            answers: payload.answers,
+            ai_analysis_models: payload.ai_analysis_models,
+            snapshot_reason: payload.reason,
+          },
+        ];
+      }) ?? [];
+
+    return NextResponse.json(mapped);
   } catch (error: unknown) {
     if (error instanceof NextResponse) return error;
     console.error('Get positioning analysis history error:', error);

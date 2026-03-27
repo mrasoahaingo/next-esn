@@ -17,6 +17,8 @@ import {
   extractionSkillsStrengthsSchema,
 } from '@/lib/schema';
 import type { CvExtractionBranch, CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
+import type { CvExtractionModelsSnapshot } from '@/lib/types/cv-extraction-snapshot-payload';
+import { logCvExtractionSnapshot } from '@/lib/services/cv-extraction-snapshot-log';
 import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import mammoth from 'mammoth';
@@ -25,6 +27,8 @@ type PrepareCvTextResult = {
   cvText: string;
   orgId: string | null;
   workflowRunId: string | null;
+  /** Modèle gateway utilisé pour la transcription PDF (absent si DOCX / texte mammoth). */
+  transcriptionModelId?: string;
   transcriptionUsage: LanguageModelUsage | undefined;
   durationMs: number;
   nextChunkIndex: number;
@@ -158,6 +162,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
         cvText,
         orgId,
         workflowRunId,
+        transcriptionModelId: resolvedTx.gatewayModelId,
         transcriptionUsage,
         durationMs: Date.now() - startTime,
         nextChunkIndex: chunkIndex,
@@ -195,6 +200,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
 type ParallelExtractResult = {
   object: unknown;
   durationMs: number;
+  modelsSnapshot: CvExtractionModelsSnapshot;
 };
 
 async function parallelExtractAndStream(
@@ -361,9 +367,27 @@ async function parallelExtractAndStream(
       console.warn('Extraction schema validation warning:', parsed.error.flatten());
     }
 
+    const modelsSnapshot: CvExtractionModelsSnapshot = {
+      byTask: {
+        [TASK_KEY.CV_BRANCH_IDENTITY]: rId.gatewayModelId,
+        [TASK_KEY.CV_BRANCH_EXPERIENCES]: rEx.gatewayModelId,
+        [TASK_KEY.CV_BRANCH_EDUCATION]: rEd.gatewayModelId,
+        [TASK_KEY.CV_BRANCH_SKILLS]: rSk.gatewayModelId,
+      },
+      uniqueModels: Array.from(
+        new Set([
+          rId.gatewayModelId,
+          rEx.gatewayModelId,
+          rEd.gatewayModelId,
+          rSk.gatewayModelId,
+        ]),
+      ).sort((a, b) => a.localeCompare(b)),
+    };
+
     return {
       object,
       durationMs: Date.now() - parallelStart,
+      modelsSnapshot,
     };
   } finally {
     writer.releaseLock();
@@ -372,16 +396,17 @@ async function parallelExtractAndStream(
 
 async function saveResult(
   candidateId: string,
-  result: { object: unknown; durationMs: number; orgId: string | null },
+  result: {
+    object: unknown;
+    durationMs: number;
+    orgId: string | null;
+    modelsSnapshot: CvExtractionModelsSnapshot;
+    workflowRunId: string | null;
+  },
 ) {
   'use step';
 
   const supabase = getSupabase();
-  const resolvedLog = await resolveLlmTask(supabase, {
-    taskKey: TASK_KEY.CV_BRANCH_IDENTITY,
-    orgId: result.orgId,
-    context: {},
-  });
 
   if (result.object) {
     await supabase
@@ -395,12 +420,17 @@ async function saveResult(
       })
       .eq('id', candidateId);
 
-    await supabase.from('extraction_history').insert({
-      candidate_id: candidateId,
-      extraction_result: result.object,
-      ai_model: resolvedLog.gatewayModelId,
-      org_id: result.orgId,
-    });
+    if (result.orgId) {
+      await logCvExtractionSnapshot(supabase, {
+        candidateId,
+        orgId: result.orgId,
+        reason: 'workflow_completed',
+        extractedData: result.object,
+        aiModels: result.modelsSnapshot,
+        durationMs: result.durationMs,
+        workflowRunId: result.workflowRunId,
+      });
+    }
   }
 
   const writable = getWritable<Uint8Array>();
@@ -473,10 +503,23 @@ export async function extractCvWorkflow(candidateId: string, jobDescription?: st
       prep.workflowRunId,
     );
 
+    const byTask: Record<string, string> = { ...ext.modelsSnapshot.byTask };
+    if (prep.transcriptionModelId) {
+      byTask[TASK_KEY.CV_TRANSCRIPTION] = prep.transcriptionModelId;
+    }
+    const uniqueModels = Array.from(
+      new Set([
+        ...ext.modelsSnapshot.uniqueModels,
+        ...(prep.transcriptionModelId ? [prep.transcriptionModelId] : []),
+      ]),
+    ).sort((a, b) => a.localeCompare(b));
+
     const result = {
       object: ext.object,
       durationMs: prep.durationMs + ext.durationMs,
       orgId: prep.orgId,
+      modelsSnapshot: { byTask, uniqueModels } satisfies CvExtractionModelsSnapshot,
+      workflowRunId: prep.workflowRunId,
     };
 
     await saveResult(candidateId, result);

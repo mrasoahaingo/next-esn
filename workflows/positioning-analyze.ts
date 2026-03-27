@@ -35,6 +35,8 @@ import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
+import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
+import { logPositioningAnalysisSnapshot } from '@/lib/services/positioning-analysis-snapshot-log';
 
 async function fetchAndAnalyze(positioningId: string) {
   'use step';
@@ -241,13 +243,13 @@ async function fetchAndAnalyze(positioningId: string) {
       ),
     ]);
 
-    try {
-      const rSyn = await resolveLlmTask(supabase, {
-        taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
-        orgId: orgId ?? null,
-        context: brandCtx,
-      });
+    const rSyn = await resolveLlmTask(supabase, {
+      taskKey: TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS,
+      orgId: orgId ?? null,
+      context: brandCtx,
+    });
 
+    try {
       const synthesisUserText = buildPositioningSynthesisUserContent(
         cv,
         jobDescription,
@@ -319,12 +321,32 @@ async function fetchAndAnalyze(positioningId: string) {
 
     const durationMs = Date.now() - startTime;
 
+    const analysisModels: PositioningAnalysisModelsSnapshot = {
+      byTask: {
+        [TASK_KEY.POSITIONING_ANALYSIS_SKILLS]: rSk.gatewayModelId,
+        [TASK_KEY.POSITIONING_ANALYSIS_EXPERIENCES]: rEx.gatewayModelId,
+        [TASK_KEY.POSITIONING_ANALYSIS_GAPS]: rGa.gatewayModelId,
+        [TASK_KEY.POSITIONING_ANALYSIS_QUESTIONS]: rQu.gatewayModelId,
+        [TASK_KEY.POSITIONING_ANALYSIS_SYNTHESIS]: rSyn.gatewayModelId,
+      },
+      uniqueModels: Array.from(
+        new Set([
+          rSk.gatewayModelId,
+          rEx.gatewayModelId,
+          rGa.gatewayModelId,
+          rQu.gatewayModelId,
+          rSyn.gatewayModelId,
+        ]),
+      ).sort((a, b) => a.localeCompare(b)),
+    };
+
     return {
       object,
       durationMs,
       candidateId: positioning.candidate_id,
       orgId: positioning.org_id as string | null,
       analysisRecruiterAnswers: priorAnswers,
+      analysisModels,
     };
   } finally {
     writer.releaseLock();
@@ -339,6 +361,7 @@ async function saveAnalysis(
     candidateId: string;
     orgId: string | null;
     analysisRecruiterAnswers: Record<string, PositioningAnswerStoredValue>;
+    analysisModels: PositioningAnalysisModelsSnapshot;
   },
 ) {
   'use step';
@@ -355,8 +378,32 @@ async function saveAnalysis(
         workflow_run_id: null,
         workflow_last_error: null,
         analysis_recruiter_answers: result.analysisRecruiterAnswers,
+        ai_analysis_models: result.analysisModels,
       })
       .eq('id', positioningId);
+
+    const orgIdForLog = result.orgId;
+    if (orgIdForLog) {
+      const { data: row } = await supabase
+        .from('positionings')
+        .select('answers, candidate_id')
+        .eq('id', positioningId)
+        .single();
+
+      const candId = (row?.candidate_id as string | undefined) ?? result.candidateId;
+      if (candId) {
+        await logPositioningAnalysisSnapshot(supabase, {
+          positioningId,
+          candidateId: candId,
+          orgId: orgIdForLog,
+          reason: 'workflow_completed',
+          analysis: result.object,
+          answers: row?.answers ?? null,
+          aiAnalysisModels: result.analysisModels,
+          durationMs: result.durationMs,
+        });
+      }
+    }
   }
 
   const writable = getWritable<Uint8Array>();

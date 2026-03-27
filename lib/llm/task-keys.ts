@@ -6,12 +6,16 @@ export const TASK_KEY = {
   CV_BRANCH_EDUCATION: 'cv.branch.education',
   CV_BRANCH_SKILLS: 'cv.branch.skills',
   CV_EXTRACTION_AGGREGATE: 'cv.extraction.aggregate',
+  /** Snapshot agrégé post-extraction dans `ai_usage_log.output_payload` (remplace extraction_history). */
+  CV_EXTRACTION_SNAPSHOT: 'cv.extraction.snapshot',
 
   POSITIONING_ANALYSIS_SKILLS: 'positioning.analysis.skills',
   POSITIONING_ANALYSIS_EXPERIENCES: 'positioning.analysis.experiences',
   POSITIONING_ANALYSIS_GAPS: 'positioning.analysis.gaps',
   POSITIONING_ANALYSIS_QUESTIONS: 'positioning.analysis.questions',
   POSITIONING_ANALYSIS_SYNTHESIS: 'positioning.analysis.synthesis',
+  /** Ligne d’audit : snapshot complet (analyse + réponses + modèles) dans `ai_usage_log.output_payload`. */
+  POSITIONING_ANALYSIS_SNAPSHOT: 'positioning.analysis.snapshot',
 
   POSITIONING_GENERATE_TAILORED_CV: 'positioning.generate.tailoredCv',
   POSITIONING_GENERATE_EMAIL: 'positioning.generate.email',

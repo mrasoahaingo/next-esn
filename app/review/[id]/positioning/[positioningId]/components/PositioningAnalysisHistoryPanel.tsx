@@ -10,6 +10,7 @@ import {
 import type { PositioningAnalysisHistoryRow } from '@/lib/queries/positionings';
 import { usePositioningAnalysisHistory } from '@/lib/queries/positionings';
 import { AnalysisView } from './AnalysisView';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -17,7 +18,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { formatHistoryModelsDisplayLabel } from '@/lib/types/positioning-analysis-models';
+import type { PositioningAnalysisSnapshotReason } from '@/lib/types/positioning-analysis-snapshot-payload';
 import { Loader2, History } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
+const HISTORY_MODELS_MISSING = 'Non renseigné';
+
+function snapshotReasonLabel(
+  r: PositioningAnalysisSnapshotReason | null | undefined,
+): string | null {
+  switch (r) {
+    case 'archive_before_clear':
+      return 'Avant relance';
+    case 'workflow_completed':
+      return 'Analyse terminée';
+    case 'migrated_from_history_table':
+      return 'Historique migré';
+    default:
+      return null;
+  }
+}
 
 function formatHistoryDate(iso: string): string {
   try {
@@ -34,10 +55,14 @@ function HistoryDetailDialog({
   entry,
   open,
   onOpenChange,
+  candidateId,
+  positioningId,
 }: {
   entry: PositioningAnalysisHistoryRow | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  candidateId: string;
+  positioningId: string;
 }) {
   const analysis = (entry?.analysis ?? null) as Partial<PositioningAnalysis> | null;
 
@@ -47,6 +72,12 @@ function HistoryDetailDialog({
       analysisPhaseAnswersOnly(parsePositioningAnswers(entry.answers)),
     );
   }, [entry]);
+
+  const modelsSummaryLabel = useMemo(() => {
+    return formatHistoryModelsDisplayLabel(entry?.ai_analysis_models) ?? HISTORY_MODELS_MISSING;
+  }, [entry]);
+
+  const wizardHref = `/review/${candidateId}/positioning/${positioningId}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,6 +99,9 @@ function HistoryDetailDialog({
               isAnalyzing={false}
               analysisSnapshotRecruiterEntries={snapshotEntries}
               hideRecruiterSnapshot={false}
+              modelsSummaryLabel={modelsSummaryLabel}
+              aiInfoHistoryHref={wizardHref}
+              aiInfoHistoryLinkLabel="Positionnement et onglet Historique"
             />
           ) : (
             <p className="text-sm text-muted-foreground">Aucune donnée d’analyse.</p>
@@ -80,18 +114,40 @@ function HistoryDetailDialog({
 
 function HistoryRowActions({
   row,
+  candidateId,
+  positioningId,
   onOpenDetail,
 }: {
   row: PositioningAnalysisHistoryRow;
+  candidateId: string;
+  positioningId: string;
   onOpenDetail: (row: PositioningAnalysisHistoryRow) => void;
 }) {
   const a = row.analysis as { matchScore?: number } | null;
   const score = a?.matchScore;
+  const modelsLabel = formatHistoryModelsDisplayLabel(row.ai_analysis_models);
+  const wizardHref = `/review/${candidateId}/positioning/${positioningId}`;
+  const reasonLabel = snapshotReasonLabel(row.snapshot_reason);
+
   return (
     <li className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{formatHistoryDate(row.created_at)}</p>
-        <p className="text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm font-medium text-foreground">{formatHistoryDate(row.created_at)}</p>
+          {reasonLabel ? (
+            <Badge variant="secondary" className="text-[10px] font-normal">
+              {reasonLabel}
+            </Badge>
+          ) : null}
+          <AiGenerationInfoIcon
+            variant="positioning_analysis"
+            modelsLabel={modelsLabel}
+            historyHref={wizardHref}
+            historyLinkLabel="Historique du positionnement"
+            className="h-6 w-6"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Score : {typeof score === 'number' && !Number.isNaN(score) ? `${score} %` : '—'}
         </p>
       </div>
@@ -109,7 +165,13 @@ function HistoryRowActions({
 }
 
 /** Bouton + dialogue liste (ex. pendant une analyse en cours). */
-export function PositioningAnalysisHistoryFloatingTrigger({ positioningId }: { positioningId: string }) {
+export function PositioningAnalysisHistoryFloatingTrigger({
+  positioningId,
+  candidateId,
+}: {
+  positioningId: string;
+  candidateId: string;
+}) {
   const { data: rows, isLoading } = usePositioningAnalysisHistory(positioningId);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dialogEntry, setDialogEntry] = useState<PositioningAnalysisHistoryRow | null>(null);
@@ -137,7 +199,8 @@ export function PositioningAnalysisHistoryFloatingTrigger({ positioningId }: { p
           <DialogHeader>
             <DialogTitle>Historique des analyses</DialogTitle>
             <p className="text-xs text-muted-foreground text-left font-normal">
-              Versions enregistrées avant une relance ou un repositionnement sur la mission.
+              Chaque ligne provient du journal d’usage IA (snapshot dans le payload). L’icône ouvre le
+              détail des modèles (tooltip).
             </p>
           </DialogHeader>
           <ul className="space-y-2 max-h-[min(60vh,420px)] overflow-y-auto">
@@ -145,6 +208,8 @@ export function PositioningAnalysisHistoryFloatingTrigger({ positioningId }: { p
               <HistoryRowActions
                 key={row.id}
                 row={row}
+                candidateId={candidateId}
+                positioningId={positioningId}
                 onOpenDetail={(r) => {
                   setPickerOpen(false);
                   setDialogEntry(r);
@@ -161,13 +226,21 @@ export function PositioningAnalysisHistoryFloatingTrigger({ positioningId }: { p
         onOpenChange={(open) => {
           if (!open) setDialogEntry(null);
         }}
+        candidateId={candidateId}
+        positioningId={positioningId}
       />
     </>
   );
 }
 
 /** Contenu de l’onglet Historique (liste + détail). */
-export function PositioningAnalysisHistoryTabContent({ positioningId }: { positioningId: string }) {
+export function PositioningAnalysisHistoryTabContent({
+  positioningId,
+  candidateId,
+}: {
+  positioningId: string;
+  candidateId: string;
+}) {
   const { data: rows, isLoading, isError } = usePositioningAnalysisHistory(positioningId);
   const [dialogEntry, setDialogEntry] = useState<PositioningAnalysisHistoryRow | null>(null);
 
@@ -189,8 +262,8 @@ export function PositioningAnalysisHistoryTabContent({ positioningId }: { positi
     return (
       <div className="rounded-xl border border-border/60 bg-card/20 px-4 py-6 text-sm text-muted-foreground">
         <p>
-          Aucune analyse archivée. Une version est conservée lorsque vous utilisez « Relancer » sur
-          l’onglet Résultats ou lorsque vous repositionnez un CV déjà présent sur cette mission.
+          Aucun snapshot enregistré dans le journal IA pour ce positionnement. Les analyses terminées
+          et les relances y apparaissent automatiquement.
         </p>
       </div>
     );
@@ -199,12 +272,18 @@ export function PositioningAnalysisHistoryTabContent({ positioningId }: { positi
   return (
     <>
       <p className="text-xs text-muted-foreground mb-4">
-        Snapshots enregistrés avant une nouvelle analyse. Ouvrez une ligne pour afficher le détail
-        (score, compétences, contexte recruteur…).
+        Journal des snapshots d’analyse (fin de workflow, relance, repositionnement). Le badge
+        indique l’origine ; l’icône résume les modèles IA.
       </p>
       <ul className="space-y-2">
         {list.map((row) => (
-          <HistoryRowActions key={row.id} row={row} onOpenDetail={setDialogEntry} />
+          <HistoryRowActions
+            key={row.id}
+            row={row}
+            candidateId={candidateId}
+            positioningId={positioningId}
+            onOpenDetail={setDialogEntry}
+          />
         ))}
       </ul>
 
@@ -214,6 +293,8 @@ export function PositioningAnalysisHistoryTabContent({ positioningId }: { positi
         onOpenChange={(open) => {
           if (!open) setDialogEntry(null);
         }}
+        candidateId={candidateId}
+        positioningId={positioningId}
       />
     </>
   );

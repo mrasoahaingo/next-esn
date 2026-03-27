@@ -4,6 +4,7 @@ export {
   useMissions,
   useMission,
   useCreateMission,
+  useDeleteMission,
   usePositionExistingCandidates,
   useUploadCvsForMission,
 } from './missions';
@@ -15,6 +16,7 @@ export {
   useCreatePositioning,
   useUpdatePositioning,
   useExportPositioning,
+  useDeletePositioning,
 } from './positionings';
 export type { PositioningAnalysisHistoryRow } from './positionings';
 export { useDashboard } from './dashboard';

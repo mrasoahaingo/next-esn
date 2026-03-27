@@ -70,6 +70,12 @@ export function computeCvStepStates(input: {
   errorStepKey: string | null;
   persistedError: WorkflowLastError | null;
   workflowFailed: boolean;
+  /**
+   * True tant que le candidat a un run d’extraction côté serveur (uploaded/extracting).
+   * Sans ça, avant reconnexion au flux NDJSON `isStreaming` est souvent false alors que l’extraction
+   * tourne — le raccourci « tout terminé » affichait des étapes incohérentes.
+   */
+  workflowRunActive?: boolean;
 }): StepStateRow[] {
   const defs = CV_WORKFLOW_STEPS;
   const { key: errKey, message: persistedMsg } = resolveErrorKeys(
@@ -78,7 +84,8 @@ export function computeCvStepStates(input: {
     input.workflowFailed,
   );
 
-  if (!input.isStreaming && !input.workflowFailed) {
+  const workflowRunActive = input.workflowRunActive ?? false;
+  if (!input.isStreaming && !input.workflowFailed && !workflowRunActive) {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
   }
 
@@ -285,6 +292,12 @@ export function computePositioningAnalysisStepStates(input: {
   errorStepKey: string | null;
   persistedError: WorkflowLastError | null;
   workflowFailed: boolean;
+  /**
+   * True tant que le positionnement est en `analyzing` avec un run côté serveur.
+   * Sans ça, avant reconnexion au flux NDJSON `isStreaming` est souvent false alors que l’analyse
+   * tourne — le raccourci « tout terminé » affichait des étapes incohérentes.
+   */
+  workflowRunActive?: boolean;
 }): StepStateRow[] {
   const defs = POSITIONING_ANALYSIS_WORKFLOW_STEPS;
   const { key: errKey, message: persistedMsg } = resolveErrorKeys(
@@ -293,7 +306,8 @@ export function computePositioningAnalysisStepStates(input: {
     input.workflowFailed,
   );
 
-  if (!input.isStreaming && !input.workflowFailed) {
+  const workflowRunActive = input.workflowRunActive ?? false;
+  if (!input.isStreaming && !input.workflowFailed && !workflowRunActive) {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
   }
 

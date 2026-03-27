@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, FileText, Download } from 'lucide-react';
 import { TailoredCvForm } from './TailoredCvForm';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 
 const CV_BRANCHES = ['tailoredCv'] as const;
@@ -104,7 +105,10 @@ export function CvGenerationStep({
         <div className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-border/60">
           <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-foreground">CV retravaillé</h3>
+            <div className="flex items-center gap-1">
+              <h3 className="text-sm font-semibold text-foreground">CV retravaillé</h3>
+              <AiGenerationInfoIcon variant="positioning_generate" className="h-6 w-6" />
+            </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               Texte structuré aligné sur l&apos;offre ; l&apos;aperçu PDF est à droite.
             </p>

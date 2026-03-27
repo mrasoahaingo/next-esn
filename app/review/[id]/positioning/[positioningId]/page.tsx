@@ -3,7 +3,7 @@
 import { useLayoutEffect, useCallback, useState, useRef, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
@@ -19,6 +19,7 @@ import {
   useCandidate,
   useUpdatePositioning,
   useExportPositioning,
+  useDeletePositioning,
   useCancelWorkflow,
 } from '@/lib/queries';
 import type { PositioningWorkflowDiagnostics } from '@/lib/queries/positionings';
@@ -45,13 +46,28 @@ import {
   parsePositioningAnswers,
   removeEntryFromAnalysisRecruiterSnapshot,
 } from '@/lib/services/positioning.service';
+import {
+  formatPositioningAnalysisModelsLabel,
+  parsePositioningAnalysisModelsSnapshot,
+} from '@/lib/types/positioning-analysis-models';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil, Square, GitCompare } from 'lucide-react';
+import { Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil, Square, GitCompare, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import dynamic from 'next/dynamic';
 import { JobInput } from './components/JobInput';
@@ -72,6 +88,7 @@ const AnalysisCharts = dynamic(
 
 export default function PositioningWizardPage() {
   const params = useParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const candidateId = params?.id as string;
   const positioningIdParam = params?.positioningId as string;
@@ -162,7 +179,15 @@ export default function PositioningWizardPage() {
     );
   }, [positioningData]);
 
+  const analysisModelsSummaryLabel = useMemo(() => {
+    const raw = (positioningData as { ai_analysis_models?: unknown } | undefined)?.ai_analysis_models;
+    return formatPositioningAnalysisModelsLabel(
+      parsePositioningAnalysisModelsSnapshot(raw) ?? undefined,
+    );
+  }, [positioningData]);
+
   const updatePositioning = useUpdatePositioning();
+  const deletePositioningMutation = useDeletePositioning();
 
   const handleRemoveRecruiterAnswerEntry = useCallback(
     (key: string, entryId: string) => {
@@ -273,6 +298,7 @@ export default function PositioningWizardPage() {
         errorStepKey: analysisErrorStepKey,
         persistedError: persistedPositioningWorkflowError,
         workflowFailed: positioningData?.status === 'error',
+        workflowRunActive: isServerAnalyzing,
       }),
     [
       analysisStreamMeta,
@@ -282,6 +308,7 @@ export default function PositioningWizardPage() {
       analysisErrorStepKey,
       persistedPositioningWorkflowError,
       positioningData?.status,
+      isServerAnalyzing,
     ],
   );
 
@@ -750,6 +777,42 @@ export default function PositioningWizardPage() {
     cancelWorkflow,
   ]);
 
+  const positioningMissionId =
+    (positioningData as { mission_id?: string | null } | undefined)?.mission_id ?? undefined;
+
+  const handleDeletePositioning = useCallback(() => {
+    if (analysisBusy) stopAnalysis();
+    if (genBusy) stopGenerate();
+    deletePositioningMutation.mutate(
+      {
+        id: positioningIdParam,
+        candidateId,
+        missionId: positioningMissionId ?? undefined,
+      },
+      {
+        onSuccess: () => {
+          reset();
+          toast.success('Positionnement supprimé');
+          router.push(`/review/${candidateId}`);
+        },
+        onError: () => {
+          toast.error('Impossible de supprimer le positionnement');
+        },
+      },
+    );
+  }, [
+    analysisBusy,
+    genBusy,
+    stopAnalysis,
+    stopGenerate,
+    deletePositioningMutation,
+    positioningIdParam,
+    candidateId,
+    positioningMissionId,
+    reset,
+    router,
+  ]);
+
   // Navigation
   const isStreaming = analysisBusy || genBusy;
   const analysisComplete = !!analysis?.matchScore && !analysisBusy;
@@ -876,6 +939,53 @@ export default function PositioningWizardPage() {
                   )}
                 </>
               )}
+              <AlertDialog>
+                <Tooltip>
+                  <AlertDialogTrigger
+                    render={
+                      <TooltipTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={deletePositioningMutation.isPending}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {deletePositioningMutation.isPending ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                            )}
+                            Supprimer
+                          </Button>
+                        }
+                      />
+                    }
+                  />
+                  <TooltipContent side="bottom" className="text-xs">
+                    Supprimer ce positionnement
+                  </TooltipContent>
+                </Tooltip>
+                <AlertDialogContent className="bg-panel border-overlay/10">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Supprimer ce positionnement ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Le dossier de positionnement sera définitivement supprimé ; le CV
+                      candidat reste dans la bibliothèque.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={handleDeletePositioning}
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
             {/* Key metrics — score + fiabilité, compétences + lacunes */}
             {analysis?.matchScore != null && !analysisBusy && (
@@ -1056,7 +1166,10 @@ export default function PositioningWizardPage() {
 
                 {(analysisBusy || analysisComplete) && positioningIdParam ? (
                   <div className="flex justify-end shrink-0">
-                    <PositioningAnalysisHistoryFloatingTrigger positioningId={positioningIdParam} />
+                    <PositioningAnalysisHistoryFloatingTrigger
+                      positioningId={positioningIdParam}
+                      candidateId={candidateId}
+                    />
                   </div>
                 ) : null}
 
@@ -1072,6 +1185,9 @@ export default function PositioningWizardPage() {
                       recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
                       workflowStepRows={showAnalysisWorkflowUi ? analysisWorkflowRows : undefined}
                       workflowSummaryLine={showAnalysisWorkflowUi ? analysisWorkflowSummary : undefined}
+                      modelsSummaryLabel={analysisModelsSummaryLabel}
+                      aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
+                      aiInfoHistoryLinkLabel="Positionnement et historique"
                     />
                   </div>
                 )}
@@ -1105,6 +1221,9 @@ export default function PositioningWizardPage() {
                         workflowSummaryLine={
                           positioningData?.status === 'error' ? analysisWorkflowSummary : undefined
                         }
+                        modelsSummaryLabel={analysisModelsSummaryLabel}
+                        aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
+                        aiInfoHistoryLinkLabel="Positionnement et historique"
                       />
                     </TabsContent>
                     <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden">
@@ -1122,7 +1241,10 @@ export default function PositioningWizardPage() {
                       className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden"
                     >
                       {positioningIdParam ? (
-                        <PositioningAnalysisHistoryTabContent positioningId={positioningIdParam} />
+                        <PositioningAnalysisHistoryTabContent
+                          positioningId={positioningIdParam}
+                          candidateId={candidateId}
+                        />
                       ) : null}
                     </TabsContent>
                   </Tabs>

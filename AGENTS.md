@@ -79,7 +79,8 @@ Do not add new `streamText` / `generateObject` / similar calls without this logg
 ### Supabase Tables
 
 - `candidates`: id, original_file_url, formatted_file_url, extracted_data (JSONB), status (uploaded → extracting → reviewing → ready → generated)
-- `extraction_history`: candidate_id, extraction_result, ai_model
+- Historique **extractions CV** : `ai_usage_log`, `task_key = cv.extraction.snapshot` (`output_payload` v1) — plus de `extraction_history` (migration `20260414_drop_extraction_history.sql`).
+- Historique **analyses de positionnement** : `ai_usage_log`, `task_key = positioning.analysis.snapshot` — plus de `positioning_analysis_history` (migration `20260413_positioning_history_ai_usage_log.sql`).
 - `ai_usage_log`: token usage and duration per LLM operation (linked to candidate / positioning / mission / org when applicable)
 
 ### Storage Buckets

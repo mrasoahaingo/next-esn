@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getRun } from 'workflow/api';
+import { logPositioningAnalysisSnapshot } from '@/lib/services/positioning-analysis-snapshot-log';
 
 /** True si le run workflow existe encore et n’est pas terminé (échec inclus = terminé). */
 export async function isPositioningWorkflowRunActive(
@@ -20,7 +21,7 @@ export async function archivePositioningAnalysisToHistoryIfPresent(
 ): Promise<void> {
   const { data: current, error } = await supabase
     .from('positionings')
-    .select('analysis, answers, org_id')
+    .select('analysis, answers, org_id, ai_analysis_models, candidate_id')
     .eq('id', positioningId)
     .eq('org_id', orgId)
     .single();
@@ -28,15 +29,18 @@ export async function archivePositioningAnalysisToHistoryIfPresent(
   if (error) throw error;
 
   const prevAnalysis = current?.analysis;
-  if (prevAnalysis != null && typeof prevAnalysis === 'object') {
+  const candidateId = current?.candidate_id as string | undefined;
+  if (prevAnalysis != null && typeof prevAnalysis === 'object' && candidateId) {
     const rowOrg = (current?.org_id as string | null | undefined) ?? orgId;
-    const { error: histErr } = await supabase.from('positioning_analysis_history').insert({
-      positioning_id: positioningId,
-      org_id: rowOrg,
+    await logPositioningAnalysisSnapshot(supabase, {
+      positioningId,
+      candidateId,
+      orgId: rowOrg,
+      reason: 'archive_before_clear',
       analysis: prevAnalysis,
       answers: current?.answers ?? null,
+      aiAnalysisModels: current?.ai_analysis_models ?? null,
     });
-    if (histErr) throw histErr;
   }
 }
 
@@ -62,6 +66,7 @@ export async function resetMissionPositioningForRegeneration(
       candidate_email: null,
       tailored_file_url: null,
       analysis_recruiter_answers: null,
+      ai_analysis_models: null,
       status: 'draft',
       workflow_run_id: null,
       workflow_last_error: null,

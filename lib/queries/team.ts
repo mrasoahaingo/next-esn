@@ -14,6 +14,8 @@ export interface OrgMember {
   imageUrl: string | null
   identifier: string
   role: 'org:admin' | 'org:member'
+  /** Plateforme (Clerk publicMetadata.role), distinct du rôle org */
+  isSuperAdmin: boolean
   createdAt: number
 }
 

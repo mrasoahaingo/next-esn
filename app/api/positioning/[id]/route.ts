@@ -86,3 +86,27 @@ export async function PATCH(
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const orgId = await requireOrgId();
+    const { id } = await params;
+    const supabase = getSupabase();
+
+    const { error } = await supabase
+      .from('positionings')
+      .delete()
+      .eq('id', id)
+      .eq('org_id', orgId);
+
+    if (error) throw error;
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    if (error instanceof NextResponse) return error;
+    console.error('Delete positioning error:', error);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
+}

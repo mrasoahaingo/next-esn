@@ -1,14 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import type { PositioningAnalysis } from '@/lib/schema';
+import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
+import type { PositioningAnalysisSnapshotReason } from '@/lib/types/positioning-analysis-snapshot-payload';
 import { queryKeys } from './keys';
 
-/** Entrée renvoyée par GET /api/positioning/[id]/analysis-history */
+/** Entrée renvoyée par GET /api/positioning/[id]/analysis-history (snapshots `ai_usage_log`) */
 export type PositioningAnalysisHistoryRow = {
   id: string;
   created_at: string;
-  analysis: PositioningAnalysis | Record<string, unknown>;
+  analysis: PositioningAnalysis | Record<string, unknown> | null;
   answers: Record<string, unknown> | null;
+  ai_analysis_models?: PositioningAnalysisModelsSnapshot | null;
+  /** Origine du snapshot (voir `positioning_analysis_snapshot` v1 dans `output_payload`). */
+  snapshot_reason?: PositioningAnalysisSnapshotReason | null;
 };
 
 /** Champs diagnostic workflow renvoyés par l’API positionnement (phase 2 / ERR-03). */
@@ -131,6 +136,31 @@ export function useExportPositioning() {
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    },
+  });
+}
+
+export function useDeletePositioning() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (variables: { id: string; candidateId: string; missionId?: string }) => {
+      const res = await fetch(`/api/positioning/${variables.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete positioning');
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.removeQueries({ queryKey: queryKeys.positionings.detail(variables.id) });
+      queryClient.removeQueries({
+        queryKey: queryKeys.positionings.analysisHistory(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(variables.candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      if (variables.missionId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
     },
   });
 }

@@ -83,6 +83,10 @@ export default function ReviewPage() {
     toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
   }, [error, errorStepKey, persistedWorkflowError?.stepKey]);
 
+  const cvWorkflowRunActive =
+    !!candidateData?.workflow_run_id &&
+    ['uploaded', 'extracting'].includes(candidateData?.status ?? '');
+
   const cvWorkflowRows = useMemo(
     () =>
       computeCvStepStates({
@@ -92,6 +96,7 @@ export default function ReviewPage() {
         errorStepKey,
         persistedError: persistedWorkflowError,
         workflowFailed: candidateData?.status === 'error',
+        workflowRunActive: cvWorkflowRunActive,
       }),
     [
       streamMeta,
@@ -100,6 +105,7 @@ export default function ReviewPage() {
       errorStepKey,
       persistedWorkflowError,
       candidateData?.status,
+      cvWorkflowRunActive,
     ],
   );
 

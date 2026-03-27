@@ -51,7 +51,21 @@ import {
 import { toast } from 'sonner'
 import { redirect } from 'next/navigation'
 
-function RoleBadge({ role }: { role: string }) {
+function RoleBadge({
+  role,
+  isSuperAdmin = false,
+}: {
+  role: string
+  isSuperAdmin?: boolean
+}) {
+  if (isSuperAdmin) {
+    return (
+      <Badge className="gap-1 bg-neon/10 text-neon border-neon/25 hover:bg-neon/10">
+        <ShieldCheck className="h-2.5 w-2.5" />
+        Support
+      </Badge>
+    )
+  }
   if (role === 'org:admin') {
     return (
       <Badge className="gap-1 bg-violet/15 text-violet border-violet/20 hover:bg-violet/15">
@@ -349,13 +363,22 @@ export default function TeamSettingsPage() {
                         </div>
                         {isCurrentUser ? (
                           <div className="flex items-center gap-2">
-                            <RoleBadge role={member.role} />
+                            <RoleBadge
+                              role={member.role}
+                              isSuperAdmin={member.isSuperAdmin}
+                            />
                             <Badge variant="outline" className="text-[10px] text-muted-foreground">
                               Vous
                             </Badge>
                           </div>
                         ) : (
                           <div className="flex items-center gap-2">
+                            {member.isSuperAdmin ? (
+                              <RoleBadge
+                                role={member.role}
+                                isSuperAdmin
+                              />
+                            ) : (
               <Select
                 value={member.role}
                 onValueChange={(v: string | null) => {
@@ -371,6 +394,7 @@ export default function TeamSettingsPage() {
                                 <SelectItem value="org:admin">Admin</SelectItem>
                               </SelectContent>
                             </Select>
+                            )}
 
                             <AlertDialog>
                               <AlertDialogTrigger
