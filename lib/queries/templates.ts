@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import { queryKeys } from './keys';
 import type { TemplateConfig } from '@/lib/schema';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
@@ -14,14 +15,17 @@ export interface TemplateListItem {
 }
 
 export function useTemplatesList() {
+  const { orgId } = useAuth();
+
   return useQuery<TemplateListItem[]>({
-    queryKey: queryKeys.templates.list(),
+    queryKey: queryKeys.templates.list(orgId ?? ''),
     queryFn: async () => {
       const res = await fetch('/api/templates');
       if (!res.ok) throw new Error('Failed to fetch templates');
       const data = await res.json();
       return Array.isArray(data) ? data : [];
     },
+    enabled: !!orgId,
   });
 }
 
@@ -33,8 +37,10 @@ interface TemplateData {
 }
 
 export function useTemplate(id: string) {
+  const { orgId } = useAuth();
+
   return useQuery<TemplateData>({
-    queryKey: queryKeys.templates.detail(id),
+    queryKey: queryKeys.templates.detail(orgId ?? '', id),
     queryFn: async () => {
       const res = await fetch(`/api/templates/${id}`);
       if (!res.ok) throw new Error('Failed to fetch template');
@@ -51,12 +57,13 @@ export function useTemplate(id: string) {
         },
       };
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
   });
 }
 
 export function useUpdateTemplate() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string; name?: string; config?: TemplateConfig; is_default?: boolean }) => {
@@ -69,8 +76,9 @@ export function useUpdateTemplate() {
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.templates.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.templates.list() });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.templates.detail(oid, variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.templates.list(oid) });
     },
   });
 }

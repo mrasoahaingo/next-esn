@@ -4,6 +4,7 @@ import { useLayoutEffect, useCallback, useMemo, useRef, useEffect } from 'react'
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import { ExtractedCV } from '@/lib/schema';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
@@ -38,6 +39,7 @@ import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
 export default function ReviewPage() {
   const params = useParams();
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
   const {
     cvData,
     setCvData,
@@ -66,9 +68,10 @@ export default function ReviewPage() {
     runStatus: candidateData?.status,
     activeStatuses: ['extracting'],
     onFinish: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
       toast.success('Extraction terminee avec succes');
       setDirty(false);
     },

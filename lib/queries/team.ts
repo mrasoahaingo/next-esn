@@ -1,10 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-
-export const teamKeys = {
-  all: ['team'] as const,
-  members: () => [...teamKeys.all, 'members'] as const,
-  invitations: () => [...teamKeys.all, 'invitations'] as const,
-}
+import { useAuth } from '@clerk/nextjs'
+import { queryKeys } from './keys'
 
 export interface OrgMember {
   id: string
@@ -29,29 +25,37 @@ export interface OrgInvitation {
 }
 
 export function useMembers() {
+  const { orgId } = useAuth()
+
   return useQuery<OrgMember[]>({
-    queryKey: teamKeys.members(),
+    queryKey: queryKeys.team.members(orgId ?? ''),
     queryFn: async () => {
       const res = await fetch('/api/members')
       if (!res.ok) throw new Error('Impossible de charger les membres')
       return res.json()
     },
+    enabled: !!orgId,
   })
 }
 
 export function useInvitations() {
+  const { orgId } = useAuth()
+
   return useQuery<OrgInvitation[]>({
-    queryKey: teamKeys.invitations(),
+    queryKey: queryKeys.team.invitations(orgId ?? ''),
     queryFn: async () => {
       const res = await fetch('/api/invitations')
       if (!res.ok) throw new Error('Impossible de charger les invitations')
       return res.json()
     },
+    enabled: !!orgId,
   })
 }
 
 export function useInviteMember() {
   const qc = useQueryClient()
+  const { orgId } = useAuth()
+
   return useMutation({
     mutationFn: async ({
       emailAddress,
@@ -71,12 +75,14 @@ export function useInviteMember() {
       }
       return res.json()
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: teamKeys.invitations() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.team.invitations(orgId ?? '') }),
   })
 }
 
 export function useRevokeInvitation() {
   const qc = useQueryClient()
+  const { orgId } = useAuth()
+
   return useMutation({
     mutationFn: async (invitationId: string) => {
       const res = await fetch(`/api/invitations/${invitationId}`, {
@@ -84,12 +90,14 @@ export function useRevokeInvitation() {
       })
       if (!res.ok) throw new Error("Erreur lors de la révocation de l'invitation")
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: teamKeys.invitations() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.team.invitations(orgId ?? '') }),
   })
 }
 
 export function useUpdateMemberRole() {
   const qc = useQueryClient()
+  const { orgId } = useAuth()
+
   return useMutation({
     mutationFn: async ({
       userId,
@@ -106,12 +114,14 @@ export function useUpdateMemberRole() {
       if (!res.ok) throw new Error('Erreur lors du changement de rôle')
       return res.json()
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: teamKeys.members() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.team.members(orgId ?? '') }),
   })
 }
 
 export function useRemoveMember() {
   const qc = useQueryClient()
+  const { orgId } = useAuth()
+
   return useMutation({
     mutationFn: async (userId: string) => {
       const res = await fetch(`/api/members/${userId}`, { method: 'DELETE' })
@@ -120,6 +130,6 @@ export function useRemoveMember() {
         throw new Error(err.error ?? 'Erreur lors de la suppression du membre')
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: teamKeys.members() }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.team.members(orgId ?? '') }),
   })
 }

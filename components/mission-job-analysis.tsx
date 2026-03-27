@@ -50,6 +50,7 @@ import {
   withMandatoryJobPostingLists,
 } from '@/lib/services/job-posting-analysis.service';
 import { normalizeSkillKey } from '@/lib/utils/skill-key';
+import { useAuth } from '@clerk/nextjs';
 import { queryKeys } from '@/lib/queries/keys';
 import { useCancelWorkflow } from '@/lib/queries/workflow';
 import { cn } from '@/lib/utils';
@@ -100,14 +101,16 @@ export function MissionJobAnalysis({
   className,
 }: MissionJobAnalysisProps) {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
   const cancelWorkflow = useCancelWorkflow();
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(missionId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.recruiterSkills.all });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
-    queryClient.invalidateQueries({ queryKey: queryKeys.orgRecruiterSkills.all });
+    const oid = orgId ?? '';
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, missionId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.recruiterSkills.all(oid) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.orgRecruiterSkills.all(oid) });
   };
 
   const jobAnalyzeActive = !!job_analysis_workflow_run_id;
@@ -122,7 +125,7 @@ export function MissionJobAnalysis({
       toast.success('Analyse terminee avec succes');
     },
     onStartOnly: async () => {
-      await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(missionId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(orgId ?? '', missionId) });
     },
   });
 

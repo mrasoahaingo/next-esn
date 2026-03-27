@@ -1,8 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import { queryKeys } from './keys';
 
-/** Champs diagnostic workflow renvoyés par l’API candidat (phase 2 / ERR-03). */
+/** Champs diagnostic workflow renvoyés par l'API candidat (phase 2 / ERR-03). */
 export type CandidateWorkflowDiagnostics = {
   workflow_last_error: WorkflowLastError | null;
 };
@@ -10,13 +11,16 @@ export type CandidateWorkflowDiagnostics = {
 const ACTIVE_CV_STATUSES = ['extracting'];
 
 export function useCandidates() {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.candidates.list(),
+    queryKey: queryKeys.candidates.list(orgId ?? ''),
     queryFn: async () => {
       const res = await fetch('/api/candidates');
       if (!res.ok) throw new Error('Failed to fetch candidates');
       return res.json();
     },
+    enabled: !!orgId,
     refetchInterval: (query) => {
       const data = query.state.data as { status: string }[] | undefined;
       if (data?.some((c) => ACTIVE_CV_STATUSES.includes(c.status))) return 3000;
@@ -26,14 +30,16 @@ export function useCandidates() {
 }
 
 export function useCandidate(id: string) {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.candidates.detail(id),
+    queryKey: queryKeys.candidates.detail(orgId ?? '', id),
     queryFn: async () => {
       const res = await fetch(`/api/candidates/${id}`);
       if (!res.ok) throw new Error('Failed to fetch candidate');
       return res.json();
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     refetchInterval: (query) => {
       const data = query.state.data as { status: string } | undefined;
       if (data?.status && ACTIVE_CV_STATUSES.includes(data.status)) return 3000;
@@ -44,6 +50,7 @@ export function useCandidate(id: string) {
 
 export function useUpdateCandidate() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string; [key: string]: unknown }) => {
@@ -56,15 +63,17 @@ export function useUpdateCandidate() {
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }
 
 export function useDeleteCandidate() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -73,14 +82,16 @@ export function useDeleteCandidate() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }
 
 export function useUploadCv() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async (file: File) => {
@@ -91,8 +102,9 @@ export function useUploadCv() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }

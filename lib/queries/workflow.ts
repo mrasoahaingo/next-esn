@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import { queryKeys } from './keys';
 
 interface CancelWorkflowParams {
@@ -13,6 +14,7 @@ interface CancelWorkflowParams {
 
 export function useCancelWorkflow() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ runId, table, recordId, resetStatus }: CancelWorkflowParams) => {
@@ -25,23 +27,24 @@ export function useCancelWorkflow() {
       return res.json();
     },
     onSuccess: (_data, variables) => {
+      const oid = orgId ?? '';
       if (variables.table === 'candidates') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(variables.recordId) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, variables.recordId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
       } else if (variables.table === 'positionings') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.recordId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, variables.recordId) });
         queryClient.invalidateQueries({
-          queryKey: queryKeys.positionings.analysisHistory(variables.recordId),
+          queryKey: queryKeys.positionings.analysisHistory(oid, variables.recordId),
         });
-        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
       } else if (variables.table === 'missions') {
-        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.recordId) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, variables.recordId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
       }
       if (variables.missionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, variables.missionId) });
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }

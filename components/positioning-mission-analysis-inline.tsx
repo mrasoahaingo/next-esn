@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import { Loader2 } from 'lucide-react';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { JobPostingAnalysisStreamMeta } from '@/lib/types/job-posting-analysis-stream';
@@ -41,11 +42,13 @@ export function PositioningMissionAnalysisInline({
   isMissionDetailLoading = false,
 }: PositioningMissionAnalysisInlineProps) {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(missionId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    const oid = orgId ?? '';
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, missionId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
   };
 
   const job_analysis = mission?.job_analysis ?? null;
@@ -63,7 +66,7 @@ export function PositioningMissionAnalysisInline({
       invalidate();
     },
     onStartOnly: async () => {
-      await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(missionId) });
+      await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(orgId ?? '', missionId) });
     },
   });
 

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import { queryKeys } from './keys';
 
 export type RecruiterSkillItem = {
@@ -11,13 +12,16 @@ export type RecruiterSkillsResponse = {
 };
 
 export function useRecruiterSkills() {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.recruiterSkills.all,
+    queryKey: queryKeys.recruiterSkills.all(orgId ?? ''),
     queryFn: async (): Promise<RecruiterSkillsResponse> => {
       const res = await fetch('/api/recruiter/skill-understood');
       if (!res.ok) throw new Error('Failed to fetch recruiter skills');
       return res.json();
     },
+    enabled: !!orgId,
   });
 }
 
@@ -30,13 +34,15 @@ export type OrgRecruiterSkillsResponse = {
 };
 
 export function useOrgRecruiterSkills(enabled: boolean) {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.orgRecruiterSkills.all,
+    queryKey: queryKeys.orgRecruiterSkills.all(orgId ?? ''),
     queryFn: async (): Promise<OrgRecruiterSkillsResponse> => {
       const res = await fetch('/api/org/recruiter-skills');
       if (!res.ok) throw new Error('Failed to fetch org recruiter skills');
       return res.json();
     },
-    enabled,
+    enabled: enabled && !!orgId,
   });
 }

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect, useCallback, type MouseEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import type { ExtractedCV, PositioningAnalysis, JobPostingAnalysis } from '@/lib/schema';
 import { MissionJobAnalysis } from '@/components/mission-job-analysis';
 import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
@@ -993,6 +994,7 @@ function PositioningRow({
   onToggleSelect?: (id: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
   const deletePositioning = useDeletePositioning();
   const candidate = p.candidates;
   const name = getCandidateName(candidate);
@@ -1010,9 +1012,10 @@ function PositioningRow({
   const analyzeActive = p.status === 'analyzing' && !!p.workflow_run_id;
 
   const invalidateMission = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(missionId) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    const oid = orgId ?? '';
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, missionId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
   };
 
   const extractStream = useWorkflowStream<Partial<ExtractedCV>, CvExtractionStreamMeta>({
@@ -1033,9 +1036,9 @@ function PositioningRow({
     activeStatuses: ['analyzing'],
     onFinish: () => {
       invalidateMission();
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(p.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(orgId ?? '', p.id) });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.positionings.analysisHistory(p.id),
+        queryKey: queryKeys.positionings.analysisHistory(orgId ?? '', p.id),
       });
       toast.success('Analyse terminee avec succes');
     },

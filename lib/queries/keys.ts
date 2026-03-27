@@ -1,34 +1,39 @@
 export const queryKeys = {
   candidates: {
-    all: ['candidates'] as const,
-    list: () => [...queryKeys.candidates.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.candidates.all, 'detail', id] as const,
+    all: (orgId: string) => ['candidates', orgId] as const,
+    list: (orgId: string) => [...queryKeys.candidates.all(orgId), 'list'] as const,
+    detail: (orgId: string, id: string) => [...queryKeys.candidates.all(orgId), 'detail', id] as const,
   },
   missions: {
-    all: ['missions'] as const,
-    list: () => [...queryKeys.missions.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.missions.all, 'detail', id] as const,
+    all: (orgId: string) => ['missions', orgId] as const,
+    list: (orgId: string) => [...queryKeys.missions.all(orgId), 'list'] as const,
+    detail: (orgId: string, id: string) => [...queryKeys.missions.all(orgId), 'detail', id] as const,
   },
   positionings: {
-    all: ['positionings'] as const,
-    list: () => [...queryKeys.positionings.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.positionings.all, 'detail', id] as const,
-    analysisHistory: (id: string) =>
-      [...queryKeys.positionings.all, 'analysisHistory', id] as const,
+    all: (orgId: string) => ['positionings', orgId] as const,
+    list: (orgId: string) => [...queryKeys.positionings.all(orgId), 'list'] as const,
+    detail: (orgId: string, id: string) => [...queryKeys.positionings.all(orgId), 'detail', id] as const,
+    analysisHistory: (orgId: string, id: string) =>
+      [...queryKeys.positionings.all(orgId), 'analysisHistory', id] as const,
   },
   dashboard: {
-    all: ['dashboard'] as const,
+    all: (orgId: string) => ['dashboard', orgId] as const,
   },
   recruiterSkills: {
-    all: ['recruiterSkills'] as const,
+    all: (orgId: string) => ['recruiterSkills', orgId] as const,
   },
   orgRecruiterSkills: {
-    all: ['orgRecruiterSkills'] as const,
+    all: (orgId: string) => ['orgRecruiterSkills', orgId] as const,
   },
   templates: {
-    all: ['templates'] as const,
-    list: () => [...queryKeys.templates.all, 'list'] as const,
-    detail: (id: string) => [...queryKeys.templates.all, 'detail', id] as const,
+    all: (orgId: string) => ['templates', orgId] as const,
+    list: (orgId: string) => [...queryKeys.templates.all(orgId), 'list'] as const,
+    detail: (orgId: string, id: string) => [...queryKeys.templates.all(orgId), 'detail', id] as const,
+  },
+  team: {
+    all: (orgId: string) => ['team', orgId] as const,
+    members: (orgId: string) => [...queryKeys.team.all(orgId), 'members'] as const,
+    invitations: (orgId: string) => [...queryKeys.team.all(orgId), 'invitations'] as const,
   },
   org: {
     settings: (orgId: string) => ['org', 'settings', orgId] as const,

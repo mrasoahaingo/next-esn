@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, Palette, Plus, Star } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@clerk/nextjs';
 import { useTemplatesList } from '@/lib/queries';
 import { queryKeys } from '@/lib/queries/keys';
 
@@ -16,6 +17,7 @@ export function TemplateListSidebar() {
   const router = useRouter();
   const params = useParams();
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   const activeId = params?.id as string | undefined;
 
@@ -29,7 +31,7 @@ export function TemplateListSidebar() {
       });
       const data = await res.json();
       if (data.id) {
-        await queryClient.invalidateQueries({ queryKey: queryKeys.templates.list() });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.templates.list(orgId ?? '') });
         toast.success('Template créé');
         router.push(`/templates/${data.id}`);
       }

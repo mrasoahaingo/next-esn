@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import type { PositioningAnalysis } from '@/lib/schema';
 import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
@@ -16,7 +17,7 @@ export type PositioningAnalysisHistoryRow = {
   snapshot_reason?: PositioningAnalysisSnapshotReason | null;
 };
 
-/** Champs diagnostic workflow renvoyés par l’API positionnement (phase 2 / ERR-03). */
+/** Champs diagnostic workflow renvoyés par l'API positionnement (phase 2 / ERR-03). */
 export type PositioningWorkflowDiagnostics = {
   workflow_last_error: WorkflowLastError | null;
 };
@@ -24,13 +25,16 @@ export type PositioningWorkflowDiagnostics = {
 const ACTIVE_POS_STATUSES = ['analyzing', 'generating'];
 
 export function usePositionings() {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.positionings.list(),
+    queryKey: queryKeys.positionings.list(orgId ?? ''),
     queryFn: async () => {
       const res = await fetch('/api/positioning');
       if (!res.ok) throw new Error('Failed to fetch positionings');
       return res.json();
     },
+    enabled: !!orgId,
     refetchInterval: (query) => {
       const data = query.state.data as { status: string }[] | undefined;
       if (data?.some((p) => ACTIVE_POS_STATUSES.includes(p.status))) return 3000;
@@ -40,14 +44,16 @@ export function usePositionings() {
 }
 
 export function usePositioning(id: string) {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.positionings.detail(id),
+    queryKey: queryKeys.positionings.detail(orgId ?? '', id),
     queryFn: async () => {
       const res = await fetch(`/api/positioning/${id}`);
       if (!res.ok) throw new Error('Failed to fetch positioning');
       return res.json();
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     refetchInterval: (query) => {
       const data = query.state.data as { status: string } | undefined;
       if (data?.status && ACTIVE_POS_STATUSES.includes(data.status)) return 3000;
@@ -57,20 +63,23 @@ export function usePositioning(id: string) {
 }
 
 export function usePositioningAnalysisHistory(id: string) {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.positionings.analysisHistory(id),
+    queryKey: queryKeys.positionings.analysisHistory(orgId ?? '', id),
     queryFn: async () => {
       const res = await fetch(`/api/positioning/${id}/analysis-history`);
       if (!res.ok) throw new Error('Failed to fetch analysis history');
       return res.json() as Promise<PositioningAnalysisHistoryRow[]>;
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     staleTime: 30_000,
   });
 }
 
 export function useCreatePositioning() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async (data: { candidateId: string; missionId: string }) => {
@@ -83,12 +92,13 @@ export function useCreatePositioning() {
       return res.json();
     },
     onSuccess: (data: { id?: string }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
       if (data?.id) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(data.id) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, data.id) });
         queryClient.invalidateQueries({
-          queryKey: queryKeys.positionings.analysisHistory(data.id),
+          queryKey: queryKeys.positionings.analysisHistory(oid, data.id),
         });
       }
     },
@@ -97,6 +107,7 @@ export function useCreatePositioning() {
 
 export function useUpdatePositioning() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string; [key: string]: unknown }) => {
@@ -109,18 +120,20 @@ export function useUpdatePositioning() {
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.id) });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, variables.id) });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.positionings.analysisHistory(variables.id),
+        queryKey: queryKeys.positionings.analysisHistory(oid, variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }
 
 export function useExportPositioning() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ id, ...body }: { id: string; [key: string]: unknown }) => {
@@ -133,15 +146,17 @@ export function useExportPositioning() {
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }
 
 export function useDeletePositioning() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async (variables: { id: string; candidateId: string; missionId?: string }) => {
@@ -150,17 +165,18 @@ export function useDeletePositioning() {
       return res.json();
     },
     onSuccess: (_data, variables) => {
-      queryClient.removeQueries({ queryKey: queryKeys.positionings.detail(variables.id) });
+      const oid = orgId ?? '';
+      queryClient.removeQueries({ queryKey: queryKeys.positionings.detail(oid, variables.id) });
       queryClient.removeQueries({
-        queryKey: queryKeys.positionings.analysisHistory(variables.id),
+        queryKey: queryKeys.positionings.analysisHistory(oid, variables.id),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(variables.candidateId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, variables.candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
       if (variables.missionId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, variables.missionId) });
       }
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
     },
   });
 }

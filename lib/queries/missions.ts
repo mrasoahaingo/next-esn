@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import type { JobPostingAnalysis } from '@/lib/schema';
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import { queryKeys } from './keys';
 
-/** Champs diagnostic workflow renvoyés par l’API mission (phase 2 / ERR-03). */
+/** Champs diagnostic workflow renvoyés par l'API mission (phase 2 / ERR-03). */
 export type MissionWorkflowDiagnostics = {
   workflow_last_error: WorkflowLastError | null;
 };
@@ -25,26 +26,31 @@ const ACTIVE_POSITIONING_STATUSES = ['analyzing', 'generating'];
 const ACTIVE_CANDIDATE_STATUSES = ['uploaded', 'extracting'];
 
 export function useMissions() {
+  const { orgId } = useAuth();
+
   return useQuery({
-    queryKey: queryKeys.missions.list(),
+    queryKey: queryKeys.missions.list(orgId ?? ''),
     queryFn: async () => {
       const res = await fetch('/api/missions');
       if (!res.ok) throw new Error('Failed to fetch missions');
       return res.json();
     },
+    enabled: !!orgId,
     refetchInterval: 60_000,
   });
 }
 
 export function useMission(id: string) {
+  const { orgId } = useAuth();
+
   return useQuery<MissionDetail>({
-    queryKey: queryKeys.missions.detail(id),
+    queryKey: queryKeys.missions.detail(orgId ?? '', id),
     queryFn: async () => {
       const res = await fetch(`/api/missions/${id}`);
       if (!res.ok) throw new Error('Failed to fetch mission');
       return res.json() as Promise<MissionDetail>;
     },
-    enabled: !!id,
+    enabled: !!id && !!orgId,
     refetchInterval: (query) => {
       const data = query.state.data as
         | {
@@ -69,6 +75,7 @@ export function useMission(id: string) {
 
 export function useCreateMission() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async (data: { title: string; company: string | null; jobDescription: string }) => {
@@ -81,10 +88,11 @@ export function useCreateMission() {
       return res.json();
     },
     onSuccess: (data: Record<string, unknown> & { id?: string }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
       if (data?.id) {
-        queryClient.setQueryData(queryKeys.missions.detail(data.id as string), data);
-        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(data.id) });
+        queryClient.setQueryData(queryKeys.missions.detail(oid, data.id as string), data);
+        queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, data.id as string) });
       }
     },
   });
@@ -92,6 +100,7 @@ export function useCreateMission() {
 
 export function usePositionExistingCandidates() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ missionId, candidateIds }: { missionId: string; candidateIds: string[] }) => {
@@ -110,16 +119,18 @@ export function usePositionExistingCandidates() {
       return results;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, variables.missionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.all(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }
 
 export function useDeleteMission() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -128,16 +139,18 @@ export function useDeleteMission() {
       return res.json();
     },
     onSuccess: (_data, id) => {
-      queryClient.removeQueries({ queryKey: queryKeys.missions.detail(id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.removeQueries({ queryKey: queryKeys.missions.detail(oid, id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.all(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }
 
 export function useUploadCvsForMission() {
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
 
   return useMutation({
     mutationFn: async ({ missionId, files }: { missionId: string; files: File[] }) => {
@@ -157,11 +170,12 @@ export function useUploadCvsForMission() {
       return payload;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, variables.missionId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
     },
   });
 }

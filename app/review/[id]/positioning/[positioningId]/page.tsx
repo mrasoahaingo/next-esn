@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
 import type { ExtractedCV, PositioningAnalysis, PositioningOutput } from '@/lib/schema';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
 import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
@@ -90,6 +91,7 @@ export default function PositioningWizardPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { orgId } = useAuth();
   const candidateId = params?.id as string;
   const positioningIdParam = params?.positioningId as string;
 
@@ -210,8 +212,8 @@ export default function PositioningWizardPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const refreshMissionCards = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.all });
-  }, [queryClient]);
+    queryClient.invalidateQueries({ queryKey: queryKeys.missions.all(orgId ?? '') });
+  }, [queryClient, orgId]);
 
   // Workflow streams
   const {
@@ -229,13 +231,14 @@ export default function PositioningWizardPage() {
     runStatus: positioningData?.status,
     activeStatuses: ['analyzing'],
     onFinish: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, positioningIdParam) });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.positionings.analysisHistory(positioningIdParam),
+        queryKey: queryKeys.positionings.analysisHistory(oid, positioningIdParam),
       });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
       toast.success('Analyse terminee avec succes');
     },
   });
@@ -255,10 +258,11 @@ export default function PositioningWizardPage() {
     runStatus: positioningData?.status,
     activeStatuses: ['generating'],
     onFinish: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      const oid = orgId ?? '';
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, positioningIdParam) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
       toast.success('Generation terminee avec succes');
     },
   });
