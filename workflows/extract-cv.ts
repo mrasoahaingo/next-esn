@@ -5,7 +5,7 @@ import { triggerMissionAnalysesAfterExtract } from '@/lib/services/positioning-a
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
-import { logAiUsage } from '@/lib/services/ai-usage.service';
+import { logAiUsage, insertAiUsageStart, updateAiUsageEnd } from '@/lib/services/ai-usage.service';
 import { mergeExtractedPartial } from '@/lib/services/extraction-merge';
 import { prepareCvForMatchingPrompt } from '@/lib/utils/cv-experience-time';
 import {
@@ -99,6 +99,22 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
       );
 
       const txStart = Date.now();
+      const txLogId = await insertAiUsageStart(supabase, {
+        operation: 'extraction',
+        candidateId,
+        orgId: orgId ?? undefined,
+        aiModel: resolvedTx.gatewayModelId,
+        taskKey: TASK_KEY.CV_TRANSCRIPTION,
+        workflowRunId,
+        inputPayload: {
+          kind: 'pdf_attachment',
+          mediaType: 'application/pdf',
+          byteLength: buffer.length,
+          system: resolvedTx.systemPrompt,
+          userText: "Transcris l'intégralité du CV ci-joint.",
+        },
+      });
+
       const result = streamText({
         ...llmFactualGenerationSettings,
         model: txModel,
@@ -107,7 +123,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
           {
             role: 'user',
             content: [
-              { type: 'text', text: 'Transcris l’intégralité du CV ci-joint.' },
+              { type: 'text', text: "Transcris l'intégralité du CV ci-joint." },
               { type: 'file', mediaType: 'application/pdf', data: buffer },
             ],
           },
@@ -139,23 +155,10 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
         throw new Error('Empty CV text after preparation');
       }
 
-      await logAiUsage(supabase, {
-        operation: 'extraction',
-        candidateId,
-        orgId: orgId ?? undefined,
-        aiModel: resolvedTx.gatewayModelId,
-        taskKey: TASK_KEY.CV_TRANSCRIPTION,
+      await updateAiUsageEnd(supabase, txLogId, {
         durationMs: txDurationMs,
         usage: transcriptionUsage,
-        inputPayload: {
-          kind: 'pdf_attachment',
-          mediaType: 'application/pdf',
-          byteLength: buffer.length,
-          system: resolvedTx.systemPrompt,
-          userText: 'Transcris l’intégralité du CV ci-joint.',
-        },
         outputPayload: { text: cvText },
-        workflowRunId,
       });
 
       return {
@@ -261,8 +264,19 @@ async function parallelExtractAndStream(
     taskKey: TaskKey,
     gatewayModelId: string,
   ): Promise<void> {
+    const branchStart = Date.now();
+    const logId = await insertAiUsageStart(supabase, {
+      operation: 'extraction',
+      candidateId,
+      orgId: orgId ?? undefined,
+      aiModel: gatewayModelId,
+      taskKey,
+      workflowRunId,
+      branch,
+      inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
+    });
+
     try {
-      const branchStart = Date.now();
       const result = streamText({
         ...llmFactualGenerationSettings,
         model: languageModel,
@@ -292,19 +306,16 @@ async function parallelExtractAndStream(
       const usage = await result.usage;
       const output = await result.output;
 
-      await logAiUsage(supabase, {
-        operation: 'extraction',
-        candidateId,
-        orgId: orgId ?? undefined,
-        aiModel: gatewayModelId,
-        taskKey,
+      await updateAiUsageEnd(supabase, logId, {
         durationMs: Date.now() - branchStart,
         usage,
-        inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
         outputPayload: output,
-        workflowRunId,
       });
     } catch (e) {
+      await updateAiUsageEnd(supabase, logId, {
+        durationMs: Date.now() - branchStart,
+        callStatus: 'failed',
+      }).catch(() => {});
       throw attachWorkflowStepKey(e, branch);
     }
   }
