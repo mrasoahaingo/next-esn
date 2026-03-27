@@ -923,6 +923,18 @@ export default function PositioningWizardPage() {
                   >
                     {analysis.matchScore}%
                   </span>
+                  <span className="h-4 w-px bg-border" aria-hidden />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-neon" />
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    {analysis.skillMatches?.filter((s) => s.relevance === 'strong').length ?? 0}/{analysis.skillMatches?.length ?? 0}
+                  </span>
+                  <span className="h-4 w-px bg-border" aria-hidden />
+                  <AlertTriangle
+                    className={`h-3.5 w-3.5 shrink-0 ${(analysis.gaps?.length ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
+                  />
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    {analysis.gaps?.length ?? 0}
+                  </span>
                 </div>
               )}
               {/* Streaming indicator + cancel */}
@@ -1123,15 +1135,6 @@ export default function PositioningWizardPage() {
                   />
                 )}
 
-                {(analysisBusy || analysisComplete) && positioningIdParam ? (
-                  <div className="flex justify-end shrink-0">
-                    <PositioningAnalysisHistoryFloatingTrigger
-                      positioningId={positioningIdParam}
-                      candidateId={candidateId}
-                    />
-                  </div>
-                ) : null}
-
                 {/* Analysis results during streaming — no tabs yet */}
                 {analysisBusy && (
                   <div>
@@ -1242,8 +1245,7 @@ export default function PositioningWizardPage() {
 
           {/* Right panel — masqué à l’étape 2 (l’analyse est déjà à l’étape 1) */}
           {currentStep !== 2 && (
-          <div>
-            <div className="flex flex-col rounded-2xl glass-panel overflow-hidden">
+            <div className="flex flex-col h-full rounded-2xl glass-panel overflow-hidden">
               {currentStep === 3 ? (
                 <>
                   <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -1280,7 +1282,7 @@ export default function PositioningWizardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="relative bg-background dark:bg-shell min-h-[600px]">
+                  <div className="relative bg-background dark:bg-shell h-full">
                     {isPdfLoading && (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1289,11 +1291,11 @@ export default function PositioningWizardPage() {
                     {pdfBlobUrl ? (
                       <iframe
                         src={pdfEmbedSrc(pdfBlobUrl)}
-                        className="h-[600px] w-full bg-background dark:bg-shell"
+                        className="h-full w-full bg-background dark:bg-shell"
                         title="CV Preview"
                       />
                     ) : (
-                      <div className="flex min-h-[600px] flex-col items-center justify-center text-muted-foreground">
+                      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
                         <FileText className="mb-2 h-10 w-10" />
                         <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
                       </div>
@@ -1317,7 +1319,6 @@ export default function PositioningWizardPage() {
                 </>
               )}
             </div>
-          </div>
           )}
         </div>
       </div>

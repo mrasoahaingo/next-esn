@@ -26,7 +26,7 @@ export function PdfPreview() {
 
   return (
     <>
-      <div className="flex flex-col rounded-2xl glass-panel overflow-hidden">
+      <div className="flex flex-col h-full rounded-2xl glass-panel overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="flex items-center text-sm font-semibold text-foreground">
             <FileText className="mr-2 h-4 w-4 text-accent" />
@@ -55,7 +55,7 @@ export function PdfPreview() {
           </div>
         </div>
 
-        <div className="relative bg-background dark:bg-shell min-h-[600px]">
+        <div className="relative bg-background dark:bg-shell h-full">
           {isPdfLoading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -65,11 +65,11 @@ export function PdfPreview() {
           {pdfBlobUrl ? (
             <iframe
               src={pdfEmbedSrc(pdfBlobUrl)}
-              className="h-[600px] w-full bg-background dark:bg-shell"
+              className="h-full w-full bg-background dark:bg-shell"
               title="CV Preview"
             />
           ) : (
-            <div className="flex min-h-[600px] flex-col items-center justify-center text-muted-foreground">
+            <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
               <FileText className="mb-2 h-10 w-10" />
               <p className="text-sm">Le PDF apparaîtra ici</p>
             </div>

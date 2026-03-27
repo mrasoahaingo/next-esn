@@ -64,7 +64,13 @@ export const extractionSchema = z.object({
     firstName: z.string(),
     lastName: z.string(),
     title: z.string(),
-    email: z.string().email().optional(),
+    /**
+     * Tolère la chaîne vide renvoyée par le LLM quand l'email est absent du CV.
+     * — Zod v4 `.email().optional()` rejette `""` au runtime → `.catch(undefined)` absorbe les valeurs invalides.
+     * — `z.preprocess` est évité : il crée un `ZodPipe` dont `io:"input"` met `email` dans `required`, ce qui
+     *    confond le modèle (champ obligatoire mais absent du CV → pas de sortie → AI_NoOutputGeneratedError).
+     */
+    email: z.string().email().optional().catch(undefined),
     phone: z.string().optional(),
     location: z.string().optional(),
     yearsOfExperience: z.string().optional().describe("Total years of professional experience (e.g. '8 ans')"),

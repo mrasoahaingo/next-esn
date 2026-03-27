@@ -617,13 +617,6 @@ export default function ReviewPage() {
               onSpacingChange={(v) => handleSectionSpacing('skills', v)}
             />
           </SectionShell>
-          <SectionShell status={status('experiences')} label="Analyse des expériences...">
-            <Experiences
-              data={safeExperiences}
-              onChange={handleExperiences}
-              readOnly={isLoading}
-            />
-          </SectionShell>
           <SectionShell status={status('education')} label="Extraction des formations...">
             <Education
               data={safeEducation}
@@ -631,12 +624,17 @@ export default function ReviewPage() {
               readOnly={isLoading}
             />
           </SectionShell>
+          <SectionShell status={status('experiences')} label="Analyse des expériences...">
+            <Experiences
+              data={safeExperiences}
+              onChange={handleExperiences}
+              readOnly={isLoading}
+            />
+          </SectionShell>
         </div>
 
         {/* Right: PDF Preview */}
-        <div>
-          <PdfPreview />
-        </div>
+        <PdfPreview />
       </div>
     </div>
   );

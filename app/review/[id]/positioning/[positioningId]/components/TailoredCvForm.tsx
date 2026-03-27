@@ -36,14 +36,14 @@ export function TailoredCvForm({ data, onUpdateField, readOnly }: TailoredCvForm
         onChange={(val) => onUpdateField('skills', val)}
         readOnly={readOnly}
       />
-      <Experiences
-        data={safeExperiences}
-        onChange={(val) => onUpdateField('experiences', val)}
-        readOnly={readOnly}
-      />
       <Education
         data={safeEducation}
         onChange={(val) => onUpdateField('education', val)}
+        readOnly={readOnly}
+      />
+      <Experiences
+        data={safeExperiences}
+        onChange={(val) => onUpdateField('experiences', val)}
         readOnly={readOnly}
       />
     </div>
