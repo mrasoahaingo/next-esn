@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { triggerMissionPositioningAnalysis } from '@/lib/services/positioning-analyze-trigger';
+import {
+  isPositioningWorkflowRunActive,
+  resetMissionPositioningForRegeneration,
+} from '@/lib/services/positioning-mission-regenerate';
 
 const createPositioningSchema = z.object({
   candidateId: z.string().uuid(),
@@ -39,7 +43,7 @@ export async function POST(req: NextRequest) {
     const { candidateId, jobDescription, missionId } = parsed.data;
     const supabase = getSupabase();
 
-    let finalJobDescription = jobDescription;
+    let finalJobDescription = jobDescription ?? '';
 
     if (missionId) {
       const { data: mission, error: missionError } = await supabase
@@ -50,7 +54,47 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (missionError) throw missionError;
-      finalJobDescription = mission.job_description;
+      finalJobDescription = mission.job_description ?? finalJobDescription;
+
+      const { data: existingRows, error: existingError } = await supabase
+        .from('positionings')
+        .select('id, workflow_run_id')
+        .eq('candidate_id', candidateId)
+        .eq('mission_id', missionId)
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (existingError) throw existingError;
+      const existing = existingRows?.[0];
+
+      if (existing) {
+        const runActive = await isPositioningWorkflowRunActive(
+          existing.workflow_run_id as string | null | undefined,
+        );
+        if (runActive) {
+          const { data: refreshed } = await supabase
+            .from('positionings')
+            .select()
+            .eq('id', existing.id)
+            .single();
+          return NextResponse.json(refreshed ?? existing);
+        }
+
+        await resetMissionPositioningForRegeneration(
+          supabase,
+          existing.id as string,
+          orgId,
+          finalJobDescription,
+        );
+        await triggerMissionPositioningAnalysis(supabase, existing.id as string);
+        const { data: refreshed } = await supabase
+          .from('positionings')
+          .select()
+          .eq('id', existing.id)
+          .single();
+        return NextResponse.json(refreshed ?? existing);
+      }
     }
 
     const { data, error } = await supabase

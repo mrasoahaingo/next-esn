@@ -1,6 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
+import type { PositioningAnalysis } from '@/lib/schema';
 import { queryKeys } from './keys';
+
+/** Entrée renvoyée par GET /api/positioning/[id]/analysis-history */
+export type PositioningAnalysisHistoryRow = {
+  id: string;
+  created_at: string;
+  analysis: PositioningAnalysis | Record<string, unknown>;
+  answers: Record<string, unknown> | null;
+};
 
 /** Champs diagnostic workflow renvoyés par l’API positionnement (phase 2 / ERR-03). */
 export type PositioningWorkflowDiagnostics = {
@@ -42,6 +51,19 @@ export function usePositioning(id: string) {
   });
 }
 
+export function usePositioningAnalysisHistory(id: string) {
+  return useQuery({
+    queryKey: queryKeys.positionings.analysisHistory(id),
+    queryFn: async () => {
+      const res = await fetch(`/api/positioning/${id}/analysis-history`);
+      if (!res.ok) throw new Error('Failed to fetch analysis history');
+      return res.json() as Promise<PositioningAnalysisHistoryRow[]>;
+    },
+    enabled: !!id,
+    staleTime: 30_000,
+  });
+}
+
 export function useCreatePositioning() {
   const queryClient = useQueryClient();
 
@@ -55,9 +77,15 @@ export function useCreatePositioning() {
       if (!res.ok) throw new Error('Failed to create positioning');
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data: { id?: string }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(data.id) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.positionings.analysisHistory(data.id),
+        });
+      }
     },
   });
 }
@@ -77,6 +105,9 @@ export function useUpdatePositioning() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.positionings.analysisHistory(variables.id),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },

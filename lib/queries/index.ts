@@ -8,7 +8,15 @@ export {
   useUploadCvsForMission,
 } from './missions';
 export type { MissionDetail } from './missions';
-export { usePositionings, usePositioning, useCreatePositioning, useUpdatePositioning, useExportPositioning } from './positionings';
+export {
+  usePositionings,
+  usePositioning,
+  usePositioningAnalysisHistory,
+  useCreatePositioning,
+  useUpdatePositioning,
+  useExportPositioning,
+} from './positionings';
+export type { PositioningAnalysisHistoryRow } from './positionings';
 export { useDashboard } from './dashboard';
 export { useRecruiterSkills, useOrgRecruiterSkills } from './recruiter-skills';
 export type {

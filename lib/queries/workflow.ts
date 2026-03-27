@@ -30,6 +30,9 @@ export function useCancelWorkflow() {
         queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list() });
       } else if (variables.table === 'positionings') {
         queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(variables.recordId) });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.positionings.analysisHistory(variables.recordId),
+        });
         queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
       } else if (variables.table === 'missions') {
         queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.recordId) });

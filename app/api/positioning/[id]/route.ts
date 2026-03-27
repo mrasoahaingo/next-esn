@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { archivePositioningAnalysisToHistoryIfPresent } from '@/lib/services/positioning-mission-regenerate';
 
 const updatePositioningSchema = z.object({
   job_description: z.string().max(50000).optional(),
@@ -63,25 +64,7 @@ export async function PATCH(
     const payload: Record<string, unknown> = { ...rest };
 
     if (archiveAnalysisBeforeClear && rest.analysis === null) {
-      const { data: current } = await supabase
-        .from('positionings')
-        .select('analysis, answers, org_id')
-        .eq('id', id)
-        .eq('org_id', orgId)
-        .single();
-
-      const prevAnalysis = current?.analysis;
-      if (prevAnalysis != null && typeof prevAnalysis === 'object') {
-        const rowOrg = (current?.org_id as string | null | undefined) ?? orgId;
-        const { error: histErr } = await supabase.from('positioning_analysis_history').insert({
-          positioning_id: id,
-          org_id: rowOrg,
-          analysis: prevAnalysis,
-          answers: current?.answers ?? null,
-        });
-        if (histErr) throw histErr;
-      }
-
+      await archivePositioningAnalysisToHistoryIfPresent(supabase, id, orgId);
       payload.status = 'draft';
       payload.workflow_run_id = null;
     }

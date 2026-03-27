@@ -13,6 +13,8 @@ export const queryKeys = {
     all: ['positionings'] as const,
     list: () => [...queryKeys.positionings.all, 'list'] as const,
     detail: (id: string) => [...queryKeys.positionings.all, 'detail', id] as const,
+    analysisHistory: (id: string) =>
+      [...queryKeys.positionings.all, 'analysisHistory', id] as const,
   },
   dashboard: {
     all: ['dashboard'] as const,

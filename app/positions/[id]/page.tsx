@@ -1012,6 +1012,10 @@ function PositioningRow({
     activeStatuses: ['analyzing'],
     onFinish: () => {
       invalidateMission();
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(p.id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.positionings.analysisHistory(p.id),
+      });
       toast.success('Analyse terminee avec succes');
     },
   });

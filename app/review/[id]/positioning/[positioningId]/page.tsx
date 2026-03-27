@@ -14,7 +14,13 @@ import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
-import { usePositioning, useCandidate, useUpdatePositioning, useExportPositioning, useCancelWorkflow } from '@/lib/queries';
+import {
+  usePositioning,
+  useCandidate,
+  useUpdatePositioning,
+  useExportPositioning,
+  useCancelWorkflow,
+} from '@/lib/queries';
 import type { PositioningWorkflowDiagnostics } from '@/lib/queries/positionings';
 import {
   computePositioningAnalysisStepStates,
@@ -50,6 +56,10 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import dynamic from 'next/dynamic';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
+import {
+  PositioningAnalysisHistoryFloatingTrigger,
+  PositioningAnalysisHistoryTabContent,
+} from './components/PositioningAnalysisHistoryPanel';
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { EmailsGenerationStep } from './components/EmailsGenerationStep';
 import { CvGenerationStep } from './components/CvGenerationStep';
@@ -195,6 +205,9 @@ export default function PositioningWizardPage() {
     activeStatuses: ['analyzing'],
     onFinish: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(positioningIdParam) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.positionings.analysisHistory(positioningIdParam),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(candidateId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
@@ -1041,6 +1054,12 @@ export default function PositioningWizardPage() {
                   />
                 )}
 
+                {(analysisBusy || analysisComplete) && positioningIdParam ? (
+                  <div className="flex justify-end shrink-0">
+                    <PositioningAnalysisHistoryFloatingTrigger positioningId={positioningIdParam} />
+                  </div>
+                ) : null}
+
                 {/* Analysis results during streaming — no tabs yet */}
                 {analysisBusy && (
                   <div className="flex-1 overflow-y-auto">
@@ -1060,12 +1079,16 @@ export default function PositioningWizardPage() {
                 {/* Tabs: Résultats | Questions — once analysis complete */}
                 {analysisComplete && (
                   <Tabs defaultValue="results" className="flex flex-col min-h-0 flex-1">
-                    <TabsList variant="segmented" className="w-full shrink-0 grid grid-cols-2">
-                      <TabsTrigger value="results" className="text-xs">
+                    <TabsList variant="segmented" className="w-full shrink-0 grid grid-cols-3">
+                      <TabsTrigger value="results" className="text-xs px-1 sm:px-2">
                         Résultats
                       </TabsTrigger>
-                      <TabsTrigger value="questions" className="text-xs">
-                        Questions & Affinage
+                      <TabsTrigger value="questions" className="text-xs px-1 sm:px-2">
+                        <span className="hidden sm:inline">Questions & Affinage</span>
+                        <span className="sm:hidden">Questions</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="history" className="text-xs px-1 sm:px-2">
+                        Historique
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="results" className="flex-1 overflow-y-auto mt-3 space-y-4 data-[state=inactive]:hidden">
@@ -1093,6 +1116,14 @@ export default function PositioningWizardPage() {
                         recruiterAnswerEntries={recruiterAnswerEntries}
                         appendRecruiterAnswer={appendRecruiterAnswer}
                       />
+                    </TabsContent>
+                    <TabsContent
+                      value="history"
+                      className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden"
+                    >
+                      {positioningIdParam ? (
+                        <PositioningAnalysisHistoryTabContent positioningId={positioningIdParam} />
+                      ) : null}
                     </TabsContent>
                   </Tabs>
                 )}

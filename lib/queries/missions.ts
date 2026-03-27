@@ -112,7 +112,7 @@ export function usePositionExistingCandidates() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(variables.missionId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.missions.list() });
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     },
   });
