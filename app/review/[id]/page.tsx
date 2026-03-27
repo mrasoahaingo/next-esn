@@ -132,6 +132,18 @@ export default function ReviewPage() {
   const aiDurationMs = candidateData?.ai_extraction_duration_ms ?? null;
   const userTimeSeconds = candidateData?.user_review_time_seconds ?? null;
 
+  const extractionModels = useMemo(() => {
+    const raw = (candidateData as { ai_extraction_models?: unknown } | undefined)?.ai_extraction_models;
+    if (!raw || typeof raw !== 'object') return null;
+    const o = raw as Record<string, unknown>;
+    if (typeof o.byTask !== 'object' || o.byTask === null) return null;
+    const byTask = o.byTask as Record<string, string>;
+    const uniqueModels = Array.isArray(o.uniqueModels)
+      ? (o.uniqueModels as string[]).join(', ')
+      : Object.values(byTask).join(', ');
+    return { byTask, label: uniqueModels || null };
+  }, [candidateData]);
+
   const pdfTemplateId =
     candidateData?.id !== undefined ? (candidateData.template_id ?? null) : undefined;
 
@@ -558,6 +570,8 @@ export default function ReviewPage() {
             workflowStepRows={showCvWorkflowUi ? cvWorkflowRows : undefined}
             workflowSummaryLine={showCvWorkflowUi ? cvWorkflowSummary : undefined}
             hideStepsList={!showCvWorkflowUi}
+            extractionModelsLabel={extractionModels?.label}
+            extractionModelsByTask={extractionModels?.byTask}
           />
           {!showCvWorkflowUi &&
             candidateData &&

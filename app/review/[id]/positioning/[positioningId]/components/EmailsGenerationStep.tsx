@@ -62,6 +62,8 @@ interface EmailsGenerationStepProps {
   positioningStatus?: string | null;
   workflowStepRows?: StepStateRow[];
   workflowSummaryLine?: string | null;
+  /** Détail par tâche LLM des modèles utilisés lors de la dernière génération. */
+  generationModelsByTask?: Record<string, string> | null;
 }
 
 export function EmailsGenerationStep({
@@ -71,6 +73,7 @@ export function EmailsGenerationStep({
   positioningStatus,
   workflowStepRows,
   workflowSummaryLine,
+  generationModelsByTask,
 }: EmailsGenerationStepProps) {
   const {
     email,
@@ -126,7 +129,11 @@ export function EmailsGenerationStep({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
               <h3 className="text-sm font-semibold text-foreground">Propositions</h3>
-              <AiGenerationInfoIcon variant="positioning_generate" className="h-6 w-6" />
+              <AiGenerationInfoIcon
+                variant="positioning_generate"
+                modelsByTask={generationModelsByTask}
+                className="h-6 w-6"
+              />
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               Propositions client (variantes) à gauche, proposition candidat à droite.

@@ -73,6 +73,8 @@ interface ExtractionProgressProps {
   workflowSummaryLine?: string | null;
   /** Identifiants gateway des modèles (si enregistrés côté serveur). */
   extractionModelsLabel?: string | null;
+  /** Détail par tâche LLM (clé → modèle gateway) pour l'affichage dans le tooltip. */
+  extractionModelsByTask?: Record<string, string> | null;
   /**
    * Masque la liste d’étapes (WorkflowStepList et pilules) — ex. extraction terminée avec succès,
    * le parent peut afficher un récap replié à part.
@@ -97,6 +99,7 @@ export function ExtractionProgress({
   workflowStepRows,
   workflowSummaryLine,
   extractionModelsLabel,
+  extractionModelsByTask,
   hideStepsList = false,
 }: ExtractionProgressProps) {
   const completedCount = steps.filter((s) => s.check(data)).length;
@@ -146,6 +149,7 @@ export function ExtractionProgress({
         <AiGenerationInfoIcon
           variant="cv_extraction"
           modelsLabel={extractionModelsLabel}
+          modelsByTask={extractionModelsByTask}
           className="h-7 w-7 shrink-0"
         />
         <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">

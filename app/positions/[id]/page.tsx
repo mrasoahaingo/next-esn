@@ -19,7 +19,7 @@ import {
 import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
 import { queryKeys } from '@/lib/queries/keys';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
-import { formatHistoryModelsDisplayLabel } from '@/lib/types/positioning-analysis-models';
+import { formatHistoryModelsDisplayLabel, parsePositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   Briefcase,
@@ -1250,6 +1250,7 @@ function PositioningRow({
             <AiGenerationInfoIcon
               variant="positioning_analysis"
               modelsLabel={formatHistoryModelsDisplayLabel(p.ai_analysis_models)}
+              modelsByTask={parsePositioningAnalysisModelsSnapshot(p.ai_analysis_models)?.byTask}
               historyHref={`/review/${candidateId}/positioning/${p.id}`}
               historyLinkLabel="Positionnement et historique"
               stopClickPropagation
@@ -1686,6 +1687,7 @@ export default function PositionDetailPage() {
                   job_analysis_workflow_run_id={mission.job_analysis_workflow_run_id ?? null}
                   job_analysis_stale={mission.job_analysis_stale ?? false}
                   workflow_last_error={mission.workflow_last_error ?? null}
+                  ai_job_analysis_models={(mission as { ai_job_analysis_models?: unknown }).ai_job_analysis_models}
                   global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
                   className="mb-0 flex flex-col"
                 />

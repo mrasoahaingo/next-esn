@@ -40,6 +40,8 @@ interface AnalysisViewProps {
   workflowSummaryLine?: string | null;
   /** Identifiants gateway des modèles utilisés pour ce calcul (colonne `ai_analysis_models`). */
   modelsSummaryLabel?: string | null;
+  /** Détail par tâche LLM pour l'affichage dans le tooltip. */
+  modelsByTask?: Record<string, string> | null;
   /** Lien vers le positionnement (historique dans l’onglet dédié). */
   aiInfoHistoryHref?: string | null;
   aiInfoHistoryLinkLabel?: string | null;
@@ -235,6 +237,7 @@ export function AnalysisView({
   workflowStepRows,
   workflowSummaryLine,
   modelsSummaryLabel,
+  modelsByTask,
   aiInfoHistoryHref,
   aiInfoHistoryLinkLabel,
 }: AnalysisViewProps) {
@@ -288,6 +291,7 @@ export function AnalysisView({
               <AiGenerationInfoIcon
                 variant="positioning_analysis"
                 modelsLabel={modelsSummaryLabel}
+                modelsByTask={modelsByTask}
                 historyHref={aiInfoHistoryHref ?? undefined}
                 historyLinkLabel={aiInfoHistoryLinkLabel ?? undefined}
               />

@@ -55,6 +55,14 @@ export function PositioningMissionAnalysisInline({
   const job_analysis_workflow_run_id = mission?.job_analysis_workflow_run_id ?? null;
   const workflow_last_error = mission?.workflow_last_error ?? null;
 
+  const jobAnalysisModels = useMemo(() => {
+    const raw = mission?.ai_job_analysis_models;
+    if (!raw || typeof raw !== 'object') return null;
+    const o = raw as Record<string, unknown>;
+    if (typeof o.byTask !== 'object' || o.byTask === null) return null;
+    return o.byTask as Record<string, string>;
+  }, [mission?.ai_job_analysis_models]);
+
   const jobAnalyzeActive = !!job_analysis_workflow_run_id;
 
   const stream = useWorkflowStream<Partial<JobPostingAnalysis>, JobPostingAnalysisStreamMeta>({
@@ -127,7 +135,11 @@ export function PositioningMissionAnalysisInline({
         <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
           Analyse de la fiche mission
         </span>
-        <AiGenerationInfoIcon variant="mission_job_analysis" className="h-6 w-6" />
+        <AiGenerationInfoIcon
+          variant="mission_job_analysis"
+          modelsByTask={jobAnalysisModels}
+          className="h-6 w-6"
+        />
         {showAnalysisProgressHint && !showJobStepList ? (
           <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />

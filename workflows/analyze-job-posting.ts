@@ -20,6 +20,7 @@ import type {
   JobPostingAnalysisBranch,
   JobPostingAnalysisStreamMeta,
 } from '@/lib/types/job-posting-analysis-stream';
+import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { hashJobDescription } from '@/lib/utils/job-description-hash';
@@ -222,11 +223,22 @@ async function fetchAndAnalyze(missionId: string) {
 
     const durationMs = Date.now() - startTime;
 
+    const modelsSnapshot: PositioningAnalysisModelsSnapshot = {
+      byTask: {
+        [TASK_KEY.MISSION_JOB_POSTING_EXECUTIVE]: rEx.gatewayModelId,
+        [TASK_KEY.MISSION_JOB_POSTING_KEY_POINTS]: rKp.gatewayModelId,
+      },
+      uniqueModels: Array.from(
+        new Set([rEx.gatewayModelId, rKp.gatewayModelId]),
+      ).sort((a, b) => a.localeCompare(b)),
+    };
+
     return {
       object,
       durationMs,
       orgId: mission.org_id as string | null,
       inputHash: hashJobDescription(jobDescription),
+      modelsSnapshot,
     };
   } finally {
     writer.releaseLock();
@@ -240,6 +252,7 @@ async function saveJobPostingAnalysis(
     durationMs: number;
     orgId: string | null;
     inputHash: string;
+    modelsSnapshot: PositioningAnalysisModelsSnapshot;
   },
 ) {
   'use step';
@@ -252,6 +265,7 @@ async function saveJobPostingAnalysis(
       .update({
         job_analysis: result.object,
         job_analysis_input_hash: result.inputHash,
+        ai_job_analysis_models: result.modelsSnapshot,
         job_analysis_workflow_run_id: null,
         workflow_last_error: null,
       })

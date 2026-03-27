@@ -426,6 +426,7 @@ async function saveResult(
         extracted_data: result.object,
         status: 'reviewing',
         ai_extraction_duration_ms: result.durationMs,
+        ai_extraction_models: result.modelsSnapshot,
         workflow_run_id: null,
         workflow_last_error: null,
       })

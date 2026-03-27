@@ -76,6 +76,8 @@ interface MissionJobAnalysisProps {
   job_analysis_workflow_run_id: string | null;
   job_analysis_stale: boolean;
   workflow_last_error?: WorkflowLastError | null;
+  /** Snapshot des modèles LLM utilisés pour la dernière analyse (colonne `ai_job_analysis_models`). */
+  ai_job_analysis_models?: unknown;
   /** Clés skills marquées « comprises » par le recruteur (toutes missions de l’org). */
   global_skill_keys_understood: string[];
   /** Classes sur le conteneur (ex. grille 2 colonnes : retirer mb-6, overflow). */
@@ -97,6 +99,7 @@ export function MissionJobAnalysis({
   job_analysis_workflow_run_id,
   job_analysis_stale,
   workflow_last_error = null,
+  ai_job_analysis_models,
   global_skill_keys_understood,
   className,
 }: MissionJobAnalysisProps) {
@@ -267,6 +270,17 @@ export function MissionJobAnalysis({
     }
   };
 
+  const jobAnalysisModels = useMemo(() => {
+    if (!ai_job_analysis_models || typeof ai_job_analysis_models !== 'object') return null;
+    const o = ai_job_analysis_models as Record<string, unknown>;
+    if (typeof o.byTask !== 'object' || o.byTask === null) return null;
+    const byTask = o.byTask as Record<string, string>;
+    const uniqueModels = Array.isArray(o.uniqueModels)
+      ? (o.uniqueModels as string[]).join(', ')
+      : Object.values(byTask).join(', ');
+    return { byTask, label: uniqueModels || null };
+  }, [ai_job_analysis_models]);
+
   const hasDescription = jobDescription.trim().length > 0;
   const showAnalyzeCta = !job_analysis && !stream.isLoading && !jobAnalyzeActive;
   const showRelaunch = !!job_analysis && !jobAnalyzeActive && !stream.isLoading;
@@ -277,7 +291,12 @@ export function MissionJobAnalysis({
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-neon" />
           <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
-          <AiGenerationInfoIcon variant="mission_job_analysis" className="h-7 w-7" />
+          <AiGenerationInfoIcon
+            variant="mission_job_analysis"
+            modelsLabel={jobAnalysisModels?.label}
+            modelsByTask={jobAnalysisModels?.byTask}
+            className="h-7 w-7"
+          />
           {showAnalysisProgressHint && !showJobStepList && (
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />

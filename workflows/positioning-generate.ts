@@ -3,6 +3,7 @@ import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai'
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
+import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import {
   mergePositioningOutputPartial,
   type PositioningGenerateAccumulator,
@@ -119,6 +120,7 @@ async function fetchAndGenerate(
 
   const acc: PositioningGenerateAccumulator = {};
   const activeBranches = new Set<PositioningGenerateBranch>();
+  const modelsMap: Record<string, string> = {};
 
   let lock = Promise.resolve();
   const runLocked = (fn: () => Promise<void>) => {
@@ -178,6 +180,8 @@ async function fetchAndGenerate(
 
       const usage = await result.usage;
       const output = await result.output;
+
+      modelsMap[taskKey] = gatewayModelId;
 
       await logAiUsage(supabase, {
         operation: 'generation',
@@ -368,11 +372,19 @@ async function fetchAndGenerate(
 
     const durationMs = Date.now() - startTime;
 
+    const modelsSnapshot: PositioningAnalysisModelsSnapshot = {
+      byTask: { ...modelsMap },
+      uniqueModels: Array.from(new Set(Object.values(modelsMap))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    };
+
     return {
       object,
       durationMs,
       candidateId: positioning.candidate_id,
       orgId: positioning.org_id as string | null,
+      modelsSnapshot,
     };
   } finally {
     writer.releaseLock();
@@ -392,6 +404,7 @@ async function saveGeneration(
     durationMs: number;
     candidateId: string;
     orgId: string | null;
+    modelsSnapshot: PositioningAnalysisModelsSnapshot;
   },
   generateMode: PositioningGenerateMode,
 ) {
@@ -416,6 +429,7 @@ async function saveGeneration(
         candidate_email: result.object.candidateEmail,
         status: 'generated',
         ai_generation_duration_ms: result.durationMs,
+        ai_generation_models: result.modelsSnapshot,
         workflow_run_id: null,
         workflow_last_error: null,
       })
@@ -424,13 +438,24 @@ async function saveGeneration(
     const { data: existing } = await supabase
       .from('positionings')
       .select(
-        'tailored_cv, email, email_first_contact, email_bullet_points, candidate_email, ai_generation_duration_ms',
+        'tailored_cv, email, email_first_contact, email_bullet_points, candidate_email, ai_generation_duration_ms, ai_generation_models',
       )
       .eq('id', positioningId)
       .single();
 
     const prevMs = (existing?.ai_generation_duration_ms as number | null | undefined) ?? 0;
     const nextDuration = prevMs + result.durationMs;
+
+    // Merge new tasks into the existing models snapshot so partial regenerations keep full history.
+    const prevByTask =
+      (existing?.ai_generation_models as { byTask?: Record<string, string> } | null)?.byTask ?? {};
+    const mergedByTask = { ...prevByTask, ...result.modelsSnapshot.byTask };
+    const mergedModels: PositioningAnalysisModelsSnapshot = {
+      byTask: mergedByTask,
+      uniqueModels: Array.from(new Set(Object.values(mergedByTask))).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    };
 
     if (generateMode === 'cv') {
       await supabase
@@ -439,6 +464,7 @@ async function saveGeneration(
           tailored_cv: result.object.tailoredCv,
           status: 'generated',
           ai_generation_duration_ms: nextDuration,
+          ai_generation_models: mergedModels,
           workflow_run_id: null,
           workflow_last_error: null,
         })
@@ -453,6 +479,7 @@ async function saveGeneration(
           candidate_email: result.object.candidateEmail,
           status: 'generated',
           ai_generation_duration_ms: nextDuration,
+          ai_generation_models: mergedModels,
           workflow_run_id: null,
           workflow_last_error: null,
         })

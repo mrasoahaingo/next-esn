@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { formatHistoryModelsDisplayLabel } from '@/lib/types/positioning-analysis-models';
+import { formatHistoryModelsDisplayLabel, parsePositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import type { PositioningAnalysisSnapshotReason } from '@/lib/types/positioning-analysis-snapshot-payload';
 import { Loader2, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +77,11 @@ function HistoryDetailDialog({
     return formatHistoryModelsDisplayLabel(entry?.ai_analysis_models) ?? HISTORY_MODELS_MISSING;
   }, [entry]);
 
+  const modelsSnapshot = useMemo(
+    () => parsePositioningAnalysisModelsSnapshot(entry?.ai_analysis_models) ?? null,
+    [entry],
+  );
+
   const wizardHref = `/review/${candidateId}/positioning/${positioningId}`;
 
   return (
@@ -100,6 +105,7 @@ function HistoryDetailDialog({
               analysisSnapshotRecruiterEntries={snapshotEntries}
               hideRecruiterSnapshot={false}
               modelsSummaryLabel={modelsSummaryLabel}
+              modelsByTask={modelsSnapshot?.byTask}
               aiInfoHistoryHref={wizardHref}
               aiInfoHistoryLinkLabel="Positionnement et onglet Historique"
             />
@@ -126,6 +132,7 @@ function HistoryRowActions({
   const a = row.analysis as { matchScore?: number } | null;
   const score = a?.matchScore;
   const modelsLabel = formatHistoryModelsDisplayLabel(row.ai_analysis_models);
+  const rowModelsSnapshot = parsePositioningAnalysisModelsSnapshot(row.ai_analysis_models);
   const wizardHref = `/review/${candidateId}/positioning/${positioningId}`;
   const reasonLabel = snapshotReasonLabel(row.snapshot_reason);
 
@@ -142,6 +149,7 @@ function HistoryRowActions({
           <AiGenerationInfoIcon
             variant="positioning_analysis"
             modelsLabel={modelsLabel}
+            modelsByTask={rowModelsSnapshot?.byTask}
             historyHref={wizardHref}
             historyLinkLabel="Historique du positionnement"
             className="h-6 w-6"

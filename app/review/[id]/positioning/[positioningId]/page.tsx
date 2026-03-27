@@ -181,11 +181,19 @@ export default function PositioningWizardPage() {
     );
   }, [positioningData]);
 
-  const analysisModelsSummaryLabel = useMemo(() => {
+  const analysisModelsSnapshot = useMemo(() => {
     const raw = (positioningData as { ai_analysis_models?: unknown } | undefined)?.ai_analysis_models;
-    return formatPositioningAnalysisModelsLabel(
-      parsePositioningAnalysisModelsSnapshot(raw) ?? undefined,
-    );
+    return parsePositioningAnalysisModelsSnapshot(raw) ?? null;
+  }, [positioningData]);
+
+  const analysisModelsSummaryLabel = useMemo(
+    () => formatPositioningAnalysisModelsLabel(analysisModelsSnapshot ?? undefined),
+    [analysisModelsSnapshot],
+  );
+
+  const generationModelsSnapshot = useMemo(() => {
+    const raw = (positioningData as { ai_generation_models?: unknown } | undefined)?.ai_generation_models;
+    return parsePositioningAnalysisModelsSnapshot(raw) ?? null;
   }, [positioningData]);
 
   const updatePositioning = useUpdatePositioning();
@@ -1152,6 +1160,7 @@ export default function PositioningWizardPage() {
                       workflowStepRows={showAnalysisWorkflowUi ? analysisWorkflowRows : undefined}
                       workflowSummaryLine={showAnalysisWorkflowUi ? analysisWorkflowSummary : undefined}
                       modelsSummaryLabel={analysisModelsSummaryLabel}
+                      modelsByTask={analysisModelsSnapshot?.byTask}
                       aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
                       aiInfoHistoryLinkLabel="Positionnement et historique"
                     />
@@ -1188,6 +1197,7 @@ export default function PositioningWizardPage() {
                           positioningData?.status === 'error' ? analysisWorkflowSummary : undefined
                         }
                         modelsSummaryLabel={analysisModelsSummaryLabel}
+                        modelsByTask={analysisModelsSnapshot?.byTask}
                         aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
                         aiInfoHistoryLinkLabel="Positionnement et historique"
                       />
@@ -1227,6 +1237,7 @@ export default function PositioningWizardPage() {
                   positioningStatus={positioningData?.status}
                   workflowStepRows={showGenerateWorkflowUi ? generateWorkflowRows : undefined}
                   workflowSummaryLine={showGenerateWorkflowUi ? generateWorkflowSummary : undefined}
+                  generationModelsByTask={generationModelsSnapshot?.byTask}
                 />
               </div>
             )}
@@ -1242,6 +1253,7 @@ export default function PositioningWizardPage() {
                   positioningStatus={positioningData?.status}
                   workflowStepRows={showGenerateWorkflowUi ? generateWorkflowRows : undefined}
                   workflowSummaryLine={showGenerateWorkflowUi ? generateWorkflowSummary : undefined}
+                  generationModelsByTask={generationModelsSnapshot?.byTask}
                 />
               </div>
             )}

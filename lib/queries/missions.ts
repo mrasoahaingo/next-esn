@@ -18,6 +18,8 @@ export type MissionDetail = MissionWorkflowDiagnostics & {
   job_analysis: JobPostingAnalysis | null;
   job_analysis_workflow_run_id: string | null;
   job_analysis_stale: boolean;
+  /** Snapshot des modèles LLM utilisés pour la dernière analyse de la fiche mission. */
+  ai_job_analysis_models?: unknown;
   global_skill_keys_understood?: string[];
   positionings?: unknown[];
 };
