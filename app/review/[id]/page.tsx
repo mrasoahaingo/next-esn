@@ -33,6 +33,7 @@ import { Summary } from '../components/Summary';
 import { PdfPreview } from '../components/PdfPreview';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
 
 export default function ReviewPage() {
   const params = useParams();
@@ -113,6 +114,13 @@ export default function ReviewPage() {
     () => formatStepSummaryLine('cv', cvWorkflowRows),
     [cvWorkflowRows],
   );
+
+  /** Comme le positionnement : liste d’étapes pendant l’extraction ou en erreur ; masquée une fois terminé. */
+  const showCvWorkflowUi =
+    isLoading ||
+    candidateData?.status === 'extracting' ||
+    candidateData?.status === 'error' ||
+    cvWorkflowRunActive;
 
   const isExtractionWorkflowActive =
     isLoading || candidateData?.status === 'extracting';
@@ -544,9 +552,22 @@ export default function ReviewPage() {
             data={cvData}
             isStreaming={isLoading}
             streamMeta={streamMeta}
-            workflowStepRows={cvWorkflowRows}
-            workflowSummaryLine={cvWorkflowSummary}
+            workflowStepRows={showCvWorkflowUi ? cvWorkflowRows : undefined}
+            workflowSummaryLine={showCvWorkflowUi ? cvWorkflowSummary : undefined}
+            hideStepsList={!showCvWorkflowUi}
           />
+          {!showCvWorkflowUi &&
+            candidateData &&
+            ['reviewing', 'ready', 'generated'].includes(candidateData.status) && (
+              <details className="mt-3 rounded-xl border border-border/60 bg-card/30 px-3 py-2 [&_summary::-webkit-details-marker]:hidden [&_summary]:list-none">
+                <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+                  Détail des étapes d&apos;extraction
+                </summary>
+                <div className="mt-3 border-t border-border/40 pt-3">
+                  <WorkflowStepList rows={cvWorkflowRows} summaryLine={null} />
+                </div>
+              </details>
+            )}
         </div>
 
       </div>

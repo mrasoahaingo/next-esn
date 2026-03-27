@@ -73,6 +73,11 @@ interface ExtractionProgressProps {
   workflowSummaryLine?: string | null;
   /** Identifiants gateway des modèles (si enregistrés côté serveur). */
   extractionModelsLabel?: string | null;
+  /**
+   * Masque la liste d’étapes (WorkflowStepList et pilules) — ex. extraction terminée avec succès,
+   * le parent peut afficher un récap replié à part.
+   */
+  hideStepsList?: boolean;
 }
 
 function branchPulsesStep(branchMeta: CvExtractionStreamMeta | null | undefined, stepKey: string): boolean {
@@ -92,6 +97,7 @@ export function ExtractionProgress({
   workflowStepRows,
   workflowSummaryLine,
   extractionModelsLabel,
+  hideStepsList = false,
 }: ExtractionProgressProps) {
   const completedCount = steps.filter((s) => s.check(data)).length;
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0;
@@ -147,35 +153,36 @@ export function ExtractionProgress({
         </span>
       </div>
 
-      {useUnifiedSteps ? (
-        <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {steps.map((step) => {
-            const done = step.check(data);
-            const activeParallel = parallelExtracting && branchPulsesStep(streamMeta, step.key);
-            const activeSequential = isStreaming && !parallelExtracting && activeStep?.key === step.key;
-            const active = activeParallel || activeSequential;
-            const Icon = step.icon;
+      {!hideStepsList &&
+        (useUnifiedSteps ? (
+          <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {steps.map((step) => {
+              const done = step.check(data);
+              const activeParallel = parallelExtracting && branchPulsesStep(streamMeta, step.key);
+              const activeSequential = isStreaming && !parallelExtracting && activeStep?.key === step.key;
+              const active = activeParallel || activeSequential;
+              const Icon = step.icon;
 
-            return (
-              <div
-                key={step.key}
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-300 ${
-                  done
-                    ? 'bg-neon/15 text-neon border border-neon/25'
-                    : active
-                      ? 'bg-violet/15 text-violet dark:text-violet-200 border border-violet/30 animate-pulse'
-                      : 'bg-overlay/[0.04] text-muted-foreground border border-border'
-                }`}
-              >
-                <Icon className="h-3 w-3" />
-                {active ? step.streamingLabel : step.label}
-              </div>
-            );
-          })}
-        </div>
-      )}
+              return (
+                <div
+                  key={step.key}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-300 ${
+                    done
+                      ? 'bg-neon/15 text-neon border border-neon/25'
+                      : active
+                        ? 'bg-violet/15 text-violet dark:text-violet-200 border border-violet/30 animate-pulse'
+                        : 'bg-overlay/[0.04] text-muted-foreground border border-border'
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {active ? step.streamingLabel : step.label}
+                </div>
+              );
+            })}
+          </div>
+        ))}
     </div>
   );
 }
