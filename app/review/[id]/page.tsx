@@ -370,7 +370,7 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] bg-background text-foreground">
+    <div className="grid min-h-full bg-background text-foreground">
       <div className="px-4 pt-4 md:px-6">
         {/* Top bar */}
         <div className="rounded-2xl glass-panel p-4">
@@ -572,10 +572,10 @@ export default function ReviewPage() {
 
       </div>
 
-      {/* Split layout: two independent scroll columns */}
-      <div className="grid min-h-0 grid-cols-1 gap-4 px-4 py-4 md:px-6 lg:grid-cols-2">
-        {/* Left: Form (independent scroll) */}
-        <div className="overflow-y-auto space-y-4">
+      {/* Split layout */}
+      <div className="grid grid-cols-1 gap-4 px-4 py-4 md:px-6 lg:grid-cols-2">
+        {/* Left: Form */}
+        <div className="space-y-4">
           {error && (
             <div className="flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
               <AlertCircle className="mr-2 h-5 w-5" />
@@ -633,8 +633,8 @@ export default function ReviewPage() {
           </SectionShell>
         </div>
 
-        {/* Right: PDF Preview (independent scroll) */}
-        <div className="overflow-y-auto">
+        {/* Right: PDF Preview */}
+        <div>
           <PdfPreview />
         </div>
       </div>

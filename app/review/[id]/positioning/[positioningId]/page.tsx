@@ -851,12 +851,12 @@ export default function PositioningWizardPage() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-background text-foreground">
-      <div className="flex flex-1 flex-col min-h-0 px-4 py-4 md:px-6">
+    <div className="flex min-h-full flex-col bg-background text-foreground">
+      <div className="flex flex-col px-4 py-4 md:px-6">
         {/* Top bar */}
         <div className="rounded-2xl glass-panel p-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 shrink items-center gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet/20 text-violet neon-ring">
                 <Target className="h-4 w-4" />
               </div>
@@ -865,8 +865,8 @@ export default function PositioningWizardPage() {
                   <Target className="h-3 w-3 text-violet" />
                   Positionnement
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                  <h1 className="text-lg font-semibold title-gradient">
+                <div className="mt-0.5 flex items-center gap-2">
+                  <h1 className="truncate text-lg font-semibold title-gradient">
                     Positionnement sur offre
                   </h1>
                   {(aiAnalysisDurationMs || aiGenerationDurationMs || userTimeSeconds) ? (
@@ -911,7 +911,20 @@ export default function PositioningWizardPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex shrink-0 items-center gap-3">
+              {/* Score */}
+              {analysis?.matchScore != null && !analysisBusy && (
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
+                  <TrendingUp
+                    className={`h-4 w-4 shrink-0 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
+                  />
+                  <span
+                    className={`text-lg font-bold tabular-nums ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
+                  >
+                    {analysis.matchScore}%
+                  </span>
+                </div>
+              )}
               {/* Streaming indicator + cancel */}
               {isStreaming && (
                 <>
@@ -987,69 +1000,15 @@ export default function PositioningWizardPage() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-            {/* Key metrics — score + fiabilité, compétences + lacunes */}
-            {analysis?.matchScore != null && !analysisBusy && (
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp
-                      className={`h-4 w-4 shrink-0 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
-                    />
-                    <span
-                      className={`text-lg font-bold tabular-nums ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
-                    >
-                      {analysis.matchScore}%
-                    </span>
-                    <span className="hidden sm:inline text-xs text-muted-foreground">Score</span>
-                  </div>
-                  <span className="hidden sm:inline h-4 w-px bg-border" aria-hidden />
-                  <Tooltip>
-                    <TooltipTrigger
-                      className={`flex cursor-help items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium outline-none ${matchScoreConfidenceBadgeClass(analysis.matchScoreConfidence)}`}
-                    >
-                      <span className="text-muted-foreground">Fiabilité</span>
-                      <span>{matchScoreConfidenceShortLabel(analysis.matchScoreConfidence)}</span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs text-xs">
-                      {analysis.matchScoreConfidenceNote?.trim()
-                        ? analysis.matchScoreConfidenceNote
-                        : analysis.matchScoreConfidence
-                          ? 'Indicateur produit par la synthèse d’analyse pour contextualiser le score.'
-                          : 'Analyse antérieure : la fiabilité du score n’était pas encore calculée. Relancez l’analyse pour l’obtenir.'}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-neon" />
-                    <span className="text-sm font-semibold tabular-nums text-foreground">
-                      {(analysis.skillMatches?.filter((s) => s.relevance === 'strong').length ?? 0)}/
-                      {analysis.skillMatches?.length ?? 0}
-                    </span>
-                    <span className="text-xs text-muted-foreground">fortes</span>
-                  </div>
-                  <span className="hidden sm:inline text-xs text-muted-foreground">·</span>
-                  <div className="flex items-center gap-1.5">
-                    <AlertTriangle
-                      className={`h-4 w-4 shrink-0 ${(analysis.gaps?.length ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
-                    />
-                    <span className="text-sm font-semibold tabular-nums text-foreground">
-                      {analysis.gaps?.length ?? 0}
-                    </span>
-                    <span className="text-xs text-muted-foreground">lacune{(analysis.gaps?.length ?? 0) !== 1 ? 's' : ''}</span>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* CV | matching | fiche — cartes cliquables */}
           <div
-            className={`mt-4 flex flex-col gap-3 ${positioningData?.mission_id && missionHeadlineForUi ? 'md:flex-row md:items-stretch' : ''}`}
+            className="mt-4 flex items-stretch gap-3"
           >
             <Link
               href={`/review/${candidateId}`}
-              className={`group flex min-h-22 min-w-0 flex-col justify-between rounded-xl border border-neon/35 bg-neon/5 p-4 shadow-sm outline-none transition-colors hover:border-neon/55 hover:bg-neon/10 focus-visible:ring-2 focus-visible:ring-ring ${positioningData?.mission_id && missionHeadlineForUi ? 'flex-1 md:min-w-0' : 'w-full'}`}
+              className="group flex min-h-22 min-w-0 flex-1 flex-col justify-between rounded-xl border border-neon/35 bg-neon/5 p-4 shadow-sm outline-none transition-colors hover:border-neon/55 hover:bg-neon/10 focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`Ouvrir le CV de ${candidateDisplayName ?? 'ce candidat'}`}
             >
               <p className="text-lg font-semibold leading-snug text-foreground group-hover:text-neon/95">
@@ -1068,7 +1027,7 @@ export default function PositioningWizardPage() {
 
             {positioningData?.mission_id && missionHeadlineForUi ? (
               <>
-                <div className="flex shrink-0 items-center justify-center md:w-14 md:py-0">
+                <div className="flex shrink-0 items-center justify-center">
                   <Tooltip>
                     <TooltipTrigger
                       type="button"
@@ -1134,14 +1093,14 @@ export default function PositioningWizardPage() {
 
         {/* Split layout — étape 2 : emails client + candidat sur toute la largeur (pas de graphiques d’analyse à droite) */}
         <div
-          className={`flex min-h-0 flex-1 flex-col gap-4 ${currentStep === 2 ? '' : 'lg:flex-row'}`}
+          className={`grid grid-cols-1 gap-4 ${currentStep === 2 ? '' : 'lg:grid-cols-2'}`}
         >
           {/* Left / principal */}
           <div
-            className={`w-full flex flex-col min-h-0 ${currentStep === 2 ? 'flex-1' : 'lg:w-1/2'}`}
+            className="flex flex-col"
           >
             {currentStep === 1 && (
-              <div className="flex flex-col min-h-0 gap-3 h-full">
+              <div className="flex flex-col gap-3">
                 {/* Job description — editable before analysis, read-only after */}
                 {(analysisBusy || analysisComplete) ? (
                   <JobInput
@@ -1175,7 +1134,7 @@ export default function PositioningWizardPage() {
 
                 {/* Analysis results during streaming — no tabs yet */}
                 {analysisBusy && (
-                  <div className="flex-1 overflow-y-auto">
+                  <div>
                     <AnalysisView
                       analysis={analysis}
                       isAnalyzing={analysisBusy}
@@ -1194,7 +1153,7 @@ export default function PositioningWizardPage() {
 
                 {/* Tabs: Résultats | Questions — once analysis complete */}
                 {analysisComplete && (
-                  <Tabs defaultValue="results" className="flex flex-col min-h-0 flex-1">
+                  <Tabs defaultValue="results" className="flex flex-col">
                     <TabsList variant="segmented" className="w-full shrink-0 grid grid-cols-3">
                       <TabsTrigger value="results" className="text-xs px-1 sm:px-2">
                         Résultats
@@ -1207,7 +1166,7 @@ export default function PositioningWizardPage() {
                         Historique
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="results" className="flex-1 overflow-y-auto mt-3 space-y-4 data-[state=inactive]:hidden">
+                    <TabsContent value="results" className="mt-3 space-y-4 data-[state=inactive]:hidden">
                       <AnalysisView
                         analysis={analysis}
                         isAnalyzing={false}
@@ -1226,7 +1185,7 @@ export default function PositioningWizardPage() {
                         aiInfoHistoryLinkLabel="Positionnement et historique"
                       />
                     </TabsContent>
-                    <TabsContent value="questions" className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden">
+                    <TabsContent value="questions" className="mt-3 data-[state=inactive]:hidden">
                       <QuestionsPanel
                         analysis={analysis}
                         onNext={() => setCurrentStep(2)}
@@ -1238,7 +1197,7 @@ export default function PositioningWizardPage() {
                     </TabsContent>
                     <TabsContent
                       value="history"
-                      className="flex-1 overflow-y-auto mt-3 data-[state=inactive]:hidden"
+                      className="mt-3 data-[state=inactive]:hidden"
                     >
                       {positioningIdParam ? (
                         <PositioningAnalysisHistoryTabContent
@@ -1253,7 +1212,7 @@ export default function PositioningWizardPage() {
             )}
 
             {currentStep === 2 && (
-              <div className="flex-1 overflow-y-auto">
+              <div>
                 <EmailsGenerationStep
                   isStreaming={genBusy}
                   streamMeta={generateStreamMeta}
@@ -1266,7 +1225,7 @@ export default function PositioningWizardPage() {
             )}
 
             {currentStep === 3 && (
-              <div className="flex-1 overflow-y-auto">
+              <div>
                 <CvGenerationStep
                   isStreaming={genBusy}
                   streamMeta={generateStreamMeta}
@@ -1283,8 +1242,8 @@ export default function PositioningWizardPage() {
 
           {/* Right panel — masqué à l’étape 2 (l’analyse est déjà à l’étape 1) */}
           {currentStep !== 2 && (
-          <div className="w-full min-h-[400px] lg:min-h-0 lg:w-1/2">
-            <div className="flex h-full flex-col rounded-2xl glass-panel overflow-hidden">
+          <div>
+            <div className="flex flex-col rounded-2xl glass-panel overflow-hidden">
               {currentStep === 3 ? (
                 <>
                   <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -1321,7 +1280,7 @@ export default function PositioningWizardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="relative flex-1 bg-background dark:bg-shell">
+                  <div className="relative bg-background dark:bg-shell min-h-[600px]">
                     {isPdfLoading && (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1330,11 +1289,11 @@ export default function PositioningWizardPage() {
                     {pdfBlobUrl ? (
                       <iframe
                         src={pdfEmbedSrc(pdfBlobUrl)}
-                        className="h-full w-full bg-background dark:bg-shell"
+                        className="h-[600px] w-full bg-background dark:bg-shell"
                         title="CV Preview"
                       />
                     ) : (
-                      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+                      <div className="flex min-h-[600px] flex-col items-center justify-center text-muted-foreground">
                         <FileText className="mb-2 h-10 w-10" />
                         <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
                       </div>
@@ -1349,7 +1308,7 @@ export default function PositioningWizardPage() {
                       Visualisation de l&apos;analyse
                     </h2>
                   </div>
-                  <div className="relative overflow-y-auto flex-1 bg-shell">
+                  <div className="bg-shell">
                     <AnalysisCharts
                       analysis={analysis}
                       isAnalyzing={analysisBusy}

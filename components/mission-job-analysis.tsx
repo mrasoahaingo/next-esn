@@ -83,7 +83,7 @@ interface MissionJobAnalysisProps {
 
 function AnalysisScrollBody({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+    <div className="pr-1">
       {children}
     </div>
   );
@@ -269,7 +269,7 @@ export function MissionJobAnalysis({
   const showRelaunch = !!job_analysis && !jobAnalyzeActive && !stream.isLoading;
 
   return (
-    <div className={cn('glass-panel flex min-h-0 flex-col overflow-hidden rounded-2xl p-6 mb-6', className)}>
+    <div className={cn('glass-panel flex flex-col rounded-2xl p-6 mb-6', className)}>
       <div className="shrink-0">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Sparkles className="h-4 w-4 shrink-0 text-neon" />

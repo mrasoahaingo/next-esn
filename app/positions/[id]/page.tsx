@@ -1532,8 +1532,8 @@ export default function PositionDetailPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col gap-4 overflow-hidden px-6 py-4">
+    <div className="flex min-h-full flex-col">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-6 py-4">
         {/* Header */}
         <div className="glass-panel shrink-0 rounded-2xl p-4 md:p-6">
           <div className="flex items-start gap-4">
@@ -1634,7 +1634,7 @@ export default function PositionDetailPage() {
             const next = v as 'analysis' | 'positionings';
             router.replace(`/positions/${missionId}?tab=${next}`);
           }}
-          className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+          className="flex w-full flex-col"
         >
           <TabsList
             variant="segmented"
@@ -1655,18 +1655,18 @@ export default function PositionDetailPage() {
 
           <TabsContent
             value="analysis"
-            className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden"
+            className="mt-0 flex flex-col data-[state=inactive]:hidden"
           >
-            <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 overflow-hidden lg:grid-cols-2 lg:grid-rows-1 lg:gap-6">
-              <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-                <div className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl p-4 md:p-6">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
+              <aside className="flex min-w-0 flex-col">
+                <div className="glass-panel flex flex-col rounded-2xl p-4 md:p-6">
                   <div className="mb-3 flex shrink-0 items-center gap-1.5">
                     <FileText className="h-3.5 w-3.5 shrink-0 text-violet/60" />
                     <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                       Fiche de poste
                     </span>
                   </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                  <div>
                     <JobDescriptionMarkdown
                       content={mission.job_description}
                       className="text-muted-foreground/80"
@@ -1675,7 +1675,7 @@ export default function PositionDetailPage() {
                 </div>
               </aside>
 
-              <div className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+              <div className="flex min-w-0 flex-col">
                 <MissionJobAnalysis
                   missionId={missionId}
                   jobDescription={mission.job_description}
@@ -1684,7 +1684,7 @@ export default function PositionDetailPage() {
                   job_analysis_stale={mission.job_analysis_stale ?? false}
                   workflow_last_error={mission.workflow_last_error ?? null}
                   global_skill_keys_understood={mission.global_skill_keys_understood ?? []}
-                  className="mb-0 flex min-h-0 flex-1 flex-col overflow-hidden"
+                  className="mb-0 flex flex-col"
                 />
               </div>
             </div>
@@ -1692,9 +1692,9 @@ export default function PositionDetailPage() {
 
           <TabsContent
             value="positionings"
-            className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden data-[state=inactive]:hidden"
+            className="mt-0 flex flex-col data-[state=inactive]:hidden"
           >
-            <div className="glass-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl p-4 md:p-6">
+            <div className="glass-panel flex flex-col rounded-2xl p-4 md:p-6">
               <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 gap-y-1">
                 <Users className="h-4 w-4 shrink-0 text-violet" />
                 <h2 className="text-sm font-semibold text-foreground">CVs sur cette mission</h2>
@@ -1727,7 +1727,7 @@ export default function PositionDetailPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="min-h-0 flex-1 space-y-8 overflow-y-auto overscroll-contain pr-1">
+                <div className="space-y-8 pr-1">
                   {drafts.length > 0 && (
                     <section aria-labelledby="positionings-in-progress">
                       <div className="flex flex-wrap items-center gap-2 mb-3">
