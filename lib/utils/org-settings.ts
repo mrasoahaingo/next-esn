@@ -22,8 +22,9 @@ export type PositioningPromptBranding = {
 
 export function toPositioningPromptBranding(
   settings: OrganizationSettingsRow | null,
+  fallbackName?: string,
 ): PositioningPromptBranding {
-  const displayName = settings?.display_name?.trim() || 'votre organisation';
+  const displayName = settings?.display_name?.trim() || fallbackName?.trim() || 'votre organisation';
   const ctx = settings?.positioning_brand_context?.trim();
   const brandContextBlock = ctx
     ? `## Contexte entreprise\n${ctx}\n\n`

@@ -28,6 +28,7 @@ import {
 import { withMandatoryJobPostingLists } from '@/lib/services/job-posting-analysis.service';
 import { mergeMatchingWeights } from '@/lib/config/matching-weights';
 import { getOrganizationSettings, toPositioningPromptBranding } from '@/lib/utils/org-settings';
+import { clerkClient } from '@clerk/nextjs/server';
 import type {
   PositioningGenerateBranch,
   PositioningGenerateMode,
@@ -78,7 +79,19 @@ async function fetchAndGenerate(
   const orgId = positioning.org_id as string | null | undefined;
   const orgSettings = orgId ? await getOrganizationSettings(orgId) : null;
   const matchingWeights = mergeMatchingWeights(orgSettings?.matching_weights);
-  const branding = toPositioningPromptBranding(orgSettings);
+
+  let clerkOrgName: string | undefined;
+  if (orgId && !orgSettings?.display_name?.trim()) {
+    try {
+      const clerk = await clerkClient();
+      const org = await clerk.organizations.getOrganization({ organizationId: orgId });
+      clerkOrgName = org.name ?? undefined;
+    } catch {
+      // non-bloquant
+    }
+  }
+
+  const branding = toPositioningPromptBranding(orgSettings, clerkOrgName);
   const brandCtx = {
     displayName: branding.displayName,
     brandContextBlock: branding.brandContextBlock,
