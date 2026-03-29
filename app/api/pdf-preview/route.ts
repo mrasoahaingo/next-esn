@@ -3,6 +3,12 @@ import { generateCvPdf } from '@/lib/services/pdf.service';
 import { requireOrgId } from '@/lib/utils/auth';
 import { getTemplateConfig, mergeTemplateWithDefaults } from '@/lib/utils/template';
 
+function getPdfPageCount(buffer: Uint8Array): number {
+  const text = Buffer.from(buffer).toString('latin1');
+  const match = text.match(/\/Count (\d+)/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const orgId = await requireOrgId();
@@ -16,11 +22,13 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = await generateCvPdf(data, resolvedTemplate);
+    const pageCount = getPdfPageCount(buffer);
 
-    return new Response(buffer, {
+    return new Response(Buffer.from(buffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Cache-Control': 'no-store',
+        'X-Pdf-Page-Count': String(pageCount),
       },
     });
   } catch (error: unknown) {

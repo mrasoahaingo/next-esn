@@ -45,6 +45,7 @@ export default function ReviewPage() {
     updateField,
     setPdfBlobUrl,
     setIsPdfLoading,
+    setPdfPageCount,
     isDirty,
     setDirty,
   } = useCvBuilderStore();
@@ -150,6 +151,7 @@ export default function ReviewPage() {
     data: cvData,
     setPdfBlobUrl,
     setIsPdfLoading,
+    setPdfPageCount,
     templateId: pdfTemplateId,
   });
 

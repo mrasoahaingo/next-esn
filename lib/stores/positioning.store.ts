@@ -15,6 +15,7 @@ interface PositioningState {
   isAnalyzing: boolean;
   isGenerating: boolean;
   pdfBlobUrl: string | null;
+  pdfPageCount: number;
   isPdfLoading: boolean;
   originalPdfBlobUrl: string | null;
   /**
@@ -35,6 +36,7 @@ interface PositioningState {
   setIsAnalyzing: (v: boolean) => void;
   setIsGenerating: (v: boolean) => void;
   setPdfBlobUrl: (url: string | null) => void;
+  setPdfPageCount: (count: number) => void;
   setIsPdfLoading: (loading: boolean) => void;
   setOriginalPdfBlobUrl: (url: string | null) => void;
   updateTailoredCvField: (field: keyof ExtractedCV, value: unknown) => void;
@@ -57,6 +59,7 @@ const initialState = {
   isAnalyzing: false,
   isGenerating: false,
   pdfBlobUrl: null,
+  pdfPageCount: 1,
   isPdfLoading: false,
   originalPdfBlobUrl: null,
   recruiterAnswerEntries: {} as Record<string, PositioningRecruiterAnswerEntry[]>,
@@ -81,6 +84,7 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
     if (prev) URL.revokeObjectURL(prev);
     set({ pdfBlobUrl: url });
   },
+  setPdfPageCount: (count) => set({ pdfPageCount: count }),
   setIsPdfLoading: (loading) => set({ isPdfLoading: loading }),
   setOriginalPdfBlobUrl: (url) => {
     const prev = get().originalPdfBlobUrl;

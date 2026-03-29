@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +14,20 @@ import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
 export function PdfPreview() {
   const pdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
   const isPdfLoading = useCvBuilderStore((s) => s.isPdfLoading);
+  const pdfPageCount = useCvBuilderStore((s) => s.pdfPageCount);
   const [fullscreen, setFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setIframeHeight(entry.contentRect.width * Math.SQRT2 * pdfPageCount);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pdfPageCount]);
 
   const handleDownload = () => {
     if (!pdfBlobUrl) return;
@@ -26,7 +39,7 @@ export function PdfPreview() {
 
   return (
     <>
-      <div className="flex flex-col h-full rounded-2xl glass-panel overflow-hidden">
+      <div ref={containerRef} className="flex flex-col rounded-2xl glass-panel overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="flex items-center text-sm font-semibold text-foreground">
             <FileText className="mr-2 h-4 w-4 text-accent" />
@@ -55,7 +68,7 @@ export function PdfPreview() {
           </div>
         </div>
 
-        <div className="relative bg-background dark:bg-shell h-full">
+        <div className="relative bg-background dark:bg-shell">
           {isPdfLoading && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -65,11 +78,12 @@ export function PdfPreview() {
           {pdfBlobUrl ? (
             <iframe
               src={pdfEmbedSrc(pdfBlobUrl)}
-              className="h-full w-full bg-background dark:bg-shell"
+              style={{ height: iframeHeight || undefined }}
+              className="w-full bg-background dark:bg-shell"
               title="CV Preview"
             />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+            <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
               <FileText className="mb-2 h-10 w-10" />
               <p className="text-sm">Le PDF apparaîtra ici</p>
             </div>

@@ -6,6 +6,7 @@ interface PdfPreviewOptions {
   data: Partial<ExtractedCV> | null;
   setPdfBlobUrl: (url: string | null) => void;
   setIsPdfLoading: (loading: boolean) => void;
+  setPdfPageCount?: (count: number) => void;
   /** Override the template config from the store (useful for template editor) */
   templateConfigOverride?: Partial<TemplateConfig> | null;
   /**
@@ -20,6 +21,7 @@ export function usePdfPreview({
   data,
   setPdfBlobUrl,
   setIsPdfLoading,
+  setPdfPageCount,
   templateConfigOverride,
   templateId,
   debounceMs = 600,
@@ -74,9 +76,11 @@ export function usePdfPreview({
 
         if (!res.ok) throw new Error('PDF generation failed');
 
+        const pageCount = parseInt(res.headers.get('X-Pdf-Page-Count') ?? '1', 10);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         setPdfBlobUrl(url);
+        setPdfPageCount?.(pageCount);
       } catch (e) {
         if ((e as Error).name !== 'AbortError') {
           console.error('PDF preview error:', e);

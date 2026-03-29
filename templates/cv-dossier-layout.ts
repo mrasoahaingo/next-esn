@@ -475,7 +475,7 @@ function addExperiencesBlock(
 
     if (theme.experienceLeftBorderWidth > 0) {
       elements[`exp-${i}-wrapper`] = {
-        type: 'KeepTogetherRow',
+        type: 'Row',
         props: { alignItems: 'stretch', gap: 10 },
         children: [`exp-${i}-accent`, `exp-${i}-col`],
       };
@@ -495,7 +495,7 @@ function addExperiencesBlock(
       };
     } else {
       elements[`exp-${i}-wrapper`] = {
-        type: 'KeepTogetherView',
+        type: 'View',
         props: {
           paddingLeft: theme.experiencePaddingLeft,
         },
@@ -788,6 +788,11 @@ export function buildCvDossierLayoutSpec(
 
   for (const block of blocks) {
     blockBuilders[block.type]?.(elements, pageChildren, data, block, colors, theme);
+  }
+
+  // Remove trailing spacers to prevent a blank last page
+  while (pageChildren.length > 0 && elements[pageChildren[pageChildren.length - 1]]?.type === 'Spacer') {
+    pageChildren.pop();
   }
 
   elements['footer-wrapper'] = {

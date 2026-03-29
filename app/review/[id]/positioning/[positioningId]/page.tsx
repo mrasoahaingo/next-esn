@@ -118,6 +118,8 @@ export default function PositioningWizardPage() {
     setCurrentStep,
     setOriginalPdfBlobUrl,
     setPdfBlobUrl,
+    pdfPageCount,
+    setPdfPageCount,
     setIsPdfLoading,
     reset,
     recruiterAnswerEntries,
@@ -403,8 +405,22 @@ export default function PositioningWizardPage() {
     data: tailoredCv,
     setPdfBlobUrl,
     setIsPdfLoading,
+    setPdfPageCount,
     templateId: pdfTemplateId,
   });
+
+  const previewPanelRef = useRef<HTMLDivElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(0);
+
+  useEffect(() => {
+    const el = previewPanelRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setIframeHeight(entry.contentRect.width * Math.SQRT2 * pdfPageCount);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pdfPageCount]);
 
   useSessionTimer({
     endpoint: `/api/positioning/${positioningIdParam}/time`,
@@ -1258,7 +1274,7 @@ export default function PositioningWizardPage() {
 
           {/* Right panel — masqué à l’étape 2 (l’analyse est déjà à l’étape 1) */}
           {currentStep !== 2 && (
-            <div className="flex flex-col h-full rounded-2xl glass-panel overflow-hidden">
+            <div ref={previewPanelRef} className="flex flex-col rounded-2xl glass-panel overflow-hidden">
               {currentStep === 3 ? (
                 <>
                   <div className="flex items-center justify-between border-b border-border px-4 py-3">
@@ -1295,7 +1311,7 @@ export default function PositioningWizardPage() {
                       )}
                     </div>
                   </div>
-                  <div className="relative bg-background dark:bg-shell h-full">
+                  <div className="relative bg-background dark:bg-shell">
                     {isPdfLoading && (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -1304,11 +1320,12 @@ export default function PositioningWizardPage() {
                     {pdfBlobUrl ? (
                       <iframe
                         src={pdfEmbedSrc(pdfBlobUrl)}
-                        className="h-full w-full bg-background dark:bg-shell"
+                        style={{ height: iframeHeight || undefined }}
+                        className="w-full bg-background dark:bg-shell"
                         title="CV Preview"
                       />
                     ) : (
-                      <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
+                      <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
                         <FileText className="mb-2 h-10 w-10" />
                         <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
                       </div>
