@@ -21,7 +21,7 @@ export const RawSignalSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).default({}),
   companyName: z.string().min(1),
   companySiren: z.string().optional(),
-  detectedAt: z.string().datetime().optional(),
+  detectedAt: z.string().datetime({ offset: true }).optional(),
 });
 export type RawSignal = z.infer<typeof RawSignalSchema>;
 
@@ -110,7 +110,7 @@ export const ProspectListItemSchema = z.object({
   convergenceBonus: z.number().int(),
   breakdown: z.record(z.string(), z.number()),
   technologies: z.array(z.string()).default([]),
-  latestSignalAt: z.string().datetime().nullable().optional(),
+  latestSignalAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export type ProspectListItem = z.infer<typeof ProspectListItemSchema>;
 
@@ -121,8 +121,8 @@ export const ProspectSignalSchema = z.object({
   rawContent: z.string().nullable().optional(),
   weight: z.number().int(),
   metadata: z.record(z.string(), z.unknown()).default({}),
-  detectedAt: z.string().datetime(),
-  expiresAt: z.string().datetime().nullable().optional(),
+  detectedAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export type ProspectSignal = z.infer<typeof ProspectSignalSchema>;
 
@@ -147,7 +147,7 @@ export const ProspectDetailSchema = z.object({
       action: ActionType,
       outcome: ActionOutcome,
       notes: z.string().nullable().optional(),
-      performedAt: z.string().datetime(),
+      performedAt: z.string().datetime({ offset: true }),
       userId: z.string(),
     }),
   ),

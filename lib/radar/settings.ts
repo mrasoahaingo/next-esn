@@ -13,7 +13,7 @@ export const radarSettingsSchema = z.object({
   pressRssUrls: z.array(z.string().url()).default([]),
   linkedinCompanyUrls: z.array(z.string().url()).default([]),
   matchThreshold: z.number().min(0).max(1).default(0.7),
-  updatedAt: z.string().datetime().nullable().optional(),
+  updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 export const radarSettingsPatchSchema = z.object({
