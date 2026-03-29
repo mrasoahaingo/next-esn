@@ -5,6 +5,7 @@ import { requireOrgId } from '@/lib/utils/auth';
 import { getProspectDetailCached } from '@/lib/radar/queries';
 import { SignalTimeline } from '@/app/(dashboard)/radar/components/signal-timeline';
 import { ConsultantMatches } from '@/app/(dashboard)/radar/components/consultant-matches';
+import { DecisionMakers } from '@/app/(dashboard)/radar/components/decision-makers';
 import { ScoreBreakdown } from '@/app/(dashboard)/radar/components/score-breakdown';
 import { AiBrief } from '@/app/(dashboard)/radar/components/ai-brief';
 import { RadarPageLinks } from '@/app/(dashboard)/radar/components/radar-page-links';
@@ -93,6 +94,7 @@ export default async function RadarProspectPage({
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           <SignalTimeline signals={prospect.signals} />
+          <DecisionMakers companyId={prospect.company.id} contacts={prospect.contacts} />
           <ConsultantMatches matches={prospect.matches} />
         </div>
         <div className="space-y-6">

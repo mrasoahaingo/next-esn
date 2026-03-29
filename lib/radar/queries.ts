@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/utils/supabase';
 import { averageEmbeddings, generateEmbedding } from '@/lib/radar/embeddings';
 import { refreshMatchesForCompany } from '@/lib/radar/matching';
 import {
+  ContactSchema,
   ProspectActionInputSchema,
   ProspectDetailSchema,
   ProspectFiltersSchema,
@@ -14,6 +15,7 @@ import {
   type ProspectListItem,
   type RawSignal,
 } from '@/lib/radar/schemas';
+import { enrichCompany } from '@/lib/radar/collectors/linkedin-enrichment';
 import { computeScore } from '@/lib/radar/scoring';
 import { getRadarSettings } from '@/lib/radar/settings';
 
@@ -368,6 +370,14 @@ export async function getProspectDetail(orgId: string, companyId: string): Promi
         availability: consultant.availability,
       };
     }),
+    contacts: (() => {
+      const raw = (companyRes.data.enrichment_data as Record<string, unknown> | null)?.contacts;
+      if (!Array.isArray(raw)) return [];
+      return raw.flatMap((item) => {
+        const parsed = ContactSchema.safeParse(item);
+        return parsed.success ? [parsed.data] : [];
+      });
+    })(),
     actions: (actionsRes.data ?? []).map((action) => ({
       id: action.id,
       action: action.action,
@@ -377,6 +387,86 @@ export async function getProspectDetail(orgId: string, companyId: string): Promi
       userId: action.user_id,
     })),
   });
+}
+
+/**
+ * Enrichit une entreprise prospect avec les données LinkedIn :
+ * - résout l'URL LinkedIn si manquante
+ * - trouve les décideurs IT (DSI, CTO, DRH…)
+ * Stocke les contacts dans enrichment_data.contacts.
+ */
+export async function enrichProspectLinkedIn(orgId: string, companyId: string): Promise<number> {
+  const supabase = getSupabase();
+
+  const { data: company, error } = await supabase
+    .from('radar_companies')
+    .select('id, name, website, linkedin_url, enrichment_data')
+    .eq('org_id', orgId)
+    .eq('id', companyId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!company) return 0;
+
+  const { linkedinUrl, contacts } = await enrichCompany({
+    id: company.id,
+    name: company.name,
+    website: company.website,
+    linkedinUrl: company.linkedin_url,
+  });
+
+  const existingEnrichment = (company.enrichment_data as Record<string, unknown> | null) ?? {};
+
+  await supabase
+    .from('radar_companies')
+    .update({
+      linkedin_url: linkedinUrl ?? company.linkedin_url,
+      enrichment_data: {
+        ...existingEnrichment,
+        contacts,
+        linkedinEnrichedAt: new Date().toISOString(),
+      },
+      last_enriched_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', companyId);
+
+  return contacts.length;
+}
+
+/**
+ * Enrichit les prospects chauds (score ≥ seuil) sans contacts LinkedIn connus.
+ * Typiquement appelé après le scoring.
+ */
+export async function enrichHotProspects(orgId: string, scoreThreshold = 60): Promise<number> {
+  const supabase = getSupabase();
+
+  const { data: hotCompanies, error } = await supabase
+    .from('radar_prospect_scores')
+    .select('company_id, radar_companies!inner(id, enrichment_data)')
+    .eq('org_id', orgId)
+    .gte('score', scoreThreshold)
+    .limit(20); // Limiter pour maîtriser les crédits Proxycurl
+
+  if (error) throw error;
+
+  let enriched = 0;
+  for (const row of hotCompanies ?? []) {
+    const company = Array.isArray(row.radar_companies) ? row.radar_companies[0] : row.radar_companies;
+    const enrichmentData = (company?.enrichment_data as Record<string, unknown> | null) ?? {};
+
+    // Ignorer si déjà enrichi récemment (< 7 jours)
+    const lastEnriched = enrichmentData.linkedinEnrichedAt as string | undefined;
+    if (lastEnriched) {
+      const daysSince = (Date.now() - new Date(lastEnriched).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince < 7) continue;
+    }
+
+    const count = await enrichProspectLinkedIn(orgId, row.company_id);
+    if (count > 0) enriched += 1;
+  }
+
+  return enriched;
 }
 
 export async function recordProspectAction(orgId: string, userId: string, input: ProspectActionInput) {

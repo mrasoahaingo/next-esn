@@ -126,6 +126,16 @@ export const ProspectSignalSchema = z.object({
 });
 export type ProspectSignal = z.infer<typeof ProspectSignalSchema>;
 
+export const ContactSchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  linkedinUrl: z.string().url(),
+  profilePicture: z.string().nullable().optional(),
+  city: z.string().nullable().optional(),
+  enrichedAt: z.string(),
+});
+export type Contact = z.infer<typeof ContactSchema>;
+
 export const ProspectDetailSchema = z.object({
   company: z.object({
     id: z.string().uuid(),
@@ -141,6 +151,7 @@ export const ProspectDetailSchema = z.object({
   score: ProspectScoreSchema.nullable(),
   signals: z.array(ProspectSignalSchema),
   matches: z.array(MatchSchema),
+  contacts: z.array(ContactSchema).default([]),
   actions: z.array(
     z.object({
       id: z.string().uuid(),
