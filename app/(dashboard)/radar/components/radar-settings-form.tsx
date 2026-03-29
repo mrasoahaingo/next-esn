@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { DEFAULT_RADAR_SETTINGS, radarSettingsSchema, type RadarSettings } from '@/lib/radar/settings';
+import { DEFAULT_LINKEDIN_DISCOVERY, DEFAULT_RADAR_SETTINGS, radarSettingsSchema, type LinkedInDiscovery, type RadarSettings } from '@/lib/radar/settings';
 
 type ManualRun = {
   kind: string;
@@ -29,6 +29,7 @@ type SettingsFormState = {
   pressRssUrlsText: string;
   linkedinCompanyUrlsText: string;
   matchThreshold: string;
+  linkedinDiscovery: LinkedInDiscovery;
 };
 
 function toLines(values: string[]) {
@@ -58,6 +59,7 @@ export function RadarSettingsForm() {
     pressRssUrlsText: toLines(DEFAULT_RADAR_SETTINGS.pressRssUrls),
     linkedinCompanyUrlsText: '',
     matchThreshold: String(DEFAULT_RADAR_SETTINGS.matchThreshold),
+    linkedinDiscovery: DEFAULT_LINKEDIN_DISCOVERY,
   });
 
   const settingsQuery = useQuery({
@@ -78,6 +80,7 @@ export function RadarSettingsForm() {
       pressRssUrlsText: toLines(settingsQuery.data.pressRssUrls),
       linkedinCompanyUrlsText: toLines(settingsQuery.data.linkedinCompanyUrls),
       matchThreshold: String(settingsQuery.data.matchThreshold),
+      linkedinDiscovery: settingsQuery.data.linkedinDiscovery,
     });
   }, [settingsQuery.data]);
 
@@ -128,6 +131,7 @@ export function RadarSettingsForm() {
         jobSearchQueries: fromLines(form.jobSearchQueriesText),
         pressRssUrls: fromLines(form.pressRssUrlsText),
         linkedinCompanyUrls: fromLines(form.linkedinCompanyUrlsText),
+        linkedinDiscovery: form.linkedinDiscovery,
         matchThreshold: Number(form.matchThreshold),
       };
 
@@ -388,6 +392,157 @@ export function RadarSettingsForm() {
               setForm((current) => ({ ...current, linkedinCompanyUrlsText: event.target.value }))
             }
           />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Decouverte LinkedIn</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 p-4">
+            <div>
+              <Label>Activer la decouverte automatique</Label>
+              <p className="text-sm text-muted-foreground">
+                Recherche de nouvelles entreprises via LinkedIn selon les filtres ci-dessous.
+              </p>
+            </div>
+            <Switch
+              checked={form.linkedinDiscovery.enabled}
+              onCheckedChange={(checked) =>
+                setForm((current) => ({
+                  ...current,
+                  linkedinDiscovery: { ...current.linkedinDiscovery, enabled: checked },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="ldSectors">Secteurs cibles (un par ligne)</Label>
+            <textarea
+              id="ldSectors"
+              className="min-h-28 w-full rounded-md border border-input bg-background/80 px-3 py-2 text-sm shadow-sm"
+              value={toLines(form.linkedinDiscovery.sectors)}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  linkedinDiscovery: { ...current.linkedinDiscovery, sectors: fromLines(event.target.value) },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="ldRegions">Regions cibles (une par ligne)</Label>
+            <textarea
+              id="ldRegions"
+              className="min-h-28 w-full rounded-md border border-input bg-background/80 px-3 py-2 text-sm shadow-sm"
+              value={toLines(form.linkedinDiscovery.regions)}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  linkedinDiscovery: { ...current.linkedinDiscovery, regions: fromLines(event.target.value) },
+                }))
+              }
+            />
+          </div>
+
+          <div className="space-y-3">
+            <Label htmlFor="ldKeywords">Mots-cles (un par ligne)</Label>
+            <textarea
+              id="ldKeywords"
+              className="min-h-28 w-full rounded-md border border-input bg-background/80 px-3 py-2 text-sm shadow-sm"
+              value={toLines(form.linkedinDiscovery.keywords)}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  linkedinDiscovery: { ...current.linkedinDiscovery, keywords: fromLines(event.target.value) },
+                }))
+              }
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="ldMinExternalRatio">Ratio externes minimum (0–1)</Label>
+              <Input
+                id="ldMinExternalRatio"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                value={form.linkedinDiscovery.minExternalRatio}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    linkedinDiscovery: {
+                      ...current.linkedinDiscovery,
+                      minExternalRatio: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ldMaxCompanies">Max entreprises par run</Label>
+              <Input
+                id="ldMaxCompanies"
+                type="number"
+                step="1"
+                min="1"
+                max="200"
+                value={form.linkedinDiscovery.maxCompaniesPerRun}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    linkedinDiscovery: {
+                      ...current.linkedinDiscovery,
+                      maxCompaniesPerRun: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ldMinHeadcount">Effectif minimum</Label>
+              <Input
+                id="ldMinHeadcount"
+                type="number"
+                step="1"
+                min="1"
+                value={form.linkedinDiscovery.minHeadcount}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    linkedinDiscovery: {
+                      ...current.linkedinDiscovery,
+                      minHeadcount: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ldMaxHeadcount">Effectif maximum</Label>
+              <Input
+                id="ldMaxHeadcount"
+                type="number"
+                step="1"
+                min="1"
+                value={form.linkedinDiscovery.maxHeadcount}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    linkedinDiscovery: {
+                      ...current.linkedinDiscovery,
+                      maxHeadcount: Number(event.target.value),
+                    },
+                  }))
+                }
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
