@@ -450,7 +450,7 @@ export async function recomputeProspectScores(orgId: string, matchThreshold?: nu
       heat: computed.heat,
       breakdown: computed.breakdown,
       computed_at: new Date().toISOString(),
-    });
+    }, { onConflict: 'company_id' });
 
     if (error) throw error;
     updated += 1;
