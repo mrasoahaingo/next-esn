@@ -1,8 +1,6 @@
 import { collectLinkedInDiscovery } from '@/lib/radar/collectors/linkedin-discovery';
 import { upsertDiscoveredCompany, insertRunLog } from '@/lib/radar/queries';
 import { getRadarSettings } from '@/lib/radar/settings';
-import type { DiscoveredCompany } from '@/lib/radar/collectors/linkedin-discovery';
-import type { ApiCall } from '@/lib/radar/schemas';
 
 async function fetchDiscoveryConfig(orgId: string) {
   'use step';
@@ -16,7 +14,10 @@ async function runDiscoveryCollector(config: NonNullable<Awaited<ReturnType<type
   return collectLinkedInDiscovery(config);
 }
 
-async function persistDiscoveredCompanies(orgId: string, companies: DiscoveredCompany[]) {
+async function persistDiscoveredCompanies(
+  orgId: string,
+  companies: Awaited<ReturnType<typeof collectLinkedInDiscovery>>['companies'],
+) {
   'use step';
   let upserted = 0;
   for (const company of companies) {
@@ -39,10 +40,10 @@ async function persistDiscoveredCompanies(orgId: string, companies: DiscoveredCo
 
 async function logDiscoveryRun(
   orgId: string,
-  result: { collected: number; upserted: number; calls: ApiCall[] },
+  result: { collected: number; upserted: number; calls: Awaited<ReturnType<typeof collectLinkedInDiscovery>>['calls'] },
 ) {
   'use step';
-  await insertRunLog(orgId, 'linkedin-discovery', result);
+  await insertRunLog(orgId, 'linkedin-discovery', result as Record<string, unknown>);
 }
 
 export async function collectLinkedInDiscoveryWorkflow(orgId: string) {
