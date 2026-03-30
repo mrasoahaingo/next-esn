@@ -63,38 +63,45 @@ export async function collectPublicMarkets(): Promise<{ signals: RawSignal[]; ca
   const calls: ApiCall[] = [];
 
   try {
-    const response = await fetch(`${CF_BASE}/scrape`, {
+    const targetUrl = 'https://www.boamp.fr/pages/recherche/?nature=appel-offre&rubrique=informatique';
+    const response = await fetch(`${CF_BASE}/json`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url: 'https://www.boamp.fr/pages/recherche/?nature=appel-offre&rubrique=informatique',
-        elements: [
-          {
-            selector: '.result-item',
-            fields: {
-              reference: { selector: '.ref', type: 'text' },
-              title: { selector: '.title', type: 'text' },
-              organization: { selector: '.org', type: 'text' },
-              deadline: { selector: '.date-limit', type: 'text' },
-              url: { selector: 'a', type: 'attribute', attribute: 'href' },
+        url: targetUrl,
+        prompt: 'Extract all visible public market notices (appels d\'offres). For each notice return: reference, title, organization, deadline, estimatedBudget (if visible), url.',
+        schema: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              reference: { type: 'string' },
+              title: { type: 'string' },
+              organization: { type: 'string' },
+              deadline: { type: 'string' },
+              estimatedBudget: { type: 'string' },
+              url: { type: 'string' },
             },
+            required: ['title', 'organization'],
           },
-        ],
+        },
+        waitForSelector: 'body',
+        gotoOptions: { waitUntil: 'domcontentloaded' },
       }),
     });
 
     logBoampCall('http_response', {
-      targetUrl: 'https://www.boamp.fr/pages/recherche/?nature=appel-offre&rubrique=informatique',
+      targetUrl,
       status: response.status,
       ok: response.ok,
     });
 
     if (!response.ok) {
       const errorSnippet = (await response.text()).slice(0, 200);
-      calls.push({ endpoint: `${CF_BASE}/scrape`, status: response.status, ok: false, responseData: { errorSnippet } });
+      calls.push({ endpoint: `${CF_BASE}/json`, status: response.status, ok: false, responseData: { errorSnippet } });
       console.error('collectPublicMarkets:', response.status, errorSnippet);
       return { signals: [], calls };
     }
@@ -102,7 +109,7 @@ export async function collectPublicMarkets(): Promise<{ signals: RawSignal[]; ca
     const json = await response.json();
     const results = Array.isArray(json.result) ? json.result : [];
     calls.push({
-      endpoint: `${CF_BASE}/scrape`,
+      endpoint: `${CF_BASE}/json`,
       status: response.status,
       ok: true,
       responseData: { itemCount: results.length },

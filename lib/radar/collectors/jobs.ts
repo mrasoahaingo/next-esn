@@ -123,6 +123,9 @@ export async function collectJobOffers(searchQueries: string[]): Promise<{ signa
     } catch (error) {
       console.error('collectJobOffers:', error);
     }
+
+    // Éviter le rate limit Cloudflare Browser Rendering (429)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   return { signals, calls };
