@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.1)
 Phase: 4
 Plan: Not started
 Status: Phase 3 complete
-Last activity: 2026-03-26 — Quick 260326-x7n (étapes analyse mission)
+Last activity: 2026-03-30 — Quick 260330-iml (Stagehand OpenAI migration)
 
 Progress: [███░░░░░░░] 33%
 
@@ -59,6 +59,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260326-x7n | Étapes analyse mission inline cohérentes si run actif avant reconnexion flux | 2026-03-26 | d0f0fad | [260326-x7n-clarifier-tapes-analyse-mission-inline-q](./quick/260326-x7n-clarifier-tapes-analyse-mission-inline-q/) |
 | 260329-wv9 | LinkedIn Discovery wired end-to-end: DB migration, settings read/write, RadarSettingsForm UI section | 2026-03-29 | 4bf355c | [260329-wv9-linkedin-discovery-settings-migration-db](./quick/260329-wv9-linkedin-discovery-settings-migration-db/) |
 | 260330-hbc | ApiCall type + collectors return { signals, calls } + run log expandable table | 2026-03-30 | 6b2857c | [260330-hbc-log-appel-et-r-ponse-api-dans-radar-run-](./quick/260330-hbc-log-appel-et-r-ponse-api-dans-radar-run-/) |
+| 260330-iml | Remplacer Anthropic par OpenAI dans les collectors Stagehand boamp et jobs | 2026-03-30 | 552a02c | [260330-iml-remplacer-anthropic-par-openai-dans-les-](./quick/260330-iml-remplacer-anthropic-par-openai-dans-les-/) |
 
 ## Session continuity
 
