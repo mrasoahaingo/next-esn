@@ -549,6 +549,101 @@ export async function recomputeProspectScores(orgId: string, matchThreshold?: nu
   return updated;
 }
 
+export async function listRunLogs(orgId: string, limit = 100) {
+  const { data, error } = await getSupabase()
+    .from('radar_run_logs')
+    .select('id, source, result, logged_at')
+    .eq('org_id', orgId)
+    .order('logged_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as Array<{
+    id: string;
+    source: string;
+    result: Record<string, unknown>;
+    logged_at: string;
+  }>;
+}
+
+export async function upsertDiscoveredCompany(
+  orgId: string,
+  company: { name: string; linkedinUrl: string; sector?: string; headcount?: number; city?: string },
+): Promise<string> {
+  const supabase = getSupabase();
+
+  const { data: existing } = await supabase
+    .from('radar_companies')
+    .select('id')
+    .eq('org_id', orgId)
+    .eq('linkedin_url', company.linkedinUrl)
+    .maybeSingle();
+
+  if (existing?.id) {
+    await supabase
+      .from('radar_companies')
+      .update({
+        name: company.name.trim(),
+        sector: company.sector ?? null,
+        headcount: company.headcount ?? null,
+        city: company.city ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+    return existing.id;
+  }
+
+  const normalizedName = normalizeCompanyName(company.name);
+  const { data: allByOrg } = await supabase
+    .from('radar_companies')
+    .select('id, name')
+    .eq('org_id', orgId);
+
+  const byName = (allByOrg ?? []).find((row) => normalizeCompanyName(row.name) === normalizedName);
+  if (byName?.id) {
+    await supabase
+      .from('radar_companies')
+      .update({
+        linkedin_url: company.linkedinUrl,
+        sector: company.sector ?? null,
+        headcount: company.headcount ?? null,
+        city: company.city ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', byName.id);
+    return byName.id;
+  }
+
+  const { data: inserted, error } = await supabase
+    .from('radar_companies')
+    .insert({
+      org_id: orgId,
+      name: company.name.trim(),
+      linkedin_url: company.linkedinUrl,
+      sector: company.sector ?? null,
+      headcount: company.headcount ?? null,
+      city: company.city ?? null,
+      enrichment_data: {},
+    })
+    .select('id')
+    .single();
+
+  if (error || !inserted) throw error ?? new Error('Unable to upsert discovered company');
+  return inserted.id;
+}
+
+export async function insertRunLog(
+  orgId: string,
+  source: 'jobs' | 'boamp' | 'press' | 'linkedin' | 'linkedin-discovery' | 'scoring' | 'enrichment',
+  result: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await getSupabase()
+    .from('radar_run_logs')
+    .insert({ org_id: orgId, source, result });
+
+  if (error) console.error('insertRunLog:', error);
+}
+
 export async function listRadarOrgIds(): Promise<string[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase

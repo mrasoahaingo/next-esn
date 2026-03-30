@@ -1,0 +1,61 @@
+import { collectLinkedInDiscovery } from '@/lib/radar/collectors/linkedin-discovery';
+import { upsertDiscoveredCompany, insertRunLog } from '@/lib/radar/queries';
+import { getRadarSettings } from '@/lib/radar/settings';
+import type { DiscoveredCompany } from '@/lib/radar/collectors/linkedin-discovery';
+import type { ApiCall } from '@/lib/radar/schemas';
+
+async function fetchDiscoveryConfig(orgId: string) {
+  'use step';
+  const settings = await getRadarSettings(orgId);
+  if (!settings.linkedinDiscovery.enabled) return null;
+  return settings.linkedinDiscovery;
+}
+
+async function runDiscoveryCollector(config: NonNullable<Awaited<ReturnType<typeof fetchDiscoveryConfig>>>) {
+  'use step';
+  return collectLinkedInDiscovery(config);
+}
+
+async function persistDiscoveredCompanies(orgId: string, companies: DiscoveredCompany[]) {
+  'use step';
+  let upserted = 0;
+  for (const company of companies) {
+    if (!company.linkedinUrl) continue;
+    try {
+      await upsertDiscoveredCompany(orgId, {
+        name: company.name,
+        linkedinUrl: company.linkedinUrl,
+        sector: company.sector,
+        headcount: company.headcount,
+        city: company.city,
+      });
+      upserted += 1;
+    } catch (error) {
+      console.error('persistDiscoveredCompanies:', company.name, error);
+    }
+  }
+  return upserted;
+}
+
+async function logDiscoveryRun(
+  orgId: string,
+  result: { collected: number; upserted: number; calls: ApiCall[] },
+) {
+  'use step';
+  await insertRunLog(orgId, 'linkedin-discovery', result);
+}
+
+export async function collectLinkedInDiscoveryWorkflow(orgId: string) {
+  'use workflow';
+
+  const config = await fetchDiscoveryConfig(orgId);
+  if (!config) {
+    await logDiscoveryRun(orgId, { collected: 0, upserted: 0, calls: [] });
+    return { collected: 0, upserted: 0 };
+  }
+
+  const { companies, calls } = await runDiscoveryCollector(config);
+  const upserted = await persistDiscoveredCompanies(orgId, companies);
+  await logDiscoveryRun(orgId, { collected: companies.length, upserted, calls });
+  return { collected: companies.length, upserted };
+}
