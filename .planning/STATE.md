@@ -56,6 +56,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 |---|-------------|------|--------|-----------|
 | 260326-x7n | Étapes analyse mission inline cohérentes si run actif avant reconnexion flux | 2026-03-26 | d0f0fad | [260326-x7n-clarifier-tapes-analyse-mission-inline-q](./quick/260326-x7n-clarifier-tapes-analyse-mission-inline-q/) |
 | 260329-wv9 | LinkedIn Discovery wired end-to-end: DB migration, settings read/write, RadarSettingsForm UI section | 2026-03-29 | 4bf355c | [260329-wv9-linkedin-discovery-settings-migration-db](./quick/260329-wv9-linkedin-discovery-settings-migration-db/) |
+| 260330-hbc | ApiCall type + collectors return { signals, calls } + run log expandable table | 2026-03-30 | 6b2857c | [260330-hbc-log-appel-et-r-ponse-api-dans-radar-run-](./quick/260330-hbc-log-appel-et-r-ponse-api-dans-radar-run-/) |
 
 ## Session continuity
 
