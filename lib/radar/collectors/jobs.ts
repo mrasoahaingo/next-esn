@@ -1,4 +1,4 @@
-import { JobOfferExtractionSchema, RawSignalSchema, type RawSignal } from '@/lib/radar/schemas';
+import { JobOfferExtractionSchema, RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
 
 const CF_BASE = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering`;
 
@@ -10,11 +10,12 @@ function logJobCall(event: string, payload: Record<string, unknown>) {
   console.info('[radar][jobs]', event, payload);
 }
 
-export async function collectJobOffers(searchQueries: string[]): Promise<RawSignal[]> {
+export async function collectJobOffers(searchQueries: string[]): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
   const signals: RawSignal[] = [];
+  const calls: ApiCall[] = [];
   const token = process.env.CLOUDFLARE_API_TOKEN;
 
-  if (!token || !process.env.CLOUDFLARE_ACCOUNT_ID) return signals;
+  if (!token || !process.env.CLOUDFLARE_ACCOUNT_ID) return { signals, calls };
 
   for (const query of searchQueries) {
     try {
@@ -57,11 +58,22 @@ export async function collectJobOffers(searchQueries: string[]): Promise<RawSign
       });
 
       if (!response.ok) {
-        console.error('collectJobOffers:', response.status, await response.text());
+        const errorSnippet = (await response.text()).slice(0, 200);
+        calls.push({ endpoint: `${CF_BASE}/json`, status: response.status, ok: false, responseData: { errorSnippet } });
+        console.error('collectJobOffers:', response.status, errorSnippet);
         continue;
       }
 
       const json = await response.json();
+      calls.push({
+        endpoint: `${CF_BASE}/json`,
+        status: response.status,
+        ok: true,
+        responseData: {
+          resultCount: json.result?.length ?? 0,
+          sample: json.result?.[0]?.title?.slice(0, 200) ?? null,
+        },
+      });
       const parsed = JobOfferExtractionSchema.safeParse({ offers: json.result ?? [] });
       if (!parsed.success) {
         logJobCall('parse_failed', {
@@ -113,5 +125,5 @@ export async function collectJobOffers(searchQueries: string[]): Promise<RawSign
     }
   }
 
-  return signals;
+  return { signals, calls };
 }

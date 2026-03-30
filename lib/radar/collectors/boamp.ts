@@ -1,7 +1,7 @@
 import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
-import { PublicMarketSchema, RawSignalSchema, type RawSignal } from '@/lib/radar/schemas';
+import { PublicMarketSchema, RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
 
 const CF_BASE = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering`;
 
@@ -56,9 +56,11 @@ async function extractBudgetWithAi(text: string): Promise<number | null> {
   }
 }
 
-export async function collectPublicMarkets(): Promise<RawSignal[]> {
+export async function collectPublicMarkets(): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
   const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!token || !process.env.CLOUDFLARE_ACCOUNT_ID) return [];
+  if (!token || !process.env.CLOUDFLARE_ACCOUNT_ID) return { signals: [], calls: [] };
+
+  const calls: ApiCall[] = [];
 
   try {
     const response = await fetch(`${CF_BASE}/scrape`, {
@@ -91,12 +93,20 @@ export async function collectPublicMarkets(): Promise<RawSignal[]> {
     });
 
     if (!response.ok) {
-      console.error('collectPublicMarkets:', response.status, await response.text());
-      return [];
+      const errorSnippet = (await response.text()).slice(0, 200);
+      calls.push({ endpoint: `${CF_BASE}/scrape`, status: response.status, ok: false, responseData: { errorSnippet } });
+      console.error('collectPublicMarkets:', response.status, errorSnippet);
+      return { signals: [], calls };
     }
 
     const json = await response.json();
     const results = Array.isArray(json.result) ? json.result : [];
+    calls.push({
+      endpoint: `${CF_BASE}/scrape`,
+      status: response.status,
+      ok: true,
+      responseData: { itemCount: results.length },
+    });
     const signals: RawSignal[] = [];
     let parsedCount = 0;
 
@@ -142,9 +152,9 @@ export async function collectPublicMarkets(): Promise<RawSignal[]> {
       signalCount: signals.length,
     });
 
-    return signals;
+    return { signals, calls };
   } catch (error) {
     console.error('collectPublicMarkets:', error);
-    return [];
+    return { signals: [], calls };
   }
 }

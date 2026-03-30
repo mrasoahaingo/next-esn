@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { RawSignalSchema, type RawSignal } from '@/lib/radar/schemas';
+import { RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
 
 const PROXYCURL_BASE = 'https://nubela.co/proxycurl/api';
 
@@ -35,12 +35,13 @@ function logLinkedInCall(event: string, payload: Record<string, unknown>) {
   console.info('[radar][linkedin]', event, payload);
 }
 
-export async function collectLinkedInSignals(companyUrls: string[]): Promise<RawSignal[]> {
+export async function collectLinkedInSignals(companyUrls: string[]): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
   const apiKey = process.env.PROXYCURL_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) return { signals: [], calls: [] };
 
   const headers = { Authorization: `Bearer ${apiKey}` };
   const signals: RawSignal[] = [];
+  const calls: ApiCall[] = [];
 
   for (const url of companyUrls) {
     try {
@@ -60,11 +61,23 @@ export async function collectLinkedInSignals(companyUrls: string[]): Promise<Raw
       });
 
       if (!employeesResponse.ok) {
+        calls.push({
+          endpoint: `${PROXYCURL_BASE}/linkedin/company/employees`,
+          status: employeesResponse.status,
+          ok: false,
+          responseData: { errorSnippet: String(employeesResponse.status) },
+        });
         console.error('collectLinkedInSignals employees:', employeesResponse.status);
         continue;
       }
 
       const employeesJson = await employeesResponse.json();
+      calls.push({
+        endpoint: `${PROXYCURL_BASE}/linkedin/company/employees`,
+        status: employeesResponse.status,
+        ok: true,
+        responseData: { employeeCount: employeesJson.employees?.length ?? 0 },
+      });
       const employeesParsed = EmployeesResponseSchema.safeParse(employeesJson);
       if (!employeesParsed.success) {
         logLinkedInCall('employees_parse_failed', {
@@ -103,9 +116,16 @@ export async function collectLinkedInSignals(companyUrls: string[]): Promise<Raw
         ok: companyResponse.ok,
       });
 
-      const companyParsed = CompanyResponseSchema.safeParse(
-        companyResponse.ok ? await companyResponse.json() : {},
-      );
+      const companyJson = companyResponse.ok ? await companyResponse.json() : {};
+      calls.push({
+        endpoint: `${PROXYCURL_BASE}/linkedin/company`,
+        status: companyResponse.status,
+        ok: companyResponse.ok,
+        responseData: companyResponse.ok
+          ? { name: companyJson.name ?? null }
+          : { errorSnippet: String(companyResponse.status) },
+      });
+      const companyParsed = CompanyResponseSchema.safeParse(companyJson);
 
       const esnCounts = Object.entries(
         externals.reduce<Record<string, number>>((accumulator, employee) => {
@@ -158,8 +178,21 @@ export async function collectLinkedInSignals(companyUrls: string[]): Promise<Raw
         ok: jobListingsResponse.ok,
       });
 
-      if (jobListingsResponse.ok) {
+      if (!jobListingsResponse.ok) {
+        calls.push({
+          endpoint: `${PROXYCURL_BASE}/linkedin/company/job/`,
+          status: jobListingsResponse.status,
+          ok: false,
+          responseData: { errorSnippet: String(jobListingsResponse.status) },
+        });
+      } else {
         const jobsJson = await jobListingsResponse.json();
+        calls.push({
+          endpoint: `${PROXYCURL_BASE}/linkedin/company/job/`,
+          status: jobListingsResponse.status,
+          ok: true,
+          responseData: { jobCount: jobsJson.job?.length ?? 0 },
+        });
         const jobsParsed = JobListingsResponseSchema.safeParse(jobsJson);
 
         if (jobsParsed.success && jobsParsed.data.job.length > 0) {
@@ -203,5 +236,5 @@ export async function collectLinkedInSignals(companyUrls: string[]): Promise<Raw
     }
   }
 
-  return signals;
+  return { signals, calls };
 }

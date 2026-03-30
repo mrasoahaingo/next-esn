@@ -1,16 +1,17 @@
 import { generateObject } from 'ai';
-import { PressExtractionSchema, RawSignalSchema, type RawSignal } from '@/lib/radar/schemas';
+import { PressExtractionSchema, RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
 
 function logPressCall(event: string, payload: Record<string, unknown>) {
   console.info('[radar][press]', event, payload);
 }
 
-export async function collectPressSignals(rssUrls: string[]): Promise<RawSignal[]> {
+export async function collectPressSignals(rssUrls: string[]): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
-  if (!apiKey) return [];
+  if (!apiKey) return { signals: [], calls: [] };
 
   const signals: RawSignal[] = [];
+  const calls: ApiCall[] = [];
 
   for (const rssUrl of rssUrls) {
     try {
@@ -33,12 +34,20 @@ export async function collectPressSignals(rssUrls: string[]): Promise<RawSignal[
       });
 
       if (!scrapeResponse.ok) {
-        console.error('collectPressSignals:', scrapeResponse.status, await scrapeResponse.text());
+        const errorSnippet = (await scrapeResponse.text()).slice(0, 200);
+        calls.push({ endpoint: 'https://api.firecrawl.dev/v2/scrape', status: scrapeResponse.status, ok: false, responseData: { errorSnippet } });
+        console.error('collectPressSignals:', scrapeResponse.status, errorSnippet);
         continue;
       }
 
       const article = await scrapeResponse.json();
       const markdown = article?.data?.markdown;
+      calls.push({
+        endpoint: 'https://api.firecrawl.dev/v2/scrape',
+        status: scrapeResponse.status,
+        ok: true,
+        responseData: { markdownLength: typeof markdown === 'string' ? markdown.length : 0 },
+      });
       if (typeof markdown !== 'string' || !markdown.trim()) {
         logPressCall('empty_markdown', { rssUrl });
         continue;
@@ -56,6 +65,15 @@ ${markdown}`,
       });
 
       const parsed = PressExtractionSchema.safeParse(extraction.object);
+      calls.push({
+        endpoint: 'llm/gemini-2.5-flash',
+        status: 200,
+        ok: true,
+        responseData: {
+          signalCount: parsed.success ? parsed.data.signals.length : 0,
+          model: 'google/gemini-2.5-flash',
+        },
+      });
       if (!parsed.success) {
         logPressCall('parse_failed', {
           rssUrl,
@@ -109,5 +127,5 @@ ${markdown}`,
     }
   }
 
-  return signals;
+  return { signals, calls };
 }

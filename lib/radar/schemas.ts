@@ -188,3 +188,10 @@ export const RadarSourceStatusSchema = z.object({
   detail: z.string(),
 });
 export type RadarSourceStatus = z.infer<typeof RadarSourceStatusSchema>;
+
+export type ApiCall = {
+  endpoint: string;       // URL called (no auth tokens, clean URL)
+  status: number;         // HTTP status code
+  ok: boolean;
+  responseData: unknown;  // Lean summary — counts, names, truncated snippets only
+};
