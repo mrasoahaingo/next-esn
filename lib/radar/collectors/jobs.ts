@@ -1,6 +1,5 @@
+import { Stagehand } from '@browserbasehq/stagehand';
 import { JobOfferExtractionSchema, RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
-
-const CF_BASE = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering`;
 
 function extractTechnologies(offers: Array<{ technologies: string[] }>) {
   return [...new Set(offers.flatMap((offer) => offer.technologies).filter(Boolean))];
@@ -10,122 +9,79 @@ function logJobCall(event: string, payload: Record<string, unknown>) {
   console.info('[radar][jobs]', event, payload);
 }
 
+function createStagehand() {
+  return new Stagehand({
+    env: 'BROWSERBASE',
+    apiKey: process.env.BROWSERBASE_API_KEY!,
+    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+    modelName: 'claude-3-5-sonnet-20241022',
+    modelClientOptions: { apiKey: process.env.ANTHROPIC_API_KEY! },
+    verbose: 0,
+  });
+}
+
 export async function collectJobOffers(searchQueries: string[]): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
+  if (!process.env.BROWSERBASE_API_KEY || !process.env.BROWSERBASE_PROJECT_ID) {
+    return { signals: [], calls: [] };
+  }
+
   const signals: RawSignal[] = [];
   const calls: ApiCall[] = [];
-  const token = process.env.CLOUDFLARE_API_TOKEN;
+  const stagehand = createStagehand();
 
-  if (!token || !process.env.CLOUDFLARE_ACCOUNT_ID) return { signals, calls };
+  try {
+    await stagehand.init();
 
-  for (const query of searchQueries) {
-    try {
+    for (const query of searchQueries) {
       const url = `https://www.indeed.fr/jobs?q=${encodeURIComponent(query)}&l=France`;
 
-      const response = await fetch(`${CF_BASE}/json`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url,
-          prompt:
-            'Extract all visible job offers from this page. For each offer return title, company, location, contractType, technologies, seniorityLevel, salaryRange, postedDate and url.',
-          schema: {
-            type: 'object',
-            properties: {
-              title: { type: 'string' },
-              company: { type: 'string' },
-              location: { type: 'string' },
-              contractType: { type: 'string' },
-              technologies: { type: 'array', items: { type: 'string' } },
-              seniorityLevel: { type: 'string' },
-              salaryRange: { type: 'string' },
-              postedDate: { type: 'string' },
-              url: { type: 'string' },
-            },
-            required: ['title', 'company', 'location', 'contractType', 'technologies', 'seniorityLevel'],
-          },
-          waitForSelector: 'body',
-        }),
-      });
+      try {
+        await stagehand.page.goto(url, { waitUntil: 'domcontentloaded' });
 
-      logJobCall('http_response', {
-        query,
-        targetUrl: url,
-        status: response.status,
-        ok: response.ok,
-      });
-
-      if (!response.ok) {
-        const errorSnippet = (await response.text()).slice(0, 200);
-        calls.push({ endpoint: `${CF_BASE}/json`, status: response.status, ok: false, responseData: { errorSnippet } });
-        console.error('collectJobOffers:', response.status, errorSnippet);
-        continue;
-      }
-
-      const json = await response.json();
-      calls.push({
-        endpoint: `${CF_BASE}/json`,
-        status: response.status,
-        ok: true,
-        responseData: {
-          resultCount: json.result?.length ?? 0,
-          sample: json.result?.[0]?.title?.slice(0, 200) ?? null,
-        },
-      });
-      const parsed = JobOfferExtractionSchema.safeParse({ offers: json.result ?? [] });
-      if (!parsed.success) {
-        logJobCall('parse_failed', {
-          query,
-          issueCount: parsed.error.issues.length,
+        const extracted = await stagehand.extract({
+          instruction: `Extrais toutes les offres d'emploi visibles sur cette page Indeed. Pour chaque offre : titre du poste, entreprise, lieu, type de contrat, technologies mentionnées, niveau d'expérience, fourchette de salaire si visible, date de publication, URL.`,
+          schema: JobOfferExtractionSchema,
         });
-        continue;
-      }
 
-      logJobCall('parsed', {
-        query,
-        offerCount: parsed.data.offers.length,
-      });
+        const offerCount = extracted.offers?.length ?? 0;
+        calls.push({ endpoint: url, status: 200, ok: true, responseData: { query, offerCount } });
+        logJobCall('extracted', { query, offerCount });
 
-      const grouped = Object.groupBy(parsed.data.offers, (offer) => offer.company.trim());
-      let signalsForQuery = 0;
-      for (const [company, offers] of Object.entries(grouped)) {
-        if (!company || !offers || offers.length === 0) continue;
+        const grouped = Object.groupBy(extracted.offers ?? [], (offer) => offer.company.trim());
+        let signalsForQuery = 0;
 
-        const candidate = {
-          source: 'job_offer' as const,
-          title: `${offers.length} offres ${extractTechnologies(offers).slice(0, 3).join('/') || 'IT'}`,
-          rawContent: JSON.stringify(offers),
-          weight: offers.length >= 5 ? 25 : offers.length >= 3 ? 20 : offers.length >= 2 ? 15 : 10,
-          metadata: {
-            query,
-            offerCount: offers.length,
-            technologies: extractTechnologies(offers),
-            contractTypes: [...new Set(offers.map((offer) => offer.contractType).filter(Boolean))],
-            urls: offers.map((offer) => offer.url).filter(Boolean),
-          },
-          companyName: company,
-        };
+        for (const [company, offers] of Object.entries(grouped)) {
+          if (!company || !offers || offers.length === 0) continue;
 
-        const signal = RawSignalSchema.safeParse(candidate);
-        if (signal.success) {
-          signals.push(signal.data);
-          signalsForQuery += 1;
+          const signal = RawSignalSchema.safeParse({
+            source: 'job_offer',
+            title: `${offers.length} offres ${extractTechnologies(offers).slice(0, 3).join('/') || 'IT'}`,
+            rawContent: JSON.stringify(offers),
+            weight: offers.length >= 5 ? 25 : offers.length >= 3 ? 20 : offers.length >= 2 ? 15 : 10,
+            metadata: {
+              query,
+              offerCount: offers.length,
+              technologies: extractTechnologies(offers),
+              contractTypes: [...new Set(offers.map((o) => o.contractType).filter(Boolean))],
+              urls: offers.map((o) => o.url).filter(Boolean),
+            },
+            companyName: company,
+          });
+
+          if (signal.success) {
+            signals.push(signal.data);
+            signalsForQuery += 1;
+          }
         }
+
+        logJobCall('query_completed', { query, signalCount: signalsForQuery });
+      } catch (error) {
+        calls.push({ endpoint: url, status: 0, ok: false, responseData: { error: String(error).slice(0, 200) } });
+        console.error('collectJobOffers query:', query, error);
       }
-
-      logJobCall('query_completed', {
-        query,
-        companyCount: Object.keys(grouped).length,
-        signalCount: signalsForQuery,
-      });
-    } catch (error) {
-      console.error('collectJobOffers:', error);
     }
-
-    // Éviter le rate limit Cloudflare Browser Rendering (429)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  } finally {
+    await stagehand.close();
   }
 
   return { signals, calls };

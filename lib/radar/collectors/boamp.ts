@@ -1,17 +1,14 @@
-import { generateObject } from 'ai';
 import { z } from 'zod';
+import { generateObject } from 'ai';
+import { Stagehand } from '@browserbasehq/stagehand';
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
-import { PublicMarketSchema, RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
-
-const CF_BASE = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/browser-rendering`;
+import { RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
 
 function logBoampCall(event: string, payload: Record<string, unknown>) {
   console.info('[radar][boamp]', event, payload);
 }
 
-// Extrait un budget estimé en euros depuis un texte brut (titre ou description)
 function parseBudgetEuros(text: string): number | null {
-  // Patterns: "500 000 €", "1,5M€", "1.5 million euros", "150K€"
   const millionMatch = text.match(/(\d+[\s,.]?\d*)\s*(?:m|million)[\s]*(?:eur|€|euros?)/i);
   if (millionMatch) {
     const value = parseFloat(millionMatch[1].replace(/[\s,]/g, '.'));
@@ -56,112 +53,86 @@ async function extractBudgetWithAi(text: string): Promise<number | null> {
   }
 }
 
+const BoampExtractionSchema = z.object({
+  notices: z.array(
+    z.object({
+      reference: z.string().optional(),
+      title: z.string(),
+      organization: z.string(),
+      deadline: z.string().optional(),
+      estimatedBudget: z.string().optional(),
+      url: z.string().optional(),
+    }),
+  ),
+});
+
 export async function collectPublicMarkets(): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
-  const token = process.env.CLOUDFLARE_API_TOKEN;
-  if (!token || !process.env.CLOUDFLARE_ACCOUNT_ID) return { signals: [], calls: [] };
+  if (!process.env.BROWSERBASE_API_KEY || !process.env.BROWSERBASE_PROJECT_ID) {
+    return { signals: [], calls: [] };
+  }
 
   const calls: ApiCall[] = [];
+  const signals: RawSignal[] = [];
+  const targetUrl = 'https://www.boamp.fr/pages/recherche/?nature=appel-offre&rubrique=informatique';
+
+  const stagehand = new Stagehand({
+    env: 'BROWSERBASE',
+    apiKey: process.env.BROWSERBASE_API_KEY!,
+    projectId: process.env.BROWSERBASE_PROJECT_ID!,
+    modelName: 'claude-3-5-sonnet-20241022',
+    modelClientOptions: { apiKey: process.env.ANTHROPIC_API_KEY! },
+    verbose: 0,
+  });
 
   try {
-    const targetUrl = 'https://www.boamp.fr/pages/recherche/?nature=appel-offre&rubrique=informatique';
-    const response = await fetch(`${CF_BASE}/json`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: targetUrl,
-        prompt: 'Extract all visible public market notices (appels d\'offres). For each notice return: reference, title, organization, deadline, estimatedBudget (if visible), url.',
-        schema: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              reference: { type: 'string' },
-              title: { type: 'string' },
-              organization: { type: 'string' },
-              deadline: { type: 'string' },
-              estimatedBudget: { type: 'string' },
-              url: { type: 'string' },
-            },
-            required: ['title', 'organization'],
-          },
-        },
-        waitForSelector: 'body',
-        gotoOptions: { waitUntil: 'domcontentloaded' },
-      }),
+    await stagehand.init();
+    await stagehand.page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+
+    const extracted = await stagehand.extract({
+      instruction: `Extrais tous les appels d'offres publics IT visibles sur cette page BOAMP. Pour chaque avis : référence, intitulé du marché, organisme acheteur, date limite de réponse, montant estimé si visible, URL de l'avis.`,
+      schema: BoampExtractionSchema,
     });
 
-    logBoampCall('http_response', {
-      targetUrl,
-      status: response.status,
-      ok: response.ok,
-    });
+    const notices = extracted.notices ?? [];
+    calls.push({ endpoint: targetUrl, status: 200, ok: true, responseData: { noticeCount: notices.length } });
+    logBoampCall('extracted', { noticeCount: notices.length });
 
-    if (!response.ok) {
-      const errorSnippet = (await response.text()).slice(0, 200);
-      calls.push({ endpoint: `${CF_BASE}/json`, status: response.status, ok: false, responseData: { errorSnippet } });
-      console.error('collectPublicMarkets:', response.status, errorSnippet);
-      return { signals: [], calls };
-    }
-
-    const json = await response.json();
-    const results = Array.isArray(json.result) ? json.result : [];
-    calls.push({
-      endpoint: `${CF_BASE}/json`,
-      status: response.status,
-      ok: true,
-      responseData: { itemCount: results.length },
-    });
-    const signals: RawSignal[] = [];
     let parsedCount = 0;
+    for (const item of notices) {
+      const haystack = [item.title, item.estimatedBudget].filter(Boolean).join(' ');
+      if (!/java|angular|cloud|devops|numerique|developpement|informatique|data|cyber/i.test(haystack)) continue;
 
-    for (const item of results) {
-      const parsed = PublicMarketSchema.safeParse({
-        ...item,
-        lots: [{ number: '1', description: [item?.title, item?.reference].filter(Boolean).join(' - ') }],
-      });
-      if (!parsed.success) continue;
       parsedCount += 1;
-
-      const haystack = [parsed.data.title, parsed.data.estimatedBudget, ...parsed.data.lots.map((lot) => lot.description)].filter(Boolean).join(' ');
-      if (!/java|angular|cloud|devops|numerique|developpement|informatique|data|cyber/i.test(haystack)) {
-        continue;
-      }
       const budgetRegex = parseBudgetEuros(haystack);
-      // Si le regex ne suffit pas, on tente l'IA (seulement si estimatedBudget fourni)
-      const budgetEuros = budgetRegex ?? (parsed.data.estimatedBudget ? await extractBudgetWithAi(parsed.data.estimatedBudget) : null);
+      const budgetEuros = budgetRegex ?? (item.estimatedBudget ? await extractBudgetWithAi(item.estimatedBudget) : null);
       const weight = budgetToWeight(budgetEuros);
 
       const signal = RawSignalSchema.safeParse({
         source: 'public_market',
-        title: `AO: ${parsed.data.title}`,
-        rawContent: JSON.stringify(parsed.data),
+        title: `AO: ${item.title}`,
+        rawContent: JSON.stringify(item),
         weight,
         metadata: {
-          reference: parsed.data.reference,
-          organization: parsed.data.organization,
-          deadline: parsed.data.deadline,
-          url: parsed.data.url,
+          reference: item.reference ?? null,
+          organization: item.organization,
+          deadline: item.deadline ?? null,
+          url: item.url ?? null,
           budgetEuros,
-          budgetLabel: parsed.data.estimatedBudget ?? null,
+          budgetLabel: item.estimatedBudget ?? null,
         },
-        companyName: parsed.data.organization,
+        companyName: item.organization,
       });
 
       if (signal.success) signals.push(signal.data);
     }
 
-    logBoampCall('completed', {
-      rawCount: results.length,
-      parsedCount,
-      signalCount: signals.length,
-    });
-
-    return { signals, calls };
+    logBoampCall('completed', { rawCount: notices.length, parsedCount, signalCount: signals.length });
   } catch (error) {
+    calls.push({ endpoint: targetUrl, status: 0, ok: false, responseData: { error: String(error).slice(0, 200) } });
     console.error('collectPublicMarkets:', error);
-    return { signals: [], calls };
+  } finally {
+    await stagehand.close();
   }
+
+  return { signals, calls };
 }
