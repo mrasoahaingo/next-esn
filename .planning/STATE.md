@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: completed
-stopped_at: Completed quick-260330-iml-PLAN.md
-last_updated: "2026-03-30T12:58:51.079Z"
-last_activity: 2026-03-26 — Quick 260326-x7n (étapes analyse mission)
+stopped_at: Completed quick-260330-n7n-PLAN.md
+last_updated: "2026-03-30T14:58:54.955Z"
+last_activity: 2026-03-30 — Quick 260330-iml (Stagehand OpenAI migration)
 progress:
   total_phases: 3
   completed_phases: 1
@@ -60,11 +60,12 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260329-wv9 | LinkedIn Discovery wired end-to-end: DB migration, settings read/write, RadarSettingsForm UI section | 2026-03-29 | 4bf355c | [260329-wv9-linkedin-discovery-settings-migration-db](./quick/260329-wv9-linkedin-discovery-settings-migration-db/) |
 | 260330-hbc | ApiCall type + collectors return { signals, calls } + run log expandable table | 2026-03-30 | 6b2857c | [260330-hbc-log-appel-et-r-ponse-api-dans-radar-run-](./quick/260330-hbc-log-appel-et-r-ponse-api-dans-radar-run-/) |
 | 260330-iml | Remplacer Anthropic par OpenAI dans les collectors Stagehand boamp et jobs | 2026-03-30 | 552a02c | [260330-iml-remplacer-anthropic-par-openai-dans-les-](./quick/260330-iml-remplacer-anthropic-par-openai-dans-les-/) |
+| 260330-n7n | Désactiver boamp/jobs dans le cron, ajouter collecteur LinkedIn browser Stagehand | 2026-03-30 | cddd599 | [260330-n7n-desactiver-canaux-boamp-et-jobs-linkedin](./quick/260330-n7n-desactiver-canaux-boamp-et-jobs-linkedin/) |
 
 ## Session continuity
 
-**Last session:** 2026-03-30T12:44:05.733Z
-**Stopped at:** Completed quick-260330-iml-PLAN.md
+**Last session:** 2026-03-30T14:58:54.951Z
+**Stopped at:** Completed quick-260330-n7n-PLAN.md
 **Resume file:** None
 
 **Next step:** `/gsd-plan-phase 4` or `/gsd-discuss-phase 4`
