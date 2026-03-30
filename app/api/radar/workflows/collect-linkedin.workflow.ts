@@ -1,5 +1,6 @@
 import { getSupabase } from '@/lib/utils/supabase';
 import { collectLinkedInSignals } from '@/lib/radar/collectors/linkedin';
+import { collectLinkedInBrowserSignals } from '@/lib/radar/collectors/linkedin-browser';
 import { insertRunLog, upsertSignals } from '@/lib/radar/queries';
 import { getRadarSettings } from '@/lib/radar/settings';
 import type { ApiCall, RawSignal } from '@/lib/radar/schemas';
@@ -25,10 +26,18 @@ async function fetchCompanyUrls(orgId: string) {
   ];
 }
 
-async function fetchLinkedInSignals(urls: string[]) {
+async function fetchAllLinkedInSignals(urls: string[]) {
   'use step';
 
-  return collectLinkedInSignals(urls);
+  const [proxycurl, browser] = await Promise.all([
+    collectLinkedInSignals(urls),
+    collectLinkedInBrowserSignals(urls),
+  ]);
+
+  return {
+    signals: [...proxycurl.signals, ...browser.signals],
+    calls: [...proxycurl.calls, ...browser.calls],
+  };
 }
 
 async function persistLinkedInSignals(orgId: string, signals: RawSignal[]) {
@@ -51,7 +60,7 @@ export async function collectLinkedInWorkflow(orgId: string) {
     return { collected: 0, persisted: 0 };
   }
 
-  const { signals, calls } = await fetchLinkedInSignals(urls);
+  const { signals, calls } = await fetchAllLinkedInSignals(urls);
   const persisted = await persistLinkedInSignals(orgId, signals);
   const result = { collected: signals.length, persisted, urlCount: urls.length, calls };
   await logLinkedInRun(orgId, result);
