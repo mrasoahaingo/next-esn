@@ -30,6 +30,7 @@ function createStagehand() {
     modelName: 'gpt-4o-mini',
     modelClientOptions: { apiKey: process.env.OPENAI_API_KEY! },
     verbose: 0,
+    keepAlive: true, // Désactive le watchdog subprocess (non dispo dans Next.js/Vercel)
   });
 }
 
