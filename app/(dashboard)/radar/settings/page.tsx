@@ -1,14 +1,16 @@
 import { requireOrgId } from '@/lib/utils/auth';
-import { getRadarSourceStatuses } from '@/lib/radar/queries';
+import { getRadarSourceStatuses, listRunLogs } from '@/lib/radar/queries';
 import { CONVERGENCE_BONUS, SOURCE_WEIGHTS } from '@/lib/radar/scoring';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadarSettingsForm } from '@/app/(dashboard)/radar/components/radar-settings-form';
 import { RadarPageLinks } from '@/app/(dashboard)/radar/components/radar-page-links';
+import { RunLogTable } from '@/app/(dashboard)/radar/components/run-log-table';
 
 export default async function RadarSettingsPage() {
-  await requireOrgId();
+  const orgId = await requireOrgId();
   const sources = getRadarSourceStatuses();
+  const runLogs = await listRunLogs(orgId);
 
   return (
     <div className="space-y-6 p-6">
@@ -38,6 +40,15 @@ export default async function RadarSettingsPage() {
       </div>
 
       <RadarSettingsForm />
+
+      <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Historique des runs</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <RunLogTable logs={runLogs} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
