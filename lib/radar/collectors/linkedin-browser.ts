@@ -76,8 +76,9 @@ export async function collectLinkedInBrowserSignals(
   const stagehand = createStagehand();
 
   try {
+    await stagehand.init();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { page } = (await stagehand.init()) as any;
+    const page = await (stagehand as any).context.newPage();
 
     // ─── Bloc A : Pages entreprise LinkedIn ───────────────────────────────────
 

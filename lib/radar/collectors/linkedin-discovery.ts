@@ -59,8 +59,9 @@ export async function collectLinkedInDiscovery(
   const terms = [...new Set([...config.keywords, ...config.sectors])].slice(0, 5);
 
   const stagehand = createStagehand();
+  await stagehand.init();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { page } = (await stagehand.init()) as any;
+  const page = await (stagehand as any).context.newPage();
 
   try {
     for (const term of terms) {
