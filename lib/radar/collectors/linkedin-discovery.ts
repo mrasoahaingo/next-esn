@@ -59,15 +59,15 @@ export async function collectLinkedInDiscovery(
   const terms = [...new Set([...config.keywords, ...config.sectors])].slice(0, 5);
 
   const stagehand = createStagehand();
-  await stagehand.init();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { page } = (await stagehand.init()) as any;
 
   try {
     for (const term of terms) {
       const url = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(term)}&origin=SWITCH_SEARCH_VERTICAL`;
 
       try {
-        // @ts-expect-error — Stagehand V3 types incomplete, page exists at runtime
-        await stagehand.page.goto(url, { waitUntil: 'domcontentloaded' });
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
         await new Promise((r) => setTimeout(r, 2000));
 
         // @ts-expect-error — Stagehand V3 types incomplete, extract() exists at runtime
