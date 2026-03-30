@@ -1,16 +1,12 @@
 import { NextResponse } from 'next/server';
 import { start } from 'workflow/api';
 import { listRadarOrgIds } from '@/lib/radar/queries';
-import { collectJobsWorkflow } from '@/app/api/radar/workflows/collect-jobs.workflow';
-import { collectBoampWorkflow } from '@/app/api/radar/workflows/collect-boamp.workflow';
 import { collectPressWorkflow } from '@/app/api/radar/workflows/collect-press.workflow';
 import { collectLinkedInWorkflow } from '@/app/api/radar/workflows/collect-linkedin.workflow';
 import { requireOrgAdmin } from '@/lib/utils/auth';
 
 async function startCollectRuns(orgId: string) {
   return Promise.all([
-    start(collectJobsWorkflow, [orgId]).then((run) => ({ kind: 'jobs', runId: run.runId })),
-    start(collectBoampWorkflow, [orgId]).then((run) => ({ kind: 'boamp', runId: run.runId })),
     start(collectPressWorkflow, [orgId]).then((run) => ({ kind: 'press', runId: run.runId })),
     start(collectLinkedInWorkflow, [orgId]).then((run) => ({ kind: 'linkedin', runId: run.runId })),
   ]);
