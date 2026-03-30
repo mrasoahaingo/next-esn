@@ -17,9 +17,9 @@ key_files:
 decisions:
   - Utiliser gpt-4o-mini pour Stagehand (coût réduit vs claude-3-5-sonnet) — OPENAI_API_KEY requis dans .env.local
 metrics:
-  duration: ~3 min
-  completed: "2026-03-30T11:27:33Z"
-  tasks_completed: 1
+  duration: ~5 min
+  completed: "2026-03-30T12:00:00Z"
+  tasks_completed: 2
   files_modified: 2
 ---
 
@@ -32,6 +32,7 @@ metrics:
 | # | Task | Commit | Files |
 |---|------|--------|-------|
 | 1 | Remplacer Anthropic par OpenAI dans les deux collectors Stagehand | 552a02c | lib/radar/collectors/boamp.ts, lib/radar/collectors/jobs.ts |
+| 2 | Checkpoint: OPENAI_API_KEY validé present dans .env.local | — | — |
 
 ## Changes Made
 
@@ -50,13 +51,9 @@ metrics:
 
 None - plan executed exactly as written.
 
-## Environment Variable Required
+## Environment Variable
 
-`OPENAI_API_KEY` doit etre present dans `.env.local` pour que les collectors Stagehand fonctionnent.
-
-Verifier avec: `grep OPENAI_API_KEY .env.local`
-
-Si absent, ajouter: `OPENAI_API_KEY=sk-...votre-cle...`
+`OPENAI_API_KEY` est confirme present dans `.env.local` (valide au checkpoint).
 
 ## Self-Check: PASSED
 
