@@ -79,8 +79,9 @@ export async function collectPublicMarkets(): Promise<{ signals: RawSignal[]; ca
     env: 'BROWSERBASE',
     apiKey: process.env.BROWSERBASE_API_KEY!,
     projectId: process.env.BROWSERBASE_PROJECT_ID!,
-    modelName: 'claude-3-5-sonnet-20241022',
-    modelClientOptions: { apiKey: process.env.ANTHROPIC_API_KEY! },
+    // Stagehand model — requires OPENAI_API_KEY in env
+    modelName: 'gpt-4o-mini',
+    modelClientOptions: { apiKey: process.env.OPENAI_API_KEY! },
     verbose: 0,
   });
 
