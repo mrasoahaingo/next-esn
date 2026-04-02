@@ -38,6 +38,7 @@ export const radarSettingsSchema = z.object({
   linkedinDiscovery: linkedinDiscoverySchema.default(DEFAULT_LINKEDIN_DISCOVERY),
   matchThreshold: z.number().min(0).max(1).default(0.7),
   updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  linkedinContextId: z.string().nullable().optional(),
 });
 
 export const radarSettingsPatchSchema = z.object({
@@ -74,6 +75,7 @@ export const DEFAULT_RADAR_SETTINGS: Omit<RadarSettings, 'orgId'> = {
   linkedinDiscovery: DEFAULT_LINKEDIN_DISCOVERY,
   matchThreshold: 0.7,
   updatedAt: null,
+  linkedinContextId: null,
 };
 
 function mapRowToSettings(orgId: string, row: Record<string, unknown> | null | undefined): RadarSettings {
@@ -86,6 +88,7 @@ function mapRowToSettings(orgId: string, row: Record<string, unknown> | null | u
     linkedinDiscovery: row?.linkedin_discovery ?? DEFAULT_RADAR_SETTINGS.linkedinDiscovery,
     matchThreshold: row?.match_threshold ?? DEFAULT_RADAR_SETTINGS.matchThreshold,
     updatedAt: row?.updated_at ?? null,
+    linkedinContextId: row?.linkedin_context_id ?? null,
   });
 }
 
@@ -132,4 +135,15 @@ export async function upsertRadarSettings(orgId: string, patch: RadarSettingsPat
 
   if (error) throw error;
   return mapRowToSettings(orgId, data as Record<string, unknown>);
+}
+
+export async function saveLinkedInContext(orgId: string, contextId: string | null): Promise<void> {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from('radar_org_settings')
+    .upsert(
+      { org_id: orgId, linkedin_context_id: contextId },
+      { onConflict: 'org_id' }
+    );
+  if (error) throw error;
 }
