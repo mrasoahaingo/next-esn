@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -53,6 +54,17 @@ export function RadarSettingsForm() {
   const [runningAll, setRunningAll] = useState(false);
   const [refreshingResults, setRefreshingResults] = useState(false);
   const [manualRuns, setManualRuns] = useState<ManualRunStatus[]>([]);
+  const [connectingLinkedIn, setConnectingLinkedIn] = useState(false);
+
+  const linkedinSessionQuery = useQuery({
+    queryKey: ['radar', 'linkedin-session', orgId],
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const res = await fetch('/api/radar/linkedin-session');
+      if (!res.ok) throw new Error('Impossible de vérifier la session LinkedIn');
+      return res.json() as Promise<{ connected: boolean }>;
+    },
+  });
   const [form, setForm] = useState<SettingsFormState>({
     enabledSources: DEFAULT_RADAR_SETTINGS.enabledSources,
     jobSearchQueriesText: toLines(DEFAULT_RADAR_SETTINGS.jobSearchQueries),
@@ -237,6 +249,33 @@ export function RadarSettingsForm() {
       toast.error((error as Error).message);
     } finally {
       setRefreshingResults(false);
+    }
+  }
+
+  async function handleLinkedInConnect() {
+    setConnectingLinkedIn(true);
+    try {
+      const res = await fetch('/api/radar/linkedin-session', { method: 'POST' });
+      if (!res.ok) throw new Error('Impossible de créer la session LinkedIn');
+      const { liveUrl } = await res.json();
+      window.open(liveUrl, '_blank');
+      queryClient.invalidateQueries({ queryKey: ['radar', 'linkedin-session', orgId] });
+      toast.success('Session créée — connectez-vous à LinkedIn dans l\'onglet ouvert');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setConnectingLinkedIn(false);
+    }
+  }
+
+  async function handleLinkedInDisconnect() {
+    try {
+      const res = await fetch('/api/radar/linkedin-session', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Impossible de déconnecter la session LinkedIn');
+      queryClient.invalidateQueries({ queryKey: ['radar', 'linkedin-session', orgId] });
+      toast.success('Session LinkedIn déconnectée');
+    } catch (error) {
+      toast.error((error as Error).message);
     }
   }
 
@@ -561,6 +600,42 @@ export function RadarSettingsForm() {
             value={form.matchThreshold}
             onChange={(event) => setForm((current) => ({ ...current, matchThreshold: event.target.value }))}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Connexion LinkedIn</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Connectez un compte LinkedIn pour que le collecteur Stagehand puisse accéder aux pages protégées.
+          </p>
+          <div className="flex items-center gap-3">
+            {linkedinSessionQuery.data?.connected ? (
+              <>
+                <Badge variant="default" className="bg-green-600">Connecté</Badge>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLinkedInDisconnect}
+                >
+                  Déconnecter
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={handleLinkedInConnect}
+                disabled={connectingLinkedIn}
+              >
+                {connectingLinkedIn ? 'Création de la session…' : 'Connecter mon LinkedIn'}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

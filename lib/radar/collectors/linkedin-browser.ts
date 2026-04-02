@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Stagehand } from '@browserbasehq/stagehand';
 import { RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
+import { getRadarSettings } from '@/lib/radar/settings';
 
 // ─── Schémas Zod locaux ───────────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ function logLinkedInBrowserCall(event: string, payload: Record<string, unknown>)
   console.info('[radar][linkedin-browser]', event, payload);
 }
 
-function createStagehand() {
+function createStagehand(contextId?: string | null) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new Stagehand({
     env: 'BROWSERBASE',
@@ -47,6 +48,14 @@ function createStagehand() {
     modelClientOptions: { apiKey: process.env.OPENAI_API_KEY! },
     verbose: 0,
     keepAlive: true, // Désactive le watchdog subprocess (non dispo dans Next.js/Vercel)
+    ...(contextId
+      ? {
+          browserbaseSessionCreateParams: {
+            projectId: process.env.BROWSERBASE_PROJECT_ID!,
+            browserSettings: { context: { id: contextId, persist: true } },
+          },
+        }
+      : {}),
   });
 }
 
@@ -67,14 +76,25 @@ function companyNameFromUrl(url: string): string {
 
 export async function collectLinkedInBrowserSignals(
   companyUrls: string[],
+  orgId?: string,
 ): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
   if (!process.env.BROWSERBASE_API_KEY || !process.env.BROWSERBASE_PROJECT_ID) {
     return { signals: [], calls: [] };
   }
 
+  let contextId: string | null = null;
+  if (orgId) {
+    try {
+      const settings = await getRadarSettings(orgId);
+      contextId = settings.linkedinContextId ?? null;
+    } catch {
+      // ignore — collecteur continue sans contexte
+    }
+  }
+
   const signals: RawSignal[] = [];
   const calls: ApiCall[] = [];
-  const stagehand = createStagehand();
+  const stagehand = createStagehand(contextId);
 
   try {
     await stagehand.init();

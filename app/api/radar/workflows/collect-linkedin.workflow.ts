@@ -26,12 +26,12 @@ async function fetchCompanyUrls(orgId: string) {
   ];
 }
 
-async function fetchAllLinkedInSignals(urls: string[]) {
+async function fetchAllLinkedInSignals(urls: string[], orgId: string) {
   'use step';
 
   const [proxycurl, browser] = await Promise.all([
     collectLinkedInSignals(urls),
-    collectLinkedInBrowserSignals(urls),
+    collectLinkedInBrowserSignals(urls, orgId),
   ]);
 
   return {
@@ -60,7 +60,7 @@ export async function collectLinkedInWorkflow(orgId: string) {
     return { collected: 0, persisted: 0 };
   }
 
-  const { signals, calls } = await fetchAllLinkedInSignals(urls);
+  const { signals, calls } = await fetchAllLinkedInSignals(urls, orgId);
   const persisted = await persistLinkedInSignals(orgId, signals);
   const result = { collected: signals.length, persisted, urlCount: urls.length, calls };
   await logLinkedInRun(orgId, result);
