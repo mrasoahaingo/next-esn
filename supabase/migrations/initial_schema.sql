@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create candidates table
 CREATE TABLE IF NOT EXISTS candidates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     extracted_data JSONB NOT NULL DEFAULT '{}',
     original_file_url TEXT NOT NULL,
     formatted_file_url TEXT,
@@ -19,7 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_candidates_extracted_data ON candidates USING GIN
 
 -- Create extraction_history table
 CREATE TABLE IF NOT EXISTS extraction_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
     extraction_result JSONB NOT NULL,
     ai_model VARCHAR(100) NOT NULL,

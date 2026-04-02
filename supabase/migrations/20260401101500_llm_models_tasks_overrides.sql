@@ -62,12 +62,18 @@ ALTER TABLE llm_models ENABLE ROW LEVEL SECURITY;
 ALTER TABLE llm_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE llm_task_org_overrides ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "deny_all_anon_llm_models" ON llm_models;
 CREATE POLICY "deny_all_anon_llm_models" ON llm_models FOR ALL TO anon USING (false);
+DROP POLICY IF EXISTS "deny_all_anon_llm_tasks" ON llm_tasks;
 CREATE POLICY "deny_all_anon_llm_tasks" ON llm_tasks FOR ALL TO anon USING (false);
+DROP POLICY IF EXISTS "deny_all_anon_llm_overrides" ON llm_task_org_overrides;
 CREATE POLICY "deny_all_anon_llm_overrides" ON llm_task_org_overrides FOR ALL TO anon USING (false);
 
+DROP POLICY IF EXISTS "deny_all_auth_llm_models" ON llm_models;
 CREATE POLICY "deny_all_auth_llm_models" ON llm_models FOR ALL TO authenticated USING (false);
+DROP POLICY IF EXISTS "deny_all_auth_llm_tasks" ON llm_tasks;
 CREATE POLICY "deny_all_auth_llm_tasks" ON llm_tasks FOR ALL TO authenticated USING (false);
+DROP POLICY IF EXISTS "deny_all_auth_llm_overrides" ON llm_task_org_overrides;
 CREATE POLICY "deny_all_auth_llm_overrides" ON llm_task_org_overrides FOR ALL TO authenticated USING (false);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON llm_models TO service_role;

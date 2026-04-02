@@ -1,6 +1,6 @@
 -- Log every AI call with full SDK usage data
 CREATE TABLE IF NOT EXISTS ai_usage_log (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     -- Link to the entity that triggered the call
     candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
     positioning_id UUID REFERENCES positionings(id) ON DELETE CASCADE,

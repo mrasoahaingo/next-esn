@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/radar/cron/collect-signals",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/radar/cron/compute-scores",
+      "schedule": "30 */6 * * *"
+    }
+  ]
+}

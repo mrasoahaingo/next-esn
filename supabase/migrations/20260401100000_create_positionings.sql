@@ -1,5 +1,5 @@
-CREATE TABLE positionings (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+CREATE TABLE IF NOT EXISTS positionings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
   job_description TEXT NOT NULL,
   analysis JSONB,

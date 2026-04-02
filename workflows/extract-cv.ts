@@ -420,7 +420,7 @@ async function saveResult(
   const supabase = getSupabase();
 
   if (result.object) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('candidates')
       .update({
         extracted_data: result.object,
@@ -431,6 +431,10 @@ async function saveResult(
         workflow_last_error: null,
       })
       .eq('id', candidateId);
+
+    if (updateError) {
+      throw new Error(`saveResult DB update failed: ${updateError.message}`);
+    }
 
     if (result.orgId) {
       await logCvExtractionSnapshot(supabase, {

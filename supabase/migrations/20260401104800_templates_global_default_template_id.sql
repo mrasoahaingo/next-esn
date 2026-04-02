@@ -30,6 +30,7 @@ WHERE t.id = p.id;
 
 -- Liste des gabarits globaux pour les clients authentifiés (JWT).
 DROP POLICY IF EXISTS "org_select_templates" ON templates;
+DROP POLICY IF EXISTS "templates_select_global" ON templates;
 CREATE POLICY "templates_select_global" ON templates
   FOR SELECT TO authenticated
   USING (org_id IS NULL OR org_id = (SELECT auth.jwt() ->> 'org_id'));

@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS positioning_analysis_history (
   org_id TEXT NOT NULL,
   analysis JSONB NOT NULL,
   answers JSONB,
+  ai_analysis_models JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -17,19 +18,23 @@ ALTER TABLE positioning_analysis_history ENABLE ROW LEVEL SECURITY;
 REVOKE ALL PRIVILEGES ON positioning_analysis_history FROM anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON positioning_analysis_history TO authenticated;
 
+DROP POLICY IF EXISTS "org_select_positioning_analysis_history" ON positioning_analysis_history;
 CREATE POLICY "org_select_positioning_analysis_history" ON positioning_analysis_history
   FOR SELECT TO authenticated
   USING (org_id = (SELECT auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_insert_positioning_analysis_history" ON positioning_analysis_history;
 CREATE POLICY "org_insert_positioning_analysis_history" ON positioning_analysis_history
   FOR INSERT TO authenticated
   WITH CHECK (org_id = (SELECT auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_update_positioning_analysis_history" ON positioning_analysis_history;
 CREATE POLICY "org_update_positioning_analysis_history" ON positioning_analysis_history
   FOR UPDATE TO authenticated
   USING (org_id = (SELECT auth.jwt() ->> 'org_id'))
   WITH CHECK (org_id = (SELECT auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_delete_positioning_analysis_history" ON positioning_analysis_history;
 CREATE POLICY "org_delete_positioning_analysis_history" ON positioning_analysis_history
   FOR DELETE TO authenticated
   USING (org_id = (SELECT auth.jwt() ->> 'org_id'));

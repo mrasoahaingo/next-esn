@@ -9,9 +9,9 @@ async function fetchDiscoveryConfig(orgId: string) {
   return settings.linkedinDiscovery;
 }
 
-async function runDiscoveryCollector(config: NonNullable<Awaited<ReturnType<typeof fetchDiscoveryConfig>>>) {
+async function runDiscoveryCollector(orgId: string, config: NonNullable<Awaited<ReturnType<typeof fetchDiscoveryConfig>>>) {
   'use step';
-  return collectLinkedInDiscovery(config);
+  return collectLinkedInDiscovery(config, orgId);
 }
 
 async function persistDiscoveredCompanies(
@@ -55,7 +55,7 @@ export async function collectLinkedInDiscoveryWorkflow(orgId: string) {
     return { collected: 0, upserted: 0 };
   }
 
-  const { companies, calls } = await runDiscoveryCollector(config);
+  const { companies, calls } = await runDiscoveryCollector(orgId, config);
   const upserted = await persistDiscoveredCompanies(orgId, companies);
   await logDiscoveryRun(orgId, { collected: companies.length, upserted, calls });
   return { collected: companies.length, upserted };

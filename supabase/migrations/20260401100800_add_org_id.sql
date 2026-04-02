@@ -17,9 +17,14 @@ CREATE INDEX IF NOT EXISTS idx_missions_org_id ON missions(org_id);
 ALTER TABLE templates ADD COLUMN IF NOT EXISTS org_id TEXT;
 CREATE INDEX IF NOT EXISTS idx_templates_org_id ON templates(org_id);
 
--- extraction_history (inherits org scope through candidate, but add for direct queries)
-ALTER TABLE extraction_history ADD COLUMN IF NOT EXISTS org_id TEXT;
-CREATE INDEX IF NOT EXISTS idx_extraction_history_org_id ON extraction_history(org_id);
+-- extraction_history (only if table still exists — dropped in a later migration)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'extraction_history') THEN
+    ALTER TABLE extraction_history ADD COLUMN IF NOT EXISTS org_id TEXT;
+    CREATE INDEX IF NOT EXISTS idx_extraction_history_org_id ON extraction_history(org_id);
+  END IF;
+END $$;
 
 -- ai_usage_log
 ALTER TABLE ai_usage_log ADD COLUMN IF NOT EXISTS org_id TEXT;

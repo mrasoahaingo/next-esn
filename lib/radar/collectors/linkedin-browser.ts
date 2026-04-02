@@ -98,13 +98,15 @@ export async function collectLinkedInBrowserSignals(
 
   try {
     await stagehand.init();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const page = await (stagehand as any).context.newPage();
+    const page = stagehand.context.activePage();
 
     // ─── Bloc A : Pages entreprise LinkedIn ───────────────────────────────────
 
     for (const companyUrl of companyUrls) {
       try {
+        if (!page) {
+          throw new Error('Page not found');
+        }
         await page.goto(companyUrl, { waitUntil: 'domcontentloaded' });
 
         // @ts-expect-error — Stagehand V3 types incomplete, extract() exists at runtime
@@ -167,6 +169,9 @@ export async function collectLinkedInBrowserSignals(
       'https://www.linkedin.com/jobs/search/?keywords=consultant%20IT%20d%C3%A9veloppeur%20cloud%20data&location=France';
 
     try {
+      if (!page) {
+        throw new Error('Page not found');
+      }
       await page.goto(jobsSearchUrl, { waitUntil: 'domcontentloaded' });
 
       // @ts-expect-error — Stagehand V3 types incomplete, extract() exists at runtime

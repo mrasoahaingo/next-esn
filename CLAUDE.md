@@ -96,6 +96,13 @@ Un SaaS pour les ESN (Entreprises de Services Numériques) qui les aide dans leu
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
+## Database Migrations
+- Migration files: `supabase/migrations/` — format `YYYYMMDDHHmmss_description.sql` (14-digit timestamp, ex: `20260402143000_linkedin_context.sql`)
+- **Le timestamp doit être unique** — utiliser l'heure courante (HHmmss) pour éviter les collisions quand plusieurs migrations sont créées le même jour
+- Générer avec : `date +%Y%m%d%H%M%S` pour obtenir le timestamp
+- Toutes les migrations doivent être **idempotentes** : `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `DROP POLICY IF EXISTS` avant `CREATE POLICY`, `DO $$ BEGIN CREATE TYPE ... EXCEPTION WHEN duplicate_object THEN NULL END $$`
+- Ne jamais modifier une migration déjà appliquée en production — créer une nouvelle migration
+
 ## Naming Patterns
 - Component files: PascalCase with `.tsx` extension (e.g., `app-header.tsx`, `QueryProvider.tsx`)
 - Utility/service files: camelCase with `.ts` extension (e.g., `positioning.service.ts`, `useAutoSave.ts`)

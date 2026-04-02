@@ -18,6 +18,9 @@ BEGIN
     SELECT 1 FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'positioning_analysis_history'
   ) THEN
+    -- S'assurer que la colonne existe avant de la lire
+    ALTER TABLE positioning_analysis_history ADD COLUMN IF NOT EXISTS ai_analysis_models JSONB;
+
     INSERT INTO ai_usage_log (
       candidate_id,
       positioning_id,

@@ -20,21 +20,26 @@ CREATE INDEX IF NOT EXISTS idx_organization_settings_updated_at ON organization_
 ALTER TABLE organization_settings ENABLE ROW LEVEL SECURITY;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON organization_settings TO authenticated;
+DROP POLICY IF EXISTS "anon_deny_all_organization_settings" ON organization_settings;
 CREATE POLICY "anon_deny_all_organization_settings" ON organization_settings FOR ALL TO anon USING (false);
 
+DROP POLICY IF EXISTS "org_select_organization_settings" ON organization_settings;
 CREATE POLICY "org_select_organization_settings" ON organization_settings
   FOR SELECT TO authenticated
   USING (org_id = (select auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_insert_organization_settings" ON organization_settings;
 CREATE POLICY "org_insert_organization_settings" ON organization_settings
   FOR INSERT TO authenticated
   WITH CHECK (org_id = (select auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_update_organization_settings" ON organization_settings;
 CREATE POLICY "org_update_organization_settings" ON organization_settings
   FOR UPDATE TO authenticated
   USING (org_id = (select auth.jwt() ->> 'org_id'))
   WITH CHECK (org_id = (select auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_delete_organization_settings" ON organization_settings;
 CREATE POLICY "org_delete_organization_settings" ON organization_settings
   FOR DELETE TO authenticated
   USING (org_id = (select auth.jwt() ->> 'org_id'));
@@ -45,11 +50,13 @@ VALUES ('org-branding', 'org-branding', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Public read so PDF engine and browsers can load logo URLs
+DROP POLICY IF EXISTS "public_read_org_branding" ON storage.objects;
 CREATE POLICY "public_read_org_branding" ON storage.objects
   FOR SELECT TO public
   USING (bucket_id = 'org-branding');
 
 -- Org-scoped read/write for authenticated users (first path segment = org_id)
+DROP POLICY IF EXISTS "org_read_org_branding" ON storage.objects;
 CREATE POLICY "org_read_org_branding" ON storage.objects
   FOR SELECT TO authenticated
   USING (
@@ -57,6 +64,7 @@ CREATE POLICY "org_read_org_branding" ON storage.objects
     AND (storage.foldername(name))[1] = (select auth.jwt() ->> 'org_id')
   );
 
+DROP POLICY IF EXISTS "org_upload_org_branding" ON storage.objects;
 CREATE POLICY "org_upload_org_branding" ON storage.objects
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -64,6 +72,7 @@ CREATE POLICY "org_upload_org_branding" ON storage.objects
     AND (storage.foldername(name))[1] = (select auth.jwt() ->> 'org_id')
   );
 
+DROP POLICY IF EXISTS "org_update_org_branding" ON storage.objects;
 CREATE POLICY "org_update_org_branding" ON storage.objects
   FOR UPDATE TO authenticated
   USING (
@@ -75,6 +84,7 @@ CREATE POLICY "org_update_org_branding" ON storage.objects
     AND (storage.foldername(name))[1] = (select auth.jwt() ->> 'org_id')
   );
 
+DROP POLICY IF EXISTS "org_delete_org_branding" ON storage.objects;
 CREATE POLICY "org_delete_org_branding" ON storage.objects
   FOR DELETE TO authenticated
   USING (

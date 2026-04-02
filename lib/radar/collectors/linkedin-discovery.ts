@@ -21,7 +21,8 @@ export type DiscoveredCompany = z.infer<typeof DiscoveredCompanySchema>;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function createStagehand() {
+function createStagehand(contextId?: string | null) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new Stagehand({
     env: 'BROWSERBASE',
     apiKey: process.env.BROWSERBASE_API_KEY!,
@@ -30,7 +31,15 @@ function createStagehand() {
     modelName: 'gpt-4o-mini',
     modelClientOptions: { apiKey: process.env.OPENAI_API_KEY! },
     verbose: 0,
-    keepAlive: true, // Désactive le watchdog subprocess (non dispo dans Next.js/Vercel)
+    keepAlive: true,
+    ...(contextId
+      ? {
+          browserbaseSessionCreateParams: {
+            projectId: process.env.BROWSERBASE_PROJECT_ID!,
+            browserSettings: { context: { id: contextId, persist: true } },
+          },
+        }
+      : {}),
   });
 }
 
@@ -48,9 +57,21 @@ function dedupeByLinkedinUrl(companies: DiscoveredCompany[]): DiscoveredCompany[
 
 export async function collectLinkedInDiscovery(
   config: LinkedInDiscovery,
+  orgId?: string,
 ): Promise<{ companies: DiscoveredCompany[]; calls: ApiCall[] }> {
   if (!process.env.BROWSERBASE_API_KEY || !process.env.BROWSERBASE_PROJECT_ID) {
     return { companies: [], calls: [] };
+  }
+
+  let contextId: string | null = null;
+  if (orgId) {
+    try {
+      const { getRadarSettings } = await import('@/lib/radar/settings');
+      const settings = await getRadarSettings(orgId);
+      contextId = settings.linkedinContextId ?? null;
+    } catch {
+      // ignore — collecteur continue sans contexte
+    }
   }
 
   const allCompanies: DiscoveredCompany[] = [];
@@ -59,10 +80,9 @@ export async function collectLinkedInDiscovery(
   // Termes de recherche : keywords + sectors, dédupliqués, max 5
   const terms = [...new Set([...config.keywords, ...config.sectors])].slice(0, 5);
 
-  const stagehand = createStagehand();
+  const stagehand = createStagehand(contextId);
   await stagehand.init();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const page = await (stagehand as any).context.newPage();
+  const page = stagehand.context.activePage();
 
   try {
     for (const term of terms) {

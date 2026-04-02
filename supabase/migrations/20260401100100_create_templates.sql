@@ -1,6 +1,6 @@
 -- Create templates table
 CREATE TABLE IF NOT EXISTS templates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL DEFAULT 'Sans titre',
     config JSONB NOT NULL DEFAULT '{}',
     is_default BOOLEAN DEFAULT false,

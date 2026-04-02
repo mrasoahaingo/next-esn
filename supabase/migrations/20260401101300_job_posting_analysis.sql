@@ -16,7 +16,7 @@ ALTER TABLE ai_usage_log
 CREATE INDEX IF NOT EXISTS idx_ai_usage_log_mission ON ai_usage_log(mission_id);
 
 CREATE TABLE IF NOT EXISTS mission_skill_understood (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   mission_id UUID NOT NULL REFERENCES missions(id) ON DELETE CASCADE,
   org_id TEXT NOT NULL,
   user_id TEXT NOT NULL,
@@ -34,21 +34,26 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON mission_skill_understood TO authenticate
 
 ALTER TABLE mission_skill_understood ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "anon_deny_all" ON mission_skill_understood;
 CREATE POLICY "anon_deny_all" ON mission_skill_understood FOR ALL TO anon USING (false);
 
+DROP POLICY IF EXISTS "org_select_mission_skill_understood" ON mission_skill_understood;
 CREATE POLICY "org_select_mission_skill_understood" ON mission_skill_understood
   FOR SELECT TO authenticated
   USING (org_id = (select auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_insert_mission_skill_understood" ON mission_skill_understood;
 CREATE POLICY "org_insert_mission_skill_understood" ON mission_skill_understood
   FOR INSERT TO authenticated
   WITH CHECK (org_id = (select auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_update_mission_skill_understood" ON mission_skill_understood;
 CREATE POLICY "org_update_mission_skill_understood" ON mission_skill_understood
   FOR UPDATE TO authenticated
   USING (org_id = (select auth.jwt() ->> 'org_id'))
   WITH CHECK (org_id = (select auth.jwt() ->> 'org_id'));
 
+DROP POLICY IF EXISTS "org_delete_mission_skill_understood" ON mission_skill_understood;
 CREATE POLICY "org_delete_mission_skill_understood" ON mission_skill_understood
   FOR DELETE TO authenticated
   USING (org_id = (select auth.jwt() ->> 'org_id'));
