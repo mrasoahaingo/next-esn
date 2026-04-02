@@ -139,7 +139,7 @@ ${truncated}`,
       const signalTypeDesc = result.transformationSignals.map((s) => s.type).join(', ') || 'tech_stack';
 
       const signal = RawSignalSchema.safeParse({
-        source: 'press', // Réutiliser la source 'press' comme signal web (pas de nouvelle source DB)
+        source: 'website',
         title: `Stack tech détectée sur site: ${result.technologies.slice(0, 4).join(', ')}`,
         rawContent: JSON.stringify({ technologies: result.technologies, signals: result.transformationSignals }),
         weight,

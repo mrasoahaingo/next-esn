@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const SignalSource = z.enum(['job_offer', 'public_market', 'linkedin', 'press']);
+export const SignalSource = z.enum(['job_offer', 'linkedin', 'website']);
 export const HeatLevel = z.enum(['cold', 'warm', 'hot', 'burning']);
 export const ActionType = z.enum([
   'email_sent',
@@ -41,41 +41,6 @@ export const JobOfferExtractionSchema = z.object({
   offers: z.array(JobOfferItemSchema).default([]),
 });
 
-export const PublicMarketSchema = z.object({
-  reference: z.string(),
-  title: z.string(),
-  organization: z.string(),
-  lots: z
-    .array(
-      z.object({
-        number: z.string(),
-        description: z.string(),
-      }),
-    )
-    .default([]),
-  estimatedBudget: z.string().optional(),
-  deadline: z.string().optional(),
-  url: z.string().optional(),
-});
-
-export const PressExtractionSchema = z.object({
-  signals: z
-    .array(
-      z.object({
-        company: z.string(),
-        signalType: z.enum([
-          'nomination',
-          'fundraising',
-          'digital_transformation',
-          'outsourcing',
-          'hiring',
-        ]),
-        title: z.string(),
-        details: z.string(),
-      }),
-    )
-    .default([]),
-});
 
 export const ProspectScoreSchema = z.object({
   companyId: z.string().uuid(),

@@ -5,7 +5,6 @@ import {
   detectVelocity,
   formatRelativeTime,
   getCompanyInitials,
-  getPressUrgencyLabel,
   HEAT_LABELS,
   HEAT_STYLES,
   SOURCE_LABELS,
@@ -18,7 +17,6 @@ export function ProspectCard({ prospect }: { prospect: ProspectListItem }) {
     .slice(0, 4);
 
   const isVelocity = detectVelocity(prospect.breakdown, prospect.latestSignalAt);
-  const pressUrgency = getPressUrgencyLabel(prospect.breakdown);
 
   return (
     <Link href={`/radar/${prospect.companyId}`} className="block">
@@ -67,12 +65,6 @@ export function ProspectCard({ prospect }: { prospect: ProspectListItem }) {
             </div>
           </div>
         </div>
-
-        {pressUrgency ? (
-          <div className="mt-2 rounded-md bg-pink-50 px-2.5 py-1 text-xs font-medium text-pink-800 ring-1 ring-inset ring-pink-200 dark:bg-pink-950 dark:text-pink-200 dark:ring-pink-900">
-            {pressUrgency === 'Nomination DSI' ? '🎯' : '💰'} {pressUrgency} — fenêtre d&apos;opportunité
-          </div>
-        ) : null}
 
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           <span className={cn('inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium', HEAT_STYLES[prospect.heat])}>

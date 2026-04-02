@@ -2,37 +2,15 @@ import type { ProspectScore } from '@/lib/radar/schemas';
 
 export const SOURCE_WEIGHTS: Record<string, number> = {
   job_offer: 25,
-  public_market: 25,
   linkedin: 20,
-  press: 15,
   vivier_match: 15,
 };
 
 // Half-life in days by signal source. After one half-life, signal weight is halved.
-// Press signals use a sub-type half-life (keyed by metadata.signalType).
 const HALF_LIFE_DAYS: Record<string, number> = {
   job_offer: 21,        // Poste souvent pourvu en 3-4 semaines
-  public_market: 45,    // AO ouvert plusieurs semaines
   linkedin: 60,         // Signal organisationnel stable
-  press: 60,            // Défaut presse
   vivier_match: 9999,   // Jamais expiré
-};
-
-const PRESS_TYPE_HALF_LIFE: Record<string, number> = {
-  nomination: 45,             // 100 jours golden window
-  fundraising: 30,            // 3 mois post-annonce max
-  outsourcing: 45,
-  digital_transformation: 60,
-  hiring: 21,                 // Même urgence qu'une offre d'emploi
-};
-
-// Press signal types with boosted base weights
-const PRESS_TYPE_WEIGHTS: Record<string, number> = {
-  nomination: 22,             // DSI nommé = fenêtre idéale
-  fundraising: 20,
-  outsourcing: 18,
-  digital_transformation: 15,
-  hiring: 18,
 };
 
 export const CONVERGENCE_BONUS: Record<number, number> = {
@@ -53,17 +31,11 @@ function computeDecayFactor(detectedAt: string | undefined, halfLifeDays: number
   return Math.pow(2, -daysSince / halfLifeDays);
 }
 
-function getSignalHalfLife(source: string, metadata?: Record<string, unknown>): number {
-  if (source === 'press' && metadata?.signalType) {
-    return PRESS_TYPE_HALF_LIFE[String(metadata.signalType)] ?? HALF_LIFE_DAYS.press;
-  }
+function getSignalHalfLife(source: string): number {
   return HALF_LIFE_DAYS[source] ?? 60;
 }
 
-function getBaseWeight(source: string, rawWeight: number, metadata?: Record<string, unknown>): number {
-  if (source === 'press' && metadata?.signalType) {
-    return PRESS_TYPE_WEIGHTS[String(metadata.signalType)] ?? rawWeight;
-  }
+function getBaseWeight(_source: string, rawWeight: number): number {
   return rawWeight;
 }
 
@@ -71,7 +43,6 @@ export type ScoringSignal = {
   source: string;
   weight: number;
   detectedAt?: string;
-  metadata?: Record<string, unknown>;
 };
 
 export function computeScore(
@@ -88,8 +59,8 @@ export function computeScore(
   const freshSources = new Set<string>();
 
   for (const signal of signals) {
-    const halfLife = getSignalHalfLife(signal.source, signal.metadata);
-    const baseWeight = getBaseWeight(signal.source, signal.weight, signal.metadata);
+    const halfLife = getSignalHalfLife(signal.source);
+    const baseWeight = getBaseWeight(signal.source, signal.weight);
     const decayFactor = computeDecayFactor(signal.detectedAt, halfLife);
     const decayedWeight = Math.round(baseWeight * decayFactor);
 

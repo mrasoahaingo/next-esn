@@ -89,6 +89,9 @@ export async function collectLinkedInDiscovery(
       const url = `https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(term)}&origin=SWITCH_SEARCH_VERTICAL`;
 
       try {
+        if (!page) {
+          throw new Error('Page not found');
+        }
         await page.goto(url, { waitUntil: 'domcontentloaded' });
         await new Promise((r) => setTimeout(r, 2000));
 

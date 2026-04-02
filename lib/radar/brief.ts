@@ -49,16 +49,9 @@ function formatSignalForBrief(signal: ProspectSignal): string {
   let detail = signal.title;
 
   // Annoter les signaux haute valeur
-  if (typeLabel === 'nomination') {
-    detail = `🎯 NOMINATION: ${signal.title} — fenêtre idéale 100 jours`;
-  } else if (typeLabel === 'fundraising') {
-    detail = `💰 LEVÉE DE FONDS: ${signal.title} — budget disponible`;
-  } else if (typeLabel === 'active_job_postings') {
+  if (typeLabel === 'active_job_postings') {
     const techs = (signal.metadata?.technologies as string[] | undefined) ?? [];
     detail = `🔍 OFFRES ACTIVES: ${signal.title}${techs.length > 0 ? ` [${techs.slice(0, 4).join(', ')}]` : ''}`;
-  } else if (signal.source === 'public_market') {
-    const budget = signal.metadata?.budgetLabel as string | undefined;
-    detail = `📋 MARCHÉ PUBLIC: ${signal.title}${budget ? ` (${budget})` : ''}`;
   }
 
   return `- [${freshnessLabel}] ${detail}`;

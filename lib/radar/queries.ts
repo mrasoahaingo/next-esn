@@ -525,7 +525,6 @@ export async function recomputeProspectScores(orgId: string, matchThreshold?: nu
         source: signal.source,
         weight: signal.weight,
         detectedAt: signal.detected_at ?? undefined,
-        metadata: (signal.metadata as Record<string, unknown> | null) ?? undefined,
       })),
       matchCount > 0,
       company.id,
@@ -634,7 +633,7 @@ export async function upsertDiscoveredCompany(
 
 export async function insertRunLog(
   orgId: string,
-  source: 'jobs' | 'boamp' | 'press' | 'linkedin' | 'linkedin-discovery' | 'scoring' | 'enrichment',
+  source: 'jobs' | 'linkedin' | 'linkedin-discovery' | 'scoring' | 'enrichment',
   result: Record<string, unknown>,
 ): Promise<void> {
   const { error } = await getSupabase()
@@ -678,18 +677,6 @@ export function getRadarSourceStatuses() {
       label: "Offres d'emploi",
       enabled: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN),
       detail: 'Cloudflare Browser Rendering /json',
-    },
-    {
-      key: 'boamp',
-      label: 'Marches publics',
-      enabled: Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN),
-      detail: 'Cloudflare Browser Rendering /scrape',
-    },
-    {
-      key: 'press',
-      label: 'Presse',
-      enabled: Boolean(process.env.FIRECRAWL_API_KEY),
-      detail: 'Firecrawl scrape markdown',
     },
     {
       key: 'linkedin',

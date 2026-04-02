@@ -1,4 +1,5 @@
 import { Stagehand } from '@browserbasehq/stagehand';
+import { z } from 'zod';
 import { JobOfferExtractionSchema, RawSignalSchema, type ApiCall, type RawSignal } from '@/lib/radar/schemas';
 
 function extractTechnologies(offers: Array<{ technologies: string[] }>) {
@@ -9,40 +10,70 @@ function logJobCall(event: string, payload: Record<string, unknown>) {
   console.info('[radar][jobs]', event, payload);
 }
 
-function createStagehand() {
+function createStagehand(contextId?: string | null) {
   return new Stagehand({
     env: 'BROWSERBASE',
     apiKey: process.env.BROWSERBASE_API_KEY!,
     projectId: process.env.BROWSERBASE_PROJECT_ID!,
     // Stagehand model — requires OPENAI_API_KEY in env
+    // @ts-expect-error — modelName exists at runtime (Stagehand V3 types incomplete)
     modelName: 'gpt-4o-mini',
     modelClientOptions: { apiKey: process.env.OPENAI_API_KEY! },
     verbose: 0,
+    keepAlive: true,
+    ...(contextId
+      ? {
+          browserbaseSessionCreateParams: {
+            projectId: process.env.BROWSERBASE_PROJECT_ID!,
+            browserSettings: { context: { id: contextId, persist: true } },
+          },
+        }
+      : {}),
   });
 }
 
-export async function collectJobOffers(searchQueries: string[]): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
+export async function collectJobOffers(
+  searchQueries: string[],
+  orgId?: string,
+): Promise<{ signals: RawSignal[]; calls: ApiCall[] }> {
   if (!process.env.BROWSERBASE_API_KEY || !process.env.BROWSERBASE_PROJECT_ID) {
     return { signals: [], calls: [] };
   }
 
+  let contextId: string | null = null;
+  if (orgId) {
+    try {
+      const { getRadarSettings } = await import('@/lib/radar/settings');
+      const settings = await getRadarSettings(orgId);
+      contextId = settings.linkedinContextId ?? null;
+    } catch {
+      // ignore — collecteur continue sans contexte
+    }
+  }
+
   const signals: RawSignal[] = [];
   const calls: ApiCall[] = [];
-  const stagehand = createStagehand();
+  const stagehand = createStagehand(contextId);
 
   try {
     await stagehand.init();
+    const page = stagehand.context.activePage();
 
     for (const query of searchQueries) {
       const url = `https://www.indeed.fr/jobs?q=${encodeURIComponent(query)}&l=France`;
 
       try {
-        await stagehand.page.goto(url, { waitUntil: 'domcontentloaded' });
+        if (!page) {
+          throw new Error('Page not found');
+        }
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
 
-        const extracted = await stagehand.extract({
+        // @ts-expect-error — Stagehand V3 types incomplete, extract() exists at runtime
+        const rawExtracted = await stagehand.extract({
           instruction: `Extrais toutes les offres d'emploi visibles sur cette page Indeed. Pour chaque offre : titre du poste, entreprise, lieu, type de contrat, technologies mentionnées, niveau d'expérience, fourchette de salaire si visible, date de publication, URL.`,
           schema: JobOfferExtractionSchema,
         });
+        const extracted = rawExtracted as unknown as z.infer<typeof JobOfferExtractionSchema>;
 
         const offerCount = extracted.offers?.length ?? 0;
         calls.push({ endpoint: url, status: 200, ok: true, responseData: { query, offerCount } });

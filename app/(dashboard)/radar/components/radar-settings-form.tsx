@@ -27,7 +27,6 @@ type ManualRunStatus = ManualRun & {
 type SettingsFormState = {
   enabledSources: RadarSettings['enabledSources'];
   jobSearchQueriesText: string;
-  pressRssUrlsText: string;
   linkedinCompanyUrlsText: string;
   matchThreshold: string;
   linkedinDiscovery: LinkedInDiscovery;
@@ -68,7 +67,6 @@ export function RadarSettingsForm() {
   const [form, setForm] = useState<SettingsFormState>({
     enabledSources: DEFAULT_RADAR_SETTINGS.enabledSources,
     jobSearchQueriesText: toLines(DEFAULT_RADAR_SETTINGS.jobSearchQueries),
-    pressRssUrlsText: toLines(DEFAULT_RADAR_SETTINGS.pressRssUrls),
     linkedinCompanyUrlsText: '',
     matchThreshold: String(DEFAULT_RADAR_SETTINGS.matchThreshold),
     linkedinDiscovery: DEFAULT_LINKEDIN_DISCOVERY,
@@ -89,7 +87,6 @@ export function RadarSettingsForm() {
     setForm({
       enabledSources: settingsQuery.data.enabledSources,
       jobSearchQueriesText: toLines(settingsQuery.data.jobSearchQueries),
-      pressRssUrlsText: toLines(settingsQuery.data.pressRssUrls),
       linkedinCompanyUrlsText: toLines(settingsQuery.data.linkedinCompanyUrls),
       matchThreshold: String(settingsQuery.data.matchThreshold),
       linkedinDiscovery: settingsQuery.data.linkedinDiscovery,
@@ -141,7 +138,6 @@ export function RadarSettingsForm() {
       const payload = {
         enabledSources: form.enabledSources,
         jobSearchQueries: fromLines(form.jobSearchQueriesText),
-        pressRssUrls: fromLines(form.pressRssUrlsText),
         linkedinCompanyUrls: fromLines(form.linkedinCompanyUrlsText),
         linkedinDiscovery: form.linkedinDiscovery,
         matchThreshold: Number(form.matchThreshold),
@@ -398,21 +394,6 @@ export function RadarSettingsForm() {
             className="min-h-40 w-full rounded-md border border-input bg-background/80 px-3 py-2 text-sm shadow-sm"
             value={form.jobSearchQueriesText}
             onChange={(event) => setForm((current) => ({ ...current, jobSearchQueriesText: event.target.value }))}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="border-border/70 bg-card/80 shadow-sm backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle>Flux presse</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Label htmlFor="pressRssUrls">URLs RSS, une par ligne</Label>
-          <textarea
-            id="pressRssUrls"
-            className="min-h-32 w-full rounded-md border border-input bg-background/80 px-3 py-2 text-sm shadow-sm"
-            value={form.pressRssUrlsText}
-            onChange={(event) => setForm((current) => ({ ...current, pressRssUrlsText: event.target.value }))}
           />
         </CardContent>
       </Card>
