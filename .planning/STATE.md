@@ -5,7 +5,7 @@ milestone_name: Réactivité, flux & résilience
 status: completed
 stopped_at: Completed quick-260403-1ga-PLAN.md
 last_updated: "2026-04-02T23:06:15Z"
-last_activity: 2026-04-02 — Quick 260403-1ga (Collector Proxycurl REST pour freelances Paris)
+last_activity: 2026-04-02 — Completed quick task 260403-1ga: Créer collector Proxycurl pour freelances Paris avec workflow et cron route
 progress:
   total_phases: 3
   completed_phases: 1
@@ -62,6 +62,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260330-iml | Remplacer Anthropic par OpenAI dans les collectors Stagehand boamp et jobs | 2026-03-30 | 552a02c | [260330-iml-remplacer-anthropic-par-openai-dans-les-](./quick/260330-iml-remplacer-anthropic-par-openai-dans-les-/) |
 | 260330-n7n | Désactiver boamp/jobs dans le cron, ajouter collecteur LinkedIn browser Stagehand | 2026-03-30 | cddd599 | [260330-n7n-desactiver-canaux-boamp-et-jobs-linkedin](./quick/260330-n7n-desactiver-canaux-boamp-et-jobs-linkedin/) |
 | 260402-fxx | Gestion de session LinkedIn via Browserbase Contexts — connect/disconnect UI + collecteur réutilise le contexte | 2026-04-02 | c5e5dae | [260402-fxx-impl-menter-la-gestion-de-session-linked](./quick/260402-fxx-impl-menter-la-gestion-de-session-linked/) |
+| 260403-1ga | Créer collector Proxycurl pour freelances Paris avec workflow et cron route | 2026-04-02 | 1e8a68b | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 
 ## Session continuity
