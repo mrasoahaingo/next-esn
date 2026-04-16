@@ -633,7 +633,7 @@ export async function upsertDiscoveredCompany(
 
 export async function insertRunLog(
   orgId: string,
-  source: 'jobs' | 'linkedin' | 'linkedin-discovery' | 'scoring' | 'enrichment',
+  source: 'jobs' | 'linkedin' | 'linkedin-discovery' | 'linkedin-agent-browser' | 'scoring' | 'enrichment',
   result: Record<string, unknown>,
 ): Promise<void> {
   const { error } = await getSupabase()

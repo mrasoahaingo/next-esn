@@ -84,7 +84,7 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
 
       <FieldGroup className="gap-6">
         {Array.isArray(data) && data.map((exp, i) => exp ? (
-          <div key={`${exp.role}-${exp.company}-${exp.startDate}-${i}`} className="relative pl-4 border-l-2 border-border hover:border-accent transition-colors group">
+          <div key={i} className="relative pl-4 border-l-2 border-border hover:border-accent transition-colors group">
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 {readOnly ? (
@@ -186,7 +186,7 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
             <div className={`mt-2 ${expandedIndex !== i && !readOnly ? 'hidden' : 'block'}`}>
               <ul className="flex flex-col gap-2">
                 {Array.isArray(exp.description) && exp.description.map((desc, j) => desc ? (
-                  <li key={`${desc.slice(0, 30)}-${j}`} className="text-foreground text-sm flex items-start group/item">
+                  <li key={j} className="text-foreground text-sm flex items-start group/item">
                     <span className="mr-2 text-primary mt-1">•</span>
                     {readOnly ? (
                       <span>{desc}</span>

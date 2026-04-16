@@ -7,6 +7,7 @@ interface PdfPreviewOptions {
   setPdfBlobUrl: (url: string | null) => void;
   setIsPdfLoading: (loading: boolean) => void;
   setPdfPageCount?: (count: number) => void;
+  onResetPreview?: () => void;
   /** Override the template config from the store (useful for template editor) */
   templateConfigOverride?: Partial<TemplateConfig> | null;
   /**
@@ -22,6 +23,7 @@ export function usePdfPreview({
   setPdfBlobUrl,
   setIsPdfLoading,
   setPdfPageCount,
+  onResetPreview,
   templateConfigOverride,
   templateId,
   debounceMs = 600,
@@ -49,11 +51,18 @@ export function usePdfPreview({
   latestTemplateIdRef.current = templateId;
 
   useEffect(() => {
-    if (!latestDataRef.current) return;
+    if (!latestDataRef.current) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (abortRef.current) abortRef.current.abort();
+      onResetPreview?.();
+      setPdfPageCount?.(1);
+      setIsPdfLoading(false);
+      return;
+    }
 
     if (timerRef.current) clearTimeout(timerRef.current);
 
-    timerRef.current = setTimeout(async () => {
+    const queuePreview = async () => {
       if (abortRef.current) abortRef.current.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -90,11 +99,13 @@ export function usePdfPreview({
           setIsPdfLoading(false);
         }
       }
-    }, debounceMs);
+    };
+
+    timerRef.current = setTimeout(queuePreview, debounceMs);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (abortRef.current) abortRef.current.abort();
     };
-  }, [requestKey, setPdfBlobUrl, setIsPdfLoading, debounceMs]);
+  }, [requestKey, setPdfBlobUrl, setIsPdfLoading, setPdfPageCount, onResetPreview, debounceMs]);
 }

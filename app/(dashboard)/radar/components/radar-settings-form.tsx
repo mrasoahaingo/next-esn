@@ -52,6 +52,9 @@ export function RadarSettingsForm() {
   const [scoring, setScoring] = useState(false);
   const [runningAll, setRunningAll] = useState(false);
   const [refreshingResults, setRefreshingResults] = useState(false);
+  const [runningFreelanceParis, setRunningFreelanceParis] = useState(false);
+  const [runningFreelanceParisProxycurl, setRunningFreelanceParisProxycurl] = useState(false);
+  const [runningLinkedInAgentBrowser, setRunningLinkedInAgentBrowser] = useState(false);
   const [manualRuns, setManualRuns] = useState<ManualRunStatus[]>([]);
   const [connectingLinkedIn, setConnectingLinkedIn] = useState(false);
 
@@ -248,6 +251,57 @@ export function RadarSettingsForm() {
     }
   }
 
+  async function triggerFreelanceParis() {
+    setRunningFreelanceParis(true);
+    try {
+      const response = await fetch('/api/radar/cron/freelance-paris', { method: 'POST' });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(json.error ?? 'Impossible de lancer le workflow');
+      }
+      registerRuns(Array.isArray(json.runs) ? json.runs : []);
+      toast.success('Analyse freelances Paris lancée');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setRunningFreelanceParis(false);
+    }
+  }
+
+  async function triggerFreelanceParisProxycurl() {
+    setRunningFreelanceParisProxycurl(true);
+    try {
+      const response = await fetch('/api/radar/cron/freelance-paris-proxycurl', { method: 'POST' });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(json.error ?? 'Impossible de lancer le workflow');
+      }
+      registerRuns(Array.isArray(json.runs) ? json.runs : []);
+      toast.success('Analyse freelances Paris (Proxycurl) lancée');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setRunningFreelanceParisProxycurl(false);
+    }
+  }
+
+  async function triggerLinkedInAgentBrowser() {
+    setRunningLinkedInAgentBrowser(true);
+    try {
+      const response = await fetch('/api/radar/cron/linkedin-agent-browser', { method: 'POST' });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(json.error ?? 'Impossible de lancer le workflow');
+      }
+      registerRuns(Array.isArray(json.runs) ? json.runs : []);
+      toast.success('Analyse freelances Paris (Agent Browser) lancée');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setRunningLinkedInAgentBrowser(false);
+    }
+  }
+
   async function handleLinkedInConnect() {
     setConnectingLinkedIn(true);
     try {
@@ -313,6 +367,30 @@ export function RadarSettingsForm() {
               disabled={refreshingResults}
             >
               {refreshingResults ? 'Rafraichissement...' : 'Rafraichir les resultats'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={triggerFreelanceParis}
+              disabled={runningFreelanceParis}
+            >
+              {runningFreelanceParis ? 'Analyse...' : 'Freelances Paris (Anchor)'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={triggerFreelanceParisProxycurl}
+              disabled={runningFreelanceParisProxycurl}
+            >
+              {runningFreelanceParisProxycurl ? 'Analyse...' : 'Freelances Paris (Proxycurl)'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={triggerLinkedInAgentBrowser}
+              disabled={runningLinkedInAgentBrowser}
+            >
+              {runningLinkedInAgentBrowser ? 'Analyse...' : 'Freelances Paris (Agent Browser)'}
             </Button>
             <Link href="/radar">
               <Button type="button" variant="outline">

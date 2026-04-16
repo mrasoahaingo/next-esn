@@ -80,6 +80,9 @@ importers:
       ai:
         specifier: 6.0.116
         version: 6.0.116(zod@4.3.6)
+      anchorbrowser:
+        specifier: 0.16.3
+        version: 0.16.3(bufferutil@4.1.0)
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -2937,6 +2940,9 @@ packages:
 
   ajv@8.18.0:
     resolution: {integrity: sha512-PlXPeEWMXMZ7sPYOHqmDyCJzcfNrUr3fGNKtezX14ykXOEIvyK81d+qydx89KY5O71FKMPaQ2vBfBFI5NHR63A==}
+
+  anchorbrowser@0.16.3:
+    resolution: {integrity: sha512-slz85Zmj0T3XDOKLH8n7nxcLFHcvpPJInCHcysuOyUbP2sMAyhMwMS6LiS727WqnTMaVGx4p6KgJpIJ8+FWhlw==}
 
   ansi-align@3.0.1:
     resolution: {integrity: sha512-IOfwwBF5iczOjp/WeY4YxyjqAFMQoZufdQWDd19SEExbVLNXqvpzSJ/M7Za4/sCPmQ0+GRquoA7bGcINcxew6w==}
@@ -10272,6 +10278,14 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
+  anchorbrowser@0.16.3(bufferutil@4.1.0):
+    dependencies:
+      playwright: 1.58.2
+      ws: 8.19.0(bufferutil@4.1.0)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   ansi-align@3.0.1:
     dependencies:
       string-width: 4.2.3
@@ -13519,15 +13533,13 @@ snapshots:
       exsolve: 1.0.8
       pathe: 2.0.3
 
-  playwright-core@1.58.2:
-    optional: true
+  playwright-core@1.58.2: {}
 
   playwright@1.58.2:
     dependencies:
       playwright-core: 1.58.2
     optionalDependencies:
       fsevents: 2.3.2
-    optional: true
 
   possible-typed-array-names@1.1.0: {}
 

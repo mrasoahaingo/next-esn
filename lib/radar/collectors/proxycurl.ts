@@ -2,7 +2,7 @@ import { z, ZodSchema } from 'zod';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const BASE_URL = 'https://nubela.co/proxycurl';
+const BASE_URL = 'https://enrichlayer.com';
 const PAGE_SIZE = 5;
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -17,10 +17,11 @@ const PersonSearchResponseSchema = z.object({
             full_name: z.string().optional(),
             headline: z.string().optional(),
           })
-          .optional(),
+          .nullish(),
       }),
     )
     .default([]),
+  total_result_count: z.number().optional(),
 });
 
 const PersonProfileResponseSchema = z.object({
@@ -29,9 +30,9 @@ const PersonProfileResponseSchema = z.object({
   experiences: z
     .array(
       z.object({
-        company: z.string().optional(),
-        company_linkedin_profile_url: z.string().optional(),
-        ends_at: z.unknown().optional(),
+        company: z.string().nullish(),
+        company_linkedin_profile_url: z.string().nullish(),
+        ends_at: z.unknown().nullish(),
       }),
     )
     .default([]),
@@ -39,11 +40,12 @@ const PersonProfileResponseSchema = z.object({
 
 const CompanyProfileResponseSchema = z.object({
   name: z.string().optional(),
-  company_size_on_linkedin: z.string().optional(),
 });
 
+// Enrichlayer retourne estimated_employee_count et verified_employee_count (pas "count")
 const EmployeeCountResponseSchema = z.object({
-  count: z.number(),
+  estimated_employee_count: z.number().optional(),
+  verified_employee_count: z.number().optional(),
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -68,10 +70,10 @@ export type FreelanceParisEntry = ProfileCompany & { companyStats: CompanyStats 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function log(event: string, payload: Record<string, unknown>) {
-  console.info('[proxycurl][linkedin]', event, payload);
+  console.info('[enrichlayer][linkedin]', event, payload);
 }
 
-async function proxycurlFetch<T>(
+async function enrichlayerFetch<T>(
   path: string,
   params: Record<string, string>,
   schema: ZodSchema<T>,
@@ -80,29 +82,35 @@ async function proxycurlFetch<T>(
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
 
   const headers = {
-    Authorization: `Bearer ${process.env.PROXYCURL_API_KEY}`,
+    Authorization: `Bearer ${process.env.ENRICHLAYER_API_KEY}`,
   };
 
   const response = await fetch(url.toString(), { headers });
+  const body = await response.text();
+
+  console.info('[enrichlayer] response', {
+    path,
+    status: response.status,
+    body: body.slice(0, 500),
+  });
 
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Proxycurl ${path} failed (${response.status}): ${body}`);
+    throw new Error(`Enrichlayer ${path} failed (${response.status}): ${body}`);
   }
 
-  const json: unknown = await response.json();
+  const json: unknown = JSON.parse(body);
   return schema.parse(json);
 }
 
 // ─── Collecte complète via API Proxycurl ──────────────────────────────────────
 
 export async function collectParisFreelanceData(): Promise<FreelanceParisEntry[]> {
-  if (!process.env.PROXYCURL_API_KEY) throw new Error('PROXYCURL_API_KEY manquant');
+  if (!process.env.ENRICHLAYER_API_KEY) throw new Error('ENRICHLAYER_API_KEY manquant');
 
-  // Étape 1 — Person Search
-  const searchResponse = await proxycurlFetch(
-    '/proxycurl/api/v2/search/person',
-    { country: 'FR', city: 'Paris', headline: 'freelance', page_size: String(PAGE_SIZE) },
+  // Étape 1 — Person Search : freelances à Paris
+  const searchResponse = await enrichlayerFetch(
+    '/api/v2/search/person',
+    { country: 'FR', city: 'Paris', headline: 'freelance développeur', page_size: String(PAGE_SIZE) },
     PersonSearchResponseSchema,
   );
 
@@ -113,9 +121,9 @@ export async function collectParisFreelanceData(): Promise<FreelanceParisEntry[]
   // Étape 2 — Pour chaque profil trouvé
   for (const result of searchResponse.results) {
     try {
-      const profileResponse = await proxycurlFetch(
-        '/proxycurl/api/v2/linkedin',
-        { linkedin_profile_url: result.linkedin_profile_url },
+      const profileResponse = await enrichlayerFetch(
+        '/api/v2/profile',
+        { profile_url: result.linkedin_profile_url },
         PersonProfileResponseSchema,
       );
 
@@ -143,30 +151,31 @@ export async function collectParisFreelanceData(): Promise<FreelanceParisEntry[]
         continue;
       }
 
-      // Étape 3 — Company Profile
-      const companyProfile = await proxycurlFetch(
-        '/proxycurl/api/linkedin/company',
+      // Étape 3 — Company Profile (pour le nom canonique)
+      const companyProfile = await enrichlayerFetch(
+        '/api/v2/company',
         { url: companyUrl },
         CompanyProfileResponseSchema,
       );
 
       log('company_page', { companyName: companyProfile.name, companyUrl });
 
-      // Étape 4a — Employee Count total
-      const totalResponse = await proxycurlFetch(
-        '/proxycurl/api/linkedin/company/employees/count',
-        { url: companyUrl },
+      // Étape 4a — Employee Count total via /api/v2/company/employees/count
+      const totalResponse = await enrichlayerFetch(
+        '/api/v2/company/employees/count',
+        { url: companyUrl, estimated_employee_count: 'include' },
         EmployeeCountResponseSchema,
       );
-      const totalEmployees = totalResponse.count;
+      const totalEmployees = totalResponse.estimated_employee_count ?? 0;
 
-      // Étape 4b — Employee Count freelances
-      const freelanceResponse = await proxycurlFetch(
-        '/proxycurl/api/linkedin/company/employees/count',
-        { url: companyUrl, keyword_regex: 'freelance' },
-        EmployeeCountResponseSchema,
+      // Étape 4b — Freelances dans l'entreprise via Person Search avec current_company_profile_url
+      // Enrichlayer ne supporte pas keyword_regex sur /employees/count, on utilise la search API
+      const freelanceSearchResponse = await enrichlayerFetch(
+        '/api/v2/search/person',
+        { current_company_profile_url: companyUrl, headline: 'freelance', page_size: '1' },
+        PersonSearchResponseSchema,
       );
-      const freelanceCount = freelanceResponse.count;
+      const freelanceCount = freelanceSearchResponse.total_result_count ?? 0;
 
       const freelanceRatio =
         totalEmployees > 0 ? Math.round((freelanceCount / totalEmployees) * 100) : 0;
@@ -188,7 +197,7 @@ export async function collectParisFreelanceData(): Promise<FreelanceParisEntry[]
 
       results.push({ ...profile, companyStats });
     } catch (error) {
-      console.error('[proxycurl][linkedin] profile error', {
+      console.error('[enrichlayer][linkedin] profile error', {
         url: result.linkedin_profile_url,
         error: error instanceof Error ? error.message : String(error),
       });

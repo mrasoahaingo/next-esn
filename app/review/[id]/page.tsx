@@ -9,7 +9,6 @@ import { ExtractedCV } from '@/lib/schema';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { useTemplateStore, fetchTemplateConfig } from '@/lib/stores/template.store';
-import { usePdfPreview } from '@/lib/hooks/usePdfPreview';
 import { useSessionTimer } from '@/lib/hooks/useSessionTimer';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import { useCandidate, useUpdateCandidate, useDeleteCandidate, useCancelWorkflow } from '@/lib/queries';
@@ -32,6 +31,7 @@ import { Experiences } from '../components/Experiences';
 import { Education } from '../components/Education';
 import { Summary } from '../components/Summary';
 import { PdfPreview } from '../components/PdfPreview';
+import { PdfPreviewSync } from '../components/PdfPreviewSync';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
@@ -39,16 +39,12 @@ export default function ReviewPage() {
   const params = useParams();
   const queryClient = useQueryClient();
   const { orgId } = useAuth();
-  const {
-    cvData,
-    setCvData,
-    updateField,
-    setPdfBlobUrl,
-    setIsPdfLoading,
-    setPdfPageCount,
-    isDirty,
-    setDirty,
-  } = useCvBuilderStore();
+  const cvData = useCvBuilderStore((s) => s.cvData);
+  const setCvData = useCvBuilderStore((s) => s.setCvData);
+  const updateField = useCvBuilderStore((s) => s.updateField);
+  const setPdfBlobUrl = useCvBuilderStore((s) => s.setPdfBlobUrl);
+  const isDirty = useCvBuilderStore((s) => s.isDirty);
+  const setDirty = useCvBuilderStore((s) => s.setDirty);
 
   const setTemplateConfig = useTemplateStore((s) => s.setTemplateConfig);
 
@@ -146,14 +142,6 @@ export default function ReviewPage() {
   /** Gabarit toujours celui par défaut de l’org (pas de choix par candidat). */
   const pdfTemplateId =
     candidateData?.id !== undefined ? null : undefined;
-
-  usePdfPreview({
-    data: cvData,
-    setPdfBlobUrl,
-    setIsPdfLoading,
-    setPdfPageCount,
-    templateId: pdfTemplateId,
-  });
 
   useSessionTimer({
     endpoint: `/api/candidates/${params?.id}/time`,
@@ -651,7 +639,14 @@ export default function ReviewPage() {
         </div>
 
         {/* Right: PDF Preview */}
-        <PdfPreview />
+        <>
+          <PdfPreviewSync
+            data={cvData}
+            onResetPreview={() => setPdfBlobUrl(null)}
+            templateId={pdfTemplateId}
+          />
+          <PdfPreview />
+        </>
       </div>
     </div>
   );
