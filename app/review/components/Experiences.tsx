@@ -1,22 +1,160 @@
 
-import { ExtractedCV } from '@/lib/schema';
+import { ExtractedCV, Skill } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Slider } from '@/components/ui/slider';
 import { Trash2, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 
 type ExperienceItem = ExtractedCV['experiences'][number];
+type SkillsData = ExtractedCV['skills'];
 
 interface ExperiencesProps {
   data: Partial<ExperienceItem>[] | undefined;
   onChange: (data: Partial<ExperienceItem>[]) => void;
+  skills?: Partial<SkillsData>;
+  onSkillsChange?: (skills: Partial<SkillsData>) => void;
   readOnly?: boolean;
 }
 
-export const Experiences = memo(function Experiences({ data, onChange, readOnly }: ExperiencesProps) {
+function getAllSkillNames(skills: Partial<SkillsData> | undefined): string[] {
+  if (!skills) return [];
+  const all: string[] = [];
+  for (const cat of ['technologies', 'softSkills', 'expertises', 'methodologies'] as const) {
+    const items = skills[cat];
+    if (Array.isArray(items)) {
+      for (const s of items) {
+        const name = typeof s === 'string' ? s : s.name;
+        if (name) all.push(name);
+      }
+    }
+  }
+  return all;
+}
+
+function ExperienceSkills({
+  expIndex,
+  expSkills,
+  globalSkills,
+  onAdd,
+  onRemove,
+}: {
+  expIndex: number;
+  expSkills: string[];
+  globalSkills: Partial<SkillsData> | undefined;
+  onAdd: (name: string) => void;
+  onRemove: (name: string) => void;
+}) {
+  const [input, setInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const allNames = getAllSkillNames(globalSkills);
+  const suggestions = input.trim()
+    ? allNames.filter(
+        (n) => n.toLowerCase().includes(input.toLowerCase()) && !expSkills.includes(n)
+      )
+    : [];
+
+  const handleAdd = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || expSkills.includes(trimmed)) return;
+    onAdd(trimmed);
+    setInput('');
+    setShowSuggestions(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAdd(input);
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="mt-3 border-t border-border/40 pt-3">
+      <FieldLabel className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+        Compétences
+      </FieldLabel>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {expSkills.map((name) => (
+          <Badge key={name} variant="outline" className="gap-1 border-accent/40 bg-muted text-foreground dark:border-accent/30 dark:bg-accent/15">
+            {name}
+            <button
+              type="button"
+              onClick={() => onRemove(name)}
+              aria-label={`Supprimer ${name}`}
+              className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+      <div ref={containerRef} className="relative">
+        <Field orientation="horizontal" className="flex-row items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <FieldLabel htmlFor={`exp-skill-add-${expIndex}`} className="sr-only">
+              Ajouter une compétence
+            </FieldLabel>
+            <Input
+              id={`exp-skill-add-${expIndex}`}
+              type="text"
+              placeholder="Ajouter une compétence..."
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={handleKeyDown}
+              autoComplete="off"
+            />
+          </div>
+          <Button type="button" size="default" onClick={() => handleAdd(input)} aria-label="Ajouter">
+            <Plus data-icon="inline-start" />
+          </Button>
+        </Field>
+        {showSuggestions && suggestions.length > 0 && (
+          <ul className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+            {suggestions.map((name) => (
+              <li key={name}>
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent/20 transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleAdd(name);
+                  }}
+                >
+                  {name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export const Experiences = memo(function Experiences({ data, onChange, skills, onSkillsChange, readOnly }: ExperiencesProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[] | number | number[]) => {
@@ -65,6 +203,31 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
     const newDesc = [...(newData[expIndex].description || [])];
     newDesc.splice(descIndex, 1);
     newData[expIndex].description = newDesc;
+    onChange(newData);
+  };
+
+  const handleAddSkill = (expIndex: number, name: string) => {
+    // Update exp.skills
+    const newData = [...(data || [])];
+    const current = newData[expIndex].skills ?? [];
+    newData[expIndex] = { ...newData[expIndex], skills: [...current, name] };
+    onChange(newData);
+
+    // Add to global pool if not already present
+    if (onSkillsChange && skills) {
+      const allNames = getAllSkillNames(skills);
+      if (!allNames.includes(name)) {
+        const currentTech = (skills.technologies ?? []) as Skill[];
+        const newSkill: Skill = { name, source: 'extracted', starred: false, added: true };
+        onSkillsChange({ ...skills, technologies: [...currentTech, newSkill] });
+      }
+    }
+  };
+
+  const handleRemoveSkill = (expIndex: number, name: string) => {
+    const newData = [...(data || [])];
+    const current = newData[expIndex].skills ?? [];
+    newData[expIndex] = { ...newData[expIndex], skills: current.filter((s) => s !== name) };
     onChange(newData);
   };
 
@@ -227,6 +390,16 @@ export const Experiences = memo(function Experiences({ data, onChange, readOnly 
                   <Plus data-icon="inline-start" />
                   Add Task
                 </Button>
+              )}
+
+              {!readOnly && (
+                <ExperienceSkills
+                  expIndex={i}
+                  expSkills={exp.skills ?? []}
+                  globalSkills={skills}
+                  onAdd={(name) => handleAddSkill(i, name)}
+                  onRemove={(name) => handleRemoveSkill(i, name)}
+                />
               )}
             </div>
 

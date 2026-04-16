@@ -633,6 +633,8 @@ export default function ReviewPage() {
             <Experiences
               data={safeExperiences}
               onChange={handleExperiences}
+              skills={safeSkills}
+              onSkillsChange={handleSkills}
               readOnly={isLoading}
             />
           </SectionShell>
