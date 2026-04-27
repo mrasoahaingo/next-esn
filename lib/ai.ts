@@ -14,6 +14,8 @@ export const modelName = 'google/gemini-2.5-flash';
  */
 export const llmFactualGenerationSettings = {
   temperature: 0,
+  maxTokens: 8192,
+  topP: 0.95,
 } as const;
 
 /** Instancie un modèle gateway (optionnellement avec `extractJsonMiddleware` pour `Output.object`). */

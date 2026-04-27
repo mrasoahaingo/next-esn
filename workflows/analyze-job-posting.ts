@@ -104,6 +104,7 @@ async function fetchAndAnalyze(missionId: string) {
     try {
       const result = streamText({
         ...llmFactualGenerationSettings,
+        temperature: 0.1,
         model: languageModel,
         system,
         messages: [{ role: 'user', content: userContent }],

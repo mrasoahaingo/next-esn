@@ -551,7 +551,7 @@ export const jobPostingKeyPointSchema = z
         if (!Number.isFinite(n)) return 1;
         return Math.max(1, Math.round(n));
       }),
-    roleInMission: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
+    roleInMission: z.union([z.string().max(400), z.number()]).transform((v) => String(v).trim()),
     /** Rubric REFACTO : bloquant vs négociable */
     requirementTier: z
       .union([jobPostingRequirementTierSchema, z.string(), z.null()])
@@ -577,7 +577,7 @@ export const jobPostingKeyPointSchema = z
       .describe('Type de preuve attendu sur le CV pour scorer ce critère')
       .transform((v) => normalizeJobPostingEvidenceTypeExpected(v)),
     valueSought: z
-      .union([z.string(), z.number(), z.null()])
+      .union([z.string().max(300), z.number(), z.null()])
       .optional()
       .describe('Formulation courte de l’exigence vérifiable (ex. "Python confirmé 3+ ans", "Anglais C1")')
       .transform((v) => {
@@ -585,7 +585,7 @@ export const jobPostingKeyPointSchema = z
         return String(v).trim();
       }),
     scoringRubricHint: z
-      .union([z.string(), z.number(), z.null()])
+      .union([z.string().max(250), z.number(), z.null()])
       .optional()
       .describe('Indication brève pour le scoring 0 / 50 / 100 (barème métier)')
       .transform((v) => {
@@ -608,6 +608,7 @@ export const jobPostingKeyPointSchema = z
 export const jobPostingAnalysisSchema = z.object({
   executiveSummary: z
     .string()
+    .max(1200)
     .describe('3 à 5 phrases : besoin, contexte, enjeux, non-négociable vs secondaire'),
   /**
    * Niveau d’expertise attendu : prime sur les correspondances technos et la récence dans les prompts de positionnement.
@@ -616,14 +617,14 @@ export const jobPostingAnalysisSchema = z.object({
   expectedExpertiseLevel: jobPostingExpectedExpertiseLevelSchema.optional(),
   /** Mots-clés prioritaires pour sélectionner le contexte CV au scoring (REFACTO §3.2) */
   cvSearchKeywords: z
-    .array(z.string())
+    .array(z.string().max(50))
     .optional()
     .describe('10 à 15 termes techniques ou métiers à prioriser pour le matching CV'),
   keyPoints: z
     .array(jobPostingKeyPointSchema)
     .describe('Points clés triés par importanceRank croissant (rang 1 en premier)'),
-  openQuestions: z.array(z.string()).optional().describe('Zones floues ou à clarifier avec le client'),
-  redFlags: z.array(z.string()).optional().describe('Ambiguïtés ou risques pour le discours commercial'),
+  openQuestions: z.array(z.string().max(400)).optional().describe('Zones floues ou à clarifier avec le client'),
+  redFlags: z.array(z.string().max(400)).optional().describe('Ambiguïtés ou risques pour le discours commercial'),
   keyPointExplanations: z
     .record(z.string(), z.lazy(() => jobPostingKeyPointExplainSchema))
     .optional()
