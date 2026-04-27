@@ -45,7 +45,34 @@ async function consumeNdjsonStream<T, M>(
   try {
     while (!abortSignal.aborted) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        // Flush remaining buffer on stream close
+        if (buffer.trim()) {
+          try {
+            const chunk = JSON.parse(buffer.trim()) as {
+              index?: number;
+              data?: Partial<T>;
+              meta?: M;
+              error?: string;
+              stepKey?: string;
+            };
+            if (chunk.error) {
+              onError(new Error(chunk.error), chunk.stepKey);
+              return;
+            }
+            if (chunk.index !== undefined) {
+              chunkIndexRef.current = chunk.index;
+            }
+            onChunk({
+              ...(chunk.data !== undefined ? { data: chunk.data } : {}),
+              ...(chunk.meta !== undefined ? { meta: chunk.meta } : {}),
+            });
+          } catch {
+            // Skip malformed trailing data
+          }
+        }
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
@@ -172,9 +199,12 @@ export function useWorkflowStream<T, M = unknown>(
 
       const contentType = response.headers.get('Content-Type') ?? '';
       if (startOnly && contentType.includes('application/json')) {
-        await onStartOnlyRef.current?.();
         reconnectedRunIdRef.current = null;
-        setReconnectNonce((n) => n + 1);
+        await onStartOnlyRef.current?.();
+        // Ne pas forcer une reconnexion si l'effet s'est déjà reconnecté au même run pendant le refetch
+        if (reconnectedRunIdRef.current !== runId) {
+          setReconnectNonce((n) => n + 1);
+        }
         delegatedToReconnect = true;
         return;
       }
@@ -199,7 +229,7 @@ export function useWorkflowStream<T, M = unknown>(
         onFinishRef.current?.();
       }
     }
-  }, [api, startConsuming]);
+  }, [api, startConsuming, runId]);
 
   // Reconnect to an existing workflow run on mount (ex. rechargement de page).
   // Ne pas ouvrir un second flux si submit() consomme déjà le POST pour le même runId :
