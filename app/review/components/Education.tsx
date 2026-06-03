@@ -43,12 +43,12 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
     <section className="glass-panel p-6 rounded-2xl transition-colors">
       <div className="flex justify-between items-center mb-4 border-b border-overlay/10 pb-2">
         <h2 className="text-lg font-semibold text-foreground">
-          Education
+          Formations
         </h2>
         {!readOnly && (
           <Button variant="ghost" size="sm" onClick={handleAdd} className="text-primary">
             <Plus data-icon="inline-start" />
-            Add Education
+            Ajouter une formation
           </Button>
         )}
       </div>
