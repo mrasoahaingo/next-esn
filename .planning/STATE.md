@@ -4,8 +4,8 @@ milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: completed
 stopped_at: Completed quick-260403-1ga-PLAN.md
-last_updated: "2026-04-02T23:06:15Z"
-last_activity: 2026-04-02 — Completed quick task 260403-1ga: Créer collector Proxycurl pour freelances Paris avec workflow et cron route
+last_updated: "2026-06-03T09:49:05Z"
+last_activity: 2026-06-03 — Completed quick task 260603-gew: Fix CV extraction progress bar and Education component French labels
 progress:
   total_phases: 3
   completed_phases: 1
