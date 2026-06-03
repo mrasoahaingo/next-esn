@@ -102,7 +102,7 @@ export function ExtractionProgress({
   extractionModelsByTask,
   hideStepsList = false,
 }: ExtractionProgressProps) {
-  const completedCount = steps.filter((s) => s.check(data)).length;
+  const completedCount = !isStreaming ? steps.length : steps.filter((s) => s.check(data)).length;
   const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0;
 
   const activeStep = isStreaming ? steps.find((s) => !s.check(data)) : null;
