@@ -230,6 +230,7 @@ async function parallelExtractAndStream(
   let chunkIndex = startChunkIndex;
 
   const activeBranches = new Set<CvExtractionBranch>();
+  const completedBranches = new Set<CvExtractionBranch>();
 
   let lock = Promise.resolve();
   const runLocked = (fn: () => Promise<void>) => {
@@ -243,6 +244,7 @@ async function parallelExtractAndStream(
     const meta: CvExtractionStreamMeta = {
       phase: 'extracting',
       activeBranches: [...activeBranches],
+      completedBranches: [...completedBranches],
     };
     await writer.write(
       encoder.encode(
@@ -276,6 +278,11 @@ async function parallelExtractAndStream(
       inputPayload: { system, messages: [{ role: 'user', content: userContent }] },
     });
 
+    const branchAbort = new AbortController();
+    // 45s : laisse assez de temps au LLM (y compris thinking tokens Gemini 2.5 Flash)
+    // mais évite de bloquer indéfiniment sur une branche sans données.
+    const branchTimeout = setTimeout(() => branchAbort.abort(), 45_000);
+
     try {
       const result = streamText({
         ...llmFactualGenerationSettings,
@@ -283,40 +290,51 @@ async function parallelExtractAndStream(
         system,
         messages: [{ role: 'user', content: userContent }],
         output: Output.object({ schema, name: outputName }),
+        abortSignal: branchAbort.signal,
       });
 
-      let branchStarted = false;
+      await runLocked(async () => {
+        activeBranches.add(branch);
+        await emit();
+      });
 
-      for await (const partial of result.partialOutputStream) {
-        await runLocked(async () => {
-          if (!branchStarted) {
-            branchStarted = true;
-            activeBranches.add(branch);
-          }
-          mergeExtractedPartial(acc, partial as Partial<ExtractedCV>);
-          await emit();
+      try {
+        for await (const partial of result.partialOutputStream) {
+          await runLocked(async () => {
+            mergeExtractedPartial(acc, partial as Partial<ExtractedCV>);
+            await emit();
+          });
+        }
+        const usage = await result.usage;
+        const output = await result.output;
+        await updateAiUsageEnd(supabase, logId, {
+          durationMs: Date.now() - branchStart,
+          usage,
+          outputPayload: output,
         });
+      } catch (streamError) {
+        if (!branchAbort.signal.aborted) {
+          await updateAiUsageEnd(supabase, logId, {
+            durationMs: Date.now() - branchStart,
+            callStatus: 'failed',
+          }).catch(() => {});
+          throw attachWorkflowStepKey(streamError, branch);
+        }
+        // Timeout : branche terminée sans données, l'utilisateur peut saisir manuellement
+        console.warn(`[extract-cv] branch=${branch} timed out after 45s — marking complete with partial data`);
+        await updateAiUsageEnd(supabase, logId, {
+          durationMs: Date.now() - branchStart,
+          callStatus: 'failed',
+        }).catch(() => {});
       }
 
       await runLocked(async () => {
         activeBranches.delete(branch);
+        completedBranches.add(branch);
         await emit();
       });
-
-      const usage = await result.usage;
-      const output = await result.output;
-
-      await updateAiUsageEnd(supabase, logId, {
-        durationMs: Date.now() - branchStart,
-        usage,
-        outputPayload: output,
-      });
-    } catch (e) {
-      await updateAiUsageEnd(supabase, logId, {
-        durationMs: Date.now() - branchStart,
-        callStatus: 'failed',
-      }).catch(() => {});
-      throw attachWorkflowStepKey(e, branch);
+    } finally {
+      clearTimeout(branchTimeout);
     }
   }
 

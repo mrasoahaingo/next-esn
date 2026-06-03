@@ -294,9 +294,9 @@ function addProfileInfoBlock(
   const pi = data.personalInfo;
   const rows: { label: string; value: string }[] = [];
   if (pi.title) rows.push({ label: 'Poste', value: pi.title });
-  if (pi.yearsOfExperience) rows.push({ label: "Annees d'experience", value: pi.yearsOfExperience });
+  if (pi.yearsOfExperience) rows.push({ label: "Années d'expérience", value: pi.yearsOfExperience });
   if (pi.location) rows.push({ label: 'Localisation', value: pi.location });
-  if (pi.availability) rows.push({ label: 'Disponibilite', value: pi.availability });
+  if (pi.availability) rows.push({ label: 'Disponibilité', value: pi.availability });
   if (pi.email && block.variant === 'detailed') rows.push({ label: 'Email', value: pi.email });
   if (pi.phone && block.variant === 'detailed') rows.push({ label: 'Telephone', value: pi.phone });
   addInfoTable(elements, 'info', rows, pageChildren, colors, theme);

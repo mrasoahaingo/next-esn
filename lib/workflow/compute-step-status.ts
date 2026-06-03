@@ -124,9 +124,11 @@ export function computeCvStepStates(input: {
 
     if (phase === 'extracting') {
       const active = meta?.activeBranches ?? [];
+      const completed = meta?.completedBranches ?? [];
       if (active.includes(br)) return { stepKey, label: shortLabel, status: 'running' };
-      if (cvBranchSatisfied(br, input.partialData)) return { stepKey, label: shortLabel, status: 'done' };
-      if (active.length > 0) return { stepKey, label: shortLabel, status: 'pending' };
+      if (completed.includes(br) || cvBranchSatisfied(br, input.partialData)) {
+        return { stepKey, label: shortLabel, status: 'done' };
+      }
       return { stepKey, label: shortLabel, status: 'pending' };
     }
 
