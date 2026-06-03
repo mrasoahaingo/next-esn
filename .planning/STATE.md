@@ -64,11 +64,12 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260402-fxx | Gestion de session LinkedIn via Browserbase Contexts — connect/disconnect UI + collecteur réutilise le contexte | 2026-04-02 | c5e5dae | [260402-fxx-impl-menter-la-gestion-de-session-linked](./quick/260402-fxx-impl-menter-la-gestion-de-session-linked/) |
 | 260403-1ga | Créer collector Proxycurl pour freelances Paris avec workflow et cron route | 2026-04-02 | 1e8a68b | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
+| 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
 
 ## Session continuity
 
-**Last session:** 2026-04-02T23:06:15Z
-**Stopped at:** Completed quick-260403-1ga-PLAN.md
+**Last session:** 2026-06-03T00:00:00Z
+**Stopped at:** Completed quick-260603-gew-PLAN.md
 **Resume file:** None
 
 **Next step:** `/gsd-plan-phase 4` or `/gsd-discuss-phase 4`
