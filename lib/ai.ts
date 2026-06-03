@@ -18,6 +18,21 @@ export const llmFactualGenerationSettings = {
   topP: 0.95,
 } as const;
 
+/**
+ * Paramètres pour les tâches d'extraction mécanique (transcription PDF, extraction CV).
+ * Désactive le thinking de Gemini 2.5 Flash : l'extraction est une copie structurée de données,
+ * pas une tâche de raisonnement. Sans thinking, le premier token JSON arrive immédiatement
+ * au lieu d'attendre 30-90s de réflexion → résout le timeout sur la branche experiences.
+ */
+export const llmExtractionSettings = {
+  temperature: 0,
+  maxTokens: 8192,
+  topP: 0.95,
+  providerOptions: {
+    google: { thinkingConfig: { thinkingBudget: 0 } },
+  },
+};
+
 /** Instancie un modèle gateway (optionnellement avec `extractJsonMiddleware` pour `Output.object`). */
 export function createGatewayLanguageModel(gatewayModelId: string, useExtractJson: boolean): LanguageModel {
   const m = gateway(gatewayModelId);

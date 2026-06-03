@@ -2,7 +2,7 @@ import { getWritable } from 'workflow';
 import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { triggerMissionAnalysesAfterExtract } from '@/lib/services/positioning-analyze-trigger';
-import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
+import { createGatewayLanguageModel, llmExtractionSettings } from '@/lib/ai';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import { logAiUsage, insertAiUsageStart, updateAiUsageEnd } from '@/lib/services/ai-usage.service';
@@ -116,7 +116,7 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
       });
 
       const result = streamText({
-        ...llmFactualGenerationSettings,
+        ...llmExtractionSettings,
         model: txModel,
         system: resolvedTx.systemPrompt,
         messages: [
@@ -265,6 +265,10 @@ async function parallelExtractAndStream(
     branch: CvExtractionBranch,
     taskKey: TaskKey,
     gatewayModelId: string,
+    /** Timeout en ms pour cette branche (défaut 45 000). La branche experiences utilise 90 000
+     *  car elle produit le plus de tokens (10+ expériences × 10 champs + description[]) et cumule
+     *  le plus de temps de réflexion Gemini 2.5 Flash avant le premier token JSON. */
+    timeoutMs = 45_000,
   ): Promise<void> {
     const branchStart = Date.now();
     const logId = await insertAiUsageStart(supabase, {
@@ -279,13 +283,11 @@ async function parallelExtractAndStream(
     });
 
     const branchAbort = new AbortController();
-    // 45s : laisse assez de temps au LLM (y compris thinking tokens Gemini 2.5 Flash)
-    // mais évite de bloquer indéfiniment sur une branche sans données.
-    const branchTimeout = setTimeout(() => branchAbort.abort(), 45_000);
+    const branchTimeout = setTimeout(() => branchAbort.abort(), timeoutMs);
 
     try {
       const result = streamText({
-        ...llmFactualGenerationSettings,
+        ...llmExtractionSettings,
         model: languageModel,
         system,
         messages: [{ role: 'user', content: userContent }],
@@ -321,7 +323,7 @@ async function parallelExtractAndStream(
           throw attachWorkflowStepKey(streamError, branch);
         }
         // Timeout : branche terminée sans données, l'utilisateur peut saisir manuellement
-        console.warn(`[extract-cv] branch=${branch} timed out after 45s — marking complete with partial data`);
+        console.warn(`[extract-cv] branch=${branch} timed out after ${timeoutMs / 1000}s — marking complete with partial data`);
         await updateAiUsageEnd(supabase, logId, {
           durationMs: Date.now() - branchStart,
           callStatus: 'failed',
@@ -364,6 +366,7 @@ async function parallelExtractAndStream(
         'experiences',
         TASK_KEY.CV_BRANCH_EXPERIENCES,
         rEx.gatewayModelId,
+        90_000, // experiences branch needs more time: largest output + longest thinking overhead
       ),
       consumeBranch(
         createGatewayLanguageModel(rEd.gatewayModelId, rEd.useExtractJson),
@@ -384,6 +387,11 @@ async function parallelExtractAndStream(
         rSk.gatewayModelId,
       ),
     ]);
+
+    // Defensive defaults: array fields may be undefined if their branch timed out.
+    // Set them to [] so the schema validates and the saved record stays usable.
+    if (acc.experiences === undefined) acc.experiences = [];
+    if (acc.education === undefined) acc.education = [];
 
     const parsed = extractionSchema.safeParse(acc);
     let object: unknown = acc;
