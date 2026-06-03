@@ -45,7 +45,7 @@ export async function DELETE(
     const { id } = params;
     const supabase = getSupabase();
 
-    await supabase.from('positionings').delete().eq('candidate_id', id);
+    await supabase.from('positionings').delete().eq('candidate_id', id).eq('org_id', orgId);
 
     const { error } = await supabase
       .from('candidates')

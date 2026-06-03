@@ -85,7 +85,7 @@ export async function PATCH(
       }
     }
 
-    const { data: refreshed } = await supabase.from('missions').select().eq('id', id).single();
+    const { data: refreshed } = await supabase.from('missions').select().eq('id', id).eq('org_id', orgId).single();
 
     return NextResponse.json(refreshed ?? data);
   } catch (error: unknown) {

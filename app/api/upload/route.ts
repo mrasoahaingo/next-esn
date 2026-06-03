@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       .from('candidates')
       .select()
       .eq('id', candidate.id)
+      .eq('org_id', orgId)
       .single();
 
     if (refreshError) throw refreshError;

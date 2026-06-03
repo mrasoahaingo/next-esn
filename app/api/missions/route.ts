@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       console.error('Mission job analysis auto-start:', e);
     }
 
-    const { data: refreshed } = await supabase.from('missions').select().eq('id', data.id).single();
+    const { data: refreshed } = await supabase.from('missions').select().eq('id', data.id).eq('org_id', orgId).single();
 
     return NextResponse.json(refreshed ?? data);
   } catch (error: unknown) {

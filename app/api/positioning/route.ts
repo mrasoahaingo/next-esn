@@ -77,6 +77,7 @@ export async function POST(req: NextRequest) {
             .from('positionings')
             .select()
             .eq('id', existing.id)
+            .eq('org_id', orgId)
             .single();
           return NextResponse.json(refreshed ?? existing);
         }
@@ -92,6 +93,7 @@ export async function POST(req: NextRequest) {
           .from('positionings')
           .select()
           .eq('id', existing.id)
+          .eq('org_id', orgId)
           .single();
         return NextResponse.json(refreshed ?? existing);
       }
@@ -118,6 +120,7 @@ export async function POST(req: NextRequest) {
         .from('positionings')
         .select()
         .eq('id', data.id)
+        .eq('org_id', orgId)
         .single();
       return NextResponse.json(refreshed ?? data);
     }
