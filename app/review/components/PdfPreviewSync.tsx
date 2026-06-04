@@ -19,8 +19,18 @@ export function PdfPreviewSync({
   const setIsPdfLoading = useCvBuilderStore((s) => s.setIsPdfLoading);
   const setPdfPageCount = useCvBuilderStore((s) => s.setPdfPageCount);
 
+  // Gate: do not trigger PDF generation until the identity step has resolved.
+  // The LLM emits `personalInfo` and `language` in the same step — once
+  // firstName/lastName or summary is present, `language` reflects the real
+  // detected value (not the Zod default 'fr'), avoiding a fr→en blink.
+  const identityResolved = !!(
+    data?.personalInfo?.firstName ||
+    data?.personalInfo?.lastName ||
+    data?.summary
+  );
+
   usePdfPreview({
-    data,
+    data: identityResolved ? data : null,
     setPdfBlobUrl,
     setIsPdfLoading,
     setPdfPageCount,
