@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
-stopped_at: Completed quick-260604-kyb-PLAN.md — wire CV_LABELS into block builders
-last_updated: "2026-06-04T13:09:01.907Z"
-last_activity: 2026-06-04
+stopped_at: Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
+last_updated: "2026-06-04T14:01:21.088Z"
+last_activity: "2026-06-04 - Completed quick task 260604-kyb: Wire CV_LABELS into buildCvDossierLayoutSpec for bilingual PDF labels"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -49,6 +49,7 @@ _To be updated after first plans complete._
 - [Phase 06]: language field at extractionSchema root (not personalInfo) — document-level property, not personal data
 - [Phase 06]: CV_LABELS declared but not wired to PDF pipeline — Phase 8 responsibility
 - [Phase 06-03]: Guard fires on rendered output (post-renderTemplate) — catches real silent passthrough; warn includes taskKey and placeholder names for actionable debug
+- [Phase quick-260604-m4p]: language field is a primitive (fr|en) — direct assignment in mergeExtractedPartial is correct, no deep merge needed
 
 ### Pending todos
 
@@ -76,8 +77,8 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last session:** 2026-06-04T13:32:04Z
-**Stopped at:** Completed quick-260604-lid-PLAN.md — fix language detection, update cv.branch.identity prompt + saveResult
+**Last session:** 2026-06-04T14:01:16.817Z
+**Stopped at:** Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
