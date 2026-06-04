@@ -72,11 +72,12 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
 | 260604-kyb | Wire CV_LABELS into buildCvDossierLayoutSpec so the PDF preview uses English labels when language is en | 2026-06-04 | 1e42d2c | [260604-kyb-wire-cv-labels-into-buildcvdossierlayout](./quick/260604-kyb-wire-cv-labels-into-buildcvdossierlayout/) |
+| 260604-lid | Language detection wired end-to-end: identity prompt detects fr/en, saveResult persists to candidates.language | 2026-06-04 | c1bb9fa | [260604-lid-fix-language-detection-update-cv-branch-](./quick/260604-lid-fix-language-detection-update-cv-branch-/) |
 
 ## Session continuity
 
-**Last session:** 2026-06-04T13:09:01.903Z
-**Stopped at:** Completed quick-260604-kyb-PLAN.md — wire CV_LABELS into block builders
+**Last session:** 2026-06-04T13:32:04Z
+**Stopped at:** Completed quick-260604-lid-PLAN.md — fix language detection, update cv.branch.identity prompt + saveResult
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
