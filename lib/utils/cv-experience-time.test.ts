@@ -10,6 +10,7 @@ import { sortExperienceIndicesByRecency } from '@/lib/utils/experience-recency';
 
 function baseCv(overrides: Partial<ExtractedCV> = {}): ExtractedCV {
   return {
+    language: 'fr',
     personalInfo: {
       firstName: 'Jean',
       lastName: 'Dupont',

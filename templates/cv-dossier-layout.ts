@@ -17,8 +17,7 @@ const WORDMARK_FALLBACK_LOGO_SRC = pathToFileURL(
 
 /**
  * Labels de section du CV localisés par langue.
- * Utilisé par Phase 8 (PDF Wiring) pour afficher les titres dans la bonne langue.
- * Non câblé dans le pipeline de génération PDF dans cette phase.
+ * Câblé dans les block builders via data.language ?? 'fr'.
  */
 export const CV_LABELS: Record<'fr' | 'en', {
   docTitle: string;
@@ -29,6 +28,19 @@ export const CV_LABELS: Record<'fr' | 'en', {
   strengths: string;
   availability: string;
   contact: string;
+  poste: string;
+  yearsOfExperience: string;
+  location: string;
+  email: string;
+  phone: string;
+  summaryHeading: string;
+  skillsHeading: string;
+  educationHeading: string;
+  experiencesHeading: string;
+  technologies: string;
+  softSkills: string;
+  expertises: string;
+  methodologies: string;
 }> = {
   fr: {
     docTitle: 'Dossier de compétences',
@@ -39,6 +51,19 @@ export const CV_LABELS: Record<'fr' | 'en', {
     strengths: 'Points forts',
     availability: 'Disponibilité',
     contact: 'Contact',
+    poste: 'Poste',
+    yearsOfExperience: "Années d'expérience",
+    location: 'Localisation',
+    email: 'Email',
+    phone: 'Téléphone',
+    summaryHeading: 'Synthèse du profil',
+    skillsHeading: 'Compétences',
+    educationHeading: 'Formations',
+    experiencesHeading: 'Expériences professionnelles',
+    technologies: 'Technologies',
+    softSkills: 'Soft skills',
+    expertises: 'Expertises',
+    methodologies: 'Méthodologies',
   },
   en: {
     docTitle: 'Competency Profile',
@@ -49,6 +74,19 @@ export const CV_LABELS: Record<'fr' | 'en', {
     strengths: 'Key Strengths',
     availability: 'Availability',
     contact: 'Contact',
+    poste: 'Position',
+    yearsOfExperience: 'Years of experience',
+    location: 'Location',
+    email: 'Email',
+    phone: 'Phone',
+    summaryHeading: 'Profile Summary',
+    skillsHeading: 'Skills',
+    educationHeading: 'Education',
+    experiencesHeading: 'Professional Experience',
+    technologies: 'Technologies',
+    softSkills: 'Soft skills',
+    expertises: 'Expertise',
+    methodologies: 'Methodologies',
   },
 };
 
@@ -328,14 +366,16 @@ function addProfileInfoBlock(
   theme: CvTemplateTheme,
 ) {
   if (!data.personalInfo) return;
+  const lang = data.language ?? 'fr';
+  const L = CV_LABELS[lang];
   const pi = data.personalInfo;
   const rows: { label: string; value: string }[] = [];
-  if (pi.title) rows.push({ label: 'Poste', value: pi.title });
-  if (pi.yearsOfExperience) rows.push({ label: "Années d'expérience", value: pi.yearsOfExperience });
-  if (pi.location) rows.push({ label: 'Localisation', value: pi.location });
-  if (pi.availability) rows.push({ label: 'Disponibilité', value: pi.availability });
-  if (pi.email && block.variant === 'detailed') rows.push({ label: 'Email', value: pi.email });
-  if (pi.phone && block.variant === 'detailed') rows.push({ label: 'Telephone', value: pi.phone });
+  if (pi.title) rows.push({ label: L.poste, value: pi.title });
+  if (pi.yearsOfExperience) rows.push({ label: L.yearsOfExperience, value: pi.yearsOfExperience });
+  if (pi.location) rows.push({ label: L.location, value: pi.location });
+  if (pi.availability) rows.push({ label: L.availability, value: pi.availability });
+  if (pi.email && block.variant === 'detailed') rows.push({ label: L.email, value: pi.email });
+  if (pi.phone && block.variant === 'detailed') rows.push({ label: L.phone, value: pi.phone });
   addInfoTable(elements, 'info', rows, pageChildren, colors, theme);
   elements['spacer-info'] = { type: 'Spacer', props: { height: 34 }, children: [] };
   pageChildren.push('spacer-info');
@@ -350,7 +390,9 @@ function addSummaryBlock(
   theme: CvTemplateTheme,
 ) {
   if (!data.summary) return;
-  addSectionHeading(elements, 'summary', 'Synthese du profil', pageChildren, colors, theme);
+  const lang = data.language ?? 'fr';
+  const L = CV_LABELS[lang];
+  addSectionHeading(elements, 'summary', L.summaryHeading, pageChildren, colors, theme);
   elements['summary-text'] = {
     type: 'RichText',
     props: {
@@ -381,11 +423,14 @@ function addSkillsBlock(
   const skills = data.skills;
   if (!skills) return;
 
+  const lang = data.language ?? 'fr';
+  const L = CV_LABELS[lang];
+
   const cats: { key: keyof typeof skills; label: string }[] = [
-    { key: 'technologies', label: 'Technologies' },
-    { key: 'softSkills', label: 'Soft skills' },
-    { key: 'expertises', label: 'Expertises' },
-    { key: 'methodologies', label: 'Methodologies' },
+    { key: 'technologies', label: L.technologies },
+    { key: 'softSkills', label: L.softSkills },
+    { key: 'expertises', label: L.expertises },
+    { key: 'methodologies', label: L.methodologies },
   ];
 
   const categoryRows = cats
@@ -405,7 +450,7 @@ function addSkillsBlock(
 
   if (categoryRows.length === 0) return;
 
-  addSectionHeading(elements, 'skills', 'Competences', pageChildren, colors, theme);
+  addSectionHeading(elements, 'skills', L.skillsHeading, pageChildren, colors, theme);
   addInfoTable(elements, 'skills', categoryRows, pageChildren, colors, theme);
   elements['spacer-skills'] = {
     type: 'Spacer',
@@ -425,7 +470,9 @@ function addEducationBlock(
 ) {
   const education = (data.education ?? []).filter(Boolean);
   if (education.length === 0) return;
-  addSectionHeading(elements, 'edu', 'Formations', pageChildren, colors, theme);
+  const lang = data.language ?? 'fr';
+  const L = CV_LABELS[lang];
+  addSectionHeading(elements, 'edu', L.educationHeading, pageChildren, colors, theme);
 
   const visibleEducation = block.variant === 'compact' ? education.slice(0, 2) : education;
   const itemHeadingColor = colors.text;
@@ -493,7 +540,9 @@ function addExperiencesBlock(
 ) {
   const experiences = (data.experiences ?? []).filter(Boolean);
   if (experiences.length === 0) return;
-  addSectionHeading(elements, 'exp', 'Experiences professionnelles', pageChildren, colors, theme);
+  const lang = data.language ?? 'fr';
+  const L = CV_LABELS[lang];
+  addSectionHeading(elements, 'exp', L.experiencesHeading, pageChildren, colors, theme);
   const itemHeadingColor = colors.text;
 
   experiences.forEach((exp, i) => {
