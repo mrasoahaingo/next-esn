@@ -114,7 +114,13 @@ Plans:
 3. Un map `CV_LABELS: Record<'fr'|'en', {...}>` existe dans `templates/cv-dossier-layout.ts` (même si non encore câblé à l'export PDF).
 4. `resolveLlmTask` émet un `console.warn` quand le prompt rendu contient encore `{{` — la garde est active.
 
-**Plans** : TBD
+**Plans** : 3 plans
+
+Plans:
+
+- [ ] `06-01-PLAN.md` — Migration SQL : colonnes language sur candidates, missions, organization_settings (LANG-05)
+- [ ] `06-02-PLAN.md` — Schémas Zod : language dans extractionIdentitySchema + CV_LABELS dans cv-dossier-layout.ts (LANG-05)
+- [ ] `06-03-PLAN.md` — Guard resolveLlmTask : console.warn sur placeholders {{ non résolus (PROMPT-02)
 
 ---
 
@@ -169,6 +175,6 @@ Plans:
 | 3 | v1.1 | 2/2 | Complete | 2026-03-26 |
 | 4 | v1.1 | 0/TBD | Not started | — |
 | 5 | v1.1 | 0/TBD | Not started | — |
-| 6 | v1.2 | 0/TBD | Not started | — |
+| 6 | v1.2 | 0/3 | Not started | — |
 | 7 | v1.2 | 0/TBD | Not started | — |
 | 8 | v1.2 | 0/TBD | Not started | — |
