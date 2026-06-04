@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
-stopped_at: Completed quick-260604-ncx-PLAN.md — gate PDF preview on identity step completion
-last_updated: "2026-06-04T14:52:36.417Z"
+stopped_at: Completed quick-260604-pin-PLAN.md — language-aware years label in formatTotalExperienceYears
+last_updated: "2026-06-04T16:28:30.761Z"
 last_activity: "2026-06-04 - Completed quick task 260604-ncx: N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en"
 progress:
   total_phases: 6
@@ -51,6 +51,7 @@ _To be updated after first plans complete._
 - [Phase 06-03]: Guard fires on rendered output (post-renderTemplate) — catches real silent passthrough; warn includes taskKey and placeholder names for actionable debug
 - [Phase quick-260604-m4p]: language field is a primitive (fr|en) — direct assignment in mergeExtractedPartial is correct, no deep merge needed
 - [Phase quick-260604-ncx]: Gate PDF preview in PdfPreviewSync (consumer), not usePdfPreview (hook), to avoid impacting template editor which uses the same hook
+- [Phase quick-260604-pin]: Language-aware formatTotalExperienceYears: optional 'fr'|'en' param with 'fr' default; unit label resolved at leaf function for backward compatibility
 
 ### Pending todos
 
@@ -82,8 +83,8 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last session:** 2026-06-04T14:52:36.417Z
-**Stopped at:** Completed quick-260604-ncx-PLAN.md — gate PDF preview on identity step completion
+**Last session:** 2026-06-04T16:28:26.255Z
+**Stopped at:** Completed quick-260604-pin-PLAN.md — language-aware years label in formatTotalExperienceYears
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
