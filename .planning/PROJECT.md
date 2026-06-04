@@ -84,6 +84,8 @@ This document evolves at phase transitions and milestone boundaries.
 | **Langue unique par document** | Prompts doivent rester maintenables sans doublons | — Pending |
 | **Artifacts positionnement cross-langue → langue mission** | Destinataire = client final, pas le candidat | — Pending |
 | **UI applicative reste FR** | Scope réduit, pas de framework i18n nécessaire | — Pending |
+| **Colonnes language en DB + Zod + CV_LABELS** | Fondations v1.2 posées en Phase 06 | ✓ Phase 06 |
+| **Guard console.warn placeholders non résolus** | Détection précoce des erreurs de template LLM | ✓ Phase 06 |
 
 ---
-*Last updated: 2026-06-04 — Milestone v1.2 Multi-langue démarré*
+*Last updated: 2026-06-04 — Phase 06 complete: DB migrations, Zod schemas, LLM placeholder guard*
