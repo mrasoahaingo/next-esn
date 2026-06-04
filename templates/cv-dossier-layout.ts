@@ -721,7 +721,8 @@ export function buildCvDossierLayoutSpec(
     : '';
   const headerTextColor = theme.headerNameColor;
   const companyName = config.header.companyName.trim();
-  const documentTitle = config.header.documentTitle.trim() || DEFAULT_TEMPLATE_CONFIG.header.documentTitle;
+  const lang = (data.language as 'fr' | 'en') ?? 'fr';
+  const documentTitle = config.header.documentTitle.trim() || CV_LABELS[lang].docTitle;
 
   elements['header-band'] = {
     type: 'FixedView',
