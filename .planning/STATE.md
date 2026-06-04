@@ -5,7 +5,7 @@ milestone_name: Réactivité, flux & résilience
 status: verifying
 stopped_at: Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
 last_updated: "2026-06-04T14:01:21.088Z"
-last_activity: "2026-06-04 - Completed quick task 260604-kyb: Wire CV_LABELS into buildCvDossierLayoutSpec for bilingual PDF labels"
+last_activity: "2026-06-04 - Completed quick task 260604-m4p: Quand j'upload un cv en anglais, la preview reset en FR"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 Phase: 7
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-06-04 - Completed quick task 260604-kyb: Wire CV_LABELS into buildCvDossierLayoutSpec for bilingual PDF labels
+Last activity: 2026-06-04 - Completed quick task 260604-m4p: Quand j'upload un cv en anglais, la preview reset en FR
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -74,6 +74,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
 | 260604-kyb | Wire CV_LABELS into buildCvDossierLayoutSpec so the PDF preview uses English labels when language is en | 2026-06-04 | 1e42d2c | [260604-kyb-wire-cv-labels-into-buildcvdossierlayout](./quick/260604-kyb-wire-cv-labels-into-buildcvdossierlayout/) |
 | 260604-lid | Language detection wired end-to-end: identity prompt detects fr/en, saveResult persists to candidates.language | 2026-06-04 | c1bb9fa | [260604-lid-fix-language-detection-update-cv-branch-](./quick/260604-lid-fix-language-detection-update-cv-branch-/) |
+| 260604-m4p | Quand j'upload un cv en anglais, la preview reset en FR | 2026-06-04 | ca4d390 | [260604-m4p-quand-j-upload-un-cv-en-anglais-la-previ](./quick/260604-m4p-quand-j-upload-un-cv-en-anglais-la-previ/) |
 
 ## Session continuity
 
