@@ -14,7 +14,7 @@ v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, 
 - [ ] **LANG-02** : Après l'analyse d'une mission, le système détecte la langue (`fr` ou `en`) et la persiste dans `missions.language`.
 - [ ] **LANG-03** : L'utilisateur peut voir et modifier la langue détectée d'un CV sur la page de review — sans déclencher une nouvelle extraction.
 - [ ] **LANG-04** : L'utilisateur peut voir et modifier la langue d'une mission sur le formulaire d'édition.
-- [ ] **LANG-05** : L'organisation dispose d'une langue par défaut (`fr|en`) dans `organization_settings.default_language`, utilisée en fallback quand la langue n'est pas encore détectée.
+- [x] **LANG-05** : L'organisation dispose d'une langue par défaut (`fr|en`) dans `organization_settings.default_language`, utilisée en fallback quand la langue n'est pas encore détectée.
 
 ## v1.2 — Contenu IA langue-aware (AI)
 
@@ -59,7 +59,7 @@ v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, 
 | LANG-02 | Phase 7 | Pending |
 | LANG-03 | Phase 8 | Pending |
 | LANG-04 | Phase 8 | Pending |
-| LANG-05 | Phase 6 | Pending |
+| LANG-05 | Phase 6 | Complete |
 | AI-01 | Phase 7 | Pending |
 | AI-02 | Phase 7 | Pending |
 | AI-03 | Phase 7 | Pending |

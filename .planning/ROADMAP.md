@@ -175,6 +175,6 @@ Plans:
 | 3 | v1.1 | 2/2 | Complete | 2026-03-26 |
 | 4 | v1.1 | 0/TBD | Not started | — |
 | 5 | v1.1 | 0/TBD | Not started | — |
-| 6 | v1.2 | 0/3 | Not started | — |
+| 6 | v1.2 | 1/3 | In Progress|  |
 | 7 | v1.2 | 0/TBD | Not started | — |
 | 8 | v1.2 | 0/TBD | Not started | — |

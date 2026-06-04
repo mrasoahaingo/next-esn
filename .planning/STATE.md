@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Multi-langue
-status: in_progress
-stopped_at: ~
-last_updated: "2026-06-04T00:00:00Z"
-last_activity: 2026-06-04 — Roadmap v1.2 créé (3 phases : 6, 7, 8)
+milestone: v1.1
+milestone_name: Réactivité, flux & résilience
+status: executing
+stopped_at: Completed 06-01-PLAN.md (language columns migration)
+last_updated: "2026-06-04T12:49:08.393Z"
+last_activity: 2026-06-04
 progress:
-  total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 5
+  completed_plans: 3
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (milestone v1.2)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille  
-**Current focus:** Milestone v1.2 — Phase 6 : DB + Schema Foundation
+**Current focus:** Phase 06 — db-schema-foundation
 
 ## Current Position
 
-Phase: 6 — DB + Schema Foundation
-Plan: —
-Status: Not started
-Last activity: 2026-06-04 — Roadmap v1.2 créé
+Phase: 06 (db-schema-foundation) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-06-04
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -45,6 +45,7 @@ _To be updated after first plans complete._
 - [Phase quick-260330-iml]: Utiliser gpt-4o-mini pour Stagehand (coût réduit vs claude-3-5-sonnet) — OPENAI_API_KEY confirmé présent dans .env.local
 - **LANG** : Langue unique par document source ; artefacts positionnement cross-langue suivent la langue de la mission (destinataire = client final). UI applicative reste en français — pas de framework i18n.
 - **PROMPT** : Un seul row par task_key avec `{{language}}` injecté — pas de doublons de prompts par langue.
+- [Phase 06-db-schema-foundation]: CHECK IN ('fr','en') en DB dès la migration — intégrité contrainte DB sans dépendre de la validation applicative
 
 ### Pending todos
 
@@ -67,11 +68,12 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260403-1ga | Créer collector Proxycurl pour freelances Paris avec workflow et cron route | 2026-04-02 | 1e8a68b | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
+| Phase 06-db-schema-foundation P01 | 2 | 1 tasks | 1 files |
 
 ## Session continuity
 
-**Last session:** 2026-06-04T00:00:00Z
-**Stopped at:** Roadmap v1.2 créé — prêt pour Phase 6
+**Last session:** 2026-06-04T12:49:08.391Z
+**Stopped at:** Completed 06-01-PLAN.md (language columns migration)
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
