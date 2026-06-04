@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
-stopped_at: Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
-last_updated: "2026-06-04T14:01:21.088Z"
+stopped_at: Completed quick-260604-ncx-PLAN.md — gate PDF preview on identity step completion
+last_updated: "2026-06-04T14:52:36.417Z"
 last_activity: "2026-06-04 - Completed quick task 260604-miq: Les textes extraits par le LLM sont toujours en français même pour un CV en anglais"
 progress:
   total_phases: 6
@@ -50,6 +50,7 @@ _To be updated after first plans complete._
 - [Phase 06]: CV_LABELS declared but not wired to PDF pipeline — Phase 8 responsibility
 - [Phase 06-03]: Guard fires on rendered output (post-renderTemplate) — catches real silent passthrough; warn includes taskKey and placeholder names for actionable debug
 - [Phase quick-260604-m4p]: language field is a primitive (fr|en) — direct assignment in mergeExtractedPartial is correct, no deep merge needed
+- [Phase quick-260604-ncx]: Gate PDF preview in PdfPreviewSync (consumer), not usePdfPreview (hook), to avoid impacting template editor which uses the same hook
 
 ### Pending todos
 
@@ -79,8 +80,8 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last session:** 2026-06-04T14:01:16.817Z
-**Stopped at:** Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
+**Last session:** 2026-06-04T14:52:31.882Z
+**Stopped at:** Completed quick-260604-ncx-PLAN.md — gate PDF preview on identity step completion
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
