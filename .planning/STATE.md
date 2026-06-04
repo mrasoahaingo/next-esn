@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
-stopped_at: Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
-last_updated: "2026-06-04T14:01:21.088Z"
+stopped_at: Completed quick-260604-n5s-PLAN.md — CV PDF download filename uses candidate name
+last_updated: "2026-06-04T14:45:49.727Z"
 last_activity: "2026-06-04 - Completed quick task 260604-miq: Les textes extraits par le LLM sont toujours en français même pour un CV en anglais"
 progress:
   total_phases: 6
@@ -79,8 +79,8 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last session:** 2026-06-04T14:01:16.817Z
-**Stopped at:** Completed quick-260604-m4p-PLAN.md — add language field to mergeExtractedPartial
+**Last session:** 2026-06-04T14:45:49.719Z
+**Stopped at:** Completed quick-260604-n5s-PLAN.md — CV PDF download filename uses candidate name
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
