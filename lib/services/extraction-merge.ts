@@ -72,4 +72,6 @@ export function mergeExtractedPartial(
     };
   }
   if (patch.strengths !== undefined) acc.strengths = patch.strengths;
+  if (patch.language !== undefined) acc.language = patch.language;
+  if (patch.sectionSpacing !== undefined) acc.sectionSpacing = patch.sectionSpacing;
 }
