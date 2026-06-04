@@ -1,49 +1,78 @@
 # Requirements: Next-ESN
 
-**Defined:** 2026-03-26  
-**Milestone:** v1.1 Réactivité, flux & résilience  
+**Defined:** 2026-06-04  
+**Milestone:** v1.2 Multi-langue  
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille
 
-v1.0 reliability requirements : `.planning/milestones/v1.0-REQUIREMENTS.md`
+v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, RES-*)
 
-## v1.1 — Flux positionnement & mission
+---
 
-- [ ] **FLOW-01** : Après création ou upload d’une mission depuis `/review/[id]/positioning`, l’utilisateur **reste** sur cette URL (pas de redirection obligatoire vers la page détail mission).
-- [ ] **FLOW-02** : La mission nouvellement ajoutée affiche **inline** l’état d’analyse (au minimum cohérent avec les statuts serveur : en cours / terminé / erreur).
-- [ ] **FLOW-03** : L’action « positionner » (ou équivalent) sur cette mission n’est **active** que lorsque l’analyse mission est **terminée avec succès** — état **dérivé du serveur** (pas d’état client volatile seul).
+## v1.2 — Modèle de données langue (LANG)
 
-## v1.1 — Réactivité & fraîcheur
+- [ ] **LANG-01** : Après l'extraction d'un CV, le système détecte la langue (`fr` ou `en`) depuis la branche identity et la persiste dans `candidates.language`.
+- [ ] **LANG-02** : Après l'analyse d'une mission, le système détecte la langue (`fr` ou `en`) et la persiste dans `missions.language`.
+- [ ] **LANG-03** : L'utilisateur peut voir et modifier la langue détectée d'un CV sur la page de review — sans déclencher une nouvelle extraction.
+- [ ] **LANG-04** : L'utilisateur peut voir et modifier la langue d'une mission sur le formulaire d'édition.
+- [ ] **LANG-05** : L'organisation dispose d'une langue par défaut (`fr|en`) dans `organization_settings.default_language`, utilisée en fallback quand la langue n'est pas encore détectée.
 
-- [ ] **LAT-01** : Réduire le décalage entre la base et l’UI pour les enregistrements concernés (ex. **Supabase Realtime** ou mécanisme équivalent documenté) — sans dégrader la charge inutilement.
-- [ ] **LAT-02** : Afficher un horodatage **« dernière génération »** (ou libellé équivalent) sur les résultats concernés par les workflows IA listés dans le périmètre de la phase.
+## v1.2 — Contenu IA langue-aware (AI)
 
-## v1.1 — Résilience partielle & retry
+- [ ] **AI-01** : Les branches d'extraction CV (expériences, formations, compétences) génèrent leur output dans la langue du CV (`candidates.language`).
+- [ ] **AI-02** : Les branches d'analyse de mission génèrent leur output dans la langue de la mission (`missions.language`).
+- [ ] **AI-03** : L'analyse de positionnement (compétences, expériences, gaps, synthèse) génère son output dans la langue de la **mission** — y compris quand le CV est dans une langue différente.
+- [ ] **AI-04** : La génération de positionnement (CV tailored, emails) génère ses artefacts dans la langue de la **mission** — si CV est FR et mission est EN, le CV tailored est en EN.
+- [ ] **AI-05** : La branche de transcription (`cv.transcription`) n'est **pas** soumise à la directive de langue — le texte source est préservé tel quel.
+- [ ] **AI-06** : Les noms de produits, d'entreprises et de certifications sont préservés verbatim dans les artefacts générés, quelle que soit la directive de langue.
 
-- [ ] **RES-01** : Lorsqu’une sous-étape échoue mais d’autres ont réussi, l’UI reflète **clairement** ce qui est utilisable vs ce qui est en erreur.
-- [ ] **RES-02** : Permettre une **relance ciblée** d’une sous-étape en échoue sans relancer tout le workflow parent, **dans les limites** du runtime `@workflow/next` beta (si impossible techniquement, documenter la limite et proposer le meilleur compromis UX).
+## v1.2 — Labels PDF localisés (PDF)
 
-## Out of scope (v1.1)
+- [ ] **PDF-01** : Le PDF exporté depuis le CV builder affiche ses labels de section dans la langue du candidat (`candidates.language`) — ex. `Skills` / `Compétences`, `Experience` / `Expériences`.
+- [ ] **PDF-02** : Le CV tailored généré depuis un positionnement affiche ses labels de section dans la langue de la mission (`missions.language`).
+
+## v1.2 — Infrastructure prompts (PROMPT)
+
+- [ ] **PROMPT-01** : Tous les prompts LLM affectés (extraction CV hors transcription, analyse mission, analyse et génération de positionnement) contiennent une directive `{{language}}` remplaçant le hardcoding `"Langue : français"`. La valeur injectée est en langage naturel (`French` / `English`) pour éviter l'ambiguïté dans les prompts.
+- [ ] **PROMPT-02** : `resolveLlmTask` émet un `console.warn` quand le prompt rendu contient encore des placeholders non résolus (`{{`) — protection contre le silent passthrough.
+
+---
+
+## Out of scope (v1.2)
 
 | Item | Reason |
 |------|--------|
-| Cancel fiable en vol | Runtime beta |
-| Barres de % fictives | Confiance utilisateur |
-| Tests automatisés | Dette connue |
-| Refonte hors écrans concernés | Périmètre |
+| I18n de l'UI applicative (sidebar, headers) | Trop large — pas de framework i18n, Clerk reste `frFR` |
+| Radar (`lib/radar/brief.ts`) multi-langue | Prompt hardcodé en code, domaine séparé |
+| Langues au-delà de FR + EN | Scope v1.2 limité aux 2 premières |
+| Cancel fiable d'un workflow | Runtime `@workflow/next` beta |
+| Re-extraction automatique sur changement de langue | LANG-03/04 : override direct sans re-run |
+| Prompts séparés par langue | Un row par task_key avec `{{language}}` — pas de doublons |
+| Traduction rétroactive des analyses historiques | Pas de valeur, risque de corruption |
+
+---
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FLOW-01 | Phase 3 | Pending |
-| FLOW-02 | Phase 3 | Pending |
-| FLOW-03 | Phase 3 | Pending |
-| LAT-01 | Phase 4 | Pending |
-| LAT-02 | Phase 4 | Pending |
-| RES-01 | Phase 5 | Pending |
-| RES-02 | Phase 5 | Pending |
+| LANG-01 | TBD | Pending |
+| LANG-02 | TBD | Pending |
+| LANG-03 | TBD | Pending |
+| LANG-04 | TBD | Pending |
+| LANG-05 | TBD | Pending |
+| AI-01 | TBD | Pending |
+| AI-02 | TBD | Pending |
+| AI-03 | TBD | Pending |
+| AI-04 | TBD | Pending |
+| AI-05 | TBD | Pending |
+| AI-06 | TBD | Pending |
+| PDF-01 | TBD | Pending |
+| PDF-02 | TBD | Pending |
+| PROMPT-01 | TBD | Pending |
+| PROMPT-02 | TBD | Pending |
 
-**Coverage:** 7 exigences v1.1, 7 mappées.
+**Coverage:** 15 exigences v1.2 — traceability à remplir par le roadmapper.
 
 ---
-*Last updated: 2026-03-26*
+*Requirements defined: 2026-06-04*  
+*Last updated: 2026-06-04 after initial definition*
