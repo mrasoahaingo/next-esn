@@ -5,9 +5,9 @@ milestone_name: Multi-langue
 status: in_progress
 stopped_at: ~
 last_updated: "2026-06-04T00:00:00Z"
-last_activity: 2026-06-04 — Milestone v1.2 Multi-langue démarré
+last_activity: 2026-06-04 — Roadmap v1.2 créé (3 phases : 6, 7, 8)
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (milestone v1.2)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille  
-**Current focus:** Milestone v1.2 — Définition des exigences et roadmap
+**Current focus:** Milestone v1.2 — Phase 6 : DB + Schema Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 6 — DB + Schema Foundation
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-04 — Milestone v1.2 Multi-langue démarré
+Status: Not started
+Last activity: 2026-06-04 — Roadmap v1.2 créé
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -40,9 +40,11 @@ _To be updated after first plans complete._
 
 ### Decisions
 
-- **FLOW** : Rester sur `/review/[id]/positioning` après upload mission ; analyse visible inline ; bouton positionnement actif seulement quand l’analyse mission est prête (serveur).
+- **FLOW** : Rester sur `/review/[id]/positioning` après upload mission ; analyse visible inline ; bouton positionnement actif seulement quand l'analyse mission est prête (serveur).
 - [Phase quick-260330-iml]: Stagehand: gpt-4o-mini + OPENAI_API_KEY pour reduire les couts de scraping vs claude-3-5-sonnet
 - [Phase quick-260330-iml]: Utiliser gpt-4o-mini pour Stagehand (coût réduit vs claude-3-5-sonnet) — OPENAI_API_KEY confirmé présent dans .env.local
+- **LANG** : Langue unique par document source ; artefacts positionnement cross-langue suivent la langue de la mission (destinataire = client final). UI applicative reste en français — pas de framework i18n.
+- **PROMPT** : Un seul row par task_key avec `{{language}}` injecté — pas de doublons de prompts par langue.
 
 ### Pending todos
 
@@ -68,8 +70,8 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last session:** 2026-06-03T00:00:00Z
-**Stopped at:** Completed quick-260603-gew-PLAN.md
+**Last session:** 2026-06-04T00:00:00Z
+**Stopped at:** Roadmap v1.2 créé — prêt pour Phase 6
 **Resume file:** None
 
-**Next step:** `/gsd:plan-phase 6` — première phase du milestone v1.2
+**Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation

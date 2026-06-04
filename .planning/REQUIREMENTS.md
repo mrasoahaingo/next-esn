@@ -55,24 +55,24 @@ v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LANG-01 | TBD | Pending |
-| LANG-02 | TBD | Pending |
-| LANG-03 | TBD | Pending |
-| LANG-04 | TBD | Pending |
-| LANG-05 | TBD | Pending |
-| AI-01 | TBD | Pending |
-| AI-02 | TBD | Pending |
-| AI-03 | TBD | Pending |
-| AI-04 | TBD | Pending |
-| AI-05 | TBD | Pending |
-| AI-06 | TBD | Pending |
-| PDF-01 | TBD | Pending |
-| PDF-02 | TBD | Pending |
-| PROMPT-01 | TBD | Pending |
-| PROMPT-02 | TBD | Pending |
+| LANG-01 | Phase 7 | Pending |
+| LANG-02 | Phase 7 | Pending |
+| LANG-03 | Phase 8 | Pending |
+| LANG-04 | Phase 8 | Pending |
+| LANG-05 | Phase 6 | Pending |
+| AI-01 | Phase 7 | Pending |
+| AI-02 | Phase 7 | Pending |
+| AI-03 | Phase 7 | Pending |
+| AI-04 | Phase 7 | Pending |
+| AI-05 | Phase 7 | Pending |
+| AI-06 | Phase 7 | Pending |
+| PDF-01 | Phase 8 | Pending |
+| PDF-02 | Phase 8 | Pending |
+| PROMPT-01 | Phase 7 | Pending |
+| PROMPT-02 | Phase 6 | Pending |
 
-**Coverage:** 15 exigences v1.2 — traceability à remplir par le roadmapper.
+**Coverage:** 15/15 exigences v1.2 mappées — Phase 6 (2), Phase 7 (9), Phase 8 (4).
 
 ---
 *Requirements defined: 2026-06-04*  
-*Last updated: 2026-06-04 after initial definition*
+*Last updated: 2026-06-04 — traceability filled after roadmap creation*
