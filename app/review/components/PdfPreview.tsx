@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
+import { buildCvPdfFilename } from '@/lib/utils/cv-pdf-filename';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,6 +16,7 @@ export function PdfPreview() {
   const pdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
   const isPdfLoading = useCvBuilderStore((s) => s.isPdfLoading);
   const pdfPageCount = useCvBuilderStore((s) => s.pdfPageCount);
+  const cvData = useCvBuilderStore((s) => s.cvData);
   const [fullscreen, setFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [iframeHeight, setIframeHeight] = useState(0);
@@ -31,9 +33,12 @@ export function PdfPreview() {
 
   const handleDownload = () => {
     if (!pdfBlobUrl) return;
+    const name = [cvData?.personalInfo?.firstName, cvData?.personalInfo?.lastName]
+      .filter(Boolean)
+      .join(' ');
     const a = document.createElement('a');
     a.href = pdfBlobUrl;
-    a.download = 'ESNEO_CV.pdf';
+    a.download = buildCvPdfFilename(name);
     a.click();
   };
 

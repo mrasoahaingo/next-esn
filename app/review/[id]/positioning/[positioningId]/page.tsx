@@ -37,6 +37,7 @@ import {
   matchScoreConfidenceShortLabel,
 } from '@/lib/utils/match-score-confidence';
 import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
+import { buildCvPdfFilename } from '@/lib/utils/cv-pdf-filename';
 import {
   analysisPhaseAffinageDiffersFromSnapshotForCurrentQuestions,
   analysisPhaseAnswersOnly,
@@ -765,7 +766,7 @@ export default function PositioningWizardPage() {
         if (data.fileUrl) {
           const a = document.createElement('a');
           a.href = data.fileUrl;
-          a.download = 'ESNEO_CV_positioning.pdf';
+          a.download = buildCvPdfFilename(candidateDisplayName ?? undefined);
           a.target = '_blank';
           a.click();
         }
@@ -1300,7 +1301,7 @@ export default function PositioningWizardPage() {
                             if (!pdfBlobUrl) return;
                             const a = document.createElement('a');
                             a.href = pdfBlobUrl;
-                            a.download = 'ESNEO_CV_positioning.pdf';
+                            a.download = buildCvPdfFilename(candidateDisplayName ?? undefined);
                             a.click();
                           }}
                           className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
@@ -1372,7 +1373,7 @@ export default function PositioningWizardPage() {
                   if (!pdfBlobUrl) return;
                   const a = document.createElement('a');
                   a.href = pdfBlobUrl;
-                  a.download = 'ESNEO_CV_positioning.pdf';
+                  a.download = buildCvPdfFilename(candidateDisplayName ?? undefined);
                   a.click();
                 }}
                 disabled={!pdfBlobUrl}
