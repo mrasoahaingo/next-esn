@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 Phase: 7
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-06-04
+Last activity: 2026-06-04 - Completed quick task 260604-kyb: Wire CV_LABELS into buildCvDossierLayoutSpec for bilingual PDF labels
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -71,9 +71,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260403-1ga | Créer collector Proxycurl pour freelances Paris avec workflow et cron route | 2026-04-02 | 1e8a68b | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
-| Phase 06-db-schema-foundation P01 | 2 | 1 tasks | 1 files |
-| Phase 06 P02 | 74 | 2 tasks | 2 files |
-| Phase 06-db-schema-foundation P03 | 8 | 1 tasks | 2 files |
+| 260604-kyb | Wire CV_LABELS into buildCvDossierLayoutSpec so the PDF preview uses English labels when language is en | 2026-06-04 | 1e42d2c | [260604-kyb-wire-cv-labels-into-buildcvdossierlayout](./quick/260604-kyb-wire-cv-labels-into-buildcvdossierlayout/) |
 
 ## Session continuity
 
