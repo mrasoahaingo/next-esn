@@ -93,7 +93,7 @@ describe('normalizeExtractedCvExperienceTime', () => {
 });
 
 describe('prepareCvForMatchingPrompt', () => {
-  it('recomputes yearsOfExperience using referenceDate for an open-ended recent role', () => {
+  it('recomputes yearsOfExperience using referenceDate for an open-ended recent role (French CV → "8 ans")', () => {
     const ref = new Date('2026-03-01T00:00:00Z');
     const cv = baseCv({
       personalInfo: {
@@ -115,6 +115,30 @@ describe('prepareCvForMatchingPrompt', () => {
     const out = prepareCvForMatchingPrompt(cv, ref);
     expect(out.experiences![0].isCurrent).toBe(true);
     expect(out.personalInfo.yearsOfExperience).toBe('8 ans');
+  });
+
+  it('uses "years" label for an English CV', () => {
+    const ref = new Date('2026-03-01T00:00:00Z');
+    const cv = baseCv({
+      language: 'en',
+      personalInfo: {
+        firstName: 'John',
+        lastName: 'Doe',
+        title: 'Developer',
+        yearsOfExperience: '2 years',
+      },
+      experiences: [
+        {
+          role: 'Dev',
+          company: 'Acme',
+          startDate: '2018',
+          isCurrent: false,
+          description: [],
+        },
+      ],
+    });
+    const out = prepareCvForMatchingPrompt(cv, ref);
+    expect(out.personalInfo.yearsOfExperience).toBe('8 years');
   });
 });
 

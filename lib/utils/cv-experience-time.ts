@@ -106,6 +106,7 @@ function mergeInclusiveMonthIntervals(intervals: [number, number][]): [number, n
 export function formatTotalExperienceYears(
   cv: ExtractedCV,
   referenceDate: Date,
+  language: 'fr' | 'en' = 'fr',
 ): string | undefined {
   const experiences = cv.experiences ?? [];
   const intervals: [number, number][] = [];
@@ -123,7 +124,8 @@ export function formatTotalExperienceYears(
   if (totalMonths <= 0) return undefined;
 
   const years = Math.max(1, Math.round(totalMonths / 12));
-  return `${years} ans`;
+  const unit = language === 'en' ? 'years' : 'ans';
+  return `${years} ${unit}`;
 }
 
 /**
@@ -131,7 +133,7 @@ export function formatTotalExperienceYears(
  */
 export function prepareCvForMatchingPrompt(cv: ExtractedCV, referenceDate: Date): ExtractedCV {
   let out = normalizeExtractedCvExperienceTime(cv, referenceDate);
-  const years = formatTotalExperienceYears(out, referenceDate);
+  const years = formatTotalExperienceYears(out, referenceDate, out.language ?? 'fr');
   if (years !== undefined) {
     out = {
       ...out,
