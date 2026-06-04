@@ -446,10 +446,14 @@ async function saveResult(
   const supabase = getSupabase();
 
   if (result.object) {
+    const lang = (result.object as Record<string, unknown>)?.language;
+    const detectedLanguage = lang === 'en' ? 'en' : 'fr';
+
     const { error: updateError } = await supabase
       .from('candidates')
       .update({
         extracted_data: result.object,
+        language: detectedLanguage,
         status: 'reviewing',
         ai_extraction_duration_ms: result.durationMs,
         ai_extraction_models: result.modelsSnapshot,
