@@ -4,7 +4,7 @@ milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
 stopped_at: Completed 06-03-PLAN.md — placeholder guard in resolveLlmTask
-last_updated: "2026-06-04T12:49:51.654Z"
+last_updated: "2026-06-04T12:53:43.796Z"
 last_activity: 2026-06-04
 progress:
   total_phases: 6
@@ -25,8 +25,8 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 
 ## Current Position
 
-Phase: 06 (db-schema-foundation) — EXECUTING
-Plan: 3 of 3
+Phase: 7
+Plan: Not started
 Status: Phase complete — ready for verification
 Last activity: 2026-06-04
 
