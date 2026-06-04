@@ -71,6 +71,14 @@ export async function resolveLlmTask(
   const gatewayModelId = await getGatewayIdForModelUuid(supabase, modelUuid);
   const systemPrompt = template.includes('{{') ? renderTemplate(template, context) : template;
 
+  if (/\{\{/.test(systemPrompt)) {
+    const unresolved = systemPrompt.match(/\{\{\s*[a-zA-Z0-9_]+\s*\}\}/g) ?? [];
+    console.warn(
+      `[resolveLlmTask] Placeholders non résolus dans task_key="${taskKey}" : ${unresolved.join(', ')}. ` +
+        `Vérifier que le contexte contient les clés attendues.`,
+    );
+  }
+
   return {
     gatewayModelId,
     systemPrompt,
