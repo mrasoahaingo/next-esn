@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
-status: executing
-stopped_at: Completed 06-01-PLAN.md (language columns migration)
-last_updated: "2026-06-04T12:49:08.393Z"
+status: verifying
+stopped_at: Completed 06-03-PLAN.md — placeholder guard in resolveLlmTask
+last_updated: "2026-06-04T12:49:51.654Z"
 last_activity: 2026-06-04
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,8 +26,8 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 ## Current Position
 
 Phase: 06 (db-schema-foundation) — EXECUTING
-Plan: 2 of 3
-Status: Ready to execute
+Plan: 3 of 3
+Status: Phase complete — ready for verification
 Last activity: 2026-06-04
 
 Progress: [░░░░░░░░░░] 0%
@@ -46,6 +46,9 @@ _To be updated after first plans complete._
 - **LANG** : Langue unique par document source ; artefacts positionnement cross-langue suivent la langue de la mission (destinataire = client final). UI applicative reste en français — pas de framework i18n.
 - **PROMPT** : Un seul row par task_key avec `{{language}}` injecté — pas de doublons de prompts par langue.
 - [Phase 06-db-schema-foundation]: CHECK IN ('fr','en') en DB dès la migration — intégrité contrainte DB sans dépendre de la validation applicative
+- [Phase 06]: language field at extractionSchema root (not personalInfo) — document-level property, not personal data
+- [Phase 06]: CV_LABELS declared but not wired to PDF pipeline — Phase 8 responsibility
+- [Phase 06-03]: Guard fires on rendered output (post-renderTemplate) — catches real silent passthrough; warn includes taskKey and placeholder names for actionable debug
 
 ### Pending todos
 
@@ -69,11 +72,13 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
 | Phase 06-db-schema-foundation P01 | 2 | 1 tasks | 1 files |
+| Phase 06 P02 | 74 | 2 tasks | 2 files |
+| Phase 06-db-schema-foundation P03 | 8 | 1 tasks | 2 files |
 
 ## Session continuity
 
-**Last session:** 2026-06-04T12:49:08.391Z
-**Stopped at:** Completed 06-01-PLAN.md (language columns migration)
+**Last session:** 2026-06-04T12:49:51.651Z
+**Stopped at:** Completed 06-03-PLAN.md — placeholder guard in resolveLlmTask
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation

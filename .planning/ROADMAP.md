@@ -30,7 +30,7 @@ Archive : `.planning/milestones/v1.0-ROADMAP.md`
 
 ### v1.2 — Multi-langue
 
-- [ ] **Phase 6: DB + Schema Foundation** — LANG-05, PROMPT-02
+- [x] **Phase 6: DB + Schema Foundation** — LANG-05, PROMPT-02 (completed 2026-06-04)
 - [ ] **Phase 7: Workflow Detection + Prompt Injection** — LANG-01, LANG-02, AI-01, AI-02, AI-03, AI-04, AI-05, AI-06, PROMPT-01
 - [ ] **Phase 8: PDF Wiring + Manual Override UI** — LANG-03, LANG-04, PDF-01, PDF-02
 
@@ -175,6 +175,6 @@ Plans:
 | 3 | v1.1 | 2/2 | Complete | 2026-03-26 |
 | 4 | v1.1 | 0/TBD | Not started | — |
 | 5 | v1.1 | 0/TBD | Not started | — |
-| 6 | v1.2 | 1/3 | In Progress|  |
+| 6 | v1.2 | 3/3 | Complete   | 2026-06-04 |
 | 7 | v1.2 | 0/TBD | Not started | — |
 | 8 | v1.2 | 0/TBD | Not started | — |
