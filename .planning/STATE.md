@@ -5,7 +5,7 @@ milestone_name: Réactivité, flux & résilience
 status: verifying
 stopped_at: Completed quick-260604-n5s-PLAN.md — CV PDF download filename uses candidate name
 last_updated: "2026-06-04T14:45:49.727Z"
-last_activity: "2026-06-04 - Completed quick task 260604-miq: Les textes extraits par le LLM sont toujours en français même pour un CV en anglais"
+last_activity: "2026-06-04 - Completed quick task 260604-n5s: Change the downloaded CV PDF filename to follow the format cv-himeo-nom-prenom-slug.pdf"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -73,6 +73,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260403-1ga | Collector Proxycurl REST en 4 étapes chainées (search/profile/company/count) + workflow + cron route | 2026-04-02 | e0fef9e | [260403-1ga-cr-er-collector-proxycurl-pour-freelance](./quick/260403-1ga-cr-er-collector-proxycurl-pour-freelance/) |
 | 260603-gew | Barre de progression 5/5 quand extraction terminée sans formations + labels Education en français | 2026-06-03 | bfe1d53 | [260603-gew-fix-cv-extraction-progress-bar-and-educa](./quick/260603-gew-fix-cv-extraction-progress-bar-and-educa/) |
 | 260604-kyb | Wire CV_LABELS into buildCvDossierLayoutSpec so the PDF preview uses English labels when language is en | 2026-06-04 | 1e42d2c | [260604-kyb-wire-cv-labels-into-buildcvdossierlayout](./quick/260604-kyb-wire-cv-labels-into-buildcvdossierlayout/) |
+| 260604-n5s | Change the downloaded CV PDF filename to follow the format cv-himeo-nom-prenom-slug.pdf | 2026-06-04 | 381a8fe | [260604-n5s-change-the-downloaded-cv-pdf-filename-to](./quick/260604-n5s-change-the-downloaded-cv-pdf-filename-to/) |
 | 260604-lid | Language detection wired end-to-end: identity prompt detects fr/en, saveResult persists to candidates.language | 2026-06-04 | c1bb9fa | [260604-lid-fix-language-detection-update-cv-branch-](./quick/260604-lid-fix-language-detection-update-cv-branch-/) |
 | 260604-m4p | Quand j'upload un cv en anglais, la preview reset en FR | 2026-06-04 | ca4d390 | [260604-m4p-quand-j-upload-un-cv-en-anglais-la-previ](./quick/260604-m4p-quand-j-upload-un-cv-en-anglais-la-previ/) |
 | 260604-miq | Les textes extraits par le LLM sont toujours en français même pour un CV en anglais | 2026-06-04 | bf5c764 | [260604-miq-les-textes-extraits-par-le-llm-sont-touj](./quick/260604-miq-les-textes-extraits-par-le-llm-sont-touj/) |
