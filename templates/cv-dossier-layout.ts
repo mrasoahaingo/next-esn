@@ -15,6 +15,43 @@ const WORDMARK_FALLBACK_LOGO_SRC = pathToFileURL(
   path.join(process.cwd(), 'public', 'esneo-full.svg'),
 ).href;
 
+/**
+ * Labels de section du CV localisés par langue.
+ * Utilisé par Phase 8 (PDF Wiring) pour afficher les titres dans la bonne langue.
+ * Non câblé dans le pipeline de génération PDF dans cette phase.
+ */
+export const CV_LABELS: Record<'fr' | 'en', {
+  docTitle: string;
+  summary: string;
+  skills: string;
+  experiences: string;
+  education: string;
+  strengths: string;
+  availability: string;
+  contact: string;
+}> = {
+  fr: {
+    docTitle: 'Dossier de compétences',
+    summary: 'Profil',
+    skills: 'Compétences',
+    experiences: 'Expériences',
+    education: 'Formation',
+    strengths: 'Points forts',
+    availability: 'Disponibilité',
+    contact: 'Contact',
+  },
+  en: {
+    docTitle: 'Competency Profile',
+    summary: 'Profile',
+    skills: 'Skills',
+    experiences: 'Experience',
+    education: 'Education',
+    strengths: 'Key Strengths',
+    availability: 'Availability',
+    contact: 'Contact',
+  },
+};
+
 type CvTemplateTheme = {
   headerBackground: string;
   headerNameColor: string;
