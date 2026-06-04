@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
-stopped_at: Completed quick-260604-n5s-PLAN.md — CV PDF download filename uses candidate name
-last_updated: "2026-06-04T14:45:49.727Z"
-last_activity: "2026-06-04 - Completed quick task 260604-n5s: Change the downloaded CV PDF filename to follow the format cv-himeo-nom-prenom-slug.pdf"
+stopped_at: Completed quick-260604-ncx-PLAN.md — gate PDF preview on identity step completion
+last_updated: "2026-06-04T14:52:36.417Z"
+last_activity: "2026-06-04 - Completed quick task 260604-ncx: N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 Phase: 7
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-06-04 - Completed quick task 260604-miq: Les textes extraits par le LLM sont toujours en français même pour un CV en anglais
+Last activity: 2026-06-04 - Completed quick task 260604-ncx: N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -50,6 +50,7 @@ _To be updated after first plans complete._
 - [Phase 06]: CV_LABELS declared but not wired to PDF pipeline — Phase 8 responsibility
 - [Phase 06-03]: Guard fires on rendered output (post-renderTemplate) — catches real silent passthrough; warn includes taskKey and placeholder names for actionable debug
 - [Phase quick-260604-m4p]: language field is a primitive (fr|en) — direct assignment in mergeExtractedPartial is correct, no deep merge needed
+- [Phase quick-260604-ncx]: Gate PDF preview in PdfPreviewSync (consumer), not usePdfPreview (hook), to avoid impacting template editor which uses the same hook
 
 ### Pending todos
 
@@ -77,11 +78,12 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260604-lid | Language detection wired end-to-end: identity prompt detects fr/en, saveResult persists to candidates.language | 2026-06-04 | c1bb9fa | [260604-lid-fix-language-detection-update-cv-branch-](./quick/260604-lid-fix-language-detection-update-cv-branch-/) |
 | 260604-m4p | Quand j'upload un cv en anglais, la preview reset en FR | 2026-06-04 | ca4d390 | [260604-m4p-quand-j-upload-un-cv-en-anglais-la-previ](./quick/260604-m4p-quand-j-upload-un-cv-en-anglais-la-previ/) |
 | 260604-miq | Les textes extraits par le LLM sont toujours en français même pour un CV en anglais | 2026-06-04 | bf5c764 | [260604-miq-les-textes-extraits-par-le-llm-sont-touj](./quick/260604-miq-les-textes-extraits-par-le-llm-sont-touj/) |
+| 260604-ncx | N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en | 2026-06-04 | ece88a0 | [260604-ncx-n-affiche-pas-la-preview-du-cv-tant-qu-o](./quick/260604-ncx-n-affiche-pas-la-preview-du-cv-tant-qu-o/) |
 
 ## Session continuity
 
-**Last session:** 2026-06-04T14:45:49.719Z
-**Stopped at:** Completed quick-260604-n5s-PLAN.md — CV PDF download filename uses candidate name
+**Last session:** 2026-06-04T14:52:36.417Z
+**Stopped at:** Completed quick-260604-ncx-PLAN.md — gate PDF preview on identity step completion
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
