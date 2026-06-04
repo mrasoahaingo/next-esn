@@ -1,137 +1,168 @@
-# Technology Stack: Async Workflow State Synchronization
+# Stack Research: Multilingual Support
 
-**Project:** Next-ESN — AI workflow UI reliability milestone
-**Researched:** 2026-03-26
-**Scope:** Async workflow state management and UI feedback patterns only. Core stack (Next.js 16, Supabase, Clerk, Vercel AI SDK, Gemini) is already fixed and not reconsidered here.
-
----
-
-## Problem Statement
-
-The app has three AI workflows (CV extraction, job analysis, positioning) each with sub-steps. The current state is: buttons don't get disabled during runs (allows duplicates), errors fail silently, sub-step progress is invisible, and the React Query + Zustand layer is desynchronized from actual workflow state. The milestone goal is reliability, not new features.
+**Project:** Next-ESN — v1.2 Multi-langue milestone
+**Researched:** 2026-06-04
+**Scope:** Technical additions for `language: 'fr' | 'en'` on DB entities, LLM language detection, PDF label swapping, Zod patterns. UI stays French — no i18n framework.
 
 ---
 
-## Recommended Stack Additions
+## New additions needed
 
-### Workflow State Layer
+### 1. No new npm dependencies — zero additions required
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| TanStack Query v5 `refetchInterval` | Already at 5.90.21 | Poll workflow status from Supabase while running | Already installed. Conditional polling (stop when `status === 'done' or 'error'`) is the safest bridge between the beta `@workflow/next` runtime and the React UI. Supabase realtime is an option but adds subscription complexity; polling at 2-3s intervals is sufficient for AI workflows that take 5-30 seconds. |
-| Supabase Realtime `postgres_changes` | Already at 2.99.1 | Push-based status updates for sub-steps | Already installed. Use only for the workflow status row that the `@workflow/next` runtime writes to. Subscribe to `UPDATE` events on a `workflow_runs` table filtered by `id`. Pair with React Query invalidation in the subscription callback. Do NOT use for the primary status loop — keep polling as fallback due to WebSocket reconnection fragility noted in Supabase docs. |
-| Zustand slices pattern | Already at 5.0.11 | Split monolithic positioning store into focused slices | Already installed. The current 25-field store is fragile. Slice into four focused stores: `workflowStatusSlice` (pending/running/done/error per workflow), `jobDescriptionSlice`, `analysisSlice`, `cvEditorSlice`. This eliminates the "any field change re-renders everything" problem. |
-
-**Confidence:** HIGH — all three are in the codebase; this is architecture pattern guidance, not new dependencies.
+All four technical concerns are solvable with what is already installed. Confidence: HIGH.
 
 ---
 
-### Optimistic Updates
+## Implementation patterns per concern
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| TanStack Query `useMutation` variable-based optimistic updates | Already at 5.90.21 | Disable trigger buttons immediately when a workflow starts | Use the **variable-based approach** (not cache manipulation via `onMutate`). When `mutation.isPending === true`, disable the trigger button and show spinner. This is simpler than cache manipulation, avoids rollback complexity, and is sufficient for the use case: AI workflow triggers are not CRUD operations where you need to show a fake result — you just need to block re-triggering. |
-| React 19 `useTransition` / `isPending` | Already at 19.2.4 | Gate button interactions during transitions | Use `isPending` from `useTransition` for navigation-adjacent interactions. For workflow triggers specifically, `useMutation.isPending` from TanStack Query is more appropriate because it has built-in persistence and cross-component access via `queryClient.isMutating()`. |
+### (1) Postgres CHECK constraint for language column
 
-**Do NOT use:** React 19 `useOptimistic` for workflow states. The hook is designed for immediate visual updates that predict server outcomes (e.g., optimistically marking a todo as complete). AI workflow results are unpredictable and non-reversible — "optimistic" is semantically wrong here. The goal is blocking re-triggers, not faking results.
+**Pattern:** `VARCHAR(2)` with `CHECK (language IN ('fr', 'en'))` + `DEFAULT 'fr'`.
 
-**Confidence:** HIGH — official TanStack Query v5 docs confirm variable-based approach for this pattern.
+```sql
+-- idempotent migration pattern (matches existing conventions)
+ALTER TABLE candidates
+  ADD COLUMN IF NOT EXISTS language VARCHAR(2) NOT NULL DEFAULT 'fr'
+  CHECK (language IN ('fr', 'en'));
 
----
+ALTER TABLE missions
+  ADD COLUMN IF NOT EXISTS language VARCHAR(2) NOT NULL DEFAULT 'fr'
+  CHECK (language IN ('fr', 'en'));
 
-### Streaming State (Sub-step Progress)
+ALTER TABLE organization_settings
+  ADD COLUMN IF NOT EXISTS default_language VARCHAR(2) NOT NULL DEFAULT 'fr'
+  CHECK (default_language IN ('fr', 'en'));
+```
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Vercel AI SDK `createUIMessageStream` + `DataStreamWriter` | Already at ai 6.0.116 / @ai-sdk/react 3.0.118 | Stream sub-step progress labels from `@workflow/next` steps to UI | The SDK supports `writer.write({ type: 'data-step', data: { label, status }, transient: true })` from the server, consumed via `onData` callback in `useChat`. Transient parts are not stored in message history, which is correct for ephemeral "Step 2/4: Extracting skills..." indicators. Use persistent parts (with `id`) for final workflow results. |
+**Why VARCHAR(2) over ENUM type:** Postgres `CREATE TYPE` is not idempotent without the `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object` wrapper (already used in this codebase — see `initial_schema.sql` conventions). VARCHAR + CHECK is simpler, fully idempotent with `ADD COLUMN IF NOT EXISTS`, and easy to extend to `'de'` later by altering the constraint. BCP-47 tags (`'fr-FR'`) are overkill for a two-language ESN product.
 
-**Critical constraint:** The `@workflow/next` step execution and the AI SDK streaming need to be bridged inside the same API route. `@workflow/next` step callbacks should write to a `DataStreamWriter`. This is architecturally possible since both use HTTP streaming, but it requires careful route design. Flag this for deeper investigation in the implementation phase.
+**Index:** Not needed — language is a filter helper, never the primary query predicate. Skip unless queries `WHERE language = 'en'` at scale.
 
-**Confidence:** MEDIUM — AI SDK 6 docs confirm the `DataStreamWriter` pattern. Whether `@workflow/next` beta exposes step callbacks that can write to a `DataStreamWriter` in the same HTTP response requires verification against the actual runtime internals. GitHub issue #6539 in vercel/ai confirms annotations stream before step completion, which is the desired behavior.
-
----
-
-### Error Propagation
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Next.js `error.tsx` boundary files | Built-in | Catch render errors from failed server components | Already the Next.js App Router mechanism. Add `error.tsx` to each major route segment (`app/review/[id]/error.tsx`, `app/review/[id]/positioning/[positioningId]/error.tsx`). These replace `react-error-boundary` for RSC errors. |
-| `react-error-boundary` v5 | NOT RECOMMENDED | — | Do not add. Has a known conflict with Next.js: it catches `notFound()`, `redirect()`, and `unauthorized()` throws which are Next.js control flow, not real errors. Use `error.tsx` files instead. |
-| Standardized API error response shape | 0 new packages | Consistent JSON errors from all API routes | Create `lib/errors/api-error.ts` with a `{ ok: false, code: string, message: string }` shape. Use across all API routes to replace the current mix of thrown `NextResponse`, silent catches, and inconsistent formats. No new package needed — this is a code pattern. |
-| `sonner` `toast.promise()` | Already at 2.0.7 | Surface workflow errors to user as toasts | Already installed. `toast.promise(triggerWorkflow(), { loading: 'Analysing...', success: 'Done', error: (err) => err.message })` wraps a mutation and automatically handles all three states. Use for all three workflow triggers. Do NOT use for sub-step progress (use streaming instead). |
-
-**Confidence:** HIGH for error.tsx and sonner patterns. HIGH for avoiding react-error-boundary (confirmed by vercel/next.js issue #58754 and bvaughn/react-error-boundary issue #143).
+**Confidence:** HIGH — standard Postgres pattern, consistent with existing `status` CHECK constraint in `initial_schema.sql` line 10.
 
 ---
 
-### Loading States
+### (2) Vercel AI SDK: reliable language detection via generateObject
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Zustand `workflowStatusSlice` | Pattern, no new dep | Single source of truth for `pending/running/done/error` per workflow ID | Each workflow trigger (CV extract, job analyze, positioning generate) should have a canonical status stored in a dedicated Zustand slice. This is the source that disables buttons (`status === 'running'`), shows progress steps, and gates navigation. React Query `isPending` alone does not survive page navigations. |
-| TanStack Query `isFetching` / `isLoading` | Already at 5.90.21 | Skeleton states for data-driven UI sections | Use `isLoading` (no data yet, first fetch) for skeleton placeholders, `isFetching` (background refetch) for subtle spinners. Never block interaction during background refetches. |
-| Next.js `loading.tsx` files | Built-in | Route-level Suspense fallback | Add `loading.tsx` to `app/review/[id]/positioning/[positioningId]/` to prevent blank screens during RSC fetches. Use `shadcn` skeleton components to match actual layout height and prevent CLS (layout shift). |
+**Pattern:** Add `language` field to the existing `extractionIdentitySchema` in `lib/schema.ts`. The identity branch already uses `generateObject` (Output.object) — language detection is one field on the same call, not a separate call.
 
-**Confidence:** HIGH — all standard patterns documented in Next.js and TanStack Query official docs.
+```typescript
+// lib/schema.ts — extend extractionIdentitySchema
+export const extractionIdentitySchema = extractionSchema.pick({
+  personalInfo: true,
+  summary: true,
+}).extend({
+  language: z.enum(['fr', 'en'])
+    .describe("Detected language of the CV document. 'fr' for French, 'en' for English."),
+});
+```
+
+The existing `resolveLlmTask` + `renderTemplate` pipeline already injects context variables. Add `{{language}}` to prompt templates by passing `language` in the `context` object:
+
+```typescript
+// in workflow orchestrator — after identity extraction resolves
+const context = {
+  language: detectedLanguage, // 'fr' | 'en'
+  // ... other vars
+};
+await resolveLlmTask(supabase, { taskKey: 'cv_experiences', orgId, context });
+```
+
+**Why not a separate LLM call for detection:** Extra latency + cost for something a schema field handles in the same identity branch call. The LLM already reads the full document for `personalInfo` — adding one enum field to the same `generateObject` schema is zero cost.
+
+**Reliability note:** Vercel AI SDK `generateObject` with `z.enum(['fr', 'en'])` is constrained output — the model cannot return an invalid value. This is the correct pattern. `streamText` parsing of language would require manual extraction from prose and is fragile. Use `generateObject` (already used in the identity branch).
+
+**Confidence:** HIGH — `generateObject` with Zod enum is documented Vercel AI SDK pattern. Codebase already uses it in extraction branches.
 
 ---
 
-## What NOT to Add
+### (3) @react-pdf/renderer font considerations for multilingual PDFs
 
-| Library | Why Not |
+**Current state:** `lib/services/pdf.registry.tsx` uses Helvetica (built-in PDF font) for all text. Helvetica is a Type 1 PostScript font bundled in every PDF reader — no `Font.register()` call needed for it.
+
+**For FR + EN content:** Helvetica covers the full Latin-1 Extended character set, which includes all French accented characters (é, è, ê, ë, à, â, ô, ù, û, ç, î, ï, œ, æ) and English. **No font change is required.** Both languages are fully within the Helvetica coverage area.
+
+**What would require a font change:** Arabic, Chinese, Japanese, Korean, or any non-Latin script. That is out of scope for v1.2.
+
+**Action required:** None. The existing Helvetica setup handles FR and EN correctly.
+
+**Confidence:** HIGH — Helvetica/WinAnsiEncoding covers ISO 8859-1 (Latin-1) and Latin Extended-A, which covers all French and English characters in use in CV documents.
+
+---
+
+### (4) Zod pattern for language field
+
+**Pattern:** `z.enum(['fr', 'en'])` — not a discriminated union.
+
+Discriminated unions (`.discriminatedUnion()`) are for objects where the shape changes based on a tag field. Here `language` is a simple string enum on a flat schema — use `z.enum`.
+
+```typescript
+// Canonical definition — single source of truth
+export const languageSchema = z.enum(['fr', 'en']);
+export type Language = z.infer<typeof languageSchema>; // 'fr' | 'en'
+```
+
+Reuse this in:
+- `extractionIdentitySchema` (LLM output detection)
+- Any API route body that accepts `language` as input
+- DB query types where `language` is returned
+
+For the `CV_LABELS` map:
+
+```typescript
+// templates/cv-labels.ts
+import type { Language } from '@/lib/schema';
+
+export const CV_LABELS: Record<Language, { skills: string; experiences: string; education: string; summary: string; strengths: string }> = {
+  fr: {
+    skills: 'Compétences',
+    experiences: 'Expériences professionnelles',
+    education: 'Formations',
+    summary: 'Résumé',
+    strengths: 'Points forts',
+  },
+  en: {
+    skills: 'Skills',
+    experiences: 'Professional Experience',
+    education: 'Education',
+    summary: 'Summary',
+    strengths: 'Key Strengths',
+  },
+};
+```
+
+TypeScript's `Record<Language, ...>` enforces exhaustive coverage — adding `'de'` to the enum will cause a compile error on the labels map until both are updated. This is the correct pattern.
+
+**Confidence:** HIGH — standard Zod enum + TypeScript Record pattern.
+
+---
+
+## What NOT to add
+
+| Library | Why not |
 |---------|---------|
-| XState v5 | Appropriate for complex multi-parallel state machines. The workflow state here is linear (pending → running → done/error). A Zustand slice with a `WorkflowStatus` union type is 80% less code and zero learning curve for the team. Add XState only if sub-steps gain branching/parallel semantics. |
-| SWR | Duplicate of TanStack Query. The project already uses TanStack Query v5 heavily. |
-| React Query Persist + IndexedDB | Out of scope for this milestone. Useful for resuming state after page refresh, but adds complexity not needed now. |
-| WebSocket (raw) | Supabase Realtime handles WebSocket management. No reason to manage raw WebSockets alongside the existing Supabase client. |
-| tRPC | Would require significant route restructuring. Not compatible with the brownfield constraint. |
-| Inngest / Trigger.dev | Full workflow orchestration replacements for `@workflow/next`. Out of scope per project constraints: "work with beta limitations, don't replace." |
+| `next-intl` | UI stays French. No route-based locale switching, no message catalogs, no locale-aware routing needed. Adding it creates complexity with zero payoff. |
+| `react-i18next` / `i18next` | Same reason. Heavyweight for two static label maps in the PDF layer. |
+| `@formatjs/intl` / `react-intl` | Overkill. The only "translation" needed is a `CV_LABELS` constant map. |
+| `franc` / `langdetect` (language detection libs) | LLM already reads the full document. A statistical n-gram detector adds a dependency and is less reliable than the LLM for short mixed-content CVs. Let the AI do it. |
+| Separate `llm_tasks` rows per language | Creates prompt duplication and admin maintenance burden. The `{{language}}` directive injection into existing prompts is the correct approach — already supported by `renderTemplate`. |
+| Custom font registration for FR/EN | Not needed. Helvetica covers both character sets. Only add custom fonts if non-Latin scripts are required. |
 
 ---
 
-## Architecture Decision: Polling vs. Realtime for Workflow Status
+## Integration notes
 
-**Recommended: Polling as primary, Supabase Realtime as accelerator**
+**`renderTemplate` is already compatible.** The function at `lib/llm/template-render.ts` replaces `{{language}}` with no changes — just pass `language` in the `context` object when calling `resolveLlmTask`.
 
-The `@workflow/next` beta runtime is the critical unknown. Its behavior when steps fail, when the HTTP connection drops, or when a step is retried is not fully documented. Polling at `refetchInterval: 2000` (conditional: only while `status === 'running'`) is resilient because:
+**Language propagation flow:**
+1. Identity branch extracts `language: 'fr' | 'en'` as a Zod enum field from the LLM response.
+2. Workflow orchestrator persists `language` to `candidates.language` (or `missions.language`).
+3. Downstream branches receive `language` via the `context` object passed to `resolveLlmTask`.
+4. PDF generation reads `candidate.language` and selects from `CV_LABELS[language]`.
 
-1. It self-heals on reconnect — no subscription re-registration needed.
-2. It works regardless of whether `@workflow/next` writes to Supabase or another store.
-3. Status comes from Supabase rows the app controls, not from the workflow runtime's internal state.
+**Cross-language positioning rule (from PROJECT.md):** When CV is FR and mission is EN, positioning artifacts follow the mission language. This means the workflow orchestrator must pass `mission.language` (not `candidate.language`) as `{{language}}` when triggering positioning branches.
 
-Supabase Realtime `postgres_changes` can be added as an optimization layer: subscribe to `UPDATE` on the `workflow_runs` table and call `queryClient.invalidateQueries()` on change. This reduces perceived latency from 2s to near-instant without replacing the polling safety net.
+**`organization_settings.default_language`:** Used as fallback when auto-detection is unavailable or skipped (e.g., manual creation without file upload). Read it during onboarding, not on every workflow call.
 
-**Database requirement:** The workflow status must be written to a Supabase table that the client can query. If `@workflow/next` does not write status automatically, the API route wrapper must write `{ id, status: 'running' }` on start and `{ status: 'done' | 'error', error_message }` on completion/failure. This is mandatory for the polling strategy to work.
-
-**Confidence:** MEDIUM — polling strategy is well-established. Whether `@workflow/next` beta writes status to Supabase needs verification against the actual codebase (`lib/` workflow wrappers).
-
----
-
-## Installation
-
-No new packages are needed for this milestone. All required libraries are already in `package.json`. The work is:
-
-1. Schema/table additions in Supabase (workflow status rows)
-2. Zustand store refactor (slice pattern for positioning store)
-3. API route standardization (error shape, status writes)
-4. React Query query key discipline (stop broad invalidations)
-5. Streaming bridge between `@workflow/next` steps and `DataStreamWriter`
-
----
-
-## Sources
-
-- [TanStack Query v5 — Mutations](https://tanstack.com/query/v5/docs/framework/react/guides/mutations)
-- [TanStack Query v5 — Optimistic Updates](https://tanstack.com/query/v5/docs/framework/react/guides/optimistic-updates)
-- [TanStack Query — Concurrent Optimistic Updates (tkdodo.eu)](https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query)
-- [Supabase Realtime — Postgres Changes](https://supabase.com/docs/guides/realtime/postgres-changes)
-- [Vercel AI SDK — Streaming Custom Data](https://ai-sdk.dev/docs/ai-sdk-ui/streaming-data)
-- [AI SDK 6 Release Notes](https://vercel.com/blog/ai-sdk-6)
-- [React 19 — useOptimistic](https://react.dev/reference/react/useOptimistic)
-- [React 19 — useTransition](https://react.dev/reference/react/useTransition)
-- [Next.js — Error Handling](https://nextjs.org/docs/app/getting-started/error-handling)
-- [react-error-boundary conflict with Next.js (issue #143)](https://github.com/bvaughn/react-error-boundary/issues/143)
-- [Next.js non-RSC error boundary issue #58754](https://github.com/vercel/next.js/issues/58754)
-- [Zustand Slices Pattern](https://github.com/pmndrs/zustand/blob/main/docs/learn/guides/slices-pattern.md)
-- [@workflow/next on npm](https://www.npmjs.com/package/@workflow/next)
-- [Vercel — Introducing Workflow Development Kit](https://vercel.com/blog/introducing-workflow)
+**Migration timestamp:** Use `date +%Y%m%d%H%M%S` at creation time to avoid collisions. Three separate `ALTER TABLE` statements can be in one migration file or split — one file is cleaner given they are all part of the same feature.

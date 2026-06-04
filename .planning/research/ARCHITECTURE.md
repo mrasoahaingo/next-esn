@@ -1,388 +1,181 @@
-# Architecture Patterns: Workflow State Propagation
+# Architecture Research: Language Integration
 
-**Domain:** Async AI workflow state synchronization — server to React UI
-**Researched:** 2026-03-26
-**Overall confidence:** HIGH (codebase directly inspected + patterns verified)
+## Data flow
+
+```
+DB (candidates.language / missions.language)
+  └── read at workflow start (fetchAndAnalyze step / parallelExtractAndStream step)
+        ├── injected into resolveLlmTask context as { language: 'fr'|'en' }
+        │     └── {{language}} rendered into system prompt by existing template-render.ts
+        └── returned from saveResult step → triggers downstream
+              ├── PDF chain: generateCvPdf(data, templateConfig, language)
+              │     └── buildCvSpec → buildCvTemplateSpec → buildCvDossierLayoutSpec
+              │           └── CV_LABELS[language] selects section heading strings
+              └── positioning workflows: read missions.language at fetchAndAnalyze entry
+                    └── passed to buildAnalysisUserContent(cv, jd, analysis, weights, opts, answers, language)
+```
+
+**Language source of truth per artifact:**
+- CV extraction → language detected by identity branch → persisted to `candidates.language`
+- Job posting analysis → language detected by analyze workflow → persisted to `missions.language`
+- Positioning artefacts (analysis, generate) → read `missions.language` (cross-language rule: artifacts follow mission language)
+- PDF export → read `candidates.language` from DB at API call time OR passed through from caller
 
 ---
 
-## Context: What the Codebase Actually Does
+## Question-by-question answers
 
-Before recommending patterns, here is what already exists. Understanding this prevents unnecessary rewrites.
+### Q1: extract-cv.ts — identity first, then 3 parallel branches
 
-### Current Mechanism
+The current structure runs all 4 branches in a single `Promise.all` inside `parallelExtractAndStream`. The language is not available until the identity branch completes.
 
-The app uses `@workflow/next` (4.0.1-beta) which wraps Vercel Workflow DevKit. The workflow runtime exposes a `ReadableStream` of NDJSON chunks when a run starts. The current flow is:
+**Cleanest restructure without breaking NDJSON:**
+
+Split `parallelExtractAndStream` into two sequential `'use step'` functions — both operating on the same writable stream via `getWritable()`. The `@workflow/next` runtime allows multiple steps to write to the same writable within a single workflow invocation.
 
 ```
-User action
-  → POST /api/extract (or /api/positioning/generate, /api/positioning/analyze)
-  → workflow runtime: start(workflowFn, args) → returns { runId, readable }
-  → API stores runId + status in Supabase (candidates.workflow_run_id, status: 'extracting')
-  → API returns the ReadableStream directly as the HTTP response body
-  → Client useWorkflowStream hook: reads NDJSON from the open POST response
-  → NDJSON chunks: { index, data: Partial<T>, meta: { phase, activeBranches } }
-  → On stream end: onFinish() → React Query invalidation → refetch from Supabase
+step 1: extractIdentityBranch(candidateId, cvText, ...) → returns { identity, language, chunkIndex }
+  - runs only CV_BRANCH_IDENTITY via consumeBranch
+  - persists candidates.language immediately after identity resolves
+  - streams identity partial via the writable (same NDJSON channel)
+  - returns the detected language
+
+step 2: parallelExtractRemaining(candidateId, cvText, language, chunkIndex, ...) → returns ParallelExtractResult
+  - runs Promise.all([experiences, education, skills])
+  - injects { language } into each resolveLlmTask context call
+  - continues streaming to same writable
 ```
 
-Reconnection path (page reload while workflow running):
+The `extractCvWorkflow` function becomes:
 ```
-runId in Supabase → React Query feeds runId + status into useWorkflowStream
-  → useWorkflowStream sees runId + active status → GET /api/workflow/[runId]/stream
-  → workflow runtime: getRun(runId).getReadable({ startIndex }) → resumes stream
-```
-
-Cancel path:
-```
-User click → POST /api/workflow/[runId]/cancel
-  → world.events.create(runId, { eventType: 'run_cancelled' })
-  → Supabase: status reset + workflow_run_id: null
+const prep = await prepareCvText(candidateId)
+const identity = await extractIdentityBranch(candidateId, prep.cvText, ...)
+const ext = await parallelExtractRemaining(candidateId, prep.cvText, identity.language, ...)
+await saveResult(candidateId, { ...ext, language: identity.language })
 ```
 
-Status polling (fallback, non-streaming):
-```
-React Query refetchInterval: 3000ms when status in ['extracting', 'analyzing', 'generating']
-  → falls back to 60_000ms when idle
-```
+**NDJSON impact:** Zero. The writable stays open across steps. The client already handles partial `data` payloads from multiple emit() calls. The stream closes only in `saveResult` (via `writable.close()`), unchanged.
 
-**Key insight:** The architecture is already correct in its broad shape. The problem is not the pattern — it is gaps in the execution of the pattern. The Supabase `status` column is the ground truth. The stream is a live view that races to completion ahead of the database settling.
+**Step boundary constraint:** Each `'use step'` function gets its own `getWritable()` call — this is fine because `getWritable()` returns the same underlying writable for the current workflow run. Confirm this holds with the `@workflow/next` beta API before splitting.
 
----
+**Fallback if getWritable() does not persist across steps:** Run identity branch sequentially inside the existing single `'use step'` function before launching the `Promise.all` — no step split required, just sequential then parallel within one step boundary. Language is available for the remaining branches. Slightly less granular error attribution on identity failures, but no NDJSON risk.
 
-## The Four Patterns — Evaluated Against This Stack
+### Q2: PDF chain — where to add language to function signatures
 
-### Pattern 1: Polling (Current partial implementation)
+Add `language` as an optional param with `'fr'` default at every layer. Thread it inward:
 
-React Query `refetchInterval` on the detail query. Already present for candidates and positionings.
+| Function | File | Change |
+|---|---|---|
+| `generateCvPdf(data, templateConfig, language?)` | `pdf.service.ts` | Add `language?: 'fr'\|'en'` param |
+| `buildCvSpec(data, templateConfig, language?)` | `pdf.template.ts` | Pass through to registry |
+| `buildCvTemplateSpec(data, templateConfig, language?)` | `templates/registry.ts` | Pass through to layout |
+| `buildCvDossierLayoutSpec(data, templateConfig, language?)` | `templates/cv-dossier-layout.ts` | Use `CV_LABELS[language ?? 'fr']` |
 
-**Current implementation:**
+`CV_LABELS` is a new `const` in `cv-dossier-layout.ts`:
 ```typescript
-// lib/queries/candidates.ts
-refetchInterval: (query) => {
-  const data = query.state.data as { status: string } | undefined;
-  if (data?.status && ACTIVE_CV_STATUSES.includes(data.status)) return 3000;
-  return false;
-},
+const CV_LABELS = {
+  fr: { summary: 'Synthese du profil', skills: 'Competences', edu: 'Formations', exp: 'Experiences professionnelles' },
+  en: { summary: 'Profile summary', skills: 'Skills', edu: 'Education', exp: 'Work experience' },
+} as const;
 ```
 
-**Strengths:** Simple, resilient to reconnects, works with Vercel serverless, no connection management.
+The 4 hardcoded French strings in `addSectionHeading` calls (lines 316, 371, 391, 459) are the only changes in `cv-dossier-layout.ts`. All other layout logic is language-agnostic.
 
-**Weaknesses in current form:**
-- 3-second polling fires regardless of whether the stream is active. On a 30-second workflow, this generates ~10 unnecessary round-trips per user.
-- Polling continues after stream ends with no explicit stop condition tied to stream completion.
-- List queries (`useCandidates`, `usePositionings`) also poll at 3s when any item is active — this scales badly as list size grows.
-- No polling for the `missions` workflow (analyze-job), which has no `status` column.
+### Q3: API routes — how language enters workflow invocation
 
-**Verdict:** Keep polling as the safety net / fallback, but make it conditional on stream not being active. The `refetchInterval` should be `false` when `useWorkflowStream.isLoading` is true, activating only after stream completes or on reconnect.
+**For upload (`app/api/upload/route.ts`):** Language is unknown at upload time. The workflow detects it. No change to the `start(extractCvWorkflow, [candidate.id])` call. Language flows out of the workflow via `saveResult` persisting `candidates.language`.
 
----
-
-### Pattern 2: NDJSON Streaming (Primary mechanism — already implemented)
-
-The `@workflow/next` runtime provides `run.readable` (a `ReadableStream<Uint8Array>`) which is consumed by `useWorkflowStream`. This is the real-time UI update path.
-
-**What works well:**
-- Sub-second latency for incremental data (partial JSON objects from `streamText`)
-- Reconnect path via `GET /api/workflow/[runId]/stream` with `startIndex` replays from any offset
-- `x-workflow-run-id` header propagation enables deduplication
-- Abort controller cleanly cancels in-flight streams
-
-**Gaps in current implementation (HIGH confidence, from code inspection):**
-
-1. **Status field not written until `saveResult`/`saveGeneration` step.** The workflow sets `status: 'reviewing'` (extract) or `status: 'generated'` (generate) only in the final `'use step'` block. If the stream closes before that step commits, Supabase still shows `'extracting'` and React Query polling restarts. There is no intermediate status update written to Supabase during streaming.
-
-2. **`onFinish` invalidation is the only trigger for React Query post-stream.** If the stream disconnects abnormally (network drop, Vercel edge timeout), `onFinish` is never called, and React Query polling must recover. But polling is disabled (`refetchInterval: false`) when status is not in the active list — and the status may still be 'extracting' in Supabase because the workflow is still running. This means the UI can show a stuck state.
-
-3. **No terminal-state broadcast.** When the workflow completes and the final step sets `workflow_run_id: null` in Supabase, the React Query cache still holds the old status until next poll fires (up to 3 seconds lag).
-
-4. **`pendingRunId` vs `runId` race.** The `useWorkflowStream` hook uses a `pendingRunId` from the POST response header to avoid double-reading the stream, but the React Query cache may clear `workflow_run_id` to `null` before the stream fully drains. This creates a brief window where `activeRunId` goes null mid-stream, potentially re-enabling action buttons prematurely.
-
-5. **No error status persisted to Supabase.** If a workflow step throws, the NDJSON stream closes with an error frame, but the workflow runtime does not write `status: 'error'` to the candidates/positionings table. The client sees `isLoading: false, error: Error` but a subsequent page reload will show the record still in `status: 'extracting'` (ghost state).
-
----
-
-### Pattern 3: Server-Sent Events (Not used, not recommended for this stack)
-
-SSE (`EventSource`) opens a long-lived HTTP GET connection where the server pushes `text/event-stream` formatted messages.
-
-**Why not applicable here:**
-- Vercel serverless functions have a 60-second max duration (Fluid Compute extends this, but SSE requires a persistent server-side loop).
-- The `@workflow/next` runtime already provides a superior version of this via `run.getReadable()` — there is no need to build a separate SSE layer.
-- SSE requires a persistent HTTP connection per workflow run per client. With multiple concurrent workflows across users, connection limits become a concern.
-- The existing NDJSON stream already provides incremental updates. SSE would be a parallel mechanism solving the same problem with more infrastructure complexity.
-
-**Verdict:** Do not add SSE. The NDJSON stream is SSE-equivalent for this use case.
-
----
-
-### Pattern 4: WebSockets (Not used, not recommended for this stack)
-
-WebSockets are bidirectional. Workflow status updates are unidirectional (server → client). The added complexity of socket lifecycle management, reconnection, and Vercel compatibility issues make this a poor fit.
-
-**Verdict:** Do not add WebSockets.
-
----
-
-### Pattern 5: Supabase Realtime Subscriptions (Viable enhancement)
-
-Supabase Realtime provides Postgres change notifications via WebSocket under the hood, exposed as `supabase.channel().on('postgres_changes', ...)`. The pattern is:
-
-```
-Workflow writes to Supabase → Supabase Realtime fires INSERT/UPDATE event
-  → Client subscription receives { new: { status, workflow_run_id } }
-  → queryClient.invalidateQueries({ queryKey: keys.candidates.detail(id) })
+**For PDF generation API routes:** Read `candidates.language` from DB at the start of the route handler, then pass it to `generateCvPdf`. Do not accept language from request body — use DB as source of truth to prevent inconsistency. Pattern:
+```typescript
+const { data: candidate } = await supabase.from('candidates').select('language').eq('id', candidateId).single();
+const language = candidate?.language ?? 'fr';
+await generateCvPdf(data, templateConfig, language);
 ```
 
-**Strengths:**
-- Zero polling overhead — event-driven instead of time-driven
-- React Query invalidation is immediate when database row changes
-- Handles the "ghost state" problem — when the workflow writes final status, UI updates within ~1 second
-- Already using Supabase so no new infrastructure
+**For job posting analysis routes:** Language detected by the analyze workflow and persisted to `missions.language`. The API route triggering re-analysis does not pass language in; the workflow reads and writes it.
 
-**Weaknesses:**
-- Requires enabling Realtime on specific tables in Supabase dashboard
-- Supabase free tier has limits on concurrent Realtime connections (200 per project)
-- Subscriptions can miss events on reconnect — need to handle the reconnect case with a manual refetch
-- Adds connection lifecycle to manage in React (subscribe on mount, unsubscribe on unmount)
+**For positioning routes:** No change to route invocation. The workflow reads `missions.language` internally.
 
-**Verdict:** Use Supabase Realtime as a complement to the existing stream, specifically to drive React Query invalidation after workflow completion. This eliminates the 3-second polling lag on terminal state changes without replacing the stream for incremental updates.
+### Q4: Positioning workflows — where to read mission.language
 
----
+Read it at the top of `fetchAndAnalyze`, from the already-fetched `positioning.missions` join. The missions select already fetches `title, company, job_analysis` — add `language` to that select:
 
-## Recommended Architecture
-
-### Single Source of Truth Hierarchy
-
-```
-Supabase (status column)       ← ground truth, persistent
-  ↑ written by workflow steps
-
-NDJSON stream (run.readable)   ← real-time view during active run
-  ↑ emitted by workflow steps concurrently with Supabase writes
-
-React Query cache              ← client-side projection
-  ↑ populated by REST /api/* fetch
-  ↑ invalidated by stream onFinish + Supabase Realtime events
-
-Zustand stores                 ← transient UI state only
-  ↑ CV builder edits, positioning draft, PDF blob
-  ↑ NEVER holds workflow status — that lives in React Query
+```typescript
+.select('*, candidates(*), missions(job_analysis, title, company, language)')
 ```
 
-**Critical rule:** Workflow status (`pending/running/done/error`) must only be read from the React Query cache (which reflects Supabase). It must never be derived from `isLoading` state of `useWorkflowStream` alone, because the stream can be absent (page reload, reconnect) while a workflow is active.
-
----
-
-## Component Boundaries
-
-### Layer 1: Workflow Runtime (Server)
-**Location:** `workflows/*.ts` + `app/api/*/route.ts`
-**Responsibility:** Execute steps, write to Supabase, emit NDJSON stream
-**Communicates with:** Supabase (writes), NDJSON stream consumer (writes), `workflow/api` (getRun, start)
-**Contract:** Every workflow MUST write a terminal status to Supabase on success AND failure before closing the stream.
-
-### Layer 2: API Routes (Server)
-**Location:** `app/api/extract/route.ts`, `app/api/positioning/generate/route.ts`, `app/api/positioning/analyze/route.ts`
-**Responsibility:** Guard against duplicate runs (check `workflow_run_id` + `run.status`), start runs, return stream
-**Communicates with:** Workflow runtime (start/getRun), Supabase (read status, write runId), client (Response stream)
-**Contract:** Return `x-workflow-run-id` header on all streaming responses. Return 409 when a run is already active.
-
-### Layer 3: useWorkflowStream Hook (Client)
-**Location:** `lib/hooks/useWorkflowStream.ts`
-**Responsibility:** Consume NDJSON stream, expose incremental data + meta + loading state, handle reconnect
-**Communicates with:** API routes (fetch), React Query (onFinish triggers invalidation)
-**Contract:** `isLoading` means stream is open. `isLoading: false` does NOT mean workflow is done — it means the stream closed (which may happen before the database commits). Always check Supabase status via React Query for definitive state.
-
-### Layer 4: React Query (Client)
-**Location:** `lib/queries/*.ts`
-**Responsibility:** Cache Supabase-derived state, trigger refetches, expose status to UI
-**Communicates with:** API routes (REST fetch), Supabase Realtime (event-driven invalidation)
-**Contract:** `status` field from query data is the authoritative workflow state for button disabling, progress rendering, and error display.
-
-### Layer 5: Zustand Stores (Client)
-**Location:** `lib/stores/*.ts`
-**Responsibility:** Local UI state — CV builder edits, positioning draft, PDF blob URL
-**Communicates with:** React Query (reads for initial values), Components (reads/writes)
-**Contract:** Stores must not hold `workflow_run_id` or `status`. These belong in React Query.
-
-### Layer 6: UI Components
-**Location:** `app/*/page.tsx`, `components/*.tsx`
-**Responsibility:** Render status, disable buttons, show progress, display errors
-**Communicates with:** `useWorkflowStream` (stream data), React Query (status), Zustand (local state)
-**Contract:** Button disabled state = `isLoading || activeStatuses.includes(reactQueryStatus)`. Never use `isLoading` alone.
-
----
-
-## Data Flow: Correct vs Current
-
-### Correct Flow (Target)
-
-```
-User clicks "Extract"
-  → UI sets optimistic isLoading (useWorkflowStream.submit)
-  → POST /api/extract → Supabase status: 'extracting' + runId stored
-  → API returns NDJSON stream
-  → useWorkflowStream reads chunks → updates local object/meta state
-  → Button disabled: isLoading=true (stream active)
-
-  [concurrent]
-  → Supabase Realtime event fires on status update
-  → React Query invalidation → refetch candidate → status: 'extracting' confirmed
-  → Button disabled: status in activeStatuses (belt + suspenders)
-
-  [stream ends]
-  → saveResult step: Supabase status: 'reviewing', workflow_run_id: null
-  → Supabase Realtime event → React Query invalidation → status: 'reviewing'
-  → useWorkflowStream.onFinish() → React Query invalidation (redundant but safe)
-  → isLoading: false, status: 'reviewing' → button re-enabled, results shown
-
-  [error path]
-  → workflow step throws → stream closes with error frame
-  → saveResult MUST write status: 'error' + workflow_run_id: null to Supabase
-  → useWorkflowStream catches error → setError
-  → Supabase Realtime → React Query → status: 'error'
-  → UI shows error toast, button re-enabled
+Then early in `fetchAndAnalyze`:
+```typescript
+const missionLanguage = (missionRow?.language as 'fr' | 'en' | null) ?? 'fr';
 ```
 
-### Current Flow (Actual — with gaps marked)
+Pass `missionLanguage` to:
+1. Each `resolveLlmTask` call: `context: { language: missionLanguage, ... }`
+2. `buildAnalysisUserContent(cv, jd, jobAnalysis, matchingWeights, promptOptions, priorAnswers, missionLanguage)`
 
-```
-User clicks "Extract"
-  → POST /api/extract → Supabase status: 'extracting' + runId stored
-  → API returns NDJSON stream
-  → useWorkflowStream reads chunks → updates local state
-  → Button disabled: isLoading=true ✓
-
-  [stream ends normally]
-  → saveResult: Supabase status: 'reviewing', workflow_run_id: null ✓
-  → useWorkflowStream.onFinish() → React Query invalidation ✓
-  → BUT: if stream disconnects before saveResult, isLoading goes false
-    and React Query polling eventually catches status: 'reviewing'
-    BUT polling is false when status not in ACTIVE_CV_STATUSES
-    AND status may still be 'extracting' — polling will fire at 3s ✓ (recovers slowly)
-
-  [error path]
-  → workflow step throws → stream closes ✗ NO status: 'error' written to Supabase
-  → useWorkflowStream sets error ✓
-  → BUT: page reload shows candidate stuck in status: 'extracting' (ghost state) ✗
-  → React Query polling resumes at 3s, fetches 'extracting' status, loops forever ✗
-  → No visual error after reload ✗
-
-  [page reload mid-workflow]
-  → React Query loads candidate with status: 'extracting' + runId ✓
-  → useWorkflowStream reconnect: GET /api/workflow/[runId]/stream ✓
-  → BUT: if workflow already completed and runId was cleared,
-    GET returns 404 or JSON {status: 'completed'}
-    → reconnect path handles this gracefully (returns early) ✓
-
-  [button double-click guard]
-  → POST /api/positioning/generate checks run.status ✓ (good)
-  → BUT /api/extract does NOT check existing run — blindly starts new one ✗ PARTIAL GAP
-```
+Same pattern applies to `positioning-generate.ts` — it follows the same fetch-then-branch structure.
 
 ---
 
-## Gaps to Close (Priority Order)
+## New vs modified components
 
-### Gap 1: Error status not written to Supabase (CRITICAL)
-**Problem:** When a workflow step throws, the database record stays in `status: 'extracting'/'generating'` forever. The `saveResult`/`saveGeneration` steps never run on failure path.
-**Fix:** Add a top-level try/catch in each workflow function that writes `status: 'error'` and clears `workflow_run_id` before rethrowing.
-**Build order:** Fix workflows first, before UI error display work — otherwise UI fixes show errors that database doesn't reflect.
-
-### Gap 2: Polling continues when stream is active (MODERATE)
-**Problem:** React Query polls at 3s even when `useWorkflowStream.isLoading` is true, generating redundant requests.
-**Fix:** Extend `useWorkflowStream` to return an `isStreamActive` flag. Pass it to `refetchInterval` callback: `if (isStreamActive) return false`.
-**Build order:** After Gap 1 (status writes), so polling has accurate data to read when it does fire.
-
-### Gap 3: No Supabase Realtime for terminal state (MODERATE)
-**Problem:** After stream closes, React Query only learns about the final status via the next poll cycle (up to 3 seconds) or via `onFinish` invalidation.
-**Fix:** Subscribe to Supabase Realtime on `candidates` and `positionings` tables for row updates matching the current record's id. On UPDATE event, call `queryClient.invalidateQueries`.
-**Build order:** After Gap 1 (needs accurate status writes to be useful). Optional if polling lag is acceptable.
-
-### Gap 4: activeRunId can go null mid-stream (LOW)
-**Problem:** `pendingRunId` clears when POST stream ends, but `runId` from React Query (which is `workflow_run_id` from DB) is set to `null` by the final workflow step. Between stream close and React Query refetch, `activeRunId` may briefly be null, potentially re-enabling buttons.
-**Fix:** Derive disabled state from `isLoading || reactQueryStatus in activeStatuses` instead of `activeRunId !== null`. The stream `isLoading` covers the streaming window; React Query status covers the pre/post state.
-**Build order:** Can be fixed independently, UI layer only.
-
-### Gap 5: Missing duplicate-run guard in /api/extract (LOW)
-**Problem:** `/api/positioning/generate` checks `run.status` before starting a duplicate, but `/api/extract` does not.
-**Fix:** Mirror the guard from generate route into extract route.
-**Build order:** After Gap 1 (error states may be the more common cause of zombie runIds).
+| Component | Status | What changes |
+|---|---|---|
+| `supabase/migrations/` | NEW | Add `candidates.language`, `missions.language`, `organization_settings.default_language` columns |
+| `lib/schema.ts` (`extractionIdentitySchema`) | MODIFIED | Add `language: z.enum(['fr','en'])` field so identity branch LLM output includes detected language |
+| `templates/cv-dossier-layout.ts` | MODIFIED | Extract 4 hardcoded French strings into `CV_LABELS` map; add `language?` param to `buildCvDossierLayoutSpec` |
+| `templates/registry.ts` | MODIFIED | Thread `language?` through `buildCvTemplateSpec` |
+| `lib/services/pdf.template.ts` | MODIFIED | Thread `language?` through `buildCvSpec` |
+| `lib/services/pdf.service.ts` | MODIFIED | Add `language?` param to `generateCvPdf` |
+| `workflows/extract-cv.ts` | MODIFIED | Split or sequence identity branch first; persist `candidates.language` in `saveResult`; inject `language` into remaining branch contexts |
+| `workflows/analyze-job-posting.ts` | MODIFIED | Detect and persist `missions.language` after analysis |
+| `workflows/positioning-analyze.ts` | MODIFIED | Read `missions.language` from join; inject into `resolveLlmTask` context and `buildAnalysisUserContent` |
+| `workflows/positioning-generate.ts` | MODIFIED | Same pattern as positioning-analyze |
+| `lib/services/positioning.service.ts` | MODIFIED | Add `language?` param to `buildAnalysisUserContent` and user-content builders |
+| DB `llm_tasks` prompts | MODIFIED | Add `{{language}}` directive to CV extraction, job posting analysis, and positioning prompt text (no new rows) |
+| PDF export API routes | MODIFIED | Read `candidates.language` from DB before calling `generateCvPdf` |
 
 ---
 
-## Build Order (Dependency Sequence)
+## Build order recommendation
 
-```
-Phase 1: Server-side contract repair
-  1a. Error status writes in workflow files (Gap 1)
-      → Unblocks all UI error display work
-  1b. Duplicate-run guard in /api/extract (Gap 5)
-      → Prevents new ghost states while fixing old ones
+**Phase 1 — Foundation (no runtime behavior change)**
+- DB migration: `candidates.language`, `missions.language`, `organization_settings.default_language` (nullable, all reads coerce null → 'fr')
+- `CV_LABELS` map in `cv-dossier-layout.ts` with `language?` param threaded through full PDF chain — guarded by `?? 'fr'` fallback so all existing PDFs stay identical
+- `extractionIdentitySchema` gains `language` field
 
-Phase 2: Client-side state accuracy
-  2a. Button disabled logic: isLoading || status in activeStatuses (Gap 4)
-      → Independent, zero server changes required
-  2b. Disable polling during active stream: isStreamActive flag (Gap 2)
-      → Requires Phase 1 complete so polling reads accurate data
+**Phase 2 — Detection in workflows**
+- Split/sequence `extract-cv.ts` identity branch out; persist `candidates.language` in `saveResult`
+- Add language detection to `analyze-job-posting.ts`; persist `missions.language`
 
-Phase 3: Latency optimization (optional)
-  3a. Supabase Realtime subscriptions for terminal state (Gap 3)
-      → Requires Phase 1 (accurate status writes)
-      → Nice-to-have, polling already recovers in <3s
-```
+**Phase 3 — Prompt injection**
+- Add `{{language}}` to DB prompts for CV extraction branches and job posting analysis
+- Verify `resolveLlmTask` context pass-through for all affected branches
 
----
+**Phase 4 — Positioning language propagation**
+- Update `positioning-analyze.ts` and `positioning-generate.ts` to read and forward `missions.language`
+- Update `buildAnalysisUserContent` and related service functions
 
-## Anti-Patterns to Avoid
+**Phase 5 — PDF language rendering**
+- Wire `candidates.language` → `generateCvPdf` in PDF export API routes
+- Test PDF output with EN label set
 
-### Anti-Pattern 1: Deriving workflow state from `isLoading` alone
-**What goes wrong:** Stream closes before database commits. `isLoading: false` but database still says `'extracting'`. Buttons re-enable mid-workflow.
-**Instead:** `disabled = isLoading || activeStatuses.includes(data?.status)`
-
-### Anti-Pattern 2: Using Zustand to hold `workflow_run_id` or `status`
-**What goes wrong:** Zustand is not synced with database. On page reload, Zustand is empty. Status tracking breaks.
-**Instead:** These fields always come from React Query (from Supabase).
-
-### Anti-Pattern 3: Calling `invalidateQueries` without specific keys
-**What goes wrong:** Invalidates unrelated queries, triggers unnecessary refetches across the entire page.
-**Instead:** Always use specific keys from `queryKeys.*` factory.
-
-### Anti-Pattern 4: Starting a new workflow run without checking existing run
-**What goes wrong:** Two parallel runs for the same record. Supabase `workflow_run_id` is overwritten, the first run's stream becomes unreachable, first run writes data silently.
-**Instead:** Check `run.status` via `getRun(workflow_run_id).status` before starting. Return 409 + existing stream if active.
-
-### Anti-Pattern 5: Adding SSE or WebSockets as a parallel mechanism
-**What goes wrong:** The `@workflow/next` runtime already provides `run.getReadable()` for streaming. Adding SSE duplicates the transport layer with more infrastructure.
-**Instead:** Use the existing NDJSON stream for real-time updates. Use Supabase Realtime for post-completion invalidation only.
-
-### Anti-Pattern 6: Swallowing errors in workflow steps
-**What goes wrong:** `.catch(() => {})` means errors are invisible. Database stays in active status. UI polls forever.
-**Instead:** Explicit error handling in all workflow steps + top-level catch that writes `status: 'error'` to Supabase.
+**Phase 6 — Manual override UI**
+- Language selector in CV review and mission edit pages
+- API routes accept explicit language override and persist to DB
 
 ---
 
-## Scalability Considerations
+## Key constraints
 
-| Concern | At 10 users | At 1K concurrent workflows |
-|---------|-------------|---------------------------|
-| NDJSON streaming | Fine — HTTP/2 multiplexing handles parallel streams | Vercel Fluid Compute limits apply; monitor concurrent connections |
-| Polling at 3s | Fine — ~10 RPM per active user | 1K * 20 RPM = 20K RPM to /api/candidates — may need Supabase Realtime to replace polling |
-| Supabase Realtime | 200 concurrent connections (free tier) | Upgrade tier or selective subscriptions only during active workflows |
-| Zustand store size | Fine | Positioning store with 25+ fields — no scaling concern, per-tab memory |
+**`@workflow/next` beta writable scope.** `getWritable()` must return the same writable instance across sequential steps within one workflow run. If it creates a new writable per step, splitting `parallelExtractAndStream` into two `'use step'` functions breaks the NDJSON stream. Verify before committing. The fallback (sequential-then-parallel within one step) avoids this risk entirely.
 
----
+**`extractionIdentitySchema` must include `language` field.** The identity branch output needs `language: z.enum(['fr','en'])` for the LLM to populate. The Zod schema change is a prerequisite for the workflow restructure to be useful.
 
-## Sources
+**Null coercion is mandatory at every read site.** Both `candidates.language` and `missions.language` start as `null` in DB. Every read must apply `?? 'fr'`. Missing this in one call site produces broken EN prompts silently.
 
-- Direct codebase inspection: `lib/hooks/useWorkflowStream.ts`, `workflows/extract-cv.ts`, `workflows/positioning-generate.ts`, `app/api/extract/route.ts`, `app/api/positioning/generate/route.ts`, `app/api/workflow/[runId]/stream/route.ts`, `app/api/workflow/[runId]/cancel/route.ts`, `lib/queries/candidates.ts`, `lib/queries/positionings.ts` — HIGH confidence
-- Vercel Workflow DevKit docs: https://useworkflow.dev/docs/getting-started/next — MEDIUM confidence (no client-side status API documented; confirmed only CLI/Web UI observability)
-- Vercel Workflow blog post: https://vercel.com/blog/introducing-workflow — MEDIUM confidence
-- TanStack Query invalidation docs: https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation — HIGH confidence
-- Supabase + React Query combination: https://makerkit.dev/blog/saas/supabase-react-query — MEDIUM confidence
-- SSE + React Query cache pattern: https://fragmentedthought.com/blog/2025/react-query-caching-with-server-side-events — MEDIUM confidence (pattern valid but not needed given existing NDJSON stream)
-- Known beta instability: https://github.com/vercel/workflow/issues/451 (workflows stuck in "pending" on Vercel) — LOW confidence (single issue, may be fixed)
+**Cross-language positioning rule must be enforced by convention.** When candidate is FR and mission is EN, all positioning artefacts must be in EN. This is enforced by always reading `missions.language` in positioning workflows, never `candidates.language`. Make this explicit in a comment at the read site to prevent future regressions.
 
----
+**PDF chain has no DB access.** Language must be passed explicitly — it cannot be looked up inside `buildCvDossierLayoutSpec`. The caller (PDF API route) owns the DB read.
 
-*Analysis: 2026-03-26*
+**Prompt `{{language}}` value must be human-readable for the LLM.** The context value should be `'French'` / `'English'` (not `'fr'` / `'en'`) if the prompts use natural language instructions. Decide on the convention before modifying prompts and apply it consistently.

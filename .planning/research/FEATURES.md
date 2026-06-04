@@ -1,125 +1,117 @@
-# Feature Landscape
+# Features Research: Multilingual LLM Content
 
-**Domain:** Async AI workflow feedback UX for AI-powered SaaS (ESN consultant matching)
-**Researched:** 2026-03-26
-**Scope:** Milestone — async workflow UX feedback for 3 existing AI workflows (CV extraction, mission analysis, positioning)
-
----
-
-## Context
-
-The app has 3 AI workflows using Vercel `@workflow/next` beta with streaming NDJSON responses. Current state:
-- No button disabling during workflow execution (duplicate triggers possible)
-- No clear progression display (pending → running → done/error)
-- Errors not surfaced reliably (mix of silent catches and inconsistent patterns)
-- React Query + Zustand state not synchronized with real workflow status
-
-The goal is reliability, not new features. All items below are evaluated through that lens.
+**Domain:** Multilingual LLM-driven content generation in a B2B ESN SaaS
+**Researched:** 2026-06-04
+**Milestone:** v1.2 Multi-langue
+**Overall confidence:** HIGH (architecture / detection patterns) / MEDIUM (prompt phrasing)
 
 ---
 
-## Table Stakes
-
-Features users expect from any async operation in 2025. Missing = product feels broken, not just incomplete.
+## Table stakes (must-have)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **Button disabled during active workflow** | Prevents duplicate calls, universal web convention | Low | Use `mutation.isPending` or workflow running state. React Query `useMutation` exposes `isPending` natively. |
-| **Visible loading indicator on trigger** | User needs confirmation the action registered | Low | Spinner/loader on the button itself, or in the workflow result area |
-| **Distinct status states in UI** | Users need to know: is it working, done, or failed? | Low-Med | Minimum: `idle`, `pending`, `success`, `error`. Maps to Supabase `status` column |
-| **Error message surfaced to user** | Silent failures destroy trust immediately | Low | Currently toast via Sonner exists — needs consistent wiring to all workflow error paths |
-| **Actionable error copy** | "Something went wrong" is useless. Users need next step | Low | "Extraction failed. Try again or contact support." — not a dev error string |
-| **Success state feedback** | User needs to know the workflow completed | Low | Brief success toast or status badge update |
-| **State persists across navigation** | User should not lose progress info on page reload | Med | Requires workflow status persisted to Supabase (already partially done via `status` column) |
+| Language auto-detection at CV identity extraction | Without it every downstream artifact defaults to wrong language — user gets French output for an English CV | Low | Detect in `cv.branch.identity`, emit `personalInfo.language`, persist to `candidates.language` |
+| Language auto-detection at mission analysis | Mission artifacts (tailored CV, emails) inherit mission language; no detection = no cross-language rule | Low | Detect inline in job posting analysis identity step, persist to `missions.language` |
+| `{{language}}` directive in all LLM prompts | Single control point; avoids duplicate prompt versions in `llm_tasks` | Low | Template renderer already supports `{{var}}`; replace hardcoded "Langue : français" in all 4 CV branches + analysis + positioning prompts |
+| Cross-language positioning rule applied | FR CV × EN mission → EN artifacts; audience is the client, not the candidate | Low | Inject `mission.language` (not `candidate.language`) into positioning-generate workflow |
+| Manual language override | LLM detection has edge cases (bilingual CVs, template boilerplate in wrong language); user must be able to correct without re-running extraction | Low | Editable field on CV review form + mission edit form; triggers no automatic re-extraction |
+| PDF section label localisation | English PDF with "Expériences" heading is broken UX; unacceptable in a client-facing document | Low | `CV_LABELS` map `{ fr: {...}, en: {...} }` in `templates/cv-dossier-layout.ts`; already planned in PROJECT.md |
 
 ---
 
-## Differentiators
-
-Features not universally expected yet, but valued when present. Raise perceived quality and reduce support load.
+## Differentiators (nice-to-have)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Sub-step progress display** | "Step 2/4: Analyzing skills" reduces anxiety during long waits | Med | Vercel AI SDK supports streaming custom data parts with IDs for reconciliation. Workflow NDJSON stream already carries step info. |
-| **Step-level status badges** | Each sub-workflow (extraction, scoring, CV gen) shows own state | Med | Architecturally natural given the 3-workflow structure. Positioning has the most sub-steps. |
-| **Specific error attribution** | "CV extraction failed — file may be corrupted" vs generic error | Med | Requires distinguishing error types in API routes and workflow error frames |
-| **"Last generated" timestamp** | Shows when results were produced, builds trust in data freshness | Low | Display `updated_at` from Supabase record |
-| **Partial success handling** | If 1 of 3 sub-workflows fails, show what succeeded | High | Complex state management; positioning has interdependent steps. Defer unless specific user pain. |
-| **Retry single failed step** | Re-run only the failed sub-step without restarting the full workflow | High | Requires workflow design change. Out of scope for reliability milestone. |
-| **Estimated time remaining** | "~30 seconds left" reduces user abandonment | High | Requires calibration data; AI workflows have high variance. High risk of being wrong and eroding trust. |
+| Language mismatch warning in positioning UI | "This CV is in French, the mission is in English — output will be generated in English" — reduces recruiter surprise | Low | Single banner in positioning page when `candidate.language !== mission.language`; good signal with minimal effort |
+| Detection confidence exposed in review UI | "Detected: English (high confidence)" — recruiter only acts when uncertain | Medium | Requires an additional schema field (e.g. `language_confidence: 'high' | 'low'`); skip for v1.2 unless detection proves unreliable in QA |
+| Per-section language detection | Some CVs have a French header with English experience content; detect dominant language per section | High | Overkill — `fr|en` single-value detection is sufficient for the ESN use case; revisit if multi-lingual consultant profiles become common |
 
 ---
 
-## Anti-Features
-
-Features to deliberately NOT build in this milestone.
+## Anti-features (explicitly avoid)
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| **Fake progress bars** | Fabricated percentages erode trust when they stall | Use honest step-based progress ("Step 2 of 4") or a simple indeterminate spinner |
-| **Push notifications / email on completion** | Out of scope per PROJECT.md, adds infrastructure complexity | Surface status synchronously in-page |
-| **Separate jobs/activity page** | Requires new routing, new queries, new UI surface | Update status inline where the workflow was triggered |
-| **Resumable/retry individual sub-steps** | Requires workflow architecture changes, breaks `@workflow/next` beta contract | Restart the full workflow on error — simpler and more reliable |
-| **Optimistic UI for AI generation** | AI output is unpredictable; optimistic state would need rollback constantly | Use real pending state, not predicted outcome |
-| **Streaming output preview** | Showing partial AI output during generation invites quality concerns | Show complete result after workflow finishes |
-| **Cancel in-flight workflow** | `@workflow/next` beta does not document reliable cancellation support | Disable trigger button to prevent new starts; no mid-flight cancel |
+| Translating company names and proper nouns | "Société Générale" must stay "Société Générale" in an English artifact; LLM silently translates unless explicitly forbidden | Add verbatim anchor rule to every prompt using `{{language}}`: "Keep company names, product names, and proper nouns verbatim — do not translate them" |
+| Translating degree and credential names | "Diplôme d'Ingénieur" is a credential, not prose — translating it misrepresents qualification to the client | List credential fields explicitly as verbatim in the prompt rule above |
+| Translating the `cv.transcription` step | Transcription is a faithful copy task; forcing a language here corrupts source fidelity that all downstream branches depend on | No `{{language}}` in `cv.transcription` prompt — language directive applies only to extraction and generation branches |
+| Dual-language output in a single artifact | Mixing "Skills / Compétences" looks unpolished and breaks downstream PDF layout | Single language per artifact, resolved at generation time |
+| Re-triggering full extraction on language change | Expensive workflow run just to change a metadata field; terrible UX for a correction | `language` column is directly writable; only re-generate downstream artifacts when user explicitly triggers regeneration |
+| UI locale change (Clerk, nav labels, app text) | Out of scope for v1.2 per PROJECT.md; large i18n surface area with its own framework requirements | Keep app UI in French; `{{language}}` directive governs AI-generated content only |
+| Radar/brief prompts (`lib/radar/brief.ts`) | Explicitly out of scope in PROJECT.md — "prompt hardcodé en code, domaine séparé, hors v1.2" | Leave radar as-is; address in a future dedicated milestone |
 
 ---
 
-## Feature Dependencies
+## Prompt phrasing recommendations
 
+### Language detection — inline at identity branch (not a separate step)
+
+**Architecture verdict:** Detect inline at `cv.branch.identity`, not in a dedicated pre-step.
+
+Ada CX research across 367k examples (55 languages) shows tool-call recall improved from 78.6% to 97.9% with two changes:
+1. Detection instruction placed *before* the main extraction output, not after. LLMs skip trailing instructions after generating long responses.
+2. Rules based on observable surface features ("majority of content sections in English"), not confidence-based gating ("if you are sure"). Observable rules fire consistently; confidence-gating causes systematic under-detection.
+
+**Recommended addition to `cv.branch.identity` system prompt:**
 ```
-Button disabled during active workflow
-  → requires: workflow running state tracked in client (React Query + Zustand sync)
-  → required by: all other progress display features
-
-Workflow status states (idle/pending/success/error)
-  → requires: consistent status in Supabase OR reliable client state
-  → required by: error display, success feedback, sub-step display
-
-Error message surfaced to user
-  → requires: consistent error propagation from API routes (no silent catches)
-  → required by: actionable error copy
-
-Sub-step progress display
-  → requires: button disabled + status states (already working baseline)
-  → requires: NDJSON stream frames carrying step names (already partially implemented)
+Détecte la langue principale du CV avant d'extraire les données.
+Règle : si la majorité des sections de contenu (expériences, résumé, compétences) sont rédigées
+en anglais → langue = "en". Sinon → langue = "fr".
+Inclus ce champ dans personalInfo.language en premier dans ta réponse JSON.
 ```
 
-**Implementation order:**
-1. Button disabled + loading indicator (unblocks everything, lowest risk)
-2. Status states synced (idle/pending/success/error)
-3. Error surfacing + actionable copy
-4. Sub-step progress display (builds on stable foundation above)
+Place this block at the top of the identity prompt, before the personalInfo/summary extraction instructions.
+
+### `{{language}}` directive — replacement for hardcoded "Langue : français"
+
+For **extraction branches** (`cv.branch.identity`, `cv.branch.experiences`, `cv.branch.education`, `cv.branch.skills`):
+```
+Langue de sortie : {{language}}.
+Règle verbatim : conserve tel quel les noms d'entreprises, noms de produits, diplômes et noms propres — ne les traduis jamais.
+```
+
+For **generation branches** (positioning, tailored CV, emails) where cross-language translation is the explicit goal:
+```
+Langue de sortie : {{language}}.
+Le document source peut être dans une langue différente. Génère l'intégralité du contenu en {{language}}.
+Règle verbatim : conserve exactement les noms d'entreprises, technologies (ex. "React", "Azure", "TypeScript"),
+et diplômes — ne les traduis pas même s'il existe un équivalent dans la langue cible.
+```
+
+**Why list concrete technology examples:** Gemini Flash and Claude will silently translate technology names ("TypeScript" → "TypeEcrit" has been observed) and credential names unless shown concrete counterexamples. Instruction-only is less reliable than few-shot anchoring for this constraint class. Including 2-3 real examples from the domain substantially reduces silent translation.
+
+**Why "Langue de sortie" over just "Langue":** The former is unambiguous — it scopes the instruction to output only. "Langue : {{language}}" could be read as describing the input language, causing the model to respond in the input document's language instead of the target.
+
+### Cross-language rule — implementation note
+
+In `positioning-generate.ts`, `{{language}}` must resolve to `mission.language`, not `candidate.language`. The `missions` join at line 55 already exists (`missions(job_analysis, title, company)`); add `language` to the select and pass it into the template context at `buildGenerateUserContent` or the `resolveLlmTask` call. No new workflow branches needed.
+
+### Mission language detection
+
+Same inline pattern as CV: detect as part of the job posting analysis identity/extraction step, persist to `missions.language`. A dedicated detect-only workflow branch would add one LLM round-trip and one failure surface with no reliability benefit — inline detection at the same model call is equally accurate and structurally simpler.
 
 ---
 
-## MVP Recommendation
+## Language detection reliability — pattern summary
 
-**Must ship (this milestone):**
-1. Button disabled during active workflow — blocks duplicate triggers
-2. Loading indicator on trigger button/area — confirms action registered
-3. Status states displayed in UI — user knows what is happening
-4. Error surfaced with actionable copy — no silent failures
-5. Success feedback — user knows when done
+| Pattern | Reliability | Notes |
+|---------|-------------|-------|
+| Dedicated detect-only step before extraction | Medium | +1 LLM call, two failure surfaces; no accuracy gain |
+| Parallel detect step (alongside extraction) | High | Zero latency overhead but requires async result merging — unnecessary complexity for `fr|en` |
+| Inline at last extraction branch (skills) | Medium | Skills branch may not run for sparse CVs; language stays null |
+| Inline at identity branch (first branch) | HIGH | Fires earliest, observable-feature rule, persists before downstream branches start |
 
-**Defer to later milestone:**
-- Sub-step progress display: valuable but needs the above as a stable base first
-- Step-level status badges: nice quality upgrade, not blocking reliability
-- "Last generated" timestamp: low effort but low priority vs correctness fixes
-- Specific error attribution: good long-term, but requires API route audit scope
+**Use inline at identity branch.**
 
 ---
 
 ## Sources
 
-- [UI patterns for async workflows, background jobs, and data pipelines — LogRocket](https://blog.logrocket.com/ui-patterns-for-async-workflows-background-jobs-and-data-pipelines/)
-- [Background tasks with progress updates: UI patterns that work — AppMaster](https://appmaster.io/blog/background-tasks-progress-ui)
-- [Mastering Mutations in React Query — tkdodo](https://tkdodo.eu/blog/mastering-mutations-in-react-query)
-- [React Query: Avoiding Duplicate Mutation Requests — Medium](https://medium.com/@jdimitrop/react-query-avoiding-duplicate-mutation-requests-38c722e7a2e9)
-- [AI SDK UI: Streaming Custom Data — Vercel](https://ai-sdk.dev/docs/ai-sdk-ui/streaming-data)
-- [Design Patterns for AI Interfaces — Smashing Magazine](https://www.smashingmagazine.com/2025/07/design-patterns-ai-interfaces/)
-
----
-
-*Confidence: HIGH for table stakes (established UX convention + verified in docs). MEDIUM for differentiators (patterns exist, application-specific tradeoffs vary). HIGH for anti-features (grounded in project constraints from PROJECT.md).*
+- [LLM Language Detection: Two Prompt Engineering Findings — Ada CX](https://www.ada.cx/labs/research/llm-powered-language-detection/) — HIGH confidence, empirical study, 367k examples, 55 languages
+- [Best LLMs for Translation 2025 — Blend](https://www.getblend.com/blog/which-llm-is-best-for-translation/) — MEDIUM confidence
+- [Beyond English: Prompt Translation Strategies — arXiv 2025](https://arxiv.org/html/2502.09331v1) — MEDIUM confidence
+- Codebase: `supabase/migrations/20260401101600_seed_llm_tasks_data.sql` — HIGH confidence (direct source)
+- Codebase: `workflows/positioning-generate.ts` lines 1–60 — HIGH confidence (direct source)
+- Codebase: `workflows/extract-cv.ts` lines 100–150 — HIGH confidence (direct source)
