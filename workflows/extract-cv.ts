@@ -8,6 +8,7 @@ import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import { logAiUsage, insertAiUsageStart, updateAiUsageEnd } from '@/lib/services/ai-usage.service';
 import { mergeExtractedPartial } from '@/lib/services/extraction-merge';
 import { prepareCvForMatchingPrompt } from '@/lib/utils/cv-experience-time';
+import { detectCvLanguage } from '@/lib/utils/detect-cv-language';
 import {
   extractionSchema,
   type ExtractedCV,
@@ -340,12 +341,16 @@ async function parallelExtractAndStream(
     }
   }
 
+  const detectedLang = detectCvLanguage(cvText);
+  const languageLabel = detectedLang === 'en' ? 'English' : 'Français';
+  const langContext = { language: detectedLang, language_label: languageLabel };
+
   try {
     const [rId, rEx, rEd, rSk] = await Promise.all([
-      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_IDENTITY, orgId, context: {} }),
-      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_EXPERIENCES, orgId, context: {} }),
-      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_EDUCATION, orgId, context: {} }),
-      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_SKILLS, orgId, context: {} }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_IDENTITY, orgId, context: langContext }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_EXPERIENCES, orgId, context: langContext }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_EDUCATION, orgId, context: langContext }),
+      resolveLlmTask(supabase, { taskKey: TASK_KEY.CV_BRANCH_SKILLS, orgId, context: langContext }),
     ]);
 
     await Promise.all([
