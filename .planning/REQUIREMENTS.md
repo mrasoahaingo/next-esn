@@ -33,7 +33,7 @@ v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, 
 ## v1.2 — Infrastructure prompts (PROMPT)
 
 - [ ] **PROMPT-01** : Tous les prompts LLM affectés (extraction CV hors transcription, analyse mission, analyse et génération de positionnement) contiennent une directive `{{language}}` remplaçant le hardcoding `"Langue : français"`. La valeur injectée est en langage naturel (`French` / `English`) pour éviter l'ambiguïté dans les prompts.
-- [ ] **PROMPT-02** : `resolveLlmTask` émet un `console.warn` quand le prompt rendu contient encore des placeholders non résolus (`{{`) — protection contre le silent passthrough.
+- [x] **PROMPT-02** : `resolveLlmTask` émet un `console.warn` quand le prompt rendu contient encore des placeholders non résolus (`{{`) — protection contre le silent passthrough.
 
 ---
 
@@ -69,7 +69,7 @@ v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, 
 | PDF-01 | Phase 8 | Pending |
 | PDF-02 | Phase 8 | Pending |
 | PROMPT-01 | Phase 7 | Pending |
-| PROMPT-02 | Phase 6 | Pending |
+| PROMPT-02 | Phase 6 | Complete |
 
 **Coverage:** 15/15 exigences v1.2 mappées — Phase 6 (2), Phase 7 (9), Phase 8 (4).
 
