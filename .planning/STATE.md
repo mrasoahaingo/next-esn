@@ -1,36 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Réactivité, flux & résilience
-status: completed
-stopped_at: Completed quick-260403-1ga-PLAN.md
-last_updated: "2026-06-03T09:49:05Z"
-last_activity: 2026-06-03 — Completed quick task 260603-gew: Fix CV extraction progress bar and Education component French labels
+milestone: v1.2
+milestone_name: Multi-langue
+status: in_progress
+stopped_at: ~
+last_updated: "2026-06-04T00:00:00Z"
+last_activity: 2026-06-04 — Milestone v1.2 Multi-langue démarré
 progress:
-  total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 33
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (milestone v1.1)
+See: `.planning/PROJECT.md` (milestone v1.2)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille  
-**Current focus:** Phase 4 — Realtime & Generation Freshness (next)
+**Current focus:** Milestone v1.2 — Définition des exigences et roadmap
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase 3 complete
-Last activity: 2026-04-02 — Quick 260403-1ga (Collector Proxycurl REST pour freelances Paris)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-04 — Milestone v1.2 Multi-langue démarré
 
-Progress: [███░░░░░░░] 33%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -72,4 +72,4 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 **Stopped at:** Completed quick-260603-gew-PLAN.md
 **Resume file:** None
 
-**Next step:** `/gsd-plan-phase 4` or `/gsd-discuss-phase 4`
+**Next step:** `/gsd:plan-phase 6` — première phase du milestone v1.2

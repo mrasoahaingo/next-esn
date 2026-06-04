@@ -8,15 +8,21 @@ Un SaaS pour les ESN (Entreprises de Services Numériques) qui les aide dans leu
 
 L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il sait ce qui se passe, ne peut pas lancer de doublons, et voit les erreurs quand ça échoue.
 
-## Current Milestone: v1.1 Réactivité, flux & résilience
+## Current Milestone: v1.2 Multi-langue
 
-**Goal:** Améliorer la réactivité perçue des états IA (Realtime, fraîcheur), fiabiliser les parcours quand une sous-étape échoue — et **corriger le flux positionnement** : création / upload de mission depuis `/review/[id]/positioning` sans rupture de parcours.
+**Goal:** Permettre aux ESN de gérer des CVs et des missions en anglais — l’IA détecte la langue automatiquement, les artefacts générés restent dans la langue du document source, et les templates PDF s’adaptent.
 
 **Target features:**
 
-- **Flux positionnement (priorité)** : rester sur `/review/[id]/positioning` après ajout / upload d’une mission ; afficher l’état d’analyse de l’offre **inline** ; n’activer le positionnement (CTA) que lorsque l’analyse mission est **terminée avec succès** (vérité serveur). Pas de redirection obligatoire vers la fiche mission puis retour manuel.
-- **Réactivité** : réduire le décalage UI ↔ base (ex. Realtime Supabase là où c’est pertinent) ; afficher un horodatage « dernière génération » sur les résultats concernés.
-- **Résilience** : succès partiel visible ; relance ciblée d’une sous-étape en échec sans tout relancer (dans les limites du runtime `@workflow/next` beta).
+- **Détection langue** : auto-détection `fr|en` lors de l’extraction CV (branche identity) et de l’analyse mission ; override manuel dans la review CV / édition mission.
+- **Artefacts IA langue-aware** : extraction CV, analyse mission, analyse de positionnement, CV tailored, emails — tous dans la langue du document source. Pour le positionnement cross-langue (CV fr × mission en), les artefacts suivent la langue de la **mission**.
+- **Labels PDF** : `templates/cv-dossier-layout.ts` remplacé par un `CV_LABELS` map `{ fr: {...}, en: {...} }` ; les PDFs en anglais affichent `Skills`, `Experience`, `Education` etc.
+- **Prompts LLM** : directive `{{language}}` injectée dans les prompts DB existants (pas de doublons de prompts). Renderer `lib/llm/template-render.ts` déjà compatible.
+- **DB** : colonnes `language` ajoutées sur `candidates`, `missions`, `organization_settings.default_language`.
+
+## Previous Milestone: v1.1 Réactivité, flux & résilience
+
+**Goal:** Améliorer la réactivité perçue des états IA (Realtime, fraîcheur), fiabiliser les parcours quand une sous-étape échoue — et corriger le flux positionnement : création / upload de mission depuis `/review/[id]/positioning` sans rupture de parcours.
 
 ## Requirements
 
@@ -36,17 +42,19 @@ L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il
 - ✓ Synchro React Query + reset store positionnement sur changement de contexte — v1.0
 - ✓ Hub `/review/[id]/positioning` : pas de redirection `/positions` après création mission ; état d’analyse mission inline ; CTA matching selon vérité serveur (`FLOW-01`–`FLOW-03`) — Phase 3
 
-### Active (v1.1)
+### Active (v1.2)
 
-Voir `.planning/REQUIREMENTS.md` — exigences FLOW-*, LAT-*, RES-*.
+Voir `.planning/REQUIREMENTS.md` — exigences LANG-*, PDF-*, PROMPT-*.
 
 ### Out of Scope
 
 - Nouvelles features métier lourdes (matching avancé, CRM, notifications push) — hors milestone sauf décision explicite
-- Refonte UX globale hors périmètre des écrans concernés par v1.1
+- Refonte UX globale / i18n de l’UI applicative — trop large, décision explicite requise
 - Tests automatisés — dette connue
 - Refactoring structurel global — hors scope sauf besoin bugfix
 - **Cancel fiable d’un workflow en vol** — limites `@workflow/next` beta
+- **Radar (`lib/radar/brief.ts`) multi-langue** — prompt hardcodé en code, domaine séparé, hors v1.2
+- **Clerk locale toggle (frFR/enUS)** — UI reste en français
 
 ## Context
 
@@ -58,7 +66,7 @@ Voir `.planning/REQUIREMENTS.md` — exigences FLOW-*, LAT-*, RES-*.
 
 - **Tech stack** : Next.js 16 + Supabase + Clerk + Vercel AI SDK — pas de changement de stack imposé
 - **Workflow runtime** : `@workflow/next` beta — travailler avec ses limites
-- **Scope** : pas de nouvelles features fonctionnelles hors exigences v1.1
+- **Scope** : pas de nouvelles features fonctionnelles hors exigences v1.2
 
 ## Key Decisions
 
@@ -73,5 +81,9 @@ Voir `.planning/REQUIREMENTS.md` — exigences FLOW-*, LAT-*, RES-*.
 
 This document evolves at phase transitions and milestone boundaries.
 
+| **Langue unique par document** | Prompts doivent rester maintenables sans doublons | — Pending |
+| **Artifacts positionnement cross-langue → langue mission** | Destinataire = client final, pas le candidat | — Pending |
+| **UI applicative reste FR** | Scope réduit, pas de framework i18n nécessaire | — Pending |
+
 ---
-*Last updated: 2026-03-26 — Phase 3 (flux hub positionnement) livrée*
+*Last updated: 2026-06-04 — Milestone v1.2 Multi-langue démarré*
