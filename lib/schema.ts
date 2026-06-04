@@ -114,6 +114,12 @@ export const skillSchema = z.object({
 export type Skill = z.infer<typeof skillSchema>;
 
 export const extractionSchema = z.object({
+  language: z
+    .enum(['fr', 'en'])
+    .default('fr')
+    .describe(
+      "Langue principale du CV détectée depuis le contenu (texte, intitulés de sections, descriptions). 'fr' si majoritairement en français, 'en' si majoritairement en anglais.",
+    ),
   personalInfo: z.object({
     firstName: z.string(),
     lastName: z.string(),
@@ -181,6 +187,7 @@ export type ExtractedCV = z.infer<typeof extractionSchema>;
 
 /** Sous-schémas pour extraction parallèle (streamText + Output.object) */
 export const extractionIdentitySchema = extractionSchema.pick({
+  language: true,
   personalInfo: true,
   summary: true,
 });
