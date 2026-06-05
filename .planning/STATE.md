@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 Phase: 7
 Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-06-05 - Completed quick task 260605-e30: CV importé en anglais traduit en français au lieu de garder la langue d'origine
+Last activity: 2026-06-05 - Completed quick task 260605-eo0: Audit complet des labels/textes statiques du template CV pour vérifier la traduction en anglais
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -82,6 +82,7 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260604-ncx | N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en | 2026-06-04 | ece88a0 | [260604-ncx-n-affiche-pas-la-preview-du-cv-tant-qu-o](./quick/260604-ncx-n-affiche-pas-la-preview-du-cv-tant-qu-o/) |
 | 260604-pin | le label 'ans' pour l'information 'Years of experience' n'est pas traduit | 2026-06-04 | 3e5057c | [260604-pin-le-label-ans-pour-l-information-years-of](./quick/260604-pin-le-label-ans-pour-l-information-years-of/) |
 | 260605-e30 | CV importé en anglais traduit en français au lieu de garder la langue d'origine | 2026-06-05 | d951efb | [260605-e30-cv-import-en-anglais-traduit-en-fran-ais](./quick/260605-e30-cv-import-en-anglais-traduit-en-fran-ais/) |
+| 260605-eo0 | Audit complet des labels/textes statiques du template CV pour vérifier la traduction en anglais | 2026-06-05 | f3e1892 | [260605-eo0-audit-complet-des-labels-textes-statique](./quick/260605-eo0-audit-complet-des-labels-textes-statique/) |
 
 ## Session continuity
 
