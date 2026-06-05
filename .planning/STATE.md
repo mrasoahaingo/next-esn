@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Réactivité, flux & résilience
 status: verifying
-stopped_at: Completed quick-260604-pin-PLAN.md — language-aware years label in formatTotalExperienceYears
-last_updated: "2026-06-04T16:28:30.761Z"
-last_activity: "2026-06-04 - Completed quick task 260604-pin: le label 'ans' pour l'information 'Years of experience' n'est pas traduit"
+stopped_at: Completed quick-260605-e30-PLAN.md — cv.transcription language-neutral migration
+last_updated: "2026-06-05T08:11:41.687Z"
+last_activity: "2026-06-04 - Completed quick task 260604-ncx: N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -84,8 +84,8 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 
 ## Session continuity
 
-**Last session:** 2026-06-04T16:28:26.255Z
-**Stopped at:** Completed quick-260604-pin-PLAN.md — language-aware years label in formatTotalExperienceYears
+**Last session:** 2026-06-05T08:11:41.676Z
+**Stopped at:** Completed quick-260605-e30-PLAN.md — cv.transcription language-neutral migration
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation
