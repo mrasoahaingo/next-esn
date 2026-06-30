@@ -1,11 +1,15 @@
-import { SignUp } from '@clerk/nextjs'
-import { AuthBrandLogo } from '@/components/auth-brand-logo'
+import { SignUp } from '@clerk/nextjs';
+import { AuthScreen, borderlessAppearance } from '@/components/auth/auth-screen';
 
 export default function SignUpPage() {
   return (
-    <div className="app-surface flex min-h-full flex-col items-center justify-center px-4 py-10">
-      <AuthBrandLogo />
-      <SignUp />
-    </div>
-  )
+    <AuthScreen
+      kicker="Plateforme IA pour les ESN"
+      title="Du CV au positionnement,"
+      accent="piloté par l’IA."
+      lede="Créez votre espace ESN : extraction des CVs, analyse des missions et matching expliqué, avec une relecture humaine par défaut."
+    >
+      <SignUp appearance={borderlessAppearance} />
+    </AuthScreen>
+  );
 }

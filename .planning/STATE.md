@@ -84,12 +84,13 @@ Implémentation RES-02 soumise aux capacités du runtime workflow beta.
 | 260605-e30 | CV importé en anglais traduit en français au lieu de garder la langue d'origine | 2026-06-05 | d951efb | [260605-e30-cv-import-en-anglais-traduit-en-fran-ais](./quick/260605-e30-cv-import-en-anglais-traduit-en-fran-ais/) |
 | 260605-eo0 | Audit complet des labels/textes statiques du template CV pour vérifier la traduction en anglais | 2026-06-05 | f3e1892 | [260605-eo0-audit-complet-des-labels-textes-statique](./quick/260605-eo0-audit-complet-des-labels-textes-statique/) |
 | 260701-00n | Rendre la home / publique accessible même connecté (pas de redirect vers /dashboard, landing sans shell app) | 2026-07-01 | _pending_ | [260701-00n-rendre-la-home-publique-accessible-m-me-](./quick/260701-00n-rendre-la-home-publique-accessible-m-me-/) |
+| 260701-1wi | Landing: liens dashboard si connecté + pages auth en 2 colonnes | 2026-06-30 | _pending_ | [260701-1wi-landing-liens-dashboard-si-connect-pages](./quick/260701-1wi-landing-liens-dashboard-si-connect-pages/) |
 
 ## Session continuity
 
 **Last session:** 2026-06-05T08:11:41.676Z
 **Stopped at:** Completed quick-260605-e30-PLAN.md — cv.transcription language-neutral migration
-**Last activity:** 2026-07-01 - Completed quick task 260701-00n: Rendre la home / publique accessible même connecté
+**Last activity:** 2026-06-30 - Completed quick task 260701-1wi: Landing liens dashboard si connecté + pages auth en 2 colonnes
 **Resume file:** None
 
 **Next step:** `/gsd:plan-phase 6` — DB + Schema Foundation

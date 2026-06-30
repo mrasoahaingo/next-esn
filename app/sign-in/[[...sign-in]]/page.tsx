@@ -1,11 +1,15 @@
-import { SignIn } from '@clerk/nextjs'
-import { AuthBrandLogo } from '@/components/auth-brand-logo'
+import { SignIn } from '@clerk/nextjs';
+import { AuthScreen, borderlessAppearance } from '@/components/auth/auth-screen';
 
 export default function SignInPage() {
   return (
-    <div className="app-surface flex min-h-full flex-col items-center justify-center px-4 py-10">
-      <AuthBrandLogo />
-      <SignIn />
-    </div>
-  )
+    <AuthScreen
+      kicker="Plateforme IA pour les ESN"
+      title="Reprenez le fil de vos"
+      accent="positionnements."
+      lede="Connectez-vous pour retrouver vos CVs de consultants, vos analyses de missions et vos positionnements assistés par l’IA."
+    >
+      <SignIn appearance={borderlessAppearance} />
+    </AuthScreen>
+  );
 }
