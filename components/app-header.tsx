@@ -13,17 +13,17 @@ import { Button } from '@/components/ui/button';
 type Crumb = { label: string; href?: string };
 
 function buildBreadcrumbs(pathname: string, params: ReturnType<typeof useParams>): Crumb[] {
-  if (pathname === '/') {
+  if (pathname === '/dashboard') {
     return [{ label: 'Tableau de bord' }];
   }
 
   if (pathname.startsWith('/templates')) {
     const id = params?.id as string | undefined;
     if (pathname === '/templates') {
-      return [{ label: 'Accueil', href: '/' }, { label: 'Templates' }];
+      return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Templates' }];
     }
     return [
-      { label: 'Accueil', href: '/' },
+      { label: 'Accueil', href: '/dashboard' },
       { label: 'Templates', href: '/templates' },
       { label: id ? `Template` : 'Détail' },
     ];
@@ -31,54 +31,54 @@ function buildBreadcrumbs(pathname: string, params: ReturnType<typeof useParams>
 
   if (pathname.startsWith('/positions')) {
     if (pathname === '/positions') {
-      return [{ label: 'Accueil', href: '/' }, { label: 'Positions' }];
+      return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Positions' }];
     }
-    return [{ label: 'Accueil', href: '/' }, { label: 'Positions', href: '/positions' }, { label: 'Mission' }];
+    return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Positions', href: '/positions' }, { label: 'Mission' }];
   }
 
   if (pathname.startsWith('/review/')) {
     const id = params?.id as string | undefined;
     const positioningId = params?.positioningId as string | undefined;
-    const cvHref = id ? `/review/${id}` : '/';
+    const cvHref = id ? `/review/${id}` : '/dashboard';
 
     if (positioningId) {
       return [
-        { label: 'Accueil', href: '/' },
+        { label: 'Accueil', href: '/dashboard' },
         { label: 'CV', href: cvHref },
         { label: 'Positionnement' },
       ];
     }
     if (pathname.endsWith('/positioning')) {
       return [
-        { label: 'Accueil', href: '/' },
+        { label: 'Accueil', href: '/dashboard' },
         { label: 'CV', href: cvHref },
         { label: 'Nouveau positionnement' },
       ];
     }
-    return [{ label: 'Accueil', href: '/' }, { label: 'Édition CV' }];
+    return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Édition CV' }];
   }
 
   if (pathname.startsWith('/settings/')) {
     if (pathname.startsWith('/settings/profile')) {
-      return [{ label: 'Accueil', href: '/' }, { label: 'Mes technos' }];
+      return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Mes technos' }];
     }
     if (pathname.startsWith('/settings/organization')) {
-      return [{ label: 'Accueil', href: '/' }, { label: 'Organisation' }];
+      return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Organisation' }];
     }
     if (pathname.startsWith('/settings/team/skills')) {
-      return [{ label: 'Accueil', href: '/' }, { label: 'Équipe', href: '/settings/team' }, { label: 'Compétences' }];
+      return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Équipe', href: '/settings/team' }, { label: 'Compétences' }];
     }
     if (pathname.startsWith('/settings/team')) {
-      return [{ label: 'Accueil', href: '/' }, { label: 'Équipe' }];
+      return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Équipe' }];
     }
-    return [{ label: 'Accueil', href: '/' }, { label: 'Paramètres' }];
+    return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Paramètres' }];
   }
 
   if (pathname.startsWith('/admin')) {
-    return [{ label: 'Accueil', href: '/' }, { label: 'Administration' }];
+    return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Administration' }];
   }
 
-  return [{ label: 'Accueil', href: '/' }, { label: 'Application' }];
+  return [{ label: 'Accueil', href: '/dashboard' }, { label: 'Application' }];
 }
 
 export function AppHeader() {

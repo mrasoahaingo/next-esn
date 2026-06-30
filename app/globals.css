@@ -54,123 +54,124 @@
 
 @layer base {
   :root {
+    /* Graphite Pro — light mode (neutral paper + azur accent, no neon/violet) */
     --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(0.985 0.002 280);
-    --card-foreground: oklch(0.145 0 0);
+    --foreground: oklch(0.16 0.006 256);
+    --card: oklch(0.985 0.002 256);
+    --card-foreground: oklch(0.16 0.006 256);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.55 0.22 130);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0.005 280);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.96 0.005 280);
-    --muted-foreground: oklch(0.45 0.02 280);
-    --accent: oklch(0.55 0.18 290);
-    --accent-foreground: oklch(0.985 0 0);
+    --popover-foreground: oklch(0.16 0.006 256);
+    --primary: oklch(0.52 0.16 256);
+    --primary-foreground: oklch(0.99 0.002 256);
+    --secondary: oklch(0.965 0.004 256);
+    --secondary-foreground: oklch(0.22 0.006 256);
+    --muted: oklch(0.96 0.004 256);
+    --muted-foreground: oklch(0.48 0.015 256);
+    --accent: oklch(0.52 0.16 256);
+    --accent-foreground: oklch(0.99 0.002 256);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(0.90 0.01 280);
-    --input: oklch(0.90 0.01 280);
-    --ring: oklch(0.55 0.22 130);
+    --border: oklch(0.91 0.004 256);
+    --input: oklch(0.91 0.004 256);
+    --ring: oklch(0.52 0.16 256);
     --radius: 0.625rem;
 
-    /* Esneo brand — light mode surfaces */
-    --shell: oklch(0.97 0.005 280);
+    /* Brand surfaces — light */
+    --shell: oklch(0.985 0.002 256);
     --panel: oklch(1 0 0);
-    --panel-soft: oklch(0.975 0.005 280);
-    --line: oklch(0.90 0.01 280);
-    --neon: oklch(0.55 0.22 130);
-    --violet: oklch(0.55 0.18 290);
+    --panel-soft: oklch(0.975 0.003 256);
+    --line: oklch(0.91 0.004 256);
+    --neon: oklch(0.50 0.16 258);      /* primary accent (azur) */
+    --violet: oklch(0.60 0.14 256);    /* secondary accent (sky) */
 
-    /* Overlay: use dark color in light mode for subtle layering */
-    --overlay: oklch(0.145 0 0);
-    --scrim: oklch(0.145 0 0 / 45%);
+    /* Overlay: dark color in light mode for subtle layering */
+    --overlay: oklch(0.16 0.006 256);
+    --scrim: oklch(0.16 0.006 256 / 45%);
 
     /* Glass panel vars */
-    --glass-bg-from: oklch(0.97 0.005 280 / 88%);
-    --glass-bg-to: oklch(0.985 0 0 / 88%);
-    --glass-border: oklch(0.55 0.18 290 / 8%);
-    --glass-shadow: oklch(0.145 0 0 / 10%);
+    --glass-bg-from: oklch(0.985 0.002 256 / 88%);
+    --glass-bg-to: oklch(1 0 0 / 88%);
+    --glass-border: oklch(0.52 0.16 256 / 8%);
+    --glass-shadow: oklch(0.16 0.006 256 / 8%);
 
-    /* Glow effects */
-    --neon-glow: oklch(0.55 0.22 130 / 25%);
-    --neon-glow-spread: oklch(0.55 0.22 130 / 15%);
-    --violet-glow: oklch(0.55 0.18 290 / 20%);
-    --violet-glow-spread: oklch(0.55 0.18 290 / 10%);
+    /* Glow effects (subtle azur) */
+    --neon-glow: oklch(0.52 0.16 256 / 12%);
+    --neon-glow-spread: oklch(0.52 0.16 256 / 8%);
+    --violet-glow: oklch(0.60 0.14 256 / 10%);
+    --violet-glow-spread: oklch(0.60 0.14 256 / 6%);
 
     /* Surface gradients */
-    --surface-glow-1: oklch(0.55 0.18 290 / 6%);
-    --surface-glow-2: oklch(0.60 0.18 295 / 5%);
-    --surface-glow-3: oklch(0.50 0.20 280 / 6%);
+    --surface-glow-1: oklch(0.52 0.16 256 / 5%);
+    --surface-glow-2: oklch(0.60 0.14 256 / 4%);
+    --surface-glow-3: oklch(0.52 0.16 256 / 5%);
 
     /* Grid noise */
-    --grid-line: oklch(0.145 0 0 / 4%);
+    --grid-line: oklch(0.16 0.006 256 / 4%);
 
     /* Title gradient */
-    --title-gradient-start: oklch(0.35 0.08 290);
-    --title-gradient-mid: oklch(0.55 0.22 130);
-    --title-gradient-end: oklch(0.55 0.18 290);
+    --title-gradient-start: oklch(0.30 0.05 256);
+    --title-gradient-mid: oklch(0.50 0.16 258);
+    --title-gradient-end: oklch(0.60 0.14 256);
   }
 
   .dark {
-    /* Esneo dark theme — deep purple-tinted dark */
-    --background: oklch(0.08 0.025 280);
-    --foreground: oklch(0.95 0.01 280);
-    --card: oklch(0.115 0.03 275);
-    --card-foreground: oklch(0.95 0.01 280);
-    --popover: oklch(0.115 0.03 275);
-    --popover-foreground: oklch(0.95 0.01 280);
-    --primary: oklch(0.91 0.22 130);
-    --primary-foreground: oklch(0.12 0.025 280);
-    --secondary: oklch(0.145 0.025 275);
-    --secondary-foreground: oklch(0.95 0.01 280);
-    --muted: oklch(0.145 0.025 275);
-    --muted-foreground: oklch(0.58 0.03 280);
-    --accent: oklch(0.62 0.18 290);
-    --accent-foreground: oklch(0.95 0.01 280);
+    /* Graphite Pro — refined graphite dark, single azur accent (no neon/violet) */
+    --background: oklch(0.165 0.006 256);
+    --foreground: oklch(0.93 0.004 256);
+    --card: oklch(0.205 0.007 256);
+    --card-foreground: oklch(0.93 0.004 256);
+    --popover: oklch(0.205 0.007 256);
+    --popover-foreground: oklch(0.93 0.004 256);
+    --primary: oklch(0.62 0.15 256);
+    --primary-foreground: oklch(0.99 0.002 256);
+    --secondary: oklch(0.24 0.008 256);
+    --secondary-foreground: oklch(0.93 0.004 256);
+    --muted: oklch(0.24 0.008 256);
+    --muted-foreground: oklch(0.66 0.014 256);
+    --accent: oklch(0.62 0.15 256);
+    --accent-foreground: oklch(0.99 0.002 256);
     --destructive: oklch(0.704 0.191 22.216);
     --destructive-foreground: oklch(0.985 0 0);
-    --border: oklch(0.75 0.05 280 / 12%);
-    --input: oklch(0.75 0.05 280 / 15%);
-    --ring: oklch(0.62 0.18 290);
+    --border: oklch(0.80 0.01 256 / 12%);
+    --input: oklch(0.80 0.01 256 / 15%);
+    --ring: oklch(0.70 0.13 258);
 
-    /* Esneo brand — dark mode surfaces */
-    --shell: #08080f;
-    --panel: #10101e;
-    --panel-soft: #16162a;
-    --line: #23233d;
-    --neon: #b5ff40;
-    --violet: #8b5cf6;
+    /* Brand surfaces — graphite dark */
+    --shell: #0b0d10;
+    --panel: #14171c;
+    --panel-soft: #1a1e24;
+    --line: #20242b;
+    --neon: oklch(0.72 0.12 258);      /* primary accent (light azur) */
+    --violet: oklch(0.80 0.10 256);    /* secondary accent (sky) */
 
-    /* Overlay: use white in dark mode for subtle layering */
+    /* Overlay: white in dark mode for subtle layering */
     --overlay: oklch(0.985 0 0);
-    --scrim: oklch(0.02 0.02 280 / 72%);
+    --scrim: oklch(0.10 0.006 256 / 72%);
 
     /* Glass panel vars */
-    --glass-bg-from: rgba(22, 22, 42, 0.88);
-    --glass-bg-to: rgba(12, 12, 22, 0.88);
-    --glass-border: rgba(139, 92, 246, 0.08);
+    --glass-bg-from: rgba(26, 30, 36, 0.85);
+    --glass-bg-to: rgba(20, 23, 28, 0.85);
+    --glass-border: rgba(111, 161, 242, 0.10);
     --glass-shadow: rgba(0, 0, 0, 0.5);
 
-    /* Glow effects */
-    --neon-glow: rgba(181, 255, 64, 0.25);
-    --neon-glow-spread: rgba(181, 255, 64, 0.28);
-    --violet-glow: rgba(139, 92, 246, 0.35);
-    --violet-glow-spread: rgba(139, 92, 246, 0.2);
+    /* Glow effects (subtle azur) */
+    --neon-glow: rgba(91, 141, 239, 0.20);
+    --neon-glow-spread: rgba(91, 141, 239, 0.14);
+    --violet-glow: rgba(143, 183, 255, 0.16);
+    --violet-glow-spread: rgba(143, 183, 255, 0.10);
 
-    /* Surface gradients */
-    --surface-glow-1: rgba(139, 92, 246, 0.12);
-    --surface-glow-2: rgba(168, 85, 247, 0.1);
-    --surface-glow-3: rgba(99, 72, 241, 0.12);
+    /* Surface gradients (very subtle) */
+    --surface-glow-1: rgba(91, 141, 239, 0.08);
+    --surface-glow-2: rgba(110, 160, 245, 0.05);
+    --surface-glow-3: rgba(60, 110, 210, 0.06);
 
     /* Grid noise */
-    --grid-line: rgba(255, 255, 255, 0.04);
+    --grid-line: rgba(255, 255, 255, 0.03);
 
     /* Title gradient */
-    --title-gradient-start: #e8e0ff;
-    --title-gradient-mid: #b5ff40;
-    --title-gradient-end: #8b5cf6;
+    --title-gradient-start: #e7eaee;
+    --title-gradient-mid: #6fa1f2;
+    --title-gradient-end: #8fb7ff;
   }
 
   * {
@@ -236,3 +237,240 @@ body {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(200%); }
 }
+
+/* ───────────────────────────────────────────────────────────────────
+ * Hallmark · genre: modern-minimal · macrostructure: Marquee Hero
+ * theme: Graphite Pro (graphite dark · single azur accent · no neon/violet)
+ * enrichment: Tier-A pure CSS · nav: N5 floating pill · footer: Ft5 statement
+ * pre-emit critique: P5 H5 E5 S5 R5 V4
+ * Landing-page tokens + utilities. Append-only; the app token system above
+ * is untouched. All landing colours reference existing brand tokens.
+ * ─────────────────────────────────────────────────────────────────── */
+:root {
+  /* Type scale (fluid) */
+  --text-display: clamp(2.6rem, 5.2vw + 1rem, 5.25rem);
+  --text-display-s: clamp(2.1rem, 3.6vw + 1rem, 3.6rem);
+  --text-h2: clamp(1.7rem, 2vw + 0.8rem, 2.6rem);
+  --text-h3: clamp(1.15rem, 0.6vw + 0.9rem, 1.4rem);
+  --text-lede: clamp(1.05rem, 0.5vw + 0.95rem, 1.3rem);
+  --text-eyebrow: 0.78rem;
+
+  /* 4pt spacing scale */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 7rem;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-mid: 320ms;
+  --dur-slow: 600ms;
+}
+
+/* Atmospheric ground: one neon + one violet bloom, fixed, no animation */
+@utility hl-bloom-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(60% 50% at 18% 0%, var(--neon-glow-spread), transparent 60%),
+    radial-gradient(55% 55% at 88% 12%, var(--violet-glow), transparent 62%);
+}
+
+@utility hl-serif {
+  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+}
+
+@utility hl-h1 {
+  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+  font-size: var(--text-display);
+  line-height: 1.0;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-style: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+@utility hl-h2 {
+  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+  font-size: var(--text-h2);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+@utility hl-eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--text-eyebrow);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--neon);
+}
+
+@utility hl-card {
+  background: linear-gradient(160deg, var(--panel-soft), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  transition: transform var(--dur-mid) var(--ease-out),
+    box-shadow var(--dur-mid) var(--ease-out),
+    border-color var(--dur-mid) var(--ease-out);
+}
+@media (hover: hover) {
+  .hl-card-lift:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in oklab, var(--violet) 35%, var(--line));
+    box-shadow: 0 24px 60px -28px var(--violet-glow), 0 0 0 1px var(--glass-border);
+  }
+}
+
+@keyframes hl-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@utility hl-reveal {
+  animation: hl-fade-up var(--dur-slow) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-reveal { animation: none; opacity: 1; transform: none; }
+  .hl-card-lift { transition: none; }
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * Landing v2 — high-end SaaS pass (append-only)
+ * Adds: scroll-driven reveals, grain texture, hero glow, smooth anchors.
+ * All values reference the existing graphite + azur token system.
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* Smooth anchor scrolling, offset for the fixed pill nav */
+html {
+  scroll-behavior: smooth;
+}
+[id] {
+  scroll-margin-top: calc(var(--space-3xl));
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+/* Fine film grain over the whole page — breaks digital flatness */
+@utility hl-grain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Scroll-driven entrance. Progressive: stays fully visible where
+ * view-timeline is unsupported (Firefox/older Safari) or motion is reduced. */
+.hl-inview {
+  opacity: 1;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hl-inview {
+      animation: hl-fade-up linear both;
+      animation-timeline: view();
+      animation-range: entry 2% cover 18%;
+    }
+  }
+}
+
+/* Hero product preview — floating glass slab with an azur halo behind it */
+@utility hl-hero-glow {
+  position: absolute;
+  inset: -12% -8% -8% -8%;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(50% 60% at 70% 30%, var(--neon-glow), transparent 70%),
+    radial-gradient(45% 50% at 30% 80%, var(--violet-glow), transparent 72%);
+  filter: blur(8px);
+}
+
+/* Soft top-edge sheen for elevated cards (single light source, top) */
+@utility hl-sheen {
+  position: relative;
+}
+.hl-sheen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--overlay) 6%, transparent), transparent 30%);
+}
+
+/* Tabular figures for data (scores, counts) */
+@utility hl-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * Landing display helpers (serif headings via --font-serif)
+ * ─────────────────────────────────────────────────────────────────── */
+
+/* Cinematic full-bleed display heading — modern serif */
+@utility hl-display {
+  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
+  font-size: clamp(2.8rem, 6vw, 5.5rem);
+  line-height: 1.0;
+  letter-spacing: -0.015em;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+/* Atmospheric photo wash — grayscale luminosity texture, never literal stock */
+@utility hl-atmo {
+  filter: grayscale(1) contrast(1.15) brightness(0.7);
+  mix-blend-mode: luminosity;
+}
+
+/* ───────────────────────────────────────────────────────────────────
+ * Landing · warm editorial light theme (Hallmark-inspired ivory)
+ * Scoped to the marketing landing (.lp-root) so the dark data-app is
+ * untouched. Dark mode keeps the graphite system. Azur stays the single
+ * accent for brand consistency; warmth comes from paper + neutrals.
+ * Only applies when the global theme is light (html without .dark).
+ * ─────────────────────────────────────────────────────────────────── */
+:root:not(.dark) .lp-root {
+  --background: oklch(0.984 0.008 83);     /* warm ivory paper */
+  --foreground: oklch(0.23 0.012 60);      /* warm ink */
+  --card: oklch(0.967 0.01 83);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.984 0.008 83);
+  --popover-foreground: var(--foreground);
+  --secondary: oklch(0.955 0.013 83);
+  --secondary-foreground: oklch(0.27 0.012 60);
+  --muted: oklch(0.95 0.013 83);
+  --muted-foreground: oklch(0.47 0.016 66);
+  --border: oklch(0.9 0.014 80);
+  --input: oklch(0.9 0.014 80);
+
+  /* Brand surfaces remapped to the warm family */
+  --shell: oklch(0.962 0.011 83);
+  --panel: oklch(0.99 0.008 83);
+  --panel-soft: oklch(0.955 0.012 83);
+  --line: oklch(0.9 0.014 80);
+
+  /* Azur accent preserved — slightly deepened for contrast on warm paper */
+  --primary: oklch(0.5 0.16 256);
+  --accent: oklch(0.5 0.16 256);
+  --ring: oklch(0.5 0.16 256);
+}
+

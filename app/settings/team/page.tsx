@@ -146,7 +146,7 @@ export default function TeamSettingsPage() {
   }
 
   if (roleLoaded && !canManage) {
-    redirect('/')
+    redirect('/dashboard')
   }
 
   async function handleInvite(e: React.FormEvent) {

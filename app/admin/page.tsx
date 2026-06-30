@@ -59,7 +59,7 @@ export default function AdminPage() {
   const setOrgDefaultTemplate = useSetOrgDefaultTemplate()
 
   if (isLoaded && !isSuperAdmin) {
-    redirect('/')
+    redirect('/dashboard')
   }
 
   if (!isLoaded || isLoading) {

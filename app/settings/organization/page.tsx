@@ -86,7 +86,7 @@ export default function OrganizationSettingsPage() {
   }, [orgId, settings]);
 
   if (roleLoaded && !canManage) {
-    redirect('/');
+    redirect('/dashboard');
   }
 
   const loading = !!orgId && isPending && !settings;

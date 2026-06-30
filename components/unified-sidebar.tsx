@@ -385,7 +385,7 @@ export function UnifiedSidebar() {
         {/* Header */}
         <SidebarHeader className="p-0">
           <Link
-            href="/"
+            href="/dashboard"
             className="flex items-center justify-center px-4 pt-6 pb-3 transition-opacity hover:opacity-90"
             onClick={() => { if (isMobile) setOpenMobile(false); }}
           >
@@ -427,7 +427,7 @@ export function UnifiedSidebar() {
           <Tabs
             value={activeTab}
             onValueChange={(v) => {
-              const target = v === 'cvs' ? '/' : '/positions';
+              const target = v === 'cvs' ? '/dashboard' : '/positions';
               if (pathname === target) return;
               router.push(target);
             }}

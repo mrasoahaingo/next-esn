@@ -1,0 +1,54 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Marquee Hero
+ * theme: Graphite Pro (graphite dark · single azur accent · no neon/violet)
+ * enrichment: Tier-A pure CSS · nav: N5 floating pill · footer: Ft5 statement
+ * pre-emit critique: P5 H5 E5 S5 R5 V4
+ *
+ * Portable token export. Live values are wired through app/globals.css
+ * (:root light + .dark). Colours catalogued here for portability; dark-mode
+ * values shown in comments. Applies to the whole app (dashboard + landing).
+ */
+:root {
+  /* ── Colour (graphite + azur — see app/globals.css) ── */
+  --color-shell: var(--shell);          /* dark: #0b0d10 */
+  --color-panel: var(--panel);          /* dark: #14171c */
+  --color-panel-soft: var(--panel-soft);/* dark: #1a1e24 */
+  --color-line: var(--line);            /* dark: #20242b */
+  --color-primary: var(--primary);      /* azur fill — white text */
+  --color-accent: var(--neon);          /* light azur — accent text/icons */
+  --color-accent-2: var(--violet);      /* sky — secondary accent */
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+
+  /* ── Type ── */
+  --font-display: var(--font-geist-sans);
+  --font-body: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --text-display: clamp(2.6rem, 5.2vw + 1rem, 5.25rem);
+  --text-display-s: clamp(2.1rem, 3.6vw + 1rem, 3.6rem);
+  --text-h2: clamp(1.7rem, 2vw + 0.8rem, 2.6rem);
+  --text-h3: clamp(1.15rem, 0.6vw + 0.9rem, 1.4rem);
+  --text-lede: clamp(1.05rem, 0.5vw + 0.95rem, 1.3rem);
+  --text-eyebrow: 0.78rem;
+
+  /* ── Space (4pt) ── */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 7rem;
+
+  /* ── Motion ── */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 140ms;
+  --dur-mid: 320ms;
+  --dur-slow: 600ms;
+
+  /* ── Radius ── */
+  --radius-pill: 999px;
+  --radius-card: 1.1rem;
+}

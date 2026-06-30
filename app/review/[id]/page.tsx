@@ -246,7 +246,7 @@ export default function ReviewPage() {
       });
     }
     deleteCandidate.mutate(candidateId, {
-      onSuccess: () => router.push('/'),
+      onSuccess: () => router.push('/dashboard'),
     });
   }, [candidateData?.workflow_run_id, activeRunId, candidateId, isLoading, stop, cancelWorkflow, deleteCandidate, router]);
 

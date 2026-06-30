@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { frFR } from "@clerk/localizations";
@@ -21,6 +21,15 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Editorial soft-serif for display headings, paired with Geist sans for body/UI.
+// opsz + SOFT axes enable Fraunces' optical-size display cut at large sizes
+// (without them the headings render flat). font-optical-sizing: auto handles it.
+const fraunces = Fraunces({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  axes: ["opsz", "SOFT"],
+});
+
 export const metadata: Metadata = {
   title: "Esneo",
   description: "Automatisation de CVs et positionnement",
@@ -37,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} app-surface antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} app-surface antialiased`}
       >
         <ClerkProvider
           afterSignOutUrl="/sign-in"

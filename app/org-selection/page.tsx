@@ -7,7 +7,7 @@ export default async function OrgSelectionPage() {
   const { orgId } = await auth()
 
   if (orgId) {
-    redirect('/')
+    redirect('/dashboard')
   }
 
   return (
@@ -22,8 +22,8 @@ export default async function OrgSelectionPage() {
         </div>
         <OrganizationList
           hidePersonal
-          afterCreateOrganizationUrl="/"
-          afterSelectOrganizationUrl="/"
+          afterCreateOrganizationUrl="/dashboard"
+          afterSelectOrganizationUrl="/dashboard"
         />
       </div>
     </div>
