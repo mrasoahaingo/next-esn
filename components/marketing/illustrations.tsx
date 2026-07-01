@@ -32,10 +32,10 @@ export function PositioningArt({ className }: Props) {
 
       <circle cx="44" cy="84" r="18" fill="var(--primary)" fillOpacity="0.15" />
       <text x="44" y="89" fontSize="13" fontWeight="600" textAnchor="middle" fill="var(--primary)">
-        AC
+        AM
       </text>
       <text x="72" y="80" fontSize="13" fontWeight="600" fill="var(--foreground)">
-        Amine Cherif
+        Alex Martin
       </text>
       <text x="72" y="98" fontSize="10.5" fill="var(--muted-foreground)">
         Lead Front-end · React / TypeScript
