@@ -1,78 +1,100 @@
 # Requirements: Next-ESN
 
-**Defined:** 2026-06-04  
-**Milestone:** v1.2 Multi-langue  
+**Defined:** 2026-07-03
+**Milestone:** v1.3 Prospection
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille
 
 v1.1 requirements : `.planning/milestones/v1.1-REQUIREMENTS.md` (FLOW-*, LAT-*, RES-*)
+v1.2 requirements (parké) : `.planning/milestones/v1.2-REQUIREMENTS.md` (LANG-*, PDF-*, PROMPT-*)
 
 ---
 
-## v1.2 — Modèle de données langue (LANG)
+## v1.3 Requirements
 
-- [ ] **LANG-01** : Après l'extraction d'un CV, le système détecte la langue (`fr` ou `en`) depuis la branche identity et la persiste dans `candidates.language`.
-- [ ] **LANG-02** : Après l'analyse d'une mission, le système détecte la langue (`fr` ou `en`) et la persiste dans `missions.language`.
-- [ ] **LANG-03** : L'utilisateur peut voir et modifier la langue détectée d'un CV sur la page de review — sans déclencher une nouvelle extraction.
-- [ ] **LANG-04** : L'utilisateur peut voir et modifier la langue d'une mission sur le formulaire d'édition.
-- [x] **LANG-05** : L'organisation dispose d'une langue par défaut (`fr|en`) dans `organization_settings.default_language`, utilisée en fallback quand la langue n'est pas encore détectée.
+Requirements pour le milestone Prospection. Chacun mappe vers une phase de la roadmap.
 
-## v1.2 — Contenu IA langue-aware (AI)
+### Automations
 
-- [ ] **AI-01** : Les branches d'extraction CV (expériences, formations, compétences) génèrent leur output dans la langue du CV (`candidates.language`).
-- [ ] **AI-02** : Les branches d'analyse de mission génèrent leur output dans la langue de la mission (`missions.language`).
-- [ ] **AI-03** : L'analyse de positionnement (compétences, expériences, gaps, synthèse) génère son output dans la langue de la **mission** — y compris quand le CV est dans une langue différente.
-- [ ] **AI-04** : La génération de positionnement (CV tailored, emails) génère ses artefacts dans la langue de la **mission** — si CV est FR et mission est EN, le CV tailored est en EN.
-- [ ] **AI-05** : La branche de transcription (`cv.transcription`) n'est **pas** soumise à la directive de langue — le texte source est préservé tel quel.
-- [ ] **AI-06** : Les noms de produits, d'entreprises et de certifications sont préservés verbatim dans les artefacts générés, quelle que soit la directive de langue.
+- [ ] **AUTO-01**: Le recruteur peut créer une automation avec critères de ciblage (secteur, taille d'effectif, zone géographique) et profils à placer
+- [ ] **AUTO-02**: Le recruteur peut modifier et supprimer une automation
+- [ ] **AUTO-03**: Le recruteur peut créer plusieurs automations dans son org (une par verticale), résultats tagués par automation source
+- [ ] **AUTO-04**: Le recruteur peut lancer une automation manuellement (« lancer maintenant »), même pipeline que le cron
+- [ ] **AUTO-05**: Les automations s'exécutent périodiquement via cron sans double exécution (lock/idempotence — gap connu de `@workflow/next`)
+- [ ] **AUTO-06**: Le recruteur voit l'état du run (en cours / terminé / erreur) et la date du dernier run par automation
 
-## v1.2 — Labels PDF localisés (PDF)
+### Signaux
 
-- [ ] **PDF-01** : Le PDF exporté depuis le CV builder affiche ses labels de section dans la langue du candidat (`candidates.language`) — ex. `Skills` / `Compétences`, `Experience` / `Expériences`.
-- [ ] **PDF-02** : Le CV tailored généré depuis un positionnement affiche ses labels de section dans la langue de la mission (`missions.language`).
+- [ ] **SIG-01**: Le pipeline collecte les signaux levées/croissance via Pappers pour les entreprises matchant les critères
+- [ ] **SIG-02**: Le pipeline collecte l'historique d'annonces via l'API France Travail
+- [ ] **SIG-03**: Le pipeline collecte la croissance d'effectifs et les arrivées de décideurs LinkedIn via ScrapIn
+- [ ] **SIG-04**: Les entreprises sont réconciliées par SIREN — une entreprise remontée par deux automations n'apparaît qu'une fois, signaux fusionnés
+- [ ] **SIG-05**: Chaque entreprise affiche ses signaux sources (badge par type avec date)
+- [ ] **SIG-06**: Un collecteur en échec n'invalide pas le run — résultats partiels conservés, erreur attribuée à la source
 
-## v1.2 — Infrastructure prompts (PROMPT)
+### Scoring
 
-- [ ] **PROMPT-01** : Tous les prompts LLM affectés (extraction CV hors transcription, analyse mission, analyse et génération de positionnement) contiennent une directive `{{language}}` remplaçant le hardcoding `"Langue : français"`. La valeur injectée est en langage naturel (`French` / `English`) pour éviter l'ambiguïté dans les prompts.
-- [x] **PROMPT-02** : `resolveLlmTask` émet un `console.warn` quand le prompt rendu contient encore des placeholders non résolus (`{{`) — protection contre le silent passthrough.
+- [ ] **SCOR-01**: Chaque entreprise reçoit un score de chaleur 0–100 calculé par règles pondérées déterministes (jamais par le LLM)
+- [ ] **SCOR-02**: Le score décroît avec l'ancienneté des signaux (decay par type de signal)
+- [ ] **SCOR-03**: Chaque entreprise a une justification lisible (2-3 phrases, LLM) fondée sur ses signaux réels
+- [ ] **SCOR-04**: Chaque entreprise a un pitch d'appel contextualisé ESN (LLM) intégrant les « profils à placer » de l'automation
 
----
+### Contacts
 
-## Out of scope (v1.2)
+- [ ] **CONT-01**: Pour une entreprise au-dessus du seuil, un décideur est identifié (nom, poste, profil LinkedIn)
+- [ ] **CONT-02**: L'email du décideur est enrichi via Dropcontact (téléphone hors scope v1.3)
+- [ ] **CONT-03**: L'enrichissement contact ne se déclenche que si score ≥ seuil ; en dessous, action désactivée avec explication
+- [ ] **CONT-04**: L'admin d'org peut configurer le seuil de chaleur (défaut 60)
+- [ ] **CONT-05**: Chaque contact stocké porte sa provenance et sa date de collecte (conformité RGPD/CNIL, rétention max 3 ans)
 
-| Item | Reason |
-|------|--------|
-| I18n de l'UI applicative (sidebar, headers) | Trop large — pas de framework i18n, Clerk reste `frFR` |
-| Radar (`lib/radar/brief.ts`) multi-langue | Prompt hardcodé en code, domaine séparé |
-| Langues au-delà de FR + EN | Scope v1.2 limité aux 2 premières |
-| Cancel fiable d'un workflow | Runtime `@workflow/next` beta |
-| Re-extraction automatique sur changement de langue | LANG-03/04 : override direct sans re-run |
-| Prompts séparés par langue | Un row par task_key avec `{{language}}` — pas de doublons |
-| Traduction rétroactive des analyses historiques | Pas de valeur, risque de corruption |
+### Liste
 
----
+- [ ] **LIST-01**: `/prospection` affiche la liste des entreprises triée par score décroissant, avec timestamp « dernière mise à jour »
+- [ ] **LIST-02**: Le recruteur peut passer une entreprise en « à appeler / appelé / écarté », persisté par org
+- [ ] **LIST-03**: Le recruteur peut filtrer la liste par statut et par automation
+
+## Future Requirements
+
+Différés — tracés mais hors roadmap v1.3.
+
+### Signaux (v1.4)
+
+- **SIG-F1**: Signaux AO/marchés publics gagnés via BOAMP/DECP (différenciateur ESN, gratuit)
+
+### Rétention & équipe (v2+)
+
+- **NOTF-F1**: Digest email des nouvelles entreprises chaudes (quotidien/hebdo par automation)
+- **CONT-F1**: Enrichissement téléphone (Kaspr) — attention interdiction démarchage téléphonique non sollicité (août 2026)
+- **MATCH-F1**: Matching entreprises chaudes ↔ consultants disponibles (« 2 candidats matchent les besoins de cette entreprise »)
+- **LIST-F1**: Snooze / rappel différé
+- **LIST-F2**: Assignation d'une entreprise à un collègue
+
+## Out of Scope
+
+Exclusions explicites — documentées pour éviter le scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Pipeline CRM complet (RDV, gagné/perdu, relances) | Explosion de scope ; 3 statuts couvrent le besoin réel du recruteur en v1.3 |
+| Séquences email / outreach automatisé | Risque RGPD, délivrabilité, réputation — le recruteur initie le contact manuellement avec le pitch copiable |
+| Signaux temps réel (websocket) | Les données firmographiques changent au mieux quotidiennement — cron suffit |
+| Base de contacts propriétaire | Charge RGPD et vérification permanente — APIs d'enrichissement au crédit, gated par seuil |
+| Agrégateur Pharow (buy) | Outil de vente, pas une API backend intégrable — build avec la stack directe |
+| Proxycurl | Service fermé (juillet 2025, procès LinkedIn) — remplacé par ScrapIn ; code radar mort à purger |
+| Tous les signaux dès le lancement | 3 signaux complémentaires suffisent pour un score crédible ; BOAMP en v1.4 |
 
 ## Traceability
 
+Rempli lors de la création de la roadmap.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LANG-01 | Phase 7 | Pending |
-| LANG-02 | Phase 7 | Pending |
-| LANG-03 | Phase 8 | Pending |
-| LANG-04 | Phase 8 | Pending |
-| LANG-05 | Phase 6 | Complete |
-| AI-01 | Phase 7 | Pending |
-| AI-02 | Phase 7 | Pending |
-| AI-03 | Phase 7 | Pending |
-| AI-04 | Phase 7 | Pending |
-| AI-05 | Phase 7 | Pending |
-| AI-06 | Phase 7 | Pending |
-| PDF-01 | Phase 8 | Pending |
-| PDF-02 | Phase 8 | Pending |
-| PROMPT-01 | Phase 7 | Pending |
-| PROMPT-02 | Phase 6 | Complete |
+| — | — | — |
 
-**Coverage:** 15/15 exigences v1.2 mappées — Phase 6 (2), Phase 7 (9), Phase 8 (4).
+**Coverage:**
+- v1.3 requirements: 23 total
+- Mapped to phases: 0
+- Unmapped: 23 ⚠️
 
 ---
-*Requirements defined: 2026-06-04*  
-*Last updated: 2026-06-04 — traceability filled after roadmap creation*
+*Requirements defined: 2026-07-03*
+*Last updated: 2026-07-03 after initial definition*
