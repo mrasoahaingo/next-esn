@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Réactivité, flux & résilience
-status: verifying
-stopped_at: Completed quick-260605-e30-PLAN.md — cv.transcription language-neutral migration
-last_updated: "2026-06-05T08:11:41.687Z"
-last_activity: "2026-06-04 - Completed quick task 260604-ncx: N'affiche pas la preview du CV tant qu'on a pas détecté la langue car ça blink entre fr et en"
+milestone: v1.3
+milestone_name: Prospection
+status: planning
+last_updated: "2026-07-03T16:46:59.567Z"
+last_activity: 2026-07-03
 progress:
-  total_phases: 6
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -25,12 +24,10 @@ See: `.planning/PROJECT.md` (milestone v1.2)
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-06-05 - Completed quick task 260605-eo0: Audit complet des labels/textes statiques du template CV pour vérifier la traduction en anglais
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-03 — Milestone v1.3 started
 
 ## Performance Metrics
 

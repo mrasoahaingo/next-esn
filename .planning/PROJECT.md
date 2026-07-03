@@ -8,17 +8,37 @@ Un SaaS pour les ESN (Entreprises de Services Numériques) qui les aide dans leu
 
 L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il sait ce qui se passe, ne peut pas lancer de doublons, et voit les erreurs quand ça échoue.
 
-## Current Milestone: v1.2 Multi-langue
+## Current Milestone: v1.3 Prospection
 
-**Goal:** Permettre aux ESN de gérer des CVs et des missions en anglais — l’IA détecte la langue automatiquement, les artefacts générés restent dans la langue du document source, et les templates PDF s’adaptent.
+**Goal:** Donner aux recruteurs ESN une liste d'entreprises « chaudes » — susceptibles de recruter avant même d'avoir publié une annonce — avec le bon contact à appeler, alimentée par des automations à critères.
 
 **Target features:**
 
-- **Détection langue** : auto-détection `fr|en` lors de l’extraction CV (branche identity) et de l’analyse mission ; override manuel dans la review CV / édition mission.
-- **Artefacts IA langue-aware** : extraction CV, analyse mission, analyse de positionnement, CV tailored, emails — tous dans la langue du document source. Pour le positionnement cross-langue (CV fr × mission en), les artefacts suivent la langue de la **mission**.
-- **Labels PDF** : `templates/cv-dossier-layout.ts` remplacé par un `CV_LABELS` map `{ fr: {...}, en: {...} }` ; les PDFs en anglais affichent `Skills`, `Experience`, `Education` etc.
-- **Prompts LLM** : directive `{{language}}` injectée dans les prompts DB existants (pas de doublons de prompts). Renderer `lib/llm/template-render.ts` déjà compatible.
-- **DB** : colonnes `language` ajoutées sur `candidates`, `missions`, `organization_settings.default_language`.
+- **Page `/prospection`** : nouvelle feature from scratch (le Radar `lib/radar/` reste de côté) — liste d'entreprises triée par score de chaleur, justification lisible « pourquoi cette entreprise est chaude » et pitch d'appel.
+- **Signaux « chauds » multi-sources** : levées de fonds/croissance, activité LinkedIn (croissance effectifs, arrivées CTO/managers, turnover), historique d'annonces récurrentes, AO/marchés publics gagnés.
+- **Contact à appeler** : enrichissement automatique via API (décideur DRH/CTO/hiring manager — nom, poste, LinkedIn, coordonnées si dispo), déclenché uniquement au-dessus du seuil de chaleur pour maîtriser les coûts.
+- **Automations à critères** : le recruteur crée plusieurs automations (ciblage entreprise : secteur/taille/géo + profils recherchés à placer) ; exécution périodique par cron **et** lancement manuel « live ».
+- **Scoring IA + règles** : pondération déterministe des signaux (type, récence) + synthèse LLM (score, justification, pitch d'appel).
+- **Liste actionnable simple** : statuts « à appeler / appelé / écarté » — pas de pipeline CRM complet dans ce milestone.
+
+**Sources de données (à valider en recherche) :**
+
+| Signal | Sources pressenties |
+|---|---|
+| Levées / croissance | Pappers / Societeinfo (actes, comptes, effectifs), presse tech (Maddyness, FrenchWeb), Crunchbase/Dealroom |
+| Activité LinkedIn | Proxycurl (headcount growth, job changes — déjà câblé), Browserbase/Stagehand (déjà câblé) |
+| Historique d'annonces | API France Travail (gratuite), Adzuna, scraping WTTJ/Indeed |
+| AO / marchés gagnés | API BOAMP (DILA), DECP data.gouv (attributions), TED |
+| Socle entreprises | API SIRENE/INSEE (gratuite) + Pappers ; réconciliation par SIREN |
+| Contacts décideurs | Proxycurl, Dropcontact (RGPD FR), Apollo.io, Kaspr, Nomination/Pharow |
+
+Question ouverte build vs buy : des agrégateurs FR (Pharow) fusionnent déjà plusieurs de ces signaux.
+
+## Parked Milestone: v1.2 Multi-langue (Phases 7–8 restantes)
+
+**Goal:** Permettre aux ESN de gérer des CVs et des missions en anglais — l’IA détecte la langue automatiquement, les artefacts générés restent dans la langue du document source, et les templates PDF s’adaptent.
+
+**État au parking (2026-07-03) :** Phase 6 (DB + Schema Foundation) livrée ; l'essentiel de la détection langue, des labels PDF et des artefacts langue-aware a été couvert par des quick tasks (voir STATE.md). Restent documentées dans la roadmap : Phase 7 (Workflow Detection + Prompt Injection) et Phase 8 (PDF Wiring + Manual Override UI).
 
 ## Previous Milestone: v1.1 Réactivité, flux & résilience
 
@@ -42,13 +62,18 @@ L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il
 - ✓ Synchro React Query + reset store positionnement sur changement de contexte — v1.0
 - ✓ Hub `/review/[id]/positioning` : pas de redirection `/positions` après création mission ; état d’analyse mission inline ; CTA matching selon vérité serveur (`FLOW-01`–`FLOW-03`) — Phase 3
 
-### Active (v1.2)
+### Active (v1.3)
 
-Voir `.planning/REQUIREMENTS.md` — exigences LANG-*, PDF-*, PROMPT-*.
+Voir `.planning/REQUIREMENTS.md` — exigences prospection (en cours de définition).
+
+### Parked (v1.2)
+
+- Exigences LANG-*, PDF-*, PROMPT-* restantes des Phases 7–8 — voir roadmap archivée.
 
 ### Out of Scope
 
-- Nouvelles features métier lourdes (matching avancé, CRM, notifications push) — hors milestone sauf décision explicite
+- Pipeline CRM complet pour la prospection (contacté → RDV → gagné/perdu, relances) — v1.3 se limite à une liste actionnable (à appeler / appelé / écarté)
+- Autres features métier lourdes (matching avancé, notifications push) — hors milestone sauf décision explicite
 - Refonte UX globale / i18n de l’UI applicative — trop large, décision explicite requise
 - Tests automatisés — dette connue
 - Refactoring structurel global — hors scope sauf besoin bugfix
@@ -66,7 +91,8 @@ Voir `.planning/REQUIREMENTS.md` — exigences LANG-*, PDF-*, PROMPT-*.
 
 - **Tech stack** : Next.js 16 + Supabase + Clerk + Vercel AI SDK — pas de changement de stack imposé
 - **Workflow runtime** : `@workflow/next` beta — travailler avec ses limites
-- **Scope** : pas de nouvelles features fonctionnelles hors exigences v1.2
+- **Scope** : pas de nouvelles features fonctionnelles hors exigences v1.3 (prospection)
+- **Coûts API** : les APIs de signaux et d'enrichissement contacts sont payantes au crédit — l'enrichissement contact ne se déclenche qu'au-dessus du seuil de chaleur
 
 ## Key Decisions
 
@@ -76,16 +102,32 @@ Voir `.planning/REQUIREMENTS.md` — exigences LANG-*, PDF-*, PROMPT-*.
 | Garder le workflow runtime beta | Pas d’alternative mature équivalente | ✓ v1.0 |
 | `handleWorkflowError` colocalisé par fichier | Orchestrateurs `@workflow/next` | ✓ v1.0 |
 | **Mission créée depuis la page positionnement** | Éviter aller-retour fiche mission ↔ positionnement | **v1.1** — rester sur `/review/[id]/positioning`, état d’analyse inline, CTA positionnement désactivé jusqu’à analyse mission OK |
-
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
 | **Langue unique par document** | Prompts doivent rester maintenables sans doublons | — Pending |
 | **Artifacts positionnement cross-langue → langue mission** | Destinataire = client final, pas le candidat | — Pending |
 | **UI applicative reste FR** | Scope réduit, pas de framework i18n nécessaire | — Pending |
 | **Colonnes language en DB + Zod + CV_LABELS** | Fondations v1.2 posées en Phase 06 | ✓ Phase 06 |
 | **Guard console.warn placeholders non résolus** | Détection précoce des erreurs de template LLM | ✓ Phase 06 |
+| **v1.2 parké au profit de la prospection** | Phases 7–8 documentées ; l'essentiel couvert par quick tasks ; prospection prioritaire | — Pending |
+| **Prospection from scratch sous `/prospection`** | Le Radar existant reste de côté — nouveau domaine propre | — Pending |
+| **Enrichissement contact gated par seuil de chaleur** | Maîtriser les coûts d'API contact (poste le plus cher) | — Pending |
+| **Réconciliation entreprises par SIREN** | Clé stable pour fusionner les signaux multi-sources | — Pending |
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-06-04 — Phase 06 complete: DB migrations, Zod schemas, LLM placeholder guard*
+*Last updated: 2026-07-03 — Milestone v1.3 Prospection démarré (v1.2 parké)*
