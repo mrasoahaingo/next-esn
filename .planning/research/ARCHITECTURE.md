@@ -1,181 +1,610 @@
-# Architecture Research: Language Integration
+# Architecture Patterns: v1.3 Prospection
 
-## Data flow
-
-```
-DB (candidates.language / missions.language)
-  └── read at workflow start (fetchAndAnalyze step / parallelExtractAndStream step)
-        ├── injected into resolveLlmTask context as { language: 'fr'|'en' }
-        │     └── {{language}} rendered into system prompt by existing template-render.ts
-        └── returned from saveResult step → triggers downstream
-              ├── PDF chain: generateCvPdf(data, templateConfig, language)
-              │     └── buildCvSpec → buildCvTemplateSpec → buildCvDossierLayoutSpec
-              │           └── CV_LABELS[language] selects section heading strings
-              └── positioning workflows: read missions.language at fetchAndAnalyze entry
-                    └── passed to buildAnalysisUserContent(cv, jd, analysis, weights, opts, answers, language)
-```
-
-**Language source of truth per artifact:**
-- CV extraction → language detected by identity branch → persisted to `candidates.language`
-- Job posting analysis → language detected by analyze workflow → persisted to `missions.language`
-- Positioning artefacts (analysis, generate) → read `missions.language` (cross-language rule: artifacts follow mission language)
-- PDF export → read `candidates.language` from DB at API call time OR passed through from caller
+**Domain:** B2B prospecting pipeline integrated into existing ESN SaaS
+**Researched:** 2026-07-03
+**Milestone:** v1.3 Prospection (new feature domain, from scratch under `/prospection`)
 
 ---
 
-## Question-by-question answers
+## How the Prospection Feature Sits in the Existing Architecture
 
-### Q1: extract-cv.ts — identity first, then 3 parallel branches
+The prospection feature is a **new domain** added alongside the existing candidate/mission/positioning domains. It does not modify any existing table, API route, or workflow. It reuses all infrastructure (Supabase, Clerk, @workflow/next, React Query, the `useWorkflowStream` hook, the `WorkflowStepList` component pattern) without changing it.
 
-The current structure runs all 4 branches in a single `Promise.all` inside `parallelExtractAndStream`. The language is not available until the identity branch completes.
-
-**Cleanest restructure without breaking NDJSON:**
-
-Split `parallelExtractAndStream` into two sequential `'use step'` functions — both operating on the same writable stream via `getWritable()`. The `@workflow/next` runtime allows multiple steps to write to the same writable within a single workflow invocation.
-
-```
-step 1: extractIdentityBranch(candidateId, cvText, ...) → returns { identity, language, chunkIndex }
-  - runs only CV_BRANCH_IDENTITY via consumeBranch
-  - persists candidates.language immediately after identity resolves
-  - streams identity partial via the writable (same NDJSON channel)
-  - returns the detected language
-
-step 2: parallelExtractRemaining(candidateId, cvText, language, chunkIndex, ...) → returns ParallelExtractResult
-  - runs Promise.all([experiences, education, skills])
-  - injects { language } into each resolveLlmTask context call
-  - continues streaming to same writable
-```
-
-The `extractCvWorkflow` function becomes:
-```
-const prep = await prepareCvText(candidateId)
-const identity = await extractIdentityBranch(candidateId, prep.cvText, ...)
-const ext = await parallelExtractRemaining(candidateId, prep.cvText, identity.language, ...)
-await saveResult(candidateId, { ...ext, language: identity.language })
-```
-
-**NDJSON impact:** Zero. The writable stays open across steps. The client already handles partial `data` payloads from multiple emit() calls. The stream closes only in `saveResult` (via `writable.close()`), unchanged.
-
-**Step boundary constraint:** Each `'use step'` function gets its own `getWritable()` call — this is fine because `getWritable()` returns the same underlying writable for the current workflow run. Confirm this holds with the `@workflow/next` beta API before splitting.
-
-**Fallback if getWritable() does not persist across steps:** Run identity branch sequentially inside the existing single `'use step'` function before launching the `Promise.all` — no step split required, just sequential then parallel within one step boundary. Language is available for the remaining branches. Slightly less granular error attribution on identity failures, but no NDJSON risk.
-
-### Q2: PDF chain — where to add language to function signatures
-
-Add `language` as an optional param with `'fr'` default at every layer. Thread it inward:
-
-| Function | File | Change |
-|---|---|---|
-| `generateCvPdf(data, templateConfig, language?)` | `pdf.service.ts` | Add `language?: 'fr'\|'en'` param |
-| `buildCvSpec(data, templateConfig, language?)` | `pdf.template.ts` | Pass through to registry |
-| `buildCvTemplateSpec(data, templateConfig, language?)` | `templates/registry.ts` | Pass through to layout |
-| `buildCvDossierLayoutSpec(data, templateConfig, language?)` | `templates/cv-dossier-layout.ts` | Use `CV_LABELS[language ?? 'fr']` |
-
-`CV_LABELS` is a new `const` in `cv-dossier-layout.ts`:
-```typescript
-const CV_LABELS = {
-  fr: { summary: 'Synthese du profil', skills: 'Competences', edu: 'Formations', exp: 'Experiences professionnelles' },
-  en: { summary: 'Profile summary', skills: 'Skills', edu: 'Education', exp: 'Work experience' },
-} as const;
-```
-
-The 4 hardcoded French strings in `addSectionHeading` calls (lines 316, 371, 391, 459) are the only changes in `cv-dossier-layout.ts`. All other layout logic is language-agnostic.
-
-### Q3: API routes — how language enters workflow invocation
-
-**For upload (`app/api/upload/route.ts`):** Language is unknown at upload time. The workflow detects it. No change to the `start(extractCvWorkflow, [candidate.id])` call. Language flows out of the workflow via `saveResult` persisting `candidates.language`.
-
-**For PDF generation API routes:** Read `candidates.language` from DB at the start of the route handler, then pass it to `generateCvPdf`. Do not accept language from request body — use DB as source of truth to prevent inconsistency. Pattern:
-```typescript
-const { data: candidate } = await supabase.from('candidates').select('language').eq('id', candidateId).single();
-const language = candidate?.language ?? 'fr';
-await generateCvPdf(data, templateConfig, language);
-```
-
-**For job posting analysis routes:** Language detected by the analyze workflow and persisted to `missions.language`. The API route triggering re-analysis does not pass language in; the workflow reads and writes it.
-
-**For positioning routes:** No change to route invocation. The workflow reads `missions.language` internally.
-
-### Q4: Positioning workflows — where to read mission.language
-
-Read it at the top of `fetchAndAnalyze`, from the already-fetched `positioning.missions` join. The missions select already fetches `title, company, job_analysis` — add `language` to that select:
-
-```typescript
-.select('*, candidates(*), missions(job_analysis, title, company, language)')
-```
-
-Then early in `fetchAndAnalyze`:
-```typescript
-const missionLanguage = (missionRow?.language as 'fr' | 'en' | null) ?? 'fr';
-```
-
-Pass `missionLanguage` to:
-1. Each `resolveLlmTask` call: `context: { language: missionLanguage, ... }`
-2. `buildAnalysisUserContent(cv, jd, jobAnalysis, matchingWeights, promptOptions, priorAnswers, missionLanguage)`
-
-Same pattern applies to `positioning-generate.ts` — it follows the same fetch-then-branch structure.
+The existing `lib/radar/` code is reference material only. The new feature lives under:
+- `lib/prospection/` — schemas, queries, services, scoring
+- `app/api/prospection/` — API routes
+- `app/api/prospection/workflows/` — @workflow/next workflow files
+- `app/prospection/` — UI pages
 
 ---
 
-## New vs modified components
+## Recommended Architecture
 
-| Component | Status | What changes |
-|---|---|---|
-| `supabase/migrations/` | NEW | Add `candidates.language`, `missions.language`, `organization_settings.default_language` columns |
-| `lib/schema.ts` (`extractionIdentitySchema`) | MODIFIED | Add `language: z.enum(['fr','en'])` field so identity branch LLM output includes detected language |
-| `templates/cv-dossier-layout.ts` | MODIFIED | Extract 4 hardcoded French strings into `CV_LABELS` map; add `language?` param to `buildCvDossierLayoutSpec` |
-| `templates/registry.ts` | MODIFIED | Thread `language?` through `buildCvTemplateSpec` |
-| `lib/services/pdf.template.ts` | MODIFIED | Thread `language?` through `buildCvSpec` |
-| `lib/services/pdf.service.ts` | MODIFIED | Add `language?` param to `generateCvPdf` |
-| `workflows/extract-cv.ts` | MODIFIED | Split or sequence identity branch first; persist `candidates.language` in `saveResult`; inject `language` into remaining branch contexts |
-| `workflows/analyze-job-posting.ts` | MODIFIED | Detect and persist `missions.language` after analysis |
-| `workflows/positioning-analyze.ts` | MODIFIED | Read `missions.language` from join; inject into `resolveLlmTask` context and `buildAnalysisUserContent` |
-| `workflows/positioning-generate.ts` | MODIFIED | Same pattern as positioning-analyze |
-| `lib/services/positioning.service.ts` | MODIFIED | Add `language?` param to `buildAnalysisUserContent` and user-content builders |
-| DB `llm_tasks` prompts | MODIFIED | Add `{{language}}` directive to CV extraction, job posting analysis, and positioning prompt text (no new rows) |
-| PDF export API routes | MODIFIED | Read `candidates.language` from DB before calling `generateCvPdf` |
+### System Overview
+
+```
+[Cron / Manual trigger]
+        │
+        ▼
+POST /api/prospection/automations/[id]/run
+  → start(collectSignalsWorkflow, [automationId, orgId])
+        │
+        ├── step: fetchAutomationConfig(automationId) → criteria, enabled sources
+        │
+        ├── step: runCollectors(criteria) → RawSignal[] per source
+        │   ├── France Travail API (job offers)
+        │   ├── SIRENE/Pappers (company lookup + SIREN resolution)
+        │   ├── Proxycurl (LinkedIn headcount, job changes) — existing pattern
+        │   └── (future) BOAMP, Crunchbase, Browserbase/Stagehand
+        │
+        ├── step: reconcileAndPersistSignals(orgId, signals) → upsert by SIREN
+        │   └── findOrCreateProspectCompany (SIREN-first, name-fallback)
+        │
+        ├── step: scoreCompanies(orgId) → heat scores per company
+        │   ├── deterministic rules (weight × decay per signal type)
+        │   └── LLM synthesis: score justification + pitch d'appel
+        │
+        ├── step: enrichHotContacts(orgId, threshold) → contacts for hot companies
+        │   └── gated: only companies above heat threshold (default: score ≥ 60)
+        │
+        └── step: logRunResult(automationId, orgId, result)
+```
+
+### Component Boundaries
+
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `prospection_automations` (DB table) | Stores criteria configs per org | API routes, cron |
+| `prospection_companies` (DB table) | One row per SIREN per org, reconciliation anchor | Signals, scores, contacts |
+| `prospection_signals` (DB table) | Raw signals per company (TTL 90d) | Scoring step, UI |
+| `prospection_scores` (DB table) | Computed heat score per company | UI list, enrichment gate |
+| `prospection_contacts` (DB table) | Enriched contacts above threshold | UI detail panel |
+| `prospection_run_logs` (DB table) | Per-automation run history | UI audit trail |
+| `prospection_actions` (DB table) | à appeler / appelé / écarté per company | UI actionable list |
+| `lib/prospection/collectors/` | One file per external signal source | Workflow steps |
+| `lib/prospection/scoring.ts` | Deterministic score computation | Scoring step |
+| `lib/prospection/scoring-llm.ts` | LLM synthesis (justification + pitch) | Scoring step |
+| `lib/prospection/queries.ts` | Supabase reads/writes | API routes, workflow steps |
+| `app/api/prospection/` | REST API handlers | React Query hooks |
+| `app/api/prospection/workflows/` | @workflow/next workflow definitions | Cron + manual trigger routes |
+| `app/api/prospection/cron/` | GET (Vercel cron) + POST (manual) routes | vercel.json cron config |
+| `lib/queries/prospection.ts` | React Query hooks | `/prospection` page |
+| `app/prospection/page.tsx` | Company list + heat sort | React Query |
+| `app/prospection/[companyId]/page.tsx` | Company detail + signals + contacts + actions | React Query |
 
 ---
 
-## Build order recommendation
+## Data Flow
 
-**Phase 1 — Foundation (no runtime behavior change)**
-- DB migration: `candidates.language`, `missions.language`, `organization_settings.default_language` (nullable, all reads coerce null → 'fr')
-- `CV_LABELS` map in `cv-dossier-layout.ts` with `language?` param threaded through full PDF chain — guarded by `?? 'fr'` fallback so all existing PDFs stay identical
-- `extractionIdentitySchema` gains `language` field
+### Full Pipeline Run
 
-**Phase 2 — Detection in workflows**
-- Split/sequence `extract-cv.ts` identity branch out; persist `candidates.language` in `saveResult`
-- Add language detection to `analyze-job-posting.ts`; persist `missions.language`
+```
+1. Trigger (cron GET or manual POST) calls start(collectSignalsWorkflow, [automationId, orgId])
+2. Workflow emits NDJSON status frames via getWritable() → useWorkflowStream hook on client
+3. fetchAutomationConfig step reads prospection_automations for criteria + source toggles
+4. runCollectors step fans out to enabled API collectors in parallel (Promise.all)
+5. Each collector returns RawProspectionSignal[] (normalized schema, SIREN if available)
+6. reconcileAndPersistSignals step:
+   a. For each signal: findOrCreateProspectCompany (SIREN-first lookup, then name fallback)
+   b. Upsert signal into prospection_signals (dedup by company_id + source + title + TTL)
+7. scoreCompanies step:
+   a. computeScore() deterministic: weight × decay × convergence bonus per company
+   b. LLM call: generateText with company signals → { score_justification, call_pitch }
+   c. Upsert into prospection_scores
+8. enrichHotContacts step:
+   a. SELECT prospection_scores WHERE score >= threshold AND (no contacts OR last_enriched > 7d ago)
+   b. Limit 20 per run to control Proxycurl credit burn
+   c. Upsert contacts into prospection_contacts
+9. logRunResult step writes to prospection_run_logs
+10. React Query invalidates ['prospection', orgId] on workflow completion
+```
 
-**Phase 3 — Prompt injection**
-- Add `{{language}}` to DB prompts for CV extraction branches and job posting analysis
-- Verify `resolveLlmTask` context pass-through for all affected branches
+### UI Data Flow
 
-**Phase 4 — Positioning language propagation**
-- Update `positioning-analyze.ts` and `positioning-generate.ts` to read and forward `missions.language`
-- Update `buildAnalysisUserContent` and related service functions
+```
+app/prospection/page.tsx
+  └── useProspections() → GET /api/prospection/companies?automationId=&heat=&sector=
+        └── listProspectCompanies(orgId, filters) from lib/prospection/queries.ts
+              └── JOIN prospection_companies + prospection_scores + prospection_signals (latest)
+                    → sorted by score DESC
 
-**Phase 5 — PDF language rendering**
-- Wire `candidates.language` → `generateCvPdf` in PDF export API routes
-- Test PDF output with EN label set
+app/prospection/[companyId]/page.tsx
+  ├── useProspectDetail(companyId) → GET /api/prospection/companies/[id]
+  │     → getProspectDetail(orgId, companyId): company + score + signals + contacts + actions
+  └── useRunAutomation(automationId) → POST /api/prospection/automations/[id]/run
+        → start(collectSignalsWorkflow, [automationId, orgId]) → returns { runId }
+        → useWorkflowStream(runId) pipes NDJSON to WorkflowStepList (existing component)
 
-**Phase 6 — Manual override UI**
-- Language selector in CV review and mission edit pages
-- API routes accept explicit language override and persist to DB
+Workflow status persisted to prospection_run_logs + prospection_scores
+React Query invalidation: mutation onSuccess calls queryClient.invalidateQueries(['prospection', orgId])
+```
+
+### State Management
+
+- **Server state:** React Query (companies list, scores, signals, contacts, actions, run logs)
+- **Local state:** None required for this domain — no draft/edit workflow like CV builder
+- **UI state:** React component state for filters (heat, sector, automation selector), action modal open/close
 
 ---
 
-## Key constraints
+## Database Schema
 
-**`@workflow/next` beta writable scope.** `getWritable()` must return the same writable instance across sequential steps within one workflow run. If it creates a new writable per step, splitting `parallelExtractAndStream` into two `'use step'` functions breaks the NDJSON stream. Verify before committing. The fallback (sequential-then-parallel within one step) avoids this risk entirely.
+### New Tables (all org-scoped with RLS)
 
-**`extractionIdentitySchema` must include `language` field.** The identity branch output needs `language: z.enum(['fr','en'])` for the LLM to populate. The Zod schema change is a prerequisite for the workflow restructure to be useful.
+```sql
+-- Automation criteria configs
+CREATE TABLE prospection_automations (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id      text NOT NULL,
+  name        text NOT NULL,
+  criteria    jsonb NOT NULL DEFAULT '{}', -- { sectors, sizes, geos, profiles }
+  sources     jsonb NOT NULL DEFAULT '{}', -- { france_travail: true, proxycurl: true, ... }
+  cron_enabled boolean NOT NULL DEFAULT true,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
 
-**Null coercion is mandatory at every read site.** Both `candidates.language` and `missions.language` start as `null` in DB. Every read must apply `?? 'fr'`. Missing this in one call site produces broken EN prompts silently.
+-- Company registry (reconciled by SIREN)
+CREATE TABLE prospection_companies (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id          text NOT NULL,
+  name            text NOT NULL,
+  siren           text,                   -- INSEE SIRENE reconciliation key
+  sector          text,
+  city            text,
+  headcount       int,
+  website         text,
+  linkedin_url    text,
+  enrichment_data jsonb DEFAULT '{}',
+  last_enriched_at timestamptz,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (org_id, siren)                  -- SIREN uniqueness within org
+);
 
-**Cross-language positioning rule must be enforced by convention.** When candidate is FR and mission is EN, all positioning artefacts must be in EN. This is enforced by always reading `missions.language` in positioning workflows, never `candidates.language`. Make this explicit in a comment at the read site to prevent future regressions.
+-- Raw signals with TTL
+CREATE TABLE prospection_signals (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id  uuid NOT NULL REFERENCES prospection_companies(id) ON DELETE CASCADE,
+  source      text NOT NULL,              -- 'france_travail' | 'proxycurl' | 'pappers' | ...
+  title       text NOT NULL,
+  raw_content text,
+  weight      int NOT NULL DEFAULT 10,
+  metadata    jsonb DEFAULT '{}',
+  detected_at timestamptz NOT NULL DEFAULT now(),
+  expires_at  timestamptz NOT NULL        -- now() + 90 days
+);
 
-**PDF chain has no DB access.** Language must be passed explicitly — it cannot be looked up inside `buildCvDossierLayoutSpec`. The caller (PDF API route) owns the DB read.
+-- Computed heat scores
+CREATE TABLE prospection_scores (
+  company_id    uuid PRIMARY KEY REFERENCES prospection_companies(id) ON DELETE CASCADE,
+  org_id        text NOT NULL,
+  score         int NOT NULL DEFAULT 0,   -- 0–100
+  heat          text NOT NULL DEFAULT 'cold', -- cold|warm|hot|burning
+  signal_count  int NOT NULL DEFAULT 0,
+  breakdown     jsonb DEFAULT '{}',       -- { source: weight }
+  justification text,                     -- LLM-generated explanation
+  call_pitch    text,                     -- LLM-generated call pitch
+  computed_at   timestamptz NOT NULL DEFAULT now()
+);
 
-**Prompt `{{language}}` value must be human-readable for the LLM.** The context value should be `'French'` / `'English'` (not `'fr'` / `'en'`) if the prompts use natural language instructions. Decide on the convention before modifying prompts and apply it consistently.
+-- Enriched contacts (gated by score threshold)
+CREATE TABLE prospection_contacts (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id  uuid NOT NULL REFERENCES prospection_companies(id) ON DELETE CASCADE,
+  name        text NOT NULL,
+  title       text,
+  linkedin_url text,
+  email       text,
+  phone       text,
+  enriched_at timestamptz NOT NULL DEFAULT now(),
+  source      text NOT NULL DEFAULT 'proxycurl'
+);
+
+-- Run audit logs
+CREATE TABLE prospection_run_logs (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id          text NOT NULL,
+  automation_id   uuid REFERENCES prospection_automations(id),
+  workflow_run_id text,
+  source          text,
+  result          jsonb DEFAULT '{}',
+  logged_at       timestamptz NOT NULL DEFAULT now()
+);
+
+-- Actionable status per company
+CREATE TABLE prospection_actions (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id      text NOT NULL,
+  company_id  uuid NOT NULL REFERENCES prospection_companies(id) ON DELETE CASCADE,
+  user_id     text NOT NULL,
+  status      text NOT NULL DEFAULT 'to_call', -- to_call | called | dismissed
+  notes       text,
+  performed_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+### RLS Policies
+
+All tables use the same pattern as existing tables:
+```sql
+ALTER TABLE prospection_automations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_isolation" ON prospection_automations
+  USING (org_id = (SELECT auth.jwt() ->> 'org_id'));
+```
+
+Service role key bypasses RLS for workflow steps (existing pattern: `getSupabase()` with service role).
+
+### Indexes
+
+```sql
+CREATE INDEX ON prospection_companies (org_id, siren);
+CREATE INDEX ON prospection_signals (company_id, expires_at);
+CREATE INDEX ON prospection_scores (org_id, score DESC);
+CREATE INDEX ON prospection_actions (org_id, company_id);
+```
+
+---
+
+## Workflow Patterns
+
+### Pattern: Multi-Step Collector Workflow
+
+Follows exactly the radar workflow pattern (`collect-linkedin.workflow.ts`):
+
+```typescript
+// app/api/prospection/workflows/collect-signals.workflow.ts
+
+async function fetchAutomationConfig(automationId: string) {
+  'use step';
+  // read from prospection_automations
+}
+
+async function runCollectors(criteria: AutomationCriteria, sources: SourceToggles) {
+  'use step';
+  // Promise.all on enabled collectors — same pattern as fetchAllLinkedInSignals
+  const results = await Promise.all([
+    sources.france_travail ? collectFranceTravailSignals(criteria) : Promise.resolve({ signals: [], calls: [] }),
+    sources.proxycurl      ? collectProxycurlSignals(criteria)     : Promise.resolve({ signals: [], calls: [] }),
+    // ...
+  ]);
+  return { signals: results.flatMap(r => r.signals), calls: results.flatMap(r => r.calls) };
+}
+
+async function reconcileSignals(orgId: string, signals: RawProspectionSignal[]) {
+  'use step';
+  // findOrCreateProspectCompany + upsertSignals
+}
+
+async function scoreAndEnrich(orgId: string, automationId: string) {
+  'use step';
+  // computeScore() deterministic pass
+  // LLM call for justification + pitch (via resolveLlmTask pattern)
+  // enrichHotContacts() gated by threshold
+}
+
+async function logRun(orgId: string, automationId: string, result: RunResult) {
+  'use step';
+  // insertRunLog into prospection_run_logs
+}
+
+export async function collectSignalsWorkflow(automationId: string, orgId: string) {
+  'use workflow';
+  const config = await fetchAutomationConfig(automationId);
+  const { signals, calls } = await runCollectors(config.criteria, config.sources);
+  const persisted = await reconcileSignals(orgId, signals);
+  await scoreAndEnrich(orgId, automationId);
+  await logRun(orgId, automationId, { persisted, calls });
+}
+```
+
+### Pattern: Dual-Trigger (Cron + Manual)
+
+Follows exactly `app/api/radar/cron/collect-signals/route.ts`:
+
+```typescript
+// app/api/prospection/cron/collect/route.ts
+
+// GET → Vercel cron (no auth, secret header check)
+export async function GET() {
+  const orgIds = await listProspectionOrgIds();
+  const automationIds = await listActiveAutomations(orgIds);
+  // start one workflow per automation
+  const runs = await Promise.all(automationIds.map(a => start(collectSignalsWorkflow, [a.id, a.orgId])));
+  return NextResponse.json({ started: runs.length });
+}
+
+// POST → manual trigger from UI
+export async function POST(request: NextRequest) {
+  const { orgId } = await requireOrgAdmin();
+  const { automationId } = await request.json();
+  const run = await start(collectSignalsWorkflow, [automationId, orgId]);
+  return NextResponse.json({ runId: run.runId, mode: 'manual' });
+}
+```
+
+### @workflow/next Beta Constraints
+
+These constraints were observed in the existing codebase and must be respected:
+
+1. **No reliable cancel.** The `/api/workflow/[runId]/cancel` route exists but is unreliable. Do not build UI that depends on cancel being honored. Show "running" state and let it complete.
+
+2. **Error handling is per-step.** Each `'use step'` function wraps its own try-catch. If a collector step fails, log the error and return empty results rather than throwing — this prevents the whole workflow from aborting when one signal source is unavailable.
+
+3. **`getWritable()` scope.** The writable is scoped to the current workflow run. If streaming status to UI is needed for the prospection pipeline, use `getWritable()` inside workflow steps — but for the prospection domain, streaming is optional. The simpler pattern is polling run status via `GET /api/prospection/runs?runId=` (mirrors `app/api/radar/runs/route.ts`) plus React Query poll on the `/api/prospection/companies` endpoint.
+
+4. **Step return values are serialized.** All step return values must be JSON-serializable. No class instances, no functions, no undefined values in returned objects.
+
+5. **Parallel collectors with Promise.all inside one step.** The `runCollectors` step runs all collectors in a single `'use step'` block using `Promise.all`. This is the existing radar pattern (see `fetchAllLinkedInSignals`). This limits granular per-collector error attribution but avoids the complexity of N separate steps.
+
+### LLM Step: Score Justification + Call Pitch
+
+The scoring LLM call uses `generateText` (not `streamText`) because the output is short (2 fields) and does not need streaming to the UI. Wrap it in the existing `resolveLlmTask` pattern with a dedicated task key:
+
+```typescript
+// lib/llm/task-keys.ts — add:
+PROSPECTION_SCORE_SYNTHESIS: 'prospection_score_synthesis'
+
+// lib/prospection/scoring-llm.ts
+export async function generateScoreSynthesis(
+  company: { name: string; sector?: string },
+  signals: ScoringSignal[],
+): Promise<{ justification: string; callPitch: string }> {
+  const task = await resolveLlmTask(TASK_KEY.PROSPECTION_SCORE_SYNTHESIS, { company, signals });
+  const { text } = await generateText({ model: task.model, system: task.system, prompt: task.prompt });
+  // parse structured JSON from text
+}
+```
+
+The prompt for this task lives in the `llm_tasks` DB table (same admin-editable pattern as all other tasks).
+
+---
+
+## SIREN Reconciliation
+
+### Strategy (from radar reference pattern)
+
+The SIREN is the primary reconciliation key across runs. The lookup order is:
+
+1. **SIREN exact match** on `(org_id, siren)` — guaranteed unique by DB constraint
+2. **Fallback: normalized name match** — strip legal suffixes (SAS, SARL, SA...), accents, punctuation; case-insensitive compare across all org companies
+3. **Create** if neither matches
+
+This is identical to `findOrCreateCompany` in `lib/radar/queries.ts`. The new code copies this logic under `lib/prospection/queries.ts`.
+
+### Cross-Run Dedup for Signals
+
+A signal is deduplicated within a run by `(company_id, source, title)` where `expires_at >= now()`. If an identical active signal exists, update its metadata/weight. If expired or absent, insert new. This prevents score inflation from repeated cron runs.
+
+---
+
+## Contact Enrichment Gating
+
+Contact enrichment is the most expensive operation (Proxycurl charges per profile lookup). The gate:
+
+1. Only companies with `prospection_scores.score >= threshold` (default 60, configurable per automation)
+2. Only companies where `prospection_contacts` is empty OR `last_enriched_at < 7 days ago`
+3. Hard limit: 20 companies per run (prevent runaway credit burn)
+
+This mirrors `enrichHotProspects` in `lib/radar/queries.ts`. In the prospection domain it becomes `enrichHotProspectContacts` in `lib/prospection/queries.ts`.
+
+The enrichment source is Proxycurl (already wired in `lib/radar/collectors/proxycurl.ts` and `lib/radar/collectors/linkedin-enrichment.ts`). The new prospection enrichment collector calls the same Proxycurl REST endpoints but writes to `prospection_contacts` instead of `radar_companies.enrichment_data`.
+
+---
+
+## New vs Modified Components
+
+### New (all under prospection domain)
+
+| Component | What it is |
+|-----------|-----------|
+| `supabase/migrations/[ts]_prospection_tables.sql` | 7 new tables with RLS, indexes |
+| `lib/prospection/schemas.ts` | Zod schemas for AutomationCriteria, RawProspectionSignal, ProspectScore, Contact, ProspectListItem, ProspectDetail, ProspectAction |
+| `lib/prospection/queries.ts` | findOrCreateProspectCompany, upsertSignals, listProspectCompanies, getProspectDetail, enrichHotProspectContacts, recordProspectAction, insertRunLog |
+| `lib/prospection/scoring.ts` | computeProspectScore() deterministic (port of radar scoring.ts with prospection signal sources) |
+| `lib/prospection/scoring-llm.ts` | generateScoreSynthesis() — LLM call for justification + pitch |
+| `lib/prospection/collectors/france-travail.ts` | France Travail Offres d'emploi REST API (free, OAuth2 client credentials) |
+| `lib/prospection/collectors/sirene.ts` | SIRENE/INSEE API for company lookup + SIREN resolution |
+| `lib/prospection/collectors/proxycurl.ts` | Thin wrapper re-exporting from lib/radar/collectors/proxycurl.ts OR a new file specific to prospection signal shape |
+| `app/api/prospection/automations/route.ts` | GET (list), POST (create) automation configs |
+| `app/api/prospection/automations/[id]/route.ts` | GET, PATCH, DELETE |
+| `app/api/prospection/automations/[id]/run/route.ts` | POST — manual trigger, returns { runId } |
+| `app/api/prospection/companies/route.ts` | GET — list with filters, sorted by score |
+| `app/api/prospection/companies/[id]/route.ts` | GET — company detail |
+| `app/api/prospection/companies/[id]/actions/route.ts` | POST — record to_call / called / dismissed |
+| `app/api/prospection/cron/collect/route.ts` | GET (Vercel cron) + POST (manual) |
+| `app/api/prospection/runs/route.ts` | GET ?runId= — poll workflow run status (mirrors radar runs route) |
+| `app/api/prospection/workflows/collect-signals.workflow.ts` | Main orchestration workflow |
+| `lib/queries/prospection.ts` | React Query hooks: useProspections, useProspectDetail, useRunAutomation, useAutomations, useProspectionRunStatus |
+| `app/prospection/page.tsx` | Company list sorted by heat score, filters, manual trigger button |
+| `app/prospection/[companyId]/page.tsx` | Company detail: signals timeline, contacts, call pitch, action buttons |
+| `app/prospection/settings/page.tsx` | Automation configs CRUD (criteria, source toggles) |
+| `lib/llm/task-keys.ts` | Add PROSPECTION_SCORE_SYNTHESIS key |
+| DB `llm_tasks` row | New row for prospection_score_synthesis prompt |
+
+### Modified (minimal surface)
+
+| Component | What changes |
+|-----------|-------------|
+| `components/authenticated-shell.tsx` | Add `/prospection` nav item in sidebar |
+| `middleware.ts` | Add `/prospection` to protected routes pattern (already catches all non-public routes) — likely no change needed |
+| `vercel.json` | Add prospection cron entry: `{ "path": "/api/prospection/cron/collect", "schedule": "0 8 * * *" }` |
+| `lib/llm/task-keys.ts` | Add `PROSPECTION_SCORE_SYNTHESIS` constant |
+
+**Zero changes to:** existing candidate/mission/positioning API routes, existing workflow files, existing DB tables, Clerk/Supabase client setup.
+
+---
+
+## Patterns to Follow
+
+### Pattern: Step-per-stage, error isolation per step
+
+Each workflow step wraps collector calls with try-catch and returns partial results rather than throwing:
+
+```typescript
+async function runFranceTravailCollector(criteria: AutomationCriteria) {
+  'use step';
+  try {
+    return await collectFranceTravailSignals(criteria);
+  } catch (error) {
+    console.error('[prospection][france-travail]', error);
+    return { signals: [], calls: [], error: String(error) };
+  }
+}
+```
+
+This mirrors the try-catch-per-signal pattern in `upsertSignals`. If France Travail is down, the run continues with signals from other sources.
+
+### Pattern: Dual-trigger route (existing radar pattern)
+
+```
+GET /api/prospection/cron/collect  → Vercel cron (secret header check)
+POST /api/prospection/cron/collect → Manual trigger (requireOrgAdmin)
+```
+
+Both call `start(collectSignalsWorkflow, ...)`. The POST returns `{ runId }` so the UI can poll.
+
+### Pattern: React Query + run polling for workflow status
+
+Since prospection workflows do not stream NDJSON (optional), the UI uses polling:
+
+```typescript
+// lib/queries/prospection.ts
+export function useProspectionRunStatus(runId: string | null) {
+  return useQuery({
+    queryKey: ['prospection-run', runId],
+    queryFn: () => fetch(`/api/prospection/runs?runId=${runId}`).then(r => r.json()),
+    enabled: !!runId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.runs?.[0]?.status;
+      return status === 'running' ? 2000 : false; // poll every 2s while running
+    },
+  });
+}
+```
+
+On completion, invalidate `['prospection', orgId]` to refresh the company list.
+
+### Pattern: SIREN-first reconciliation (existing radar pattern, ported verbatim)
+
+`findOrCreateProspectCompany` in `lib/prospection/queries.ts` is a direct port of `findOrCreateCompany` in `lib/radar/queries.ts` with the table name changed from `radar_companies` to `prospection_companies`.
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Storing contacts in company.enrichment_data JSONB
+
+The radar code stores contacts in `radar_companies.enrichment_data` as a JSONB blob. This makes contacts unqueryable, unmaintainable, and hard to expire individually.
+
+**Prospection must use a dedicated `prospection_contacts` table** — contacts are first-class, filterable, and enrichment status is per-contact.
+
+### Anti-Pattern 2: Scoring inside the collector step
+
+Collector and scoring are separate concerns. Mixing them (collect + score in one step) makes the scoring unreproducible on demand and prevents re-scoring existing signals without re-collecting.
+
+**Keep them as separate steps.** The score step reads from `prospection_signals`, not from collector output.
+
+### Anti-Pattern 3: Parallel workflows per source
+
+The radar cron starts multiple separate workflows per org (`collect-linkedin`, `collect-linkedin-discovery`). This creates management overhead (multiple runIds to poll, risk of race conditions on score computation).
+
+**For prospection, use a single workflow per automation run** — one `collectSignalsWorkflow` that fans out to collectors internally via `Promise.all` inside a single `'use step'`. One runId per run to track.
+
+### Anti-Pattern 4: Enriching all companies above threshold every run
+
+If threshold is score >= 60 and there are 50 hot companies, enriching all 50 per daily cron = 50 Proxycurl calls/day = expensive. The 7-day cache check (already in `enrichHotProspects`) is mandatory.
+
+**Always check `last_enriched_at` before calling Proxycurl.** Re-enrich only if > 7 days since last enrichment.
+
+### Anti-Pattern 5: Collecting all orgs in a single workflow
+
+The radar cron loops all org IDs and starts one workflow per org sequentially. This creates long cron runtime on Vercel (serverless function timeout risk).
+
+**For prospection cron:** iterate org automations and start each as a separate `start()` call (fire-and-forget). The cron route returns after starting all workflows; execution happens async in @workflow/next's durable runtime, not in the cron function itself.
+
+---
+
+## Scalability Considerations
+
+| Concern | At 1 org | At 10 orgs | At 100 orgs |
+|---------|----------|------------|-------------|
+| Cron execution | Single workflow, ~30s | 10 parallel workflows (start and forget) | Needs cron batching or separate cron per org |
+| Proxycurl credits | 20 enrichments/run = controllable | 200/run = watch quota | Needs org-level enrichment budget |
+| Signal table growth | ~100 signals/run, expires in 90d | ~1K/run | Needs partition by org_id + automated cleanup |
+| Score computation | In-memory, trivial | Still in-memory | Still in-memory until >10K companies |
+| France Travail rate limit | ~5 req/s free tier | Risk of 429 with parallel runs | Needs per-collector rate limiter |
+
+---
+
+## Suggested Build Order
+
+The order respects data dependencies: you cannot score without signals, cannot enrich without scores, cannot show UI without data.
+
+**Phase 1 — DB + Schema Foundation**
+- Migration: 7 new tables with RLS and indexes
+- `lib/prospection/schemas.ts` — Zod types for all entities
+- `lib/prospection/queries.ts` — SIREN reconciliation, upsertSignals, basic CRUD
+- No workflow, no UI. Testable via Supabase Studio.
+
+**Phase 2 — First Collector + Scoring (no LLM)**
+- `lib/prospection/collectors/france-travail.ts` — France Travail Offres API (free, no auth complexity)
+- `lib/prospection/scoring.ts` — deterministic computeProspectScore() (port of radar scoring.ts)
+- `app/api/prospection/workflows/collect-signals.workflow.ts` — first version with France Travail only
+- `app/api/prospection/cron/collect/route.ts` — dual-trigger route
+- Vercel cron entry in `vercel.json`
+- Testable end-to-end: trigger → signals → scores in DB
+
+**Phase 3 — Additional Collectors + SIREN Resolution**
+- `lib/prospection/collectors/sirene.ts` — SIRENE/INSEE API for SIREN lookup
+- `lib/prospection/collectors/proxycurl.ts` — LinkedIn headcount/job changes (existing Proxycurl key)
+- Add collectors to `runCollectors` step in workflow
+- SIREN reconciliation exercised with multi-source signals
+
+**Phase 4 — LLM Scoring Synthesis**
+- `lib/prospection/scoring-llm.ts` — generateScoreSynthesis()
+- Add `PROSPECTION_SCORE_SYNTHESIS` task key + DB prompt row
+- `scoreAndEnrich` step: deterministic score first, then LLM for justification + call_pitch
+- LLM output written to `prospection_scores.justification` + `prospection_scores.call_pitch`
+
+**Phase 5 — Contact Enrichment**
+- `enrichHotProspectContacts()` in `lib/prospection/queries.ts`
+- `prospection_contacts` table wired
+- Threshold gate enforced (score >= 60, 7-day cache, limit 20/run)
+- Contacts visible in company detail
+
+**Phase 6 — Automation Config UI + Actions**
+- `app/prospection/settings/page.tsx` — CRUD for automations (criteria, source toggles)
+- `app/prospection/page.tsx` — company list sorted by heat
+- `app/prospection/[companyId]/page.tsx` — detail panel: signals, contacts, call pitch, action buttons
+- `prospection_actions` table + API route for to_call / called / dismissed
+- Manual trigger button → POST /api/prospection/automations/[id]/run → polling via `useProspectionRunStatus`
+- Sidebar nav entry added
+
+---
+
+## Integration Points with Existing Architecture
+
+| Existing piece | How prospection uses it |
+|---------------|------------------------|
+| `lib/utils/auth.ts` — `requireOrgId()`, `requireOrgAdmin()`, `requireOrgContext()` | Used in all prospection API routes — identical pattern |
+| `lib/utils/supabase.ts` — `getSupabase()` | Used in all prospection queries and workflow steps |
+| `lib/ai.ts` — `createGatewayLanguageModel()` | Used in `scoring-llm.ts` for generateText call |
+| `lib/llm/resolve-task.ts` — `resolveLlmTask()` | Used in `scoring-llm.ts` to resolve prompt from DB |
+| `lib/llm/task-keys.ts` — `TASK_KEY` | Extended with `PROSPECTION_SCORE_SYNTHESIS` |
+| `workflow/api` — `start()`, `getRun()` | Used in cron/manual trigger routes and run status route |
+| `lib/services/ai-usage.service.ts` — `logAiUsage()` | Used in `scoring-llm.ts` to track LLM cost |
+| `components/ui/` (shadcn) | Used in all prospection UI pages |
+| Proxycurl collectors (`lib/radar/collectors/proxycurl.ts`) | Referenced or thin-wrapped for contact enrichment |
+| `useWorkflowStream` hook (optional) | Can be used if NDJSON streaming is added to the workflow; not required for MVP |
+
+---
+
+## Sources
+
+- Existing `lib/radar/queries.ts` — SIREN reconciliation, enrichment gating pattern (HIGH confidence)
+- Existing `lib/radar/collectors/` + `app/api/radar/workflows/` — collector + workflow step pattern (HIGH confidence)
+- Existing `app/api/radar/cron/` — dual-trigger cron pattern (HIGH confidence)
+- Existing `workflows/extract-cv.ts` — @workflow/next step structure and getWritable pattern (HIGH confidence)
+- `.planning/PROJECT.md` — v1.3 feature scope, signal sources, constraints (HIGH confidence)
+- `.planning/codebase/ARCHITECTURE.md` — layer structure, entry points (HIGH confidence)
