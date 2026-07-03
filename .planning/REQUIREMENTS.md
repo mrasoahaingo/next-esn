@@ -84,17 +84,38 @@ Exclusions explicites — documentées pour éviter le scope creep.
 
 ## Traceability
 
-Rempli lors de la création de la roadmap.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| — | — | — |
+| AUTO-01 | Phase 14 | Pending |
+| AUTO-02 | Phase 14 | Pending |
+| AUTO-03 | Phase 14 | Pending |
+| AUTO-04 | Phase 14 | Pending |
+| AUTO-05 | Phase 10 | Pending |
+| AUTO-06 | Phase 10 | Pending |
+| SIG-01 | Phase 11 | Pending |
+| SIG-02 | Phase 10 | Pending |
+| SIG-03 | Phase 11 | Pending |
+| SIG-04 | Phase 9 | Pending |
+| SIG-05 | Phase 12 | Pending |
+| SIG-06 | Phase 11 | Pending |
+| SCOR-01 | Phase 10 | Pending |
+| SCOR-02 | Phase 10 | Pending |
+| SCOR-03 | Phase 12 | Pending |
+| SCOR-04 | Phase 12 | Pending |
+| CONT-01 | Phase 13 | Pending |
+| CONT-02 | Phase 13 | Pending |
+| CONT-03 | Phase 13 | Pending |
+| CONT-04 | Phase 9 | Pending |
+| CONT-05 | Phase 9 | Pending |
+| LIST-01 | Phase 14 | Pending |
+| LIST-02 | Phase 14 | Pending |
+| LIST-03 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-03*
-*Last updated: 2026-07-03 after initial definition*
+*Last updated: 2026-07-03 — Traceability filled after roadmap creation*
