@@ -234,44 +234,35 @@ async function fetchAndAnalyze(missionId: string) {
       ).sort((a, b) => a.localeCompare(b)),
     };
 
-    return {
-      object,
-      durationMs,
-      orgId: mission.org_id as string | null,
-      inputHash: hashJobDescription(jobDescription),
-      modelsSnapshot,
-    };
+    let persisted = false;
+
+    if (object != null && typeof object === 'object') {
+      const { error: updateError } = await supabase
+        .from('missions')
+        .update({
+          job_analysis: object,
+          job_analysis_input_hash: hashJobDescription(jobDescription),
+          ai_job_analysis_models: modelsSnapshot,
+          job_analysis_workflow_run_id: null,
+          workflow_last_error: null,
+        })
+        .eq('id', missionId);
+
+      if (updateError) {
+        throw new Error('saveJobPostingAnalysis DB update failed: ' + updateError.message);
+      }
+
+      persisted = true;
+    }
+
+    return { missionId, durationMs, persisted };
   } finally {
     writer.releaseLock();
   }
 }
 
-async function saveJobPostingAnalysis(
-  missionId: string,
-  result: {
-    object: unknown;
-    durationMs: number;
-    orgId: string | null;
-    inputHash: string;
-    modelsSnapshot: PositioningAnalysisModelsSnapshot;
-  },
-) {
+async function closeJobPostingStream() {
   'use step';
-
-  const supabase = getSupabase();
-
-  if (result.object != null && typeof result.object === 'object') {
-    await supabase
-      .from('missions')
-      .update({
-        job_analysis: result.object,
-        job_analysis_input_hash: result.inputHash,
-        ai_job_analysis_models: result.modelsSnapshot,
-        job_analysis_workflow_run_id: null,
-        workflow_last_error: null,
-      })
-      .eq('id', missionId);
-  }
 
   const writable = getWritable<Uint8Array>();
   await writable.close();
@@ -320,8 +311,8 @@ export async function analyzeJobPostingWorkflow(missionId: string) {
 
   try {
     const result = await fetchAndAnalyze(missionId);
-    await saveJobPostingAnalysis(missionId, result);
-    return result.object;
+    await closeJobPostingStream();
+    return { missionId: result.missionId, durationMs: result.durationMs };
   } catch (error) {
     await handleWorkflowError(missionId, error);
     throw error;

@@ -202,9 +202,9 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
 }
 
 type ParallelExtractResult = {
-  object: unknown;
+  candidateId: string;
   durationMs: number;
-  modelsSnapshot: CvExtractionModelsSnapshot;
+  persisted: boolean;
 };
 
 async function parallelExtractAndStream(
@@ -214,6 +214,8 @@ async function parallelExtractAndStream(
   startChunkIndex: number,
   orgId: string | null,
   workflowRunId: string | null,
+  prepareDurationMs: number,
+  transcriptionModelId: string | undefined,
 ): Promise<ParallelExtractResult> {
   'use step';
 
@@ -426,63 +428,66 @@ async function parallelExtractAndStream(
       ).sort((a, b) => a.localeCompare(b)),
     };
 
-    return {
-      object,
-      durationMs: Date.now() - parallelStart,
-      modelsSnapshot,
-    };
+    const byTask: Record<string, string> = { ...modelsSnapshot.byTask };
+    if (transcriptionModelId) {
+      byTask[TASK_KEY.CV_TRANSCRIPTION] = transcriptionModelId;
+    }
+    const uniqueModels = Array.from(
+      new Set([
+        ...modelsSnapshot.uniqueModels,
+        ...(transcriptionModelId ? [transcriptionModelId] : []),
+      ]),
+    ).sort((a, b) => a.localeCompare(b));
+
+    const fullModelsSnapshot: CvExtractionModelsSnapshot = { byTask, uniqueModels };
+    const durationMs = prepareDurationMs + (Date.now() - parallelStart);
+
+    let persisted = false;
+
+    if (object) {
+      const lang = (object as Record<string, unknown>)?.language;
+      const detectedLanguage = lang === 'en' ? 'en' : 'fr';
+
+      const { error: updateError } = await supabase
+        .from('candidates')
+        .update({
+          extracted_data: object,
+          language: detectedLanguage,
+          status: 'reviewing',
+          ai_extraction_duration_ms: durationMs,
+          ai_extraction_models: fullModelsSnapshot,
+          workflow_run_id: null,
+          workflow_last_error: null,
+        })
+        .eq('id', candidateId);
+
+      if (updateError) {
+        throw new Error(`saveResult DB update failed: ${updateError.message}`);
+      }
+
+      persisted = true;
+
+      if (orgId) {
+        await logCvExtractionSnapshot(supabase, {
+          candidateId,
+          orgId,
+          reason: 'workflow_completed',
+          extractedData: object,
+          aiModels: fullModelsSnapshot,
+          durationMs,
+          workflowRunId,
+        });
+      }
+    }
+
+    return { candidateId, durationMs, persisted };
   } finally {
     writer.releaseLock();
   }
 }
 
-async function saveResult(
-  candidateId: string,
-  result: {
-    object: unknown;
-    durationMs: number;
-    orgId: string | null;
-    modelsSnapshot: CvExtractionModelsSnapshot;
-    workflowRunId: string | null;
-  },
-) {
+async function closeExtractStream() {
   'use step';
-
-  const supabase = getSupabase();
-
-  if (result.object) {
-    const lang = (result.object as Record<string, unknown>)?.language;
-    const detectedLanguage = lang === 'en' ? 'en' : 'fr';
-
-    const { error: updateError } = await supabase
-      .from('candidates')
-      .update({
-        extracted_data: result.object,
-        language: detectedLanguage,
-        status: 'reviewing',
-        ai_extraction_duration_ms: result.durationMs,
-        ai_extraction_models: result.modelsSnapshot,
-        workflow_run_id: null,
-        workflow_last_error: null,
-      })
-      .eq('id', candidateId);
-
-    if (updateError) {
-      throw new Error(`saveResult DB update failed: ${updateError.message}`);
-    }
-
-    if (result.orgId) {
-      await logCvExtractionSnapshot(supabase, {
-        candidateId,
-        orgId: result.orgId,
-        reason: 'workflow_completed',
-        extractedData: result.object,
-        aiModels: result.modelsSnapshot,
-        durationMs: result.durationMs,
-        workflowRunId: result.workflowRunId,
-      });
-    }
-  }
 
   const writable = getWritable<Uint8Array>();
   await writable.close();
@@ -552,30 +557,13 @@ export async function extractCvWorkflow(candidateId: string, jobDescription?: st
       prep.nextChunkIndex,
       prep.orgId,
       prep.workflowRunId,
+      prep.durationMs,
+      prep.transcriptionModelId,
     );
 
-    const byTask: Record<string, string> = { ...ext.modelsSnapshot.byTask };
-    if (prep.transcriptionModelId) {
-      byTask[TASK_KEY.CV_TRANSCRIPTION] = prep.transcriptionModelId;
-    }
-    const uniqueModels = Array.from(
-      new Set([
-        ...ext.modelsSnapshot.uniqueModels,
-        ...(prep.transcriptionModelId ? [prep.transcriptionModelId] : []),
-      ]),
-    ).sort((a, b) => a.localeCompare(b));
-
-    const result = {
-      object: ext.object,
-      durationMs: prep.durationMs + ext.durationMs,
-      orgId: prep.orgId,
-      modelsSnapshot: { byTask, uniqueModels } satisfies CvExtractionModelsSnapshot,
-      workflowRunId: prep.workflowRunId,
-    };
-
-    await saveResult(candidateId, result);
+    await closeExtractStream();
     await runMissionAnalysesAfterExtract(candidateId);
-    return result.object;
+    return { candidateId: ext.candidateId, durationMs: ext.durationMs };
   } catch (error) {
     await handleWorkflowError(candidateId, 'candidates', error);
     throw error;
