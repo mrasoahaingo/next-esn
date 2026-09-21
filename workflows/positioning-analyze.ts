@@ -437,7 +437,11 @@ async function handleWorkflowError(
     message: errorMessage,
   });
 
-  await supabase
+  // supabase-js ne lève pas : sans ce contrôle, un échec laisserait la ligne bloquée en
+  // `analyzing` alors qu'une erreur a bien eu lieu. On logue sans lever : on est déjà dans
+  // le chemin d'erreur, lever masquerait l'erreur initiale et empêcherait l'écriture du
+  // frame d'erreur dans le flux.
+  const { error: statusUpdateError } = await supabase
     .from(table)
     .update({
       status: 'error',
@@ -445,6 +449,15 @@ async function handleWorkflowError(
       workflow_last_error: workflowLastError,
     })
     .eq('id', recordId);
+
+  if (statusUpdateError) {
+    console.error('handleWorkflowError status update failed', {
+      table,
+      recordId,
+      stepKey,
+      supabaseError: statusUpdateError.message,
+    });
+  }
 
   // Write error frame to NDJSON stream so connected clients see it
   const writable = getWritable<Uint8Array>();

@@ -103,7 +103,7 @@ export async function POST(
         });
       }
 
-      await Promise.all([
+      const [, { error: updateError }] = await Promise.all([
         logAiUsage(supabase, {
           operation: 'analysis',
           missionId,
@@ -125,6 +125,16 @@ export async function POST(
           .eq('id', missionId)
           .eq('org_id', orgId),
       ]);
+
+      // supabase-js ne lève pas : sans ce contrôle, une explication de point clé pourrait
+      // disparaître en silence. La réponse HTTP est déjà renvoyée, on se contente de loguer.
+      if (updateError) {
+        console.error('key-point explain job_analysis update failed', {
+          missionId,
+          pointId,
+          supabaseError: updateError.message,
+        });
+      }
     });
 
     return NextResponse.json(object);

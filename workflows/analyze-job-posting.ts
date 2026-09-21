@@ -300,13 +300,26 @@ async function handleWorkflowError(missionId: string, error: unknown, ctx?: { st
     message: errorMessage,
   });
 
-  await supabase
+  // supabase-js ne lève pas : sans ce contrôle, un échec laisserait la mission bloquée avec
+  // son `job_analysis_workflow_run_id` alors qu'une erreur a bien eu lieu. On logue sans
+  // lever : on est déjà dans le chemin d'erreur, lever masquerait l'erreur initiale et
+  // empêcherait l'écriture du frame d'erreur dans le flux.
+  const { error: statusUpdateError } = await supabase
     .from('missions')
     .update({
       job_analysis_workflow_run_id: null,
       workflow_last_error: workflowLastError,
     })
     .eq('id', missionId);
+
+  if (statusUpdateError) {
+    console.error('handleWorkflowError status update failed', {
+      table: 'missions',
+      recordId: missionId,
+      stepKey,
+      supabaseError: statusUpdateError.message,
+    });
+  }
 
   const writable = getWritable<Uint8Array>();
   const writer = writable.getWriter();
