@@ -502,12 +502,14 @@ async function parallelExtractAndStream(
   }
 }
 
-// Un échec de ce step est quasi toujours déterministe (schéma refusé, écriture Postgres
-// refusée) : le rejouer ne fait que re-facturer l'intégralité de ses appels LLM. La
+// Un rejeu de ce step relance TOUS ses appels LLM et produit donc une sortie neuve : il peut
+// rattraper un aléa de génération (sortie malformée, caractère interdit) ou une panne
+// passagère. Mais chaque tentative est facturée en entier, d'où un plafond à 1 : une
+// seconde chance, jamais plus. La
 // relance reste possible à la main depuis la page de review.
 // `prepareCvText` reste volontairement sans plafond : il n'écrit aucun JSONB et sa reprise
 // sans refaire la transcription est délibérée (décision 260921-jz1).
-parallelExtractAndStream.maxRetries = 0;
+parallelExtractAndStream.maxRetries = 1;
 
 async function closeExtractStream() {
   'use step';
