@@ -4,6 +4,7 @@ import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
 import type { PositioningAnalysis } from '@/lib/schema';
 import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import type { PositioningAnalysisSnapshotReason } from '@/lib/types/positioning-analysis-snapshot-payload';
+import { toast } from 'sonner';
 import { queryKeys } from './keys';
 
 /** Entrée renvoyée par GET /api/positioning/[id]/analysis-history (snapshots `ai_usage_log`) */
@@ -150,6 +151,15 @@ export function useExportPositioning() {
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
+    },
+    // `POST /api/positioning/:id/export` peut désormais renvoyer 500 quand la persistance
+    // échoue (au lieu d'un faux succès). Sans ce toast, on remplacerait un silence serveur
+    // par un silence UI — aucun des appelants n'affiche d'erreur localement.
+    onError: () => {
+      toast.error(
+        "Échec de l'export : le PDF n'a pas pu être enregistré. Réessayez ou contactez le support.",
+        { duration: 8000 },
+      );
     },
   });
 }
