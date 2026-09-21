@@ -73,6 +73,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CV_EXTRACTION_SUCCESS_STATUSES,
+  WORKFLOW_GENERIC_FAILURE_MESSAGE,
   POSITIONING_ANALYSIS_SUCCESS_STATUSES,
   resolveWorkflowOutcome,
 } from '@/lib/workflow/workflow-outcome';
@@ -183,6 +184,8 @@ interface CandidateItem {
 const IN_PROGRESS_STATUSES = new Set(['draft', 'analyzing']);
 /** Prêts : analyse terminée ; génération manuelle depuis le wizard. */
 const READY_STATUSES = new Set(['analyzed', 'generating', 'generated', 'exported']);
+/** En échec : jamais masquer une ligne, sinon l'utilisateur la croit disparue. */
+const FAILED_STATUSES = new Set(['error']);
 
 const posStatusConfig: Record<
   string,
@@ -194,6 +197,7 @@ const posStatusConfig: Record<
   generating: { label: 'Génération…', variant: 'outline' },
   generated: { label: 'Prêt', variant: 'default' },
   exported: { label: 'Exporté', variant: 'default' },
+  error: { label: 'Échec', variant: 'destructive' },
 };
 
 function formatCvExtractionHint(meta: CvExtractionStreamMeta | null): string | null {
@@ -1354,6 +1358,27 @@ function PositioningRow({
           </p>
         )}
 
+        {p.status === 'error' && (
+          <div
+            className="mt-2 flex flex-wrap items-center gap-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="min-w-0 flex-1 text-[11px] text-destructive">
+              {p.workflow_last_error?.message ?? WORKFLOW_GENERIC_FAILURE_MESSAGE}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              disabled={analysisStream.isLoading}
+              onClick={() => analysisStream.submit({ positioningId: p.id })}
+              className="shrink-0 border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              {analysisStream.isLoading ? 'Relance…' : 'Relancer l’analyse'}
+            </Button>
+          </div>
+        )}
+
         {p.analysis?.matchSummary && analysisComplete && (
           <Tooltip>
             <TooltipTrigger className="w-full">
@@ -1511,6 +1536,7 @@ export default function PositionDetailPage() {
 
   const drafts = positionings.filter((p) => IN_PROGRESS_STATUSES.has(p.status));
   const ready = positionings.filter((p) => READY_STATUSES.has(p.status));
+  const failed = positionings.filter((p) => FAILED_STATUSES.has(p.status));
 
   const existingCandidateIds = useMemo(
     () => new Set(positionings.map((p) => p.candidate_id)),
@@ -1758,8 +1784,40 @@ export default function PositionDetailPage() {
                 </div>
               ) : (
                 <div className="space-y-8 pr-1">
+                  {failed.length > 0 && (
+                    <section aria-labelledby="positionings-failed">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                        <h3
+                          id="positionings-failed"
+                          className="text-xs font-semibold text-foreground tracking-tight"
+                        >
+                          En échec
+                        </h3>
+                        <Badge variant="destructive" className="text-[9px] px-1.5 py-0">
+                          {failed.length}
+                        </Badge>
+                      </div>
+                      <div className="space-y-1 rounded-xl border border-destructive/30 bg-muted/40 p-1">
+                        {failed.map((p) => (
+                          <PositioningRow
+                            key={p.id}
+                            p={p}
+                            missionId={missionId}
+                            onNavigate={(href) => router.push(href)}
+                            onCancelWorkflow={(args) => cancelWorkflow.mutate(args)}
+                            onPositioningDeleted={handlePositioningDeleted}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
                   {drafts.length > 0 && (
-                    <section aria-labelledby="positionings-in-progress">
+                    <section
+                      aria-labelledby="positionings-in-progress"
+                      className={failed.length > 0 ? 'border-t border-border pt-8' : ''}
+                    >
                       <div className="flex flex-wrap items-center gap-2 mb-3">
                         <Sparkles className="h-4 w-4 text-violet shrink-0" />
                         <h3
@@ -1790,7 +1848,9 @@ export default function PositionDetailPage() {
                   {ready.length > 0 && (
                     <section
                       aria-labelledby="positionings-ready"
-                      className={drafts.length > 0 ? 'border-t border-border pt-8' : ''}
+                      className={
+                        failed.length > 0 || drafts.length > 0 ? 'border-t border-border pt-8' : ''
+                      }
                     >
                       <div className="flex flex-wrap items-center gap-2 mb-3">
                         <CheckCircle2 className="h-4 w-4 text-neon shrink-0" />
