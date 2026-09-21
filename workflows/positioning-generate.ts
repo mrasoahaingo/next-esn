@@ -379,113 +379,98 @@ async function fetchAndGenerate(
       ),
     };
 
-    return {
-      object,
-      durationMs,
-      candidateId: positioning.candidate_id,
-      orgId: positioning.org_id as string | null,
-      modelsSnapshot,
-    };
+    if (!object) {
+      return { positioningId, durationMs, persisted: false };
+    }
+
+    if (generateMode === 'all') {
+      const { error: updateError } = await supabase
+        .from('positionings')
+        .update({
+          tailored_cv: object.tailoredCv,
+          email: object.email,
+          email_first_contact: object.emailFirstContact,
+          email_bullet_points: object.emailBulletPoints,
+          candidate_email: object.candidateEmail,
+          status: 'generated',
+          ai_generation_duration_ms: durationMs,
+          ai_generation_models: modelsSnapshot,
+          workflow_run_id: null,
+          workflow_last_error: null,
+        })
+        .eq('id', positioningId);
+
+      if (updateError) {
+        throw new Error('saveGeneration DB update failed: ' + updateError.message);
+      }
+    } else {
+      const { data: existing } = await supabase
+        .from('positionings')
+        .select(
+          'tailored_cv, email, email_first_contact, email_bullet_points, candidate_email, ai_generation_duration_ms, ai_generation_models',
+        )
+        .eq('id', positioningId)
+        .single();
+
+      const prevMs = (existing?.ai_generation_duration_ms as number | null | undefined) ?? 0;
+      const nextDuration = prevMs + durationMs;
+
+      const prevByTask =
+        (existing?.ai_generation_models as { byTask?: Record<string, string> } | null)?.byTask ?? {};
+      const mergedByTask = { ...prevByTask, ...modelsSnapshot.byTask };
+      const mergedModels: PositioningAnalysisModelsSnapshot = {
+        byTask: mergedByTask,
+        uniqueModels: Array.from(new Set(Object.values(mergedByTask))).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      };
+
+      if (generateMode === 'cv') {
+        const { error: updateError } = await supabase
+          .from('positionings')
+          .update({
+            tailored_cv: object.tailoredCv,
+            status: 'generated',
+            ai_generation_duration_ms: nextDuration,
+            ai_generation_models: mergedModels,
+            workflow_run_id: null,
+            workflow_last_error: null,
+          })
+          .eq('id', positioningId);
+
+        if (updateError) {
+          throw new Error('saveGeneration DB update failed: ' + updateError.message);
+        }
+      } else {
+        const { error: updateError } = await supabase
+          .from('positionings')
+          .update({
+            email: object.email,
+            email_first_contact: object.emailFirstContact,
+            email_bullet_points: object.emailBulletPoints,
+            candidate_email: object.candidateEmail,
+            status: 'generated',
+            ai_generation_duration_ms: nextDuration,
+            ai_generation_models: mergedModels,
+            workflow_run_id: null,
+            workflow_last_error: null,
+          })
+          .eq('id', positioningId);
+
+        if (updateError) {
+          throw new Error('saveGeneration DB update failed: ' + updateError.message);
+        }
+      }
+    }
+
+    return { positioningId, durationMs, persisted: true };
   } finally {
     writer.releaseLock();
   }
 }
 
-async function saveGeneration(
-  positioningId: string,
-  result: {
-    object: {
-      tailoredCv?: unknown;
-      email?: unknown;
-      emailFirstContact?: unknown;
-      emailBulletPoints?: unknown;
-      candidateEmail?: unknown;
-    };
-    durationMs: number;
-    candidateId: string;
-    orgId: string | null;
-    modelsSnapshot: PositioningAnalysisModelsSnapshot;
-  },
-  generateMode: PositioningGenerateMode,
-) {
+async function closeGenerateStream() {
   'use step';
-
-  const supabase = getSupabase();
-
-  if (!result.object) {
-    const writable = getWritable<Uint8Array>();
-    await writable.close();
-    return;
-  }
-
-  if (generateMode === 'all') {
-    await supabase
-      .from('positionings')
-      .update({
-        tailored_cv: result.object.tailoredCv,
-        email: result.object.email,
-        email_first_contact: result.object.emailFirstContact,
-        email_bullet_points: result.object.emailBulletPoints,
-        candidate_email: result.object.candidateEmail,
-        status: 'generated',
-        ai_generation_duration_ms: result.durationMs,
-        ai_generation_models: result.modelsSnapshot,
-        workflow_run_id: null,
-        workflow_last_error: null,
-      })
-      .eq('id', positioningId);
-  } else {
-    const { data: existing } = await supabase
-      .from('positionings')
-      .select(
-        'tailored_cv, email, email_first_contact, email_bullet_points, candidate_email, ai_generation_duration_ms, ai_generation_models',
-      )
-      .eq('id', positioningId)
-      .single();
-
-    const prevMs = (existing?.ai_generation_duration_ms as number | null | undefined) ?? 0;
-    const nextDuration = prevMs + result.durationMs;
-
-    // Merge new tasks into the existing models snapshot so partial regenerations keep full history.
-    const prevByTask =
-      (existing?.ai_generation_models as { byTask?: Record<string, string> } | null)?.byTask ?? {};
-    const mergedByTask = { ...prevByTask, ...result.modelsSnapshot.byTask };
-    const mergedModels: PositioningAnalysisModelsSnapshot = {
-      byTask: mergedByTask,
-      uniqueModels: Array.from(new Set(Object.values(mergedByTask))).sort((a, b) =>
-        a.localeCompare(b),
-      ),
-    };
-
-    if (generateMode === 'cv') {
-      await supabase
-        .from('positionings')
-        .update({
-          tailored_cv: result.object.tailoredCv,
-          status: 'generated',
-          ai_generation_duration_ms: nextDuration,
-          ai_generation_models: mergedModels,
-          workflow_run_id: null,
-          workflow_last_error: null,
-        })
-        .eq('id', positioningId);
-    } else {
-      await supabase
-        .from('positionings')
-        .update({
-          email: result.object.email,
-          email_first_contact: result.object.emailFirstContact,
-          email_bullet_points: result.object.emailBulletPoints,
-          candidate_email: result.object.candidateEmail,
-          status: 'generated',
-          ai_generation_duration_ms: nextDuration,
-          ai_generation_models: mergedModels,
-          workflow_run_id: null,
-          workflow_last_error: null,
-        })
-        .eq('id', positioningId);
-    }
-  }
 
   const writable = getWritable<Uint8Array>();
   await writable.close();
@@ -545,8 +530,8 @@ export async function positioningGenerateWorkflow(
 
   try {
     const result = await fetchAndGenerate(positioningId, answers, generateMode);
-    await saveGeneration(positioningId, result, generateMode);
-    return result.object;
+    await closeGenerateStream();
+    return { positioningId: result.positioningId, durationMs: result.durationMs };
   } catch (error) {
     await handleWorkflowError(positioningId, 'positionings', error);
     throw error;

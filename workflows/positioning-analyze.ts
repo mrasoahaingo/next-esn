@@ -22,7 +22,6 @@ import {
   buildMissionPositionHeadline,
   buildPositioningSynthesisUserContent,
   parsePositioningAnswers,
-  type PositioningAnswerStoredValue,
 } from '@/lib/services/positioning.service';
 import { withMandatoryJobPostingLists } from '@/lib/services/job-posting-analysis.service';
 import { mergeMatchingWeights } from '@/lib/config/matching-weights';
@@ -340,71 +339,60 @@ async function fetchAndAnalyze(positioningId: string) {
       ).sort((a, b) => a.localeCompare(b)),
     };
 
-    return {
-      object,
-      durationMs,
-      candidateId: positioning.candidate_id,
-      orgId: positioning.org_id as string | null,
-      analysisRecruiterAnswers: priorAnswers,
-      analysisModels,
-    };
+    let persisted = false;
+
+    if (object) {
+      const { error: updateError } = await supabase
+        .from('positionings')
+        .update({
+          analysis: object,
+          status: 'analyzed',
+          ai_analysis_duration_ms: durationMs,
+          workflow_run_id: null,
+          workflow_last_error: null,
+          analysis_recruiter_answers: priorAnswers,
+          ai_analysis_models: analysisModels,
+        })
+        .eq('id', positioningId);
+
+      if (updateError) {
+        throw new Error('saveAnalysis DB update failed: ' + updateError.message);
+      }
+
+      persisted = true;
+
+      const orgIdForLog = positioning.org_id as string | null;
+      if (orgIdForLog) {
+        const { data: row } = await supabase
+          .from('positionings')
+          .select('answers, candidate_id')
+          .eq('id', positioningId)
+          .single();
+
+        const candId = (row?.candidate_id as string | undefined) ?? positioning.candidate_id;
+        if (candId) {
+          await logPositioningAnalysisSnapshot(supabase, {
+            positioningId,
+            candidateId: candId,
+            orgId: orgIdForLog,
+            reason: 'workflow_completed',
+            analysis: object,
+            answers: row?.answers ?? null,
+            aiAnalysisModels: analysisModels,
+            durationMs,
+          });
+        }
+      }
+    }
+
+    return { positioningId, durationMs, persisted };
   } finally {
     writer.releaseLock();
   }
 }
 
-async function saveAnalysis(
-  positioningId: string,
-  result: {
-    object: unknown;
-    durationMs: number;
-    candidateId: string;
-    orgId: string | null;
-    analysisRecruiterAnswers: Record<string, PositioningAnswerStoredValue>;
-    analysisModels: PositioningAnalysisModelsSnapshot;
-  },
-) {
+async function closeAnalysisStream() {
   'use step';
-
-  const supabase = getSupabase();
-
-  if (result.object) {
-    await supabase
-      .from('positionings')
-      .update({
-        analysis: result.object,
-        status: 'analyzed',
-        ai_analysis_duration_ms: result.durationMs,
-        workflow_run_id: null,
-        workflow_last_error: null,
-        analysis_recruiter_answers: result.analysisRecruiterAnswers,
-        ai_analysis_models: result.analysisModels,
-      })
-      .eq('id', positioningId);
-
-    const orgIdForLog = result.orgId;
-    if (orgIdForLog) {
-      const { data: row } = await supabase
-        .from('positionings')
-        .select('answers, candidate_id')
-        .eq('id', positioningId)
-        .single();
-
-      const candId = (row?.candidate_id as string | undefined) ?? result.candidateId;
-      if (candId) {
-        await logPositioningAnalysisSnapshot(supabase, {
-          positioningId,
-          candidateId: candId,
-          orgId: orgIdForLog,
-          reason: 'workflow_completed',
-          analysis: result.object,
-          answers: row?.answers ?? null,
-          aiAnalysisModels: result.analysisModels,
-          durationMs: result.durationMs,
-        });
-      }
-    }
-  }
 
   const writable = getWritable<Uint8Array>();
   await writable.close();
@@ -460,8 +448,8 @@ export async function positioningAnalyzeWorkflow(positioningId: string) {
 
   try {
     const result = await fetchAndAnalyze(positioningId);
-    await saveAnalysis(positioningId, result);
-    return result.object;
+    await closeAnalysisStream();
+    return { positioningId: result.positioningId, durationMs: result.durationMs };
   } catch (error) {
     await handleWorkflowError(positioningId, 'positionings', error);
     throw error;
