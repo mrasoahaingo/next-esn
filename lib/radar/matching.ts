@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 
 const MatchRpcRowSchema = z.object({
   id: z.string().uuid(),
@@ -39,7 +40,21 @@ export async function refreshMatchesForCompany(
   const supabase = getSupabase();
   const matches = await findMatchingConsultants(orgId, embedding, 5, threshold);
 
-  await supabase.from('radar_matches').delete().eq('company_id', companyId);
+  // Purge avant réinsertion : un échec silencieux laisserait d'anciens matchs coexister avec
+  // les nouveaux. On logue sans lever, le recalcul reste utile même partiellement appliqué.
+  const { error: purgeError } = await supabase
+    .from('radar_matches')
+    .delete()
+    .eq('company_id', companyId);
+
+  if (purgeError) {
+    logSupabaseWriteError({
+      table: 'radar_matches',
+      recordId: companyId,
+      operation: 'radar.refreshMatchesForCompany.purge',
+      supabaseError: purgeError,
+    });
+  }
 
   if (matches.length === 0) return 0;
 
