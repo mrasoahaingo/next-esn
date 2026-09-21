@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.3)
 Phase: 9 of 14 (DB + Schema Foundation + Proxycurl Audit)
 Plan: — of —
 Status: Ready to plan
-Last activity: 2026-09-21 — Completed quick task 260921-ksd: Assainissement des caractères interdits par Postgres avant tout écrit JSONB
+Last activity: 2026-09-21 — Completed quick task 260921-seo: Écritures Supabase non contrôlées traitées + règle ESLint de prévention
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -66,6 +66,7 @@ None.
 | 260921-j3g | Réconciliation des runs workflow zombies bloqués en analyzing/generating | 2026-09-21 | 566bfb2 | [260921-j3g-reconciliation-des-runs-workflow-zombies](./quick/260921-j3g-reconciliation-des-runs-workflow-zombies/) |
 | 260921-jz1 | Payloads volumineux retirés des frontières de steps workflow + visibilité des échecs | 2026-09-21 | 2c96649 | [260921-jz1-ne-plus-faire-transiter-les-payloads-vol](./quick/260921-jz1-ne-plus-faire-transiter-les-payloads-vol/) |
 | 260921-ksd | Assainissement des caractères interdits par Postgres avant tout écrit JSONB + plafond de retry | 2026-09-21 | 116fb14 | [260921-ksd-assainir-les-caracteres-interdits-par-po](./quick/260921-ksd-assainir-les-caracteres-interdits-par-po/) |
+| 260921-seo | Écritures Supabase non contrôlées traitées (17 sites) + règle ESLint de prévention | 2026-09-21 | 2a1b793 | [260921-seo-traiter-les-11-ecritures-supabase-non-co](./quick/260921-seo-traiter-les-11-ecritures-supabase-non-co/) |
 
 
 ## Session continuity
