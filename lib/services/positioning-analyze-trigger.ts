@@ -1,6 +1,7 @@
 import { start, getRun } from 'workflow/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { positioningAnalyzeWorkflow } from '@/workflows/positioning-analyze';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 import {
   mergeIncomingPositioningAnswers,
   parsePositioningAnswers,
@@ -44,10 +45,21 @@ export async function triggerMissionPositioningAnalysis(
   if (!candidateReadyForAnalysis(row.candidates)) return;
 
   const run = await start(positioningAnalyzeWorkflow, [positioningId]);
-  await supabase
+  // Déclencheur asynchrone sans réponse client : on logue sans lever. Sans ce log, une ligne
+  // restée en `draft` alors que son run tourne serait indiscernable d'un run jamais lancé.
+  const { error: claimError } = await supabase
     .from('positionings')
     .update({ workflow_run_id: run.runId, status: 'analyzing', workflow_started_at: new Date().toISOString() })
     .eq('id', positioningId);
+
+  if (claimError) {
+    logSupabaseWriteError({
+      table: 'positionings',
+      recordId: positioningId,
+      operation: 'positioning.analyze.trigger.claimRun',
+      supabaseError: claimError,
+    });
+  }
 }
 
 /** Après extraction : lancer l’analyse pour tous les positionnements mission encore en draft pour ce candidat. */
@@ -127,10 +139,19 @@ export async function respondPositioningAnalyzePost(
 
   const run = await start(positioningAnalyzeWorkflow, [positioningId]);
 
-  await supabase
+  const { error: claimError } = await supabase
     .from('positionings')
     .update({ workflow_run_id: run.runId, status: 'analyzing', workflow_started_at: new Date().toISOString() })
     .eq('id', positioningId);
+
+  if (claimError) {
+    logSupabaseWriteError({
+      table: 'positionings',
+      recordId: positioningId,
+      operation: 'positioning.analyze.respond.claimRun',
+      supabaseError: claimError,
+    });
+  }
 
   return new Response(run.readable, {
     headers: {

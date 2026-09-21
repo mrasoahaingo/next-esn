@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 import {
   reconcileWorkflowRecord,
   type WorkflowReconcileRow,
@@ -75,7 +76,23 @@ export async function DELETE(
     const { id } = params;
     const supabase = getSupabase();
 
-    await supabase.from('positionings').delete().eq('candidate_id', id).eq('org_id', orgId);
+    // Best-effort assumé : si cette purge échoue, la suppression du candidat juste après
+    // échouera elle aussi (contrainte FK) ou laissera des positionnements orphelins. Le log est
+    // le seul signal — supabase-js ne lève pas.
+    const { error: cascadeError } = await supabase
+      .from('positionings')
+      .delete()
+      .eq('candidate_id', id)
+      .eq('org_id', orgId);
+
+    if (cascadeError) {
+      logSupabaseWriteError({
+        table: 'positionings',
+        recordId: id,
+        operation: 'candidate.delete.cascadePositionings',
+        supabaseError: cascadeError,
+      });
+    }
 
     const { error } = await supabase
       .from('candidates')

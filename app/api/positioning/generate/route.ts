@@ -2,6 +2,7 @@ import { start, getRun } from 'workflow/api';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 import { positioningGenerateWorkflow } from '@/workflows/positioning-generate';
 import type { PositioningGenerateMode } from '@/lib/types/positioning-generate-stream';
 
@@ -70,10 +71,21 @@ export async function POST(req: NextRequest) {
 
     const run = await start(positioningGenerateWorkflow, [positioningId, answers ?? {}, generateMode]);
 
-    await supabase
+    // Idem extract : run déjà démarré, on ne lève pas, mais une écriture perdue rendrait le
+    // run invisible de la réconciliation. Log obligatoire.
+    const { error: claimError } = await supabase
       .from('positionings')
       .update({ workflow_run_id: run.runId, status: 'generating', workflow_started_at: new Date().toISOString() })
       .eq('id', positioningId);
+
+    if (claimError) {
+      logSupabaseWriteError({
+        table: 'positionings',
+        recordId: positioningId,
+        operation: 'positioning.generate.claimRun',
+        supabaseError: claimError,
+      });
+    }
 
     return new Response(run.readable, {
       headers: {
