@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
+import { toast } from 'sonner';
 import { queryKeys } from './keys';
 
 interface CancelWorkflowParams {
@@ -45,6 +46,16 @@ export function useCancelWorkflow() {
         queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, variables.missionId) });
       }
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
+    },
+    // `POST /api/workflow/:runId/cancel` peut désormais renvoyer 500 quand la ligne n'a pas pu
+    // être réinitialisée. Le toast est posé ici (et non dans les 9 composants appelants) pour
+    // couvrir tous les sites d'un coup. Le run est déjà annulé côté runtime : relancer
+    // l'annulation est idempotent, d'où la formulation « Réessayez ».
+    onError: () => {
+      toast.error(
+        "Échec de l'annulation : la ligne n'a pas pu être réinitialisée. Réessayez ou contactez le support.",
+        { duration: 8000 },
+      );
     },
   });
 }
