@@ -30,6 +30,12 @@ interface UseWorkflowStreamReturn<T, M = unknown> {
    * n’est pas encore rafraîchie — permet d’afficher « Annuler » pendant tout le flux.
    */
   activeRunId: string | null;
+  /**
+   * True quand la reconnexion a constaté que le run était déjà terminé côté serveur
+   * (réponse JSON au lieu du flux NDJSON) — permet de distinguer « flux reconnecté »
+   * de « run déjà fini », au lieu de rester bloqué sur des étapes figées.
+   */
+  runTerminated: boolean;
 }
 
 async function consumeNdjsonStream<T, M>(
@@ -125,6 +131,8 @@ export function useWorkflowStream<T, M = unknown>(
   const [errorStepKey, setErrorStepKey] = useState<string | null>(null);
   /** Run id issu du POST tant que React Query n’a pas encore le `workflow_run_id` en base */
   const [pendingRunId, setPendingRunId] = useState<string | null>(null);
+  /** Run déjà terminé côté serveur au moment de la reconnexion */
+  const [runTerminated, setRunTerminated] = useState(false);
 
   const chunkIndexRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -180,6 +188,7 @@ export function useWorkflowStream<T, M = unknown>(
     setErrorStepKey(null);
     setObject(null);
     setStreamMeta(null);
+    setRunTerminated(false);
     chunkIndexRef.current = 0;
 
     let delegatedToReconnect = false;
@@ -255,6 +264,7 @@ export function useWorkflowStream<T, M = unknown>(
     setError(null);
     setErrorStepKey(null);
     setStreamMeta(null);
+    setRunTerminated(false);
 
     (async () => {
       try {
@@ -310,5 +320,15 @@ export function useWorkflowStream<T, M = unknown>(
     };
   }, []);
 
-  return { object, streamMeta, isLoading, error, errorStepKey, submit, stop, activeRunId };
+  return {
+    object,
+    streamMeta,
+    isLoading,
+    error,
+    errorStepKey,
+    submit,
+    stop,
+    activeRunId,
+    runTerminated,
+  };
 }
