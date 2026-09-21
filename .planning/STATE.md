@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.3)
 Phase: 9 of 14 (DB + Schema Foundation + Proxycurl Audit)
 Plan: — of —
 Status: Ready to plan
-Last activity: 2026-09-21 — Completed quick task 260921-j3g: Réconciliation des runs workflow zombies bloqués en analyzing/generating
+Last activity: 2026-09-21 — Completed quick task 260921-jz1: Payloads volumineux retirés des frontières de steps workflow
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -64,6 +64,7 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260921-j3g | Réconciliation des runs workflow zombies bloqués en analyzing/generating | 2026-09-21 | 566bfb2 | [260921-j3g-reconciliation-des-runs-workflow-zombies](./quick/260921-j3g-reconciliation-des-runs-workflow-zombies/) |
+| 260921-jz1 | Payloads volumineux retirés des frontières de steps workflow + visibilité des échecs | 2026-09-21 | 2c96649 | [260921-jz1-ne-plus-faire-transiter-les-payloads-vol](./quick/260921-jz1-ne-plus-faire-transiter-les-payloads-vol/) |
 
 
 ## Session continuity
