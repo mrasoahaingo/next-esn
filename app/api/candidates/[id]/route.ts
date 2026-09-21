@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import {
+  reconcileWorkflowRecord,
+  type WorkflowReconcileRow,
+} from '@/lib/services/workflow-reconcile';
 
 const updateCandidateSchema = z.object({
   extracted_data: z.record(z.string(), z.unknown()).optional(),
@@ -28,6 +32,32 @@ export async function GET(
     if (error || !data) {
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
     }
+
+    // Garde-fou anti-zombie : la lecture est le moment où l’utilisateur regarde l’état.
+    if ((data.status === 'uploaded' || data.status === 'extracting') && data.workflow_run_id) {
+      const decision = await reconcileWorkflowRecord({
+        supabase,
+        table: 'candidates',
+        row: data as WorkflowReconcileRow,
+      });
+      if (decision.action === 'settle') {
+        return NextResponse.json({
+          ...data,
+          status: decision.status,
+          workflow_run_id: null,
+          workflow_last_error: null,
+        });
+      }
+      if (decision.action === 'fail') {
+        return NextResponse.json({
+          ...data,
+          status: 'error',
+          workflow_run_id: null,
+          workflow_last_error: decision.workflowLastError,
+        });
+      }
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     if (error instanceof NextResponse) return error;

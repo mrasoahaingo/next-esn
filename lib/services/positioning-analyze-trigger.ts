@@ -46,7 +46,7 @@ export async function triggerMissionPositioningAnalysis(
   const run = await start(positioningAnalyzeWorkflow, [positioningId]);
   await supabase
     .from('positionings')
-    .update({ workflow_run_id: run.runId, status: 'analyzing' })
+    .update({ workflow_run_id: run.runId, status: 'analyzing', workflow_started_at: new Date().toISOString() })
     .eq('id', positioningId);
 }
 
@@ -129,7 +129,7 @@ export async function respondPositioningAnalyzePost(
 
   await supabase
     .from('positionings')
-    .update({ workflow_run_id: run.runId, status: 'analyzing' })
+    .update({ workflow_run_id: run.runId, status: 'analyzing', workflow_started_at: new Date().toISOString() })
     .eq('id', positioningId);
 
   return new Response(run.readable, {

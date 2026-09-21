@@ -1,6 +1,8 @@
 import { getRun } from 'workflow/api';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireOrgId } from '@/lib/utils/auth';
+import { getSupabase } from '@/lib/utils/supabase';
+import { reconcileWorkflowRunById } from '@/lib/services/workflow-reconcile';
 
 export async function GET(
   request: NextRequest,
@@ -14,13 +16,16 @@ export async function GET(
     const run = getRun(runId);
 
     if (!(await run.exists)) {
+      // Run perdu : la ligne peut rester bloquée en statut actif — on la réconcilie avant de répondre.
+      await reconcileWorkflowRunById(getSupabase(), runId);
       return NextResponse.json({ error: 'Run not found' }, { status: 404 });
     }
 
     const status = await run.status;
 
     if (status === 'completed' || status === 'failed' || status === 'cancelled') {
-      return NextResponse.json({ status });
+      const decision = await reconcileWorkflowRunById(getSupabase(), runId);
+      return NextResponse.json({ status, reconciled: decision.action });
     }
 
     const startIndexParam = searchParams.get('startIndex');

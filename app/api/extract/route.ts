@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     await supabase
       .from('candidates')
-      .update({ workflow_run_id: run.runId, status: 'extracting' })
+      .update({ workflow_run_id: run.runId, status: 'extracting', workflow_started_at: new Date().toISOString() })
       .eq('id', candidateId);
 
     return new Response(run.readable, {

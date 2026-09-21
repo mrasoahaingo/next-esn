@@ -98,7 +98,7 @@ export async function POST(
 
           const { error: candidateUpdateError } = await supabase
             .from('candidates')
-            .update({ workflow_run_id: run.runId, status: 'extracting' })
+            .update({ workflow_run_id: run.runId, status: 'extracting', workflow_started_at: new Date().toISOString() })
             .eq('id', candidate.id);
 
           if (candidateUpdateError) throw candidateUpdateError;

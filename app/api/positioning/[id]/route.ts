@@ -3,6 +3,10 @@ import { z } from 'zod';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { archivePositioningAnalysisToHistoryIfPresent } from '@/lib/services/positioning-mission-regenerate';
+import {
+  reconcileWorkflowRecord,
+  type WorkflowReconcileRow,
+} from '@/lib/services/workflow-reconcile';
 
 const updatePositioningSchema = z.object({
   job_description: z.string().max(50000).optional(),
@@ -37,6 +41,34 @@ export async function GET(
 
     if (error || !data) {
       return NextResponse.json({ error: 'Positioning not found' }, { status: 404 });
+    }
+
+    // Garde-fou anti-zombie : la lecture est le moment où l’utilisateur regarde l’état.
+    if (
+      (data.status === 'analyzing' || data.status === 'generating') &&
+      data.workflow_run_id
+    ) {
+      const decision = await reconcileWorkflowRecord({
+        supabase,
+        table: 'positionings',
+        row: data as WorkflowReconcileRow,
+      });
+      if (decision.action === 'settle') {
+        return NextResponse.json({
+          ...data,
+          status: decision.status,
+          workflow_run_id: null,
+          workflow_last_error: null,
+        });
+      }
+      if (decision.action === 'fail') {
+        return NextResponse.json({
+          ...data,
+          status: 'error',
+          workflow_run_id: null,
+          workflow_last_error: decision.workflowLastError,
+        });
+      }
     }
 
     return NextResponse.json(data);
