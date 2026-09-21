@@ -14,6 +14,47 @@ export const AI_USAGE_SNAPSHOT_MAX_STRING_CHARS = 600 * 1024;
 export type AiUsageCallStatus = 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
 /**
+ * Taille approximative d'un payload, à seule fin de diagnostic.
+ * Retourne -1 si la sérialisation échoue : ne lève jamais.
+ */
+function approxPayloadBytes(payload: unknown): number {
+  if (payload === undefined) return 0;
+  try {
+    return JSON.stringify(payload)?.length ?? -1;
+  } catch {
+    return -1;
+  }
+}
+
+/**
+ * supabase-js ne lève pas : il renvoie `{ error }`. Sans ce report, un insert refusé
+ * (payload trop gros, contrainte, RLS) disparaît silencieusement.
+ * N'expose JAMAIS le contenu du payload — uniquement sa taille.
+ */
+function reportAiUsageLogFailure(
+  operationLabel: string,
+  error: { message: string },
+  ctx: {
+    taskKey?: string;
+    positioningId?: string;
+    candidateId?: string;
+    missionId?: string;
+    approxPayloadBytes: number;
+  },
+): void {
+  console.error(
+    `ai_usage_log ${operationLabel} failed: ${error.message}`,
+    {
+      taskKey: ctx.taskKey ?? null,
+      positioningId: ctx.positioningId ?? null,
+      candidateId: ctx.candidateId ?? null,
+      missionId: ctx.missionId ?? null,
+      approxPayloadBytes: ctx.approxPayloadBytes,
+    },
+  );
+}
+
+/**
  * Insère une ligne `in_progress` dès le début de l'appel LLM.
  * Retourne l'`id` à passer à `updateAiUsageEnd` une fois l'appel terminé.
  */
@@ -32,7 +73,7 @@ export async function insertAiUsageStart(
     inputPayload?: unknown;
   },
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('ai_usage_log')
     .insert({
       candidate_id: params.candidateId ?? null,
@@ -53,6 +94,17 @@ export async function insertAiUsageStart(
     })
     .select('id')
     .single();
+
+  if (error) {
+    reportAiUsageLogFailure('insert (start)', error, {
+      taskKey: params.taskKey,
+      positioningId: params.positioningId,
+      candidateId: params.candidateId,
+      missionId: params.missionId,
+      approxPayloadBytes: approxPayloadBytes(params.inputPayload),
+    });
+  }
+
   return data?.id ?? null;
 }
 
@@ -80,7 +132,7 @@ export async function updateAiUsageEnd(
     outputPayloadMaxChars = LLM_LOG_MAX_STRING_CHARS,
   } = params;
 
-  await supabase
+  const { error } = await supabase
     .from('ai_usage_log')
     .update({
       duration_ms: durationMs,
@@ -97,6 +149,12 @@ export async function updateAiUsageEnd(
       call_status: callStatus,
     })
     .eq('id', logId);
+
+  if (error) {
+    reportAiUsageLogFailure('update (end)', error, {
+      approxPayloadBytes: approxPayloadBytes(outputPayload),
+    });
+  }
 }
 
 export async function logAiUsage(
@@ -125,7 +183,7 @@ export async function logAiUsage(
      */
     outputPayloadMaxChars?: number;
   },
-) {
+): Promise<void> {
   const {
     operation,
     candidateId,
@@ -144,7 +202,7 @@ export async function logAiUsage(
     outputPayloadMaxChars = LLM_LOG_MAX_STRING_CHARS,
   } = params;
 
-  await supabase.from('ai_usage_log').insert({
+  const { error } = await supabase.from('ai_usage_log').insert({
     candidate_id: candidateId ?? null,
     positioning_id: positioningId ?? null,
     mission_id: missionId ?? null,
@@ -168,4 +226,15 @@ export async function logAiUsage(
     call_status: callStatus,
     branch,
   });
+
+  if (error) {
+    reportAiUsageLogFailure('insert', error, {
+      taskKey,
+      positioningId,
+      candidateId,
+      missionId,
+      approxPayloadBytes:
+        approxPayloadBytes(inputPayload) + approxPayloadBytes(outputPayload),
+    });
+  }
 }

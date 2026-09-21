@@ -50,8 +50,11 @@ const ACTIVE_STATUS_SUCCESS: Record<WorkflowReconcileTable, Record<string, strin
   },
 };
 
-function failWith(message: string): WorkflowReconcileDecision {
-  return { action: 'fail', workflowLastError: { stepKey: 'unknown', message } };
+function failWith(message: string, runId: string | null): WorkflowReconcileDecision {
+  return {
+    action: 'fail',
+    workflowLastError: { stepKey: 'unknown', message, ...(runId ? { runId } : {}) },
+  };
 }
 
 /**
@@ -63,26 +66,28 @@ export function decideWorkflowReconciliation(input: {
   currentStatus: string | null;
   startedAt: string | null;
   now: number;
+  /** Run associé à la ligne : conservé dans `workflow_last_error` pour l'investigation. */
+  runId: string | null;
   run: WorkflowRunSnapshot;
   hasResultData: boolean;
 }): WorkflowReconcileDecision {
-  const { table, currentStatus, startedAt, now, run, hasResultData } = input;
+  const { table, currentStatus, startedAt, now, runId, run, hasResultData } = input;
 
   if (!currentStatus) return { action: 'none' };
   const successStatus = ACTIVE_STATUS_SUCCESS[table][currentStatus];
   // Statut non actif (déjà terminal) -> idempotence, on ne touche à rien.
   if (!successStatus) return { action: 'none' };
 
-  if (!run.exists) return failWith(DEAD_RUN_MESSAGE);
+  if (!run.exists) return failWith(DEAD_RUN_MESSAGE, runId);
 
   if (run.status === 'completed') {
     return hasResultData
       ? { action: 'settle', status: successStatus }
-      : failWith(DEAD_RUN_MESSAGE);
+      : failWith(DEAD_RUN_MESSAGE, runId);
   }
 
   if (run.status === 'failed' || run.status === 'cancelled') {
-    return failWith(DEAD_RUN_MESSAGE);
+    return failWith(DEAD_RUN_MESSAGE, runId);
   }
 
   // Run non terminal : on ne peut conclure qu’avec une preuve d’ancienneté.
@@ -90,7 +95,7 @@ export function decideWorkflowReconciliation(input: {
   const startedAtMs = Date.parse(startedAt);
   if (Number.isNaN(startedAtMs)) return { action: 'none' };
   if (now - startedAtMs > WORKFLOW_ZOMBIE_TIMEOUT_MS) {
-    return failWith(ZOMBIE_RUN_MESSAGE);
+    return failWith(ZOMBIE_RUN_MESSAGE, runId);
   }
 
   return { action: 'none' };
@@ -146,6 +151,7 @@ export async function reconcileWorkflowRecord(input: {
       currentStatus: row.status,
       startedAt: row.workflow_started_at,
       now: Date.now(),
+      runId: row.workflow_run_id,
       run,
       hasResultData: computeHasResultData(table, row),
     });
