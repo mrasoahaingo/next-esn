@@ -3,6 +3,7 @@ import {
   WORKFLOW_ZOMBIE_TIMEOUT_MS,
   decideWorkflowReconciliation,
 } from '@/lib/services/workflow-reconcile';
+import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 
 const NOW = Date.UTC(2026, 8, 21, 12, 0, 0);
 const iso = (offsetMs: number): string => new Date(NOW - offsetMs).toISOString();
@@ -15,6 +16,8 @@ describe('decideWorkflowReconciliation', () => {
         currentStatus: 'analyzing',
         startedAt: iso(60_000),
         now: NOW,
+      runId: null,
+        runId: null,
         run: { exists: true, status: 'completed' },
         hasResultData: true,
       }),
@@ -28,6 +31,8 @@ describe('decideWorkflowReconciliation', () => {
         currentStatus: 'generating',
         startedAt: iso(60_000),
         now: NOW,
+      runId: null,
+        runId: null,
         run: { exists: true, status: 'completed' },
         hasResultData: true,
       }),
@@ -40,6 +45,7 @@ describe('decideWorkflowReconciliation', () => {
       currentStatus: 'analyzing',
       startedAt: iso(60_000),
       now: NOW,
+      runId: null,
       run: { exists: true, status: 'completed' },
       hasResultData: false,
     });
@@ -55,6 +61,7 @@ describe('decideWorkflowReconciliation', () => {
       currentStatus: 'analyzing',
       startedAt: iso(60_000),
       now: NOW,
+      runId: null,
       run: { exists: true, status: 'failed' },
       hasResultData: true,
     });
@@ -70,6 +77,8 @@ describe('decideWorkflowReconciliation', () => {
         currentStatus: 'generating',
         startedAt: iso(60_000),
         now: NOW,
+      runId: null,
+        runId: null,
         run: { exists: true, status: 'cancelled' },
         hasResultData: false,
       }).action,
@@ -82,6 +91,7 @@ describe('decideWorkflowReconciliation', () => {
       currentStatus: 'extracting',
       startedAt: iso(60_000),
       now: NOW,
+      runId: null,
       run: { exists: false, status: null },
       hasResultData: false,
     });
@@ -97,6 +107,8 @@ describe('decideWorkflowReconciliation', () => {
         currentStatus: 'analyzing',
         startedAt: iso(WORKFLOW_ZOMBIE_TIMEOUT_MS - 1_000),
         now: NOW,
+      runId: null,
+        runId: null,
         run: { exists: true, status: 'running' },
         hasResultData: false,
       }),
@@ -109,6 +121,7 @@ describe('decideWorkflowReconciliation', () => {
       currentStatus: 'analyzing',
       startedAt: iso(WORKFLOW_ZOMBIE_TIMEOUT_MS + 1_000),
       now: NOW,
+      runId: null,
       run: { exists: true, status: 'running' },
       hasResultData: false,
     });
@@ -124,6 +137,8 @@ describe('decideWorkflowReconciliation', () => {
         currentStatus: 'analyzing',
         startedAt: null,
         now: NOW,
+      runId: null,
+        runId: null,
         run: { exists: true, status: 'running' },
         hasResultData: false,
       }),
@@ -138,6 +153,8 @@ describe('decideWorkflowReconciliation', () => {
           currentStatus,
           startedAt: iso(WORKFLOW_ZOMBIE_TIMEOUT_MS * 10),
           now: NOW,
+      runId: null,
+        runId: null,
           run: { exists: false, status: null },
           hasResultData: false,
         }),
@@ -153,6 +170,8 @@ describe('decideWorkflowReconciliation', () => {
           currentStatus,
           startedAt: iso(60_000),
           now: NOW,
+      runId: null,
+        runId: null,
           run: { exists: true, status: 'completed' },
           hasResultData: true,
         }),
@@ -166,13 +185,73 @@ describe('decideWorkflowReconciliation', () => {
       currentStatus: 'extracting',
       startedAt: iso(WORKFLOW_ZOMBIE_TIMEOUT_MS + 1),
       now: NOW,
+      runId: null,
       run: { exists: true, status: 'running' },
       hasResultData: false,
     });
     expect(decision.action).toBe('fail');
   });
 
+  it('conserve le runId fourni dans workflowLastError sur toutes les décisions fail', () => {
+    const failInputs = [
+      { run: { exists: false, status: null }, hasResultData: false, startedAt: iso(60_000) },
+      { run: { exists: true, status: 'completed' }, hasResultData: false, startedAt: iso(60_000) },
+      { run: { exists: true, status: 'failed' }, hasResultData: true, startedAt: iso(60_000) },
+      { run: { exists: true, status: 'cancelled' }, hasResultData: false, startedAt: iso(60_000) },
+      {
+        run: { exists: true, status: 'running' },
+        hasResultData: false,
+        startedAt: iso(WORKFLOW_ZOMBIE_TIMEOUT_MS + 1_000),
+      },
+    ];
+
+    for (const input of failInputs) {
+      const decision = decideWorkflowReconciliation({
+        table: 'positionings',
+        currentStatus: 'analyzing',
+        now: NOW,
+        runId: 'wrun_01M31XXE33AS042XJCXZNGC54T',
+        ...input,
+      });
+      expect(decision.action).toBe('fail');
+      if (decision.action !== 'fail') throw new Error('unreachable');
+      expect(decision.workflowLastError.runId).toBe('wrun_01M31XXE33AS042XJCXZNGC54T');
+    }
+  });
+
+  it('omet runId quand aucun run n’est connu', () => {
+    const decision = decideWorkflowReconciliation({
+      table: 'positionings',
+      currentStatus: 'analyzing',
+      startedAt: iso(60_000),
+      now: NOW,
+      runId: null,
+      run: { exists: false, status: null },
+      hasResultData: false,
+    });
+    expect(decision.action).toBe('fail');
+    if (decision.action !== 'fail') throw new Error('unreachable');
+    expect(decision.workflowLastError.runId).toBeUndefined();
+  });
+
   it('expose un timeout zombie de 15 minutes', () => {
     expect(WORKFLOW_ZOMBIE_TIMEOUT_MS).toBe(15 * 60 * 1000);
+  });
+});
+
+describe('workflowLastErrorSchema', () => {
+  it('accepte un objet historique sans runId (rétrocompatibilité des lignes en base)', () => {
+    const parsed = workflowLastErrorSchema.parse({ stepKey: 'skills', message: 'boom' });
+    expect(parsed).toEqual({ stepKey: 'skills', message: 'boom' });
+    expect(parsed.runId).toBeUndefined();
+  });
+
+  it('accepte et conserve un runId', () => {
+    const parsed = workflowLastErrorSchema.parse({
+      stepKey: 'unknown',
+      message: 'boom',
+      runId: 'wrun_123',
+    });
+    expect(parsed.runId).toBe('wrun_123');
   });
 });
