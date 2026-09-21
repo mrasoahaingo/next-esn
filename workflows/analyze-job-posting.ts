@@ -25,6 +25,7 @@ import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { hashJobDescription } from '@/lib/utils/job-description-hash';
 import { normalizeSkillKey } from '@/lib/utils/skill-key';
+import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
 
 function sortKeyPoints(analysis: JobPostingAnalysis): JobPostingAnalysis {
   const sorted = [...analysis.keyPoints].sort((a, b) => a.importanceRank - b.importanceRank);
@@ -237,12 +238,18 @@ async function fetchAndAnalyze(missionId: string) {
     let persisted = false;
 
     if (object != null && typeof object === 'object') {
+      // Assainissement AVANT écriture : un NUL ou un surrogate isolé produit par le
+      // modèle ferait échouer l'update jsonb et perdrait toute l'analyse de fiche.
+      const sanitizeMeta: JsonbSanitizeMeta = { removedChars: 0, paths: [] };
+      const safeObject = sanitizeForJsonb(object, sanitizeMeta);
+      const safeModelsSnapshot = sanitizeForJsonb(modelsSnapshot, sanitizeMeta);
+
       const { error: updateError } = await supabase
         .from('missions')
         .update({
-          job_analysis: object,
+          job_analysis: safeObject,
           job_analysis_input_hash: hashJobDescription(jobDescription),
-          ai_job_analysis_models: modelsSnapshot,
+          ai_job_analysis_models: safeModelsSnapshot,
           job_analysis_workflow_run_id: null,
           workflow_last_error: null,
         })
@@ -253,6 +260,15 @@ async function fetchAndAnalyze(missionId: string) {
       }
 
       persisted = true;
+
+      if (sanitizeMeta.removedChars > 0) {
+        // Jamais le contenu du payload : uniquement le volume et les chemins touchés.
+        console.warn('Job posting analysis jsonb sanitization', {
+          missionId,
+          removedChars: sanitizeMeta.removedChars,
+          paths: sanitizeMeta.paths,
+        });
+      }
     }
 
     return { missionId, durationMs, persisted };

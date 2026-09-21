@@ -1,3 +1,5 @@
+import { sanitizeForJsonb } from '@/lib/utils/pg-jsonb-safe';
+
 /** Plafond ~150 ko par chaîne pour limiter la taille des JSONB en base. */
 export const LLM_LOG_MAX_STRING_CHARS = 150 * 1024;
 
@@ -41,12 +43,18 @@ function deepTruncate(
 }
 
 /**
- * Prépare un objet pour insertion JSONB : tronque les chaînes longues et ajoute `_truncation` à la racine si besoin.
+ * Prépare un objet pour insertion JSONB : assainit les caractères refusés par Postgres
+ * (NUL, surrogates isolés), tronque les chaînes longues et ajoute `_truncation` à la
+ * racine si besoin.
+ *
+ * L'assainissement a lieu AVANT la troncature : c'est le point de passage obligé de tous
+ * les payloads `ai_usage_log` (`logAiUsage`, `insertAiUsageStart`, `updateAiUsageEnd`, et
+ * par ricochet les snapshots d'analyse et d'extraction).
  */
 export function serializeLlmLogPayload(payload: unknown, maxStringChars = LLM_LOG_MAX_STRING_CHARS): unknown {
   if (payload === undefined) return undefined;
   const meta: LlmLogPayloadMeta = { truncated: false };
-  const data = deepTruncate(payload, '', maxStringChars, meta);
+  const data = deepTruncate(sanitizeForJsonb(payload), '', maxStringChars, meta);
   if (!meta.truncated) return data;
   if (data !== null && typeof data === 'object' && !Array.isArray(data)) {
     return {

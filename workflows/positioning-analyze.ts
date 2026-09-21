@@ -36,6 +36,7 @@ import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import { logPositioningAnalysisSnapshot } from '@/lib/services/positioning-analysis-snapshot-log';
+import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
 
 async function fetchAndAnalyze(positioningId: string) {
   'use step';
@@ -342,16 +343,23 @@ async function fetchAndAnalyze(positioningId: string) {
     let persisted = false;
 
     if (object) {
+      // Assainissement AVANT écriture : un NUL ou un surrogate isolé produit par le
+      // modèle ferait échouer l'update jsonb et perdrait toute l'analyse.
+      const sanitizeMeta: JsonbSanitizeMeta = { removedChars: 0, paths: [] };
+      const safeObject = sanitizeForJsonb(object, sanitizeMeta);
+      const safePriorAnswers = sanitizeForJsonb(priorAnswers, sanitizeMeta);
+      const safeAnalysisModels = sanitizeForJsonb(analysisModels, sanitizeMeta);
+
       const { error: updateError } = await supabase
         .from('positionings')
         .update({
-          analysis: object,
+          analysis: safeObject,
           status: 'analyzed',
           ai_analysis_duration_ms: durationMs,
           workflow_run_id: null,
           workflow_last_error: null,
-          analysis_recruiter_answers: priorAnswers,
-          ai_analysis_models: analysisModels,
+          analysis_recruiter_answers: safePriorAnswers,
+          ai_analysis_models: safeAnalysisModels,
         })
         .eq('id', positioningId);
 
@@ -360,6 +368,15 @@ async function fetchAndAnalyze(positioningId: string) {
       }
 
       persisted = true;
+
+      if (sanitizeMeta.removedChars > 0) {
+        // Jamais le contenu du payload : uniquement le volume et les chemins touchés.
+        console.warn('Positioning analysis jsonb sanitization', {
+          positioningId,
+          removedChars: sanitizeMeta.removedChars,
+          paths: sanitizeMeta.paths,
+        });
+      }
 
       const orgIdForLog = positioning.org_id as string | null;
       if (orgIdForLog) {

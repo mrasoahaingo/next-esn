@@ -20,6 +20,7 @@ import {
 import type { CvExtractionBranch, CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import type { CvExtractionModelsSnapshot } from '@/lib/types/cv-extraction-snapshot-payload';
 import { logCvExtractionSnapshot } from '@/lib/services/cv-extraction-snapshot-log';
+import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
 import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import mammoth from 'mammoth';
@@ -448,14 +449,20 @@ async function parallelExtractAndStream(
       const lang = (object as Record<string, unknown>)?.language;
       const detectedLanguage = lang === 'en' ? 'en' : 'fr';
 
+      // Assainissement AVANT écriture : un NUL ou un surrogate isolé produit par le
+      // modèle ferait échouer l'update jsonb et perdrait toute l'extraction.
+      const sanitizeMeta: JsonbSanitizeMeta = { removedChars: 0, paths: [] };
+      const safeObject = sanitizeForJsonb(object, sanitizeMeta);
+      const safeModelsSnapshot = sanitizeForJsonb(fullModelsSnapshot, sanitizeMeta);
+
       const { error: updateError } = await supabase
         .from('candidates')
         .update({
-          extracted_data: object,
+          extracted_data: safeObject,
           language: detectedLanguage,
           status: 'reviewing',
           ai_extraction_duration_ms: durationMs,
-          ai_extraction_models: fullModelsSnapshot,
+          ai_extraction_models: safeModelsSnapshot,
           workflow_run_id: null,
           workflow_last_error: null,
         })
@@ -466,6 +473,15 @@ async function parallelExtractAndStream(
       }
 
       persisted = true;
+
+      if (sanitizeMeta.removedChars > 0) {
+        // Jamais le contenu du payload : uniquement le volume et les chemins touchés.
+        console.warn('CV extraction jsonb sanitization', {
+          candidateId,
+          removedChars: sanitizeMeta.removedChars,
+          paths: sanitizeMeta.paths,
+        });
+      }
 
       if (orgId) {
         await logCvExtractionSnapshot(supabase, {

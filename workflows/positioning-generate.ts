@@ -39,6 +39,7 @@ import { workflowLastErrorSchema } from '@/lib/types/workflow-last-error';
 import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow-step-error';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
+import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
 
 async function fetchAndGenerate(
   positioningId: string,
@@ -383,18 +384,24 @@ async function fetchAndGenerate(
       return { positioningId, durationMs, persisted: false };
     }
 
+    // Assainissement AVANT écriture : un NUL ou un surrogate isolé produit par le
+    // modèle ferait échouer l'update jsonb et perdrait toute la génération.
+    const sanitizeMeta: JsonbSanitizeMeta = { removedChars: 0, paths: [] };
+    const safeObject = sanitizeForJsonb(object, sanitizeMeta);
+    const safeModelsSnapshot = sanitizeForJsonb(modelsSnapshot, sanitizeMeta);
+
     if (generateMode === 'all') {
       const { error: updateError } = await supabase
         .from('positionings')
         .update({
-          tailored_cv: object.tailoredCv,
-          email: object.email,
-          email_first_contact: object.emailFirstContact,
-          email_bullet_points: object.emailBulletPoints,
-          candidate_email: object.candidateEmail,
+          tailored_cv: safeObject.tailoredCv,
+          email: safeObject.email,
+          email_first_contact: safeObject.emailFirstContact,
+          email_bullet_points: safeObject.emailBulletPoints,
+          candidate_email: safeObject.candidateEmail,
           status: 'generated',
           ai_generation_duration_ms: durationMs,
-          ai_generation_models: modelsSnapshot,
+          ai_generation_models: safeModelsSnapshot,
           workflow_run_id: null,
           workflow_last_error: null,
         })
@@ -417,19 +424,22 @@ async function fetchAndGenerate(
 
       const prevByTask =
         (existing?.ai_generation_models as { byTask?: Record<string, string> } | null)?.byTask ?? {};
-      const mergedByTask = { ...prevByTask, ...modelsSnapshot.byTask };
-      const mergedModels: PositioningAnalysisModelsSnapshot = {
-        byTask: mergedByTask,
-        uniqueModels: Array.from(new Set(Object.values(mergedByTask))).sort((a, b) =>
-          a.localeCompare(b),
-        ),
-      };
+      const mergedByTask = { ...prevByTask, ...safeModelsSnapshot.byTask };
+      const mergedModels: PositioningAnalysisModelsSnapshot = sanitizeForJsonb(
+        {
+          byTask: mergedByTask,
+          uniqueModels: Array.from(new Set(Object.values(mergedByTask))).sort((a, b) =>
+            a.localeCompare(b),
+          ),
+        },
+        sanitizeMeta,
+      );
 
       if (generateMode === 'cv') {
         const { error: updateError } = await supabase
           .from('positionings')
           .update({
-            tailored_cv: object.tailoredCv,
+            tailored_cv: safeObject.tailoredCv,
             status: 'generated',
             ai_generation_duration_ms: nextDuration,
             ai_generation_models: mergedModels,
@@ -445,10 +455,10 @@ async function fetchAndGenerate(
         const { error: updateError } = await supabase
           .from('positionings')
           .update({
-            email: object.email,
-            email_first_contact: object.emailFirstContact,
-            email_bullet_points: object.emailBulletPoints,
-            candidate_email: object.candidateEmail,
+            email: safeObject.email,
+            email_first_contact: safeObject.emailFirstContact,
+            email_bullet_points: safeObject.emailBulletPoints,
+            candidate_email: safeObject.candidateEmail,
             status: 'generated',
             ai_generation_duration_ms: nextDuration,
             ai_generation_models: mergedModels,
@@ -461,6 +471,16 @@ async function fetchAndGenerate(
           throw new Error('saveGeneration DB update failed: ' + updateError.message);
         }
       }
+    }
+
+    if (sanitizeMeta.removedChars > 0) {
+      // Jamais le contenu du payload : uniquement le volume et les chemins touchés.
+      console.warn('Positioning generation jsonb sanitization', {
+        positioningId,
+        generateMode,
+        removedChars: sanitizeMeta.removedChars,
+        paths: sanitizeMeta.paths,
+      });
     }
 
     return { positioningId, durationMs, persisted: true };

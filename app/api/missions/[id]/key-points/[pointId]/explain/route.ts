@@ -13,6 +13,7 @@ import { buildJobPostingKeyPointExplainUserContent } from '@/lib/services/job-po
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY } from '@/lib/llm/task-keys';
+import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
 
 export async function POST(
   _req: NextRequest,
@@ -78,6 +79,30 @@ export async function POST(
     const durationMs = Date.now() - start;
 
     after(async () => {
+      // Assainissement AVANT écriture : un NUL ou un surrogate isolé produit par le
+      // modèle ferait échouer l'update jsonb et perdrait l'explication du point clé.
+      const sanitizeMeta: JsonbSanitizeMeta = { removedChars: 0, paths: [] };
+      const nextJobAnalysis = sanitizeForJsonb(
+        {
+          ...(analysis ?? {}),
+          keyPointExplanations: {
+            ...((analysis?.keyPointExplanations ?? {}) as Record<string, JobPostingKeyPointExplain>),
+            [pointId]: object,
+          },
+        },
+        sanitizeMeta,
+      );
+
+      if (sanitizeMeta.removedChars > 0) {
+        // Jamais le contenu du payload : uniquement le volume et les chemins touchés.
+        console.warn('Key point explain jsonb sanitization', {
+          missionId,
+          pointId,
+          removedChars: sanitizeMeta.removedChars,
+          paths: sanitizeMeta.paths,
+        });
+      }
+
       await Promise.all([
         logAiUsage(supabase, {
           operation: 'analysis',
@@ -96,15 +121,7 @@ export async function POST(
         }),
         supabase
           .from('missions')
-          .update({
-            job_analysis: {
-              ...(analysis ?? {}),
-              keyPointExplanations: {
-                ...((analysis?.keyPointExplanations ?? {}) as Record<string, JobPostingKeyPointExplain>),
-                [pointId]: object,
-              },
-            },
-          })
+          .update({ job_analysis: nextJobAnalysis })
           .eq('id', missionId)
           .eq('org_id', orgId),
       ]);
