@@ -9,6 +9,8 @@ function badgeVariant(status: StepStatus): 'default' | 'secondary' | 'destructiv
       return 'default';
     case 'error':
       return 'destructive';
+    case 'reconnecting':
+      return 'outline';
     case 'done':
     case 'pending':
     default:
@@ -26,6 +28,8 @@ function statusLabel(status: StepStatus): string {
       return 'Terminé';
     case 'error':
       return 'Erreur';
+    case 'reconnecting':
+      return 'Reprise du suivi…';
     default:
       return status;
   }

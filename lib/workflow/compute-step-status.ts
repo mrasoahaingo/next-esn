@@ -15,9 +15,10 @@ import {
   getPositioningGenerateSteps,
   getWorkflowStepDefs,
   type WorkflowKind,
+  type WorkflowStepDef,
 } from '@/lib/workflow/workflow-step-labels';
 
-export type StepStatus = 'pending' | 'running' | 'done' | 'error';
+export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'reconnecting';
 
 export type StepStateRow = {
   stepKey: string;
@@ -25,6 +26,14 @@ export type StepStateRow = {
   status: StepStatus;
   errorMessage?: string;
 };
+
+/**
+ * Run actif côté serveur mais aucun événement rejoué (reconnexion NDJSON muette) : on affiche
+ * « Reprise du suivi… » plutôt que des étapes figées en « En attente ».
+ */
+function reconnectingRows(defs: WorkflowStepDef[]): StepStateRow[] {
+  return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'reconnecting' as const }));
+}
 
 function hasCvSkills(d: Partial<ExtractedCV> | null): boolean {
   const s = d?.skills;
@@ -87,6 +96,10 @@ export function computeCvStepStates(input: {
   const workflowRunActive = input.workflowRunActive ?? false;
   if (!input.isStreaming && !input.workflowFailed && !workflowRunActive) {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
+  }
+
+  if (workflowRunActive && input.streamMeta == null && !input.isStreaming && !input.workflowFailed && !errKey) {
+    return reconnectingRows(defs);
   }
 
   const meta = input.streamMeta;
@@ -221,6 +234,10 @@ export function computeJobPostingStepStates(input: {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
   }
 
+  if (workflowRunActive && input.streamMeta == null && !input.isStreaming && !input.workflowFailed && !errKey) {
+    return reconnectingRows(defs);
+  }
+
   const meta = input.streamMeta;
   const phase = meta?.phase;
   const active = meta?.activeBranches ?? [];
@@ -313,6 +330,10 @@ export function computePositioningAnalysisStepStates(input: {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
   }
 
+  if (workflowRunActive && input.streamMeta == null && !input.isStreaming && !input.workflowFailed && !errKey) {
+    return reconnectingRows(defs);
+  }
+
   const meta = input.streamMeta;
   const phase = meta?.phase;
   const active = meta?.activeBranches ?? [];
@@ -368,6 +389,12 @@ export function computePositioningGenerateStepStates(input: {
   errorStepKey: string | null;
   persistedError: WorkflowLastError | null;
   workflowFailed: boolean;
+  /**
+   * True tant que le positionnement est en `generating` avec un run côté serveur.
+   * Sans ça, avant reconnexion au flux NDJSON `isStreaming` est souvent false alors que la
+   * génération tourne — le raccourci « tout terminé » affichait des étapes incohérentes.
+   */
+  workflowRunActive?: boolean;
 }): StepStateRow[] {
   const defs = getPositioningGenerateSteps(input.generateMode);
   const { key: errKey, message: persistedMsg } = resolveErrorKeys(
@@ -376,8 +403,13 @@ export function computePositioningGenerateStepStates(input: {
     input.workflowFailed,
   );
 
-  if (!input.isStreaming && !input.workflowFailed) {
+  const workflowRunActive = input.workflowRunActive ?? false;
+  if (!input.isStreaming && !input.workflowFailed && !workflowRunActive) {
     return defs.map((d) => ({ stepKey: d.stepKey, label: d.shortLabel, status: 'done' as const }));
+  }
+
+  if (workflowRunActive && input.streamMeta == null && !input.isStreaming && !input.workflowFailed && !errKey) {
+    return reconnectingRows(defs);
   }
 
   const meta = input.streamMeta;
@@ -414,7 +446,7 @@ export function formatStepSummaryLine(
   const defs = getWorkflowStepDefs(kind, generateMode);
   if (!defs.length) return null;
 
-  const runningIdx = rows.findIndex((r) => r.status === 'running');
+  const runningIdx = rows.findIndex((r) => r.status === 'running' || r.status === 'reconnecting');
   if (runningIdx >= 0) {
     const i = runningIdx + 1;
     const label = rows[runningIdx]?.label ?? defs[runningIdx]?.shortLabel ?? '';

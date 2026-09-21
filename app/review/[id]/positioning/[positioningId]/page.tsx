@@ -360,6 +360,7 @@ export default function PositioningWizardPage() {
         errorStepKey: generateErrorStepKey,
         persistedError: persistedPositioningWorkflowError,
         workflowFailed: positioningData?.status === 'error',
+        workflowRunActive: positioningData?.status === 'generating',
       }),
     [
       generateStreamMeta,
