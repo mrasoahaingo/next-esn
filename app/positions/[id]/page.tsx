@@ -72,6 +72,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  CV_EXTRACTION_SUCCESS_STATUSES,
+  POSITIONING_ANALYSIS_SUCCESS_STATUSES,
+  resolveWorkflowOutcome,
+} from '@/lib/workflow/workflow-outcome';
+import {
   useMission,
   useUploadCvsForMission,
   useCancelWorkflow,
@@ -1011,11 +1016,13 @@ function PositioningRow({
 
   const analyzeActive = p.status === 'analyzing' && !!p.workflow_run_id;
 
-  const invalidateMission = () => {
+  /** Relit la mission après invalidation : le toast doit refléter l'état persisté, pas la fin du flux. */
+  const refetchMissionDetail = async (): Promise<MissionDetail | undefined> => {
     const oid = orgId ?? '';
-    queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, missionId) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.missions.detail(oid, missionId) });
     queryClient.invalidateQueries({ queryKey: queryKeys.missions.list(oid) });
     queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
+    return queryClient.getQueryData<MissionDetail>(queryKeys.missions.detail(oid, missionId));
   };
 
   const extractStream = useWorkflowStream<Partial<ExtractedCV>, CvExtractionStreamMeta>({
@@ -1023,9 +1030,16 @@ function PositioningRow({
     runId: extractActive ? (candidate?.workflow_run_id ?? undefined) : undefined,
     runStatus: extractActive ? 'extracting' : undefined,
     activeStatuses: ['extracting'],
-    onFinish: () => {
-      invalidateMission();
-      toast.success('Extraction terminee avec succes');
+    onFinish: async () => {
+      const mission = await refetchMissionDetail();
+      const freshCandidate = mission?.positionings.find((row) => row.id === p.id)?.candidates;
+      const outcome = resolveWorkflowOutcome({
+        status: freshCandidate?.status,
+        successStatuses: CV_EXTRACTION_SUCCESS_STATUSES,
+        lastError: freshCandidate?.workflow_last_error ?? null,
+      });
+      if (outcome.kind === 'success') toast.success('Extraction terminée avec succès');
+      else if (outcome.kind === 'error') toast.error(outcome.message, { duration: 8000 });
     },
   });
 
@@ -1034,13 +1048,21 @@ function PositioningRow({
     runId: analyzeActive ? (p.workflow_run_id ?? undefined) : undefined,
     runStatus: analyzeActive ? 'analyzing' : undefined,
     activeStatuses: ['analyzing'],
-    onFinish: () => {
-      invalidateMission();
+    onFinish: async () => {
+      const mission = await refetchMissionDetail();
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(orgId ?? '', p.id) });
       queryClient.invalidateQueries({
         queryKey: queryKeys.positionings.analysisHistory(orgId ?? '', p.id),
       });
-      toast.success('Analyse terminee avec succes');
+
+      const fresh = mission?.positionings.find((row) => row.id === p.id);
+      const outcome = resolveWorkflowOutcome({
+        status: fresh?.status,
+        successStatuses: POSITIONING_ANALYSIS_SUCCESS_STATUSES,
+        lastError: fresh?.workflow_last_error ?? null,
+      });
+      if (outcome.kind === 'success') toast.success('Analyse terminée avec succès');
+      else if (outcome.kind === 'error') toast.error(outcome.message, { duration: 8000 });
     },
   });
 

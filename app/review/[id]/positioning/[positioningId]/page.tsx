@@ -30,6 +30,11 @@ import {
   formatStepSummaryLine,
 } from '@/lib/workflow/compute-step-status';
 import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
+import {
+  POSITIONING_ANALYSIS_SUCCESS_STATUSES,
+  POSITIONING_GENERATE_SUCCESS_STATUSES,
+  resolveWorkflowOutcome,
+} from '@/lib/workflow/workflow-outcome';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import {
@@ -82,6 +87,11 @@ import { QuestionsPanel } from './components/QuestionsPanel';
 import { EmailsGenerationStep } from './components/EmailsGenerationStep';
 import { CvGenerationStep } from './components/CvGenerationStep';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+/** Sous-ensemble relu après invalidation pour décider du toast. */
+type PersistedPositioningState = PositioningWorkflowDiagnostics & {
+  status?: string | null;
+};
 const AnalysisCharts = dynamic(
   () => import('./components/AnalysisCharts').then((m) => m.AnalysisCharts),
   { loading: () => <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-violet" /></div> },
@@ -240,16 +250,29 @@ export default function PositioningWizardPage() {
     runId: positioningData?.workflow_run_id,
     runStatus: positioningData?.status,
     activeStatuses: ['analyzing'],
-    onFinish: () => {
+    onFinish: async () => {
       const oid = orgId ?? '';
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, positioningIdParam) });
+      // La fermeture du flux ne prouve rien : on attend l'état réellement persisté.
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.positionings.detail(oid, positioningIdParam),
+      });
       queryClient.invalidateQueries({
         queryKey: queryKeys.positionings.analysisHistory(oid, positioningIdParam),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
-      toast.success('Analyse terminee avec succes');
+
+      const fresh = queryClient.getQueryData<PersistedPositioningState>(
+        queryKeys.positionings.detail(oid, positioningIdParam),
+      );
+      const outcome = resolveWorkflowOutcome({
+        status: fresh?.status,
+        successStatuses: POSITIONING_ANALYSIS_SUCCESS_STATUSES,
+        lastError: fresh?.workflow_last_error ?? null,
+      });
+      if (outcome.kind === 'success') toast.success('Analyse terminée avec succès');
+      else if (outcome.kind === 'error') toast.error(outcome.message, { duration: 8000 });
     },
   });
 
@@ -267,13 +290,25 @@ export default function PositioningWizardPage() {
     runId: positioningData?.workflow_run_id,
     runStatus: positioningData?.status,
     activeStatuses: ['generating'],
-    onFinish: () => {
+    onFinish: async () => {
       const oid = orgId ?? '';
-      queryClient.invalidateQueries({ queryKey: queryKeys.positionings.detail(oid, positioningIdParam) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.positionings.detail(oid, positioningIdParam),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.positionings.list(oid) });
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
-      toast.success('Generation terminee avec succes');
+
+      const fresh = queryClient.getQueryData<PersistedPositioningState>(
+        queryKeys.positionings.detail(oid, positioningIdParam),
+      );
+      const outcome = resolveWorkflowOutcome({
+        status: fresh?.status,
+        successStatuses: POSITIONING_GENERATE_SUCCESS_STATUSES,
+        lastError: fresh?.workflow_last_error ?? null,
+      });
+      if (outcome.kind === 'success') toast.success('Génération terminée avec succès');
+      else if (outcome.kind === 'error') toast.error(outcome.message, { duration: 8000 });
     },
   });
 
