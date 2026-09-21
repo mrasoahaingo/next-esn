@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.3)
 Phase: 9 of 14 (DB + Schema Foundation + Proxycurl Audit)
 Plan: — of —
 Status: Ready to plan
-Last activity: 2026-07-03 — Roadmap v1.3 Prospection créé (Phases 9–14)
+Last activity: 2026-09-21 — Completed quick task 260921-j3g: Réconciliation des runs workflow zombies bloqués en analyzing/generating
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -58,6 +58,13 @@ None.
 - **Dropcontact async** (POST job + poll/webhook) — stratégie webhook vs polling à prototyper avant Phase 13.
 - **France Travail token refresh** — token OAuth2 expirant cause des échecs cron silencieux ; stratégie de refresh (étape séparée + retry sur 401) à prototyper Phase 10.
 - **`@workflow/next` advisory lock** — interaction `pg_try_advisory_lock` + runs concurrent à valider en staging Phase 10.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260921-j3g | Réconciliation des runs workflow zombies bloqués en analyzing/generating | 2026-09-21 | 566bfb2 | [260921-j3g-reconciliation-des-runs-workflow-zombies](./quick/260921-j3g-reconciliation-des-runs-workflow-zombies/) |
+
 
 ## Session continuity
 
