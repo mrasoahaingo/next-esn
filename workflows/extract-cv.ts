@@ -502,6 +502,13 @@ async function parallelExtractAndStream(
   }
 }
 
+// Un échec de ce step est quasi toujours déterministe (schéma refusé, écriture Postgres
+// refusée) : le rejouer ne fait que re-facturer l'intégralité de ses appels LLM. La
+// relance reste possible à la main depuis la page de review.
+// `prepareCvText` reste volontairement sans plafond : il n'écrit aucun JSONB et sa reprise
+// sans refaire la transcription est délibérée (décision 260921-jz1).
+parallelExtractAndStream.maxRetries = 0;
+
 async function closeExtractStream() {
   'use step';
 

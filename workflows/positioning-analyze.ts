@@ -408,6 +408,12 @@ async function fetchAndAnalyze(positioningId: string) {
   }
 }
 
+// Un échec de ce step est quasi toujours déterministe (schéma refusé, écriture Postgres
+// refusée) : le rejouer ne fait que re-facturer l'intégralité de ses appels LLM — 3 rejeux
+// = 15 appels sur une analyse de positionnement. La relance reste possible à la main via
+// le bouton « Relancer l'analyse ».
+fetchAndAnalyze.maxRetries = 0;
+
 async function closeAnalysisStream() {
   'use step';
 

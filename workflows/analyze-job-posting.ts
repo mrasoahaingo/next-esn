@@ -277,6 +277,11 @@ async function fetchAndAnalyze(missionId: string) {
   }
 }
 
+// Un échec de ce step est quasi toujours déterministe (schéma refusé, écriture Postgres
+// refusée) : le rejouer ne fait que re-facturer l'intégralité de ses appels LLM. La
+// relance reste possible à la main depuis la page mission.
+fetchAndAnalyze.maxRetries = 0;
+
 async function closeJobPostingStream() {
   'use step';
 

@@ -489,6 +489,11 @@ async function fetchAndGenerate(
   }
 }
 
+// Un échec de ce step est quasi toujours déterministe (schéma refusé, écriture Postgres
+// refusée) : le rejouer ne fait que re-facturer l'intégralité de ses appels LLM. La
+// relance reste possible à la main via le bouton « Regénérer ».
+fetchAndGenerate.maxRetries = 0;
+
 async function closeGenerateStream() {
   'use step';
 
