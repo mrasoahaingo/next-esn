@@ -6,6 +6,7 @@ import { generateBriefStream, RADAR_BRIEF_MODEL_ID, type BriefChannel, type Brie
 import { getProspectDetail } from '@/lib/radar/queries';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { requireOrgContext } from '@/lib/utils/auth';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 
 const BriefRequestSchema = z.object({
   companyId: z.string().uuid(),
@@ -72,13 +73,24 @@ export async function POST(request: Request) {
             outputPayload: responseMessage,
             callStatus: isAborted ? 'cancelled' : 'completed',
           });
-          await getSupabase().from('radar_actions').insert({
+          // On est dans le `onFinish` d'un stream déjà renvoyé au client : lever n'aurait aucun
+          // destinataire. On lit donc `{ error }` uniquement pour le rendre visible en logs.
+          const { error: logActionError } = await getSupabase().from('radar_actions').insert({
             org_id: orgId,
             user_id: userId,
             company_id: body.companyId,
             action: 'brief_generated',
             outcome: 'pending',
           });
+
+          if (logActionError) {
+            logSupabaseWriteError({
+              table: 'radar_actions',
+              recordId: body.companyId,
+              operation: 'radar.brief.logAction',
+              supabaseError: logActionError,
+            });
+          }
         } catch (error) {
           console.error('radar brief logging:', error);
         }

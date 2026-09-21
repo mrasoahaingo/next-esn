@@ -1,5 +1,6 @@
 import { unstable_cache } from 'next/cache';
 import { getSupabase } from '@/lib/utils/supabase';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 import { averageEmbeddings, generateEmbedding } from '@/lib/radar/embeddings';
 import { refreshMatchesForCompany } from '@/lib/radar/matching';
 import {
@@ -69,10 +70,22 @@ async function findOrCreateCompany(
     if (bySiren) {
       // Enrichir le SIREN si le nom a changé (fusion, rebranding)
       if (bySiren.name !== signal.companyName.trim()) {
-        await supabase
+        // Best-effort : la ligne est déjà identifiée par son SIREN, un nom périmé est un
+        // désagrément d'affichage, pas une perte de donnée. On logue sans faire échouer
+        // l'ingestion du signal.
+        const { error: refreshNameError } = await supabase
           .from('radar_companies')
           .update({ name: signal.companyName.trim(), updated_at: new Date().toISOString() })
           .eq('id', bySiren.id);
+
+        if (refreshNameError) {
+          logSupabaseWriteError({
+            table: 'radar_companies',
+            recordId: bySiren.id,
+            operation: 'radar.findOrCreateCompany.refreshName',
+            supabaseError: refreshNameError,
+          });
+        }
       }
       return bySiren as RadarCompanyRow;
     }
@@ -92,10 +105,26 @@ async function findOrCreateCompany(
   if (byName) {
     // Enrichir le SIREN si on l'a maintenant et qu'il manquait
     if (!byName.siren && signal.companySiren) {
-      await supabase
+      const { error: backfillSirenError } = await supabase
         .from('radar_companies')
         .update({ siren: signal.companySiren, updated_at: new Date().toISOString() })
         .eq('id', byName.id);
+
+      if (backfillSirenError) {
+        // Le SIREN est la clé de réconciliation : un échec silencieux ici recrée un doublon au
+        // run suivant (le rapprochement repassera par le nom normalisé). On ne fait pas échouer
+        // l'ingestion, mais on refuse de retourner un objet OPTIMISTE : l'appelant reçoit la
+        // ligne telle qu'elle est réellement en base, sans le SIREN qui n'a pas été persisté.
+        logSupabaseWriteError({
+          table: 'radar_companies',
+          recordId: byName.id,
+          operation: 'radar.findOrCreateCompany.backfillSiren',
+          supabaseError: backfillSirenError,
+        });
+        return byName as RadarCompanyRow;
+      }
+
+      return { ...byName, siren: signal.companySiren } as RadarCompanyRow;
     }
     return byName as RadarCompanyRow;
   }
@@ -417,7 +446,7 @@ export async function enrichProspectLinkedIn(orgId: string, companyId: string): 
 
   const existingEnrichment = (company.enrichment_data as Record<string, unknown> | null) ?? {};
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('radar_companies')
     .update({
       linkedin_url: linkedinUrl ?? company.linkedin_url,
@@ -430,6 +459,21 @@ export async function enrichProspectLinkedIn(orgId: string, companyId: string): 
       updated_at: new Date().toISOString(),
     })
     .eq('id', companyId);
+
+  if (updateError) {
+    // Appel API le plus coûteux du produit : si l'update échoue, l'enrichissement déjà facturé
+    // est perdu et sera re-facturé au prochain passage. On ne lève pas (l'opération englobante
+    // — boucle des prospects chauds — ne doit pas s'arrêter), mais on retourne `0` : ici `0`
+    // signifie « RIEN N'A ÉTÉ PERSISTÉ », ce qui est exactement ce que l'appelant doit croire.
+    // Compter des contacts absents de la base ferait sauter un ré-enrichissement nécessaire.
+    logSupabaseWriteError({
+      table: 'radar_companies',
+      recordId: companyId,
+      operation: 'radar.enrichProspectLinkedIn.update',
+      supabaseError: updateError,
+    });
+    return 0;
+  }
 
   return contacts.length;
 }
@@ -579,7 +623,7 @@ export async function upsertDiscoveredCompany(
     .maybeSingle();
 
   if (existing?.id) {
-    await supabase
+    const { error: refreshError } = await supabase
       .from('radar_companies')
       .update({
         name: company.name.trim(),
@@ -589,6 +633,17 @@ export async function upsertDiscoveredCompany(
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id);
+
+    if (refreshError) {
+      // Retour inchangé : la ligne existe bien et reste retrouvable par son `linkedin_url`,
+      // seul son rafraîchissement descriptif a échoué. Risque faible, log suffisant.
+      logSupabaseWriteError({
+        table: 'radar_companies',
+        recordId: existing.id,
+        operation: 'radar.upsertDiscoveredCompany.refreshByLinkedin',
+        supabaseError: refreshError,
+      });
+    }
     return existing.id;
   }
 
@@ -600,7 +655,7 @@ export async function upsertDiscoveredCompany(
 
   const byName = (allByOrg ?? []).find((row) => normalizeCompanyName(row.name) === normalizedName);
   if (byName?.id) {
-    await supabase
+    const { error: backfillLinkedinError } = await supabase
       .from('radar_companies')
       .update({
         linkedin_url: company.linkedinUrl,
@@ -610,6 +665,19 @@ export async function upsertDiscoveredCompany(
         updated_at: new Date().toISOString(),
       })
       .eq('id', byName.id);
+
+    if (backfillLinkedinError) {
+      // Risque résiduel assumé : sans `linkedin_url` persistée, le prochain run ne retrouvera
+      // pas la ligne par LinkedIn et repassera par le rapprochement par nom normalisé —
+      // dégradé mais non destructeur. C'est pourquoi on n'échoue pas ici, et pourquoi on
+      // conserve `byName.id` : la ligne existe, elle a juste gardé son état antérieur.
+      logSupabaseWriteError({
+        table: 'radar_companies',
+        recordId: byName.id,
+        operation: 'radar.upsertDiscoveredCompany.backfillLinkedin',
+        supabaseError: backfillLinkedinError,
+      });
+    }
     return byName.id;
   }
 
