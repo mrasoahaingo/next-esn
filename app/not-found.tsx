@@ -1,22 +1,32 @@
+import '@/app/esneo-site.css';
+
+import Image from 'next/image';
 import Link from 'next/link';
-import { FileQuestion } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight } from 'lucide-react';
+import { PHOTOS } from '@/components/site/images';
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-        <FileQuestion className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold">Page introuvable</h2>
-        <p className="text-sm text-muted-foreground">
-          La page que vous recherchez n&apos;existe pas ou a été déplacée.
+    <div className="es es-404">
+      <div className="es-404__copy">
+        <h1 className="es-head">Cette page n’existe pas.</h1>
+        <p>
+          Le lien est peut-être ancien, ou la page a été déplacée. Vos CV, missions et positionnements sont
+          toujours là.
         </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 24px', alignItems: 'center' }}>
+          <Link href="/dashboard" className="es-btn">
+            Aller au dashboard
+            <ArrowRight className="size-4" aria-hidden />
+          </Link>
+          <Link href="/" className="es-link">
+            Retour à l’accueil
+          </Link>
+        </div>
       </div>
-      <Button variant="outline" nativeButton={false} render={<Link href="/" />}>
-        Retour à l&apos;accueil
-      </Button>
+      <div className="es-404__photo">
+        <Image src={PHOTOS.couloir.src} alt={PHOTOS.couloir.alt} fill sizes="(max-width: 860px) 100vw, 58vw" />
+      </div>
     </div>
   );
 }

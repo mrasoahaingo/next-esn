@@ -1,49 +1,31 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { EsneoFullLogo } from '@/components/esneo-full-logo';
+import { PHOTO_CREDIT, type SitePhoto } from '@/components/site/images';
 
 /**
- * Panneau de marque gauche des pages auth — statique (pas de motion), aux
- * jetons Esneo (encre primaire). Reprend la voix de la landing pour que la
- * connexion ne ressemble pas à une page orpheline.
+ * Panneau gauche des pages auth : une photo du métier (générée par IA, légendée),
+ * un voile neutre sous le texte, la promesse de la landing. Statique.
  */
-export function AuthBrandPanel({
-  kicker,
-  title,
-  accent,
-  lede,
-}: {
-  kicker: string;
-  title: string;
-  accent: string;
-  lede: string;
-}) {
+export function AuthBrandPanel({ title, lede, photo }: { title: string; lede: string; photo: SitePhoto }) {
   return (
-    <aside className="bg-primary text-primary-foreground relative hidden flex-col justify-between overflow-hidden p-10 md:flex lg:p-14">
-      <Link
-        href="/"
-        className="group text-primary-foreground/70 hover:text-primary-foreground inline-flex w-fit items-center gap-2 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-        <EsneoFullLogo className="h-5 w-auto text-primary-foreground" title="Esneo" />
+    <aside className="es-auth__panel">
+      <Image src={photo.src} alt={photo.alt} width={photo.width} height={photo.height} priority sizes="50vw" />
+      <div className="es-auth__scrim" aria-hidden />
+
+      <Link href="/" className="es-auth__brand es-link" aria-label="Retour à l’accueil Esneo">
+        <ArrowLeft className="size-4" aria-hidden />
+        <EsneoFullLogo className="text-white" title="Esneo" />
       </Link>
 
-      <div className="max-w-md">
-        <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground/60">
-          {kicker}
-        </p>
-        <h1 className="hl-serif text-[clamp(2rem,3.5vw,2.75rem)] leading-[1.06] font-semibold tracking-tight text-balance">
-          {title} <span className="text-primary-foreground/60">{accent}</span>
-        </h1>
-        <p className="mt-5 text-base leading-relaxed text-pretty text-primary-foreground/75">
-          {lede}
+      <div>
+        <h1 className="es-auth__title">{title}</h1>
+        <p className="es-auth__lede">{lede}</p>
+        <p className="es-auth__note">
+          Vos CV ne quittent l’espace de votre organisation que pour l’extraction, l’analyse et la rédaction, confiées à des modèles d’IA tiers. {PHOTO_CREDIT}
         </p>
       </div>
-
-      <p className="text-primary-foreground/55 max-w-md text-xs leading-relaxed text-pretty">
-        Chaque ESN dispose d’un espace isolé, avec une relecture humaine par
-        défaut. Vos données restent privées.
-      </p>
     </aside>
   );
 }
