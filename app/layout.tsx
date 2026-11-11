@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { frFR } from "@clerk/localizations";
@@ -21,14 +21,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Editorial soft-serif for display headings, paired with Geist sans for body/UI.
-// opsz + SOFT axes enable Fraunces' optical-size display cut at large sizes
-// (without them the headings render flat). font-optical-sizing: auto handles it.
-const fraunces = Fraunces({
-  variable: "--font-serif",
+// Pages publiques (landing, connexion, inscription, 404 — `.es`, app/esneo-site.css) :
+// Hanken Grotesk 400/500 porte la voix ; les fragments d'interface gardent Geist,
+// la police du produit. Voir DESIGN.md.
+const hanken = Hanken_Grotesk({
+  variable: "--font-hanken",
   subsets: ["latin"],
-  axes: ["opsz", "SOFT"],
+  weight: ["400", "500"],
 });
+
+// Champs Clerk sans texte indicatif (le libellé suffit) ; « Create a password »
+// venait d'une clé absente de frFR.
+const clerkLocalization = {
+  ...frFR,
+  formFieldInputPlaceholder__signUpPassword: '',
+  formFieldInputPlaceholder__password: '',
+  formFieldInputPlaceholder__emailAddress: '',
+} as typeof frFR;
 
 export const metadata: Metadata = {
   title: "Esneo",
@@ -46,11 +55,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} app-surface antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${hanken.variable} app-surface antialiased`}
       >
         <ClerkProvider
           afterSignOutUrl="/sign-in"
-          localization={frFR}
+          localization={clerkLocalization}
           appearance={{
             elements: {
               card: 'bg-card border border-border shadow-xl',

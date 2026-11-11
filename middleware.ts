@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/org-selection(.*)',
   '/.well-known/(.*)',
+  // Carte de partage de la landing (app/opengraph-image.tsx), lue par les robots sans session.
+  '/opengraph-image(.*)',
 ])
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)', '/templates(.*)'])
