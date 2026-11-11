@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Prospection
 status: planning
-stopped_at: Phase 9 context gathered
-last_updated: "2026-07-03T22:19:14.671Z"
-last_activity: 2026-07-03 — Roadmap v1.3 Prospection créé (Phases 9–14)
+stopped_at: context exhaustion at 75% (2026-11-11)
+last_updated: "2026-11-11T23:42:43.361Z"
+last_activity: "2026-09-21 — Completed quick task 260921-seo: Écritures Supabase non contrôlées traitées + règle ESLint de prévention"
 progress:
   total_phases: 7
   completed_phases: 0
@@ -67,12 +67,12 @@ None.
 | 260921-jz1 | Payloads volumineux retirés des frontières de steps workflow + visibilité des échecs | 2026-09-21 | 2c96649 | [260921-jz1-ne-plus-faire-transiter-les-payloads-vol](./quick/260921-jz1-ne-plus-faire-transiter-les-payloads-vol/) |
 | 260921-ksd | Assainissement des caractères interdits par Postgres avant tout écrit JSONB + plafond de retry | 2026-09-21 | 116fb14 | [260921-ksd-assainir-les-caracteres-interdits-par-po](./quick/260921-ksd-assainir-les-caracteres-interdits-par-po/) |
 | 260921-seo | Écritures Supabase non contrôlées traitées (17 sites) + règle ESLint de prévention | 2026-09-21 | 2a1b793 | [260921-seo-traiter-les-11-ecritures-supabase-non-co](./quick/260921-seo-traiter-les-11-ecritures-supabase-non-co/) |
-
+| 261111-q9p | Refonte visuelle des pages publiques (landing, auth, 404) : photos GPT Image 2.6, jury de 3 juges | 2026-11-12 | ea6fb48 | [261111-q9p-refonte-visuelle-des-pages-publiques-esn](./quick/261111-q9p-refonte-visuelle-des-pages-publiques-esn/) |
 
 ## Session continuity
 
-**Last session:** 2026-07-03T22:19:14.662Z
-**Stopped at:** Phase 9 context gathered
-**Resume file:** .planning/phases/09-db-schema-foundation-proxycurl-audit/09-CONTEXT.md
+**Last session:** 2026-11-11T23:42:43.357Z
+**Stopped at:** context exhaustion at 75% (2026-11-11)
+**Resume file:** None
 
 **Next step:** `/gsd:plan-phase 9` — DB + Schema Foundation + Proxycurl Audit
