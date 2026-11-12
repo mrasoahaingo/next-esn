@@ -99,7 +99,7 @@ Grille de 12 colonnes, marges `clamp(20px, 2,8vw, 40px)`, sections espacées de 
 | Héros | titre colonnes 1–9 ; texte et action colonnes 1–4 ; scène photo en onglet de dossier colonnes 5–12, débordant à droite, fragment de positionnement dessus |
 | Intro | phrase d'ouverture, puis planche éditoriale : photo du point staffing pleine largeur portant deux fragments (nouvelle demande client, positionnements de la semaine), deux portraits et quatre faits courts ; mention « générées par IA » |
 | Statuts | tableau d'affichage pleine largeur, une ligne ouverte en azur, cliquable |
-| Fonctionnement | quatre temps à gauche, fragment épinglé sur la photo du bureau (onglet) qui change d'état ; sur téléphone, chaque étape porte son fragment sur un recadrage distinct |
+| Fonctionnement | quatre temps à gauche, fragment épinglé sur la photo du bureau (onglet) qui change d'état ; sur téléphone, une seule bande photo en onglet puis chaque étape avec sa carte sur papier, en décalé alterné |
 | Fiabilité | mosaïque : grande case (photo + dossier de compétences) et quatre petites preuves ; carrousel horizontal sur téléphone |
 | Contrat | champ azur : titre de chapitre, quatre groupes titrés (fait / ne fera jamais / arrêtez / gagnez) |
 | Questions | index des questions à gauche, réponse en grand à droite (accordéon sur téléphone) |
