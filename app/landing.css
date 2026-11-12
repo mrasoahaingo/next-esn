@@ -2,13 +2,13 @@
  * theme: custom (tuned) · vibe: "verre iOS de nuit, lumière azur, sobre" · paper: oklch(14% 0.012 265) · accent: oklch(55% 0.2 264)
  * display + voice: Albert Sans 600 (roman, −0.03em) · product UI: Geist · data: Geist Mono · axes: dark / grotesk-sans / cool
  * diversification: same three axes as the previous build (Graphite Pro) — user override (no serif), accepted deviation from the rotation rule
- * wordmark: typographic « esneo » in Albert Sans 700 + azur status dot — site-wide logo (components/esneo-full-logo.tsx, SVG) ; landing nav/footer use components/landing/esneo-wordmark.tsx
+ * logo: the user's original script logo (components/esneo-full-logo.tsx, SVG, currentColor), sized by height via .eg-logo, margins cropped to the letters
  * enrichment: Tier A — HTML/CSS product fragments in glass windows over the paper they replace + one existing AI photo (hero, darkened)
  * glass: explicit user override of the genre ban — product windows, nav pill, frosted "Bientôt" panes only; ≤ 3 blurred layers on screen; blur radius never animated
  * tone: luxe technique · context: inferred by orchestrator · studied: no · pre-emit critique: P4 H5 E4 S5 R4 V4
  * r2 (jury tour 3): blur only over a photo or a sheet (hero, screens 1/2/4, tracking board; nav pill; frosted panes), opaque panels elsewhere,
  *   no blur on product windows under 60rem · halos anchored to hero and the lit trust band · numbered tour 01–04 with a progress rail
- *   · scroll-driven sheen (animation-timeline: view(), progressive) · breathing wordmark dot · conditional docs pane with height glide
+ *   · scroll-driven sheen (animation-timeline: view(), progressive) · conditional docs pane with height glide
  * slop: 58/58 · contrast: pass (40–41, worst pixel ≥ 4.67:1 behind every visible text on glass, measured) · honest: pass (46)
  * chrome: pass (47) · tokens: pass (48) · mobile: pass (34, 49, 50–57) at 320/375/414/768
  * r3: fixed-height hero photo + reserved stage (no shift below), done bar always visible on phones, tour eyebrow under 40rem,
@@ -16,12 +16,14 @@
  * r4: masked 90° skewed sheen (no edge, none on azure), preview reserved with a skeleton (CLS 0), single live region, flat footer dot
  * r5: hero caption on the paperwork, stage 5rem higher with the halo in the title's void, decorative org card removed, CLS 0
  * r6 (validated, integrated): landing on /, /apercu removed · sign-in, sign-up, 404 in the same direction (photo + one glass pane,
- *   Clerk left-aligned, bordered fields, worst pixel ≥ 8:1 on the pane, brand-corner veil ≥ 10:1) · SVG wordmark site-wide
+ *   Clerk left-aligned, bordered fields, worst pixel ≥ 8:1 on the pane, brand-corner veil ≥ 10:1)
  * r7: public pages rendered without waiting for Clerk (SSR, no JS, no root Suspense) · form column h1 + azure halo · phone
  *   auth: 9rem photo band, promise reduced to one line, first field and « Continuer » above the fold at 375 × 667 · desktop
- *   pane 30rem framed on the paper CV · Clerk styled through appearance only · wordmark vectorised (Albert Sans OFL paths)
+ *   pane 30rem framed on the paper CV · Clerk styled through appearance only
  * r8 (jury r7 9.2 / 9.4 / 9.1): Clerk footer left-aligned, quiet phone promise, red focus ring on invalid fields, 404 seams
  *   removed and « Se connecter » when signed out, card title below the form h1 on desktop, per-page titles and descriptions
+ * r9: the user's original script logo everywhere (nav, footer mast, auth, 404, OG card) · legacy public-page system deleted
+ *   (marketing landing, site components, esneo-site.css, Hanken, unused photos)
  * loosened by user request: glass (genre ban), repeated theme axes, height transition on the hero work area (layout property)
  */
 
@@ -185,7 +187,6 @@ html:has(.eg-landing) {
   --dur-long: 420ms;
   --dur-morph: 520ms;
   --dur-reveal: 900ms;
-  --dur-breathe: 3.6s;
 
   /* Plans */
   --z-base: 1;
@@ -744,38 +745,19 @@ html:has(.eg-landing) {
   color: var(--color-accent-text);
 }
 
-/* ─── Mot-symbole « esneo » ───────────────────────────────────────────── */
-.eg-mark {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.07em;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-style: normal;
-  line-height: 1;
-  letter-spacing: -0.05em;
-  font-kerning: normal;
-  color: var(--color-ink);
-  white-space: nowrap;
-}
-.eg-mark__word {
-  display: inline-block;
-}
-.eg-mark__k1 {
-  margin-inline: -0.008em -0.004em;
-}
-.eg-mark__k2 {
-  margin-left: -0.01em;
-}
-.eg-mark__dot {
+/* ─── Logo ────────────────────────────────────────────────────────────── */
+/* Le logo script d'origine (components/esneo-full-logo.tsx, viewBox 2816 × 510).
+ * Son tracé occupe x 199,5 → 2606,7 : on rogne ces marges latérales pour que les
+ * lettres s'alignent sur la colonne. On règle la hauteur (--logo-h) ; la largeur
+ * suit le rapport de la viewBox (5,5216). Couleur : l'encre de la page. */
+.eg-logo {
+  --logo-h: 1.5rem;
+  display: block;
   flex: none;
-  width: 0.18em;
-  height: 0.18em;
-  border-radius: 50%;
-  background: var(--color-accent);
-  box-shadow:
-    inset 0 0.02em 0 var(--glass-spec-mid),
-    0 0 0.45em var(--color-accent-glow);
+  width: calc(var(--logo-h) * 5.5216);
+  height: var(--logo-h);
+  margin-inline: calc(var(--logo-h) * -0.3912) calc(var(--logo-h) * -0.4105);
+  color: var(--color-ink);
 }
 
 /* ─── Nav N10 : barre transparente → pilule de verre ─────────────────── */
@@ -827,7 +809,7 @@ html:has(.eg-landing) {
   transition: transform var(--dur-morph) var(--ease-out);
 }
 .eg-nav__logo {
-  font-size: 1.75rem;
+  --logo-h: 1.5rem;
 }
 .eg-nav__links {
   display: none;
@@ -2942,7 +2924,7 @@ html:has(.eg-landing) {
   }
 }
 
-/* ─── Pied Ft1 : le mot-symbole en mât, pleine largeur, sans couture ──── */
+/* ─── Pied Ft1 : le logo en mât, pleine largeur, sans couture ─────────── */
 .eg-foot {
   padding-block: var(--space-2xl) var(--space-xl);
   overflow: clip;
@@ -2956,19 +2938,10 @@ html:has(.eg-landing) {
   container-type: inline-size;
   margin-top: clamp(2rem, 5vw, 4rem);
 }
-/* Le mot remplit la colonne, marges comprises : « esneo » + pastille mesure
- * --mark-em em (calibré à l'écran), d'où 100cqi / --mark-em. */
+/* Le logo remplit la colonne : ses lettres (2407,2 unités de large sur 510 de
+ * haut) mesurent 100cqi, d'où une hauteur de 100cqi × 510 / 2407,2. */
 .eg-foot__mark {
-  --mark-em: 2.66;
-  font-size: calc(100cqi / var(--mark-em));
-  line-height: 0.82;
-  letter-spacing: -0.06em;
-}
-.eg-foot__mark .eg-mark__dot {
-  width: 0.11em;
-  height: 0.11em;
-  box-shadow: 0 0 0.35em var(--color-accent-glow);
-  animation: eg-breathe var(--dur-breathe) var(--ease-in-out) infinite;
+  --logo-h: calc(100cqi * 0.21187);
 }
 .eg-foot__tag {
   max-width: 32rem;
@@ -3035,17 +3008,6 @@ html:has(.eg-landing) {
     transform: scaleY(1);
   }
 }
-@keyframes eg-breathe {
-  0%,
-  100% {
-    opacity: 0.82;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.16);
-  }
-}
 @keyframes eg-menu-in {
   from {
     opacity: 0;
@@ -3109,9 +3071,6 @@ html:has(.eg-landing) {
   .eg .eg-menu {
     animation-name: eg-fade;
   }
-  .eg .eg-foot__mark .eg-mark__dot {
-    animation: none !important;
-  }
   .eg .eg-nav__inner,
   .eg .eg-nav__brand,
   .eg .eg-nav__end,
@@ -3161,7 +3120,7 @@ html:has(.eg-landing) {
   content: '';
   position: absolute;
   inset: 0;
-  /* Le coin de la marque reçoit son propre voile : la flèche et le mot-symbole
+  /* Le coin de la marque reçoit son propre voile : la flèche et le logo
    * gardent au moins 3:1 sur le pixel le plus clair de chaque photo ; en bas,
    * le voile porte la promesse puis se fond dans le papier. */
   background:
@@ -3185,8 +3144,7 @@ html:has(.eg-landing) {
   height: 1rem;
 }
 .eg-auth__logo {
-  width: 6rem;
-  color: var(--color-ink);
+  --logo-h: 1.25rem;
 }
 /* Légende sur la photo : bureau seulement (au téléphone, sous le formulaire). */
 .eg-auth__chip {
@@ -3293,7 +3251,7 @@ html:has(.eg-landing) {
       linear-gradient(180deg, var(--color-veil-mid) 0%, transparent 22%);
   }
   .eg-auth__logo {
-    width: 6.5rem;
+    --logo-h: 1.375rem;
   }
   .eg-auth__chip {
     display: block;
@@ -3381,8 +3339,7 @@ html:has(.eg-landing) {
   border-radius: var(--radius-control);
 }
 .eg-404__logo {
-  width: 6.5rem;
-  color: var(--color-ink);
+  --logo-h: 1.5rem;
 }
 .eg-404__text {
   max-width: 38ch;

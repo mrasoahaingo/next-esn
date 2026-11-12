@@ -12,7 +12,7 @@ import { StatusWindow } from '@/components/landing/status-window';
 import { DocsWindow } from '@/components/landing/docs-window';
 import { TourProgress } from '@/components/landing/tour-progress';
 import { LandingFaq } from '@/components/landing/landing-faq';
-import { EsneoWordmark } from '@/components/landing/esneo-wordmark';
+import { EsneoFullLogo } from '@/components/esneo-full-logo';
 import { MissionWindow, ScoreWindow, SheetCv, SheetMission } from '@/components/landing/tour-windows';
 
 /* Photo existante (brut .media/esneo/fin-1.png, converti sans retouche en
@@ -414,7 +414,7 @@ export function Landing(): React.JSX.Element {
         </section>
       </main>
 
-      {/* ─── Pied Ft1 : le mot-symbole en mât, pleine largeur ─────────────── */}
+      {/* ─── Pied Ft1 : le logo en mât, pleine largeur ──────────────────────── */}
       <footer className="eg-foot">
         <div className="eg-wrap eg-foot__band">
           <p className="eg-foot__tag">
@@ -432,7 +432,7 @@ export function Landing(): React.JSX.Element {
           </nav>
         </div>
         <div className="eg-wrap eg-foot__mast">
-          <EsneoWordmark className="eg-foot__mark" />
+          <EsneoFullLogo className="eg-logo eg-foot__mark" title="Esneo" />
         </div>
         <p className="eg-wrap eg-foot__fine">
           {fr('© 2026 Esneo · Photographies générées par IA, personnes fictives · Candidats, consultants et missions affichés : exemples fictifs.')}

@@ -153,7 +153,7 @@ Conteneur `--page-max` 76rem, marges `--gutter` `clamp(1rem, 4vw, 3rem)`, espace
 | Bientôt | deux vitres restées givrées sur une mini-interface éteinte : Prospection ; Claude branché sur Esneo via un connecteur (MCP) ; chacune marquée « Bientôt » |
 | Questions | titre à gauche, accordéon à droite (empilés sur téléphone) |
 | Action finale | verre teinté azur (opaque) : « Essayez Esneo sur vos propres CV. », la suite en clair, bouton clair, phrase sur l'usage des données |
-| Pied (Ft1) | une ligne d'accroche et les liens, puis le mot-symbole en mât pleine largeur (taille en `cqi`), puis la ligne des mentions (photos IA, exemples fictifs) |
+| Pied (Ft1) | une ligne d'accroche et les liens, puis le logo en mât, lettres pleine largeur de la colonne (taille en `cqi`), puis la ligne des mentions (photos IA, exemples fictifs) |
 | Connexion / inscription | colonne du formulaire : titre « Se connecter » ou « Créer votre compte » (le seul h1 : 1,75rem au téléphone, 2rem au bureau), formulaire Clerk aligné à gauche jusqu'à « Secured by Clerk », sur un halo azur discret (hauteur réservée, CLS nul), puis la phrase sur les données. Téléphone : photo en bande de 9rem, marque en haut, la promesse réduite à une ligne discrète (`ink-2`, 400) sur le voile ; « Sans carte bancaire. » sous le titre de l'inscription ; légende IA sous le formulaire ; sur 375 × 667, le premier champ et « Continuer » sont visibles dès l'arrivée. Bureau ≥ 60rem : deux colonnes, photo pleine hauteur à gauche (marque en haut, légende en pastille à droite, vitre de 30rem en bas : promesse en 500, plus petite que le h1, et son chapeau), cadrée pour laisser voir le CV papier de la photo de connexion |
 | 404 | page entière pour tout chemin inconnu (le middleware ne protège que les routes de l'app) ; téléphone : photo du couloir en tête, puis marque, « Cette page n'existe pas. », texte, « Retour à l'accueil » et « Se connecter » (« Ouvrir l'app » une fois connecté, même bascule que la landing) ; bureau : texte 5/12 à gauche, photo 7/12 à droite. Les voiles de la photo partent du papier plein (3rem) : aucune couture |
 
@@ -192,30 +192,26 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - Nav : morphose barre → pilule sur `transform` et `opacity` (520 ms, `--ease-out`). Menu : entrée 220 ms.
 - Apparitions de la visite (`components/landing/landing-reveal.tsx`) : chaque fenêtre part d'une opacité de 0,25
   et se pose une fois. Sans script, rien n'est masqué.
-- La pastille du mot-symbole du pied respire (3,6 s).
 - Durées : 120 / 220 / 420 / 520 / 900 ms ; courbes `--ease-out` `cubic-bezier(0.16, 1, 0.3, 1)`.
-- `prefers-reduced-motion: reduce` : fondus de 150 ms au plus, pas de transformation, pas de respiration, pas de
+- `prefers-reduced-motion: reduce` : fondus de 150 ms au plus, pas de transformation, pas de
   reflet ni de fil animé, défilement instantané. Le contenu est intact.
 
 ## Logo
 
-- Le **mot-symbole** : « esneo » en minuscules, Albert Sans 700, interlettrage resserré, suivi de la **pastille de
-  statut azur** `#3466e6`. C'est celle qui, dans le produit, dit qu'un traitement tourne et où il en est ; elle est
-  posée comme un point.
-- **Partout** : `components/esneo-full-logo.tsx` (SVG, même nom et mêmes props qu'avant). Les glyphes sont
-  **vectorisés en tracés** : Albert Sans (SIL OFL 1.1), instance 700 du fichier variable du dépôt google/fonts,
-  convertie avec opentype.js aux positions mesurées sur le mot-symbole de la landing (interlettrage −0,05 em,
-  crénage `s` −0,008/−0,004 em, second `e` −0,01 em). Le logo ne dépend donc d'aucune police chargée et ne s'étire
-  jamais. Le mot est en `currentColor` (clair en thème sombre, sombre en thème clair, via `text-foreground` par
-  défaut) ; seule la pastille reste azur. Dimensionné à la largeur (`viewBox` 269,55 × 51,4) : barre latérale de
-  l'app 120×23 px, centré (`w-30`) ; sélection d'organisation 240 px ; pages d'authentification 6 à 6,5rem. Les
-  tracés sont exportés (`ESNEO_WORDMARK_PATH`) et servent aussi à la carte de partage (`app/opengraph-image.tsx`).
-- **Variante texte** : `components/landing/esneo-wordmark.tsx` (même dessin, crénage paire par paire, taille en
-  `em`), pour la nav de la landing et le mât du pied en `cqi`.
-- Restent sur l'ancien dessin, hors pages et hors UI : l'icône d'onglet (`public/esneo-icon.svg`,
-  `app/layout.tsx`) et le logo de repli du dossier de compétences PDF quand l'organisation n'a pas de logo
-  (`public/esneo-full.svg`, `templates/cv-dossier-layout.ts`). Les tracés vectorisés permettent maintenant de
-  les remplacer ; ce sont des fichiers du produit, laissés en l'état.
+- **Le logo script d'origine d'Esneo**, inchangé : `components/esneo-full-logo.tsx` (tracé SVG, `viewBox` 2816 × 510,
+  même géométrie que `public/esneo-full.svg`), en `currentColor`. Sur les pages publiques, il prend l'encre de la
+  page (`--color-ink`, clair sur fond sombre) ; dans l'app, `text-foreground` (sombre en thème clair, clair en
+  thème sombre).
+- Sur les pages publiques, la classe `.eg-logo` (`app/landing.css`) le règle par sa hauteur (`--logo-h`) et rogne
+  les marges latérales de la `viewBox` (le tracé occupe x 199,5 → 2606,7) pour que les lettres s'alignent sur la
+  colonne : nav 1,5rem de haut (dans une pilule de 60 px) ; connexion et inscription 1,25rem au téléphone, 1,375rem
+  au bureau, sur le voile d'angle de la photo (9,9:1 au moins sur le pixel le plus clair) ; 404 1,5rem ; pied en
+  mât, lettres pleine largeur de la colonne (hauteur `100cqi × 510 / 2407,2`).
+- Dans l'app, rien ne change : barre latérale 120 × 22 px, centré (`w-30`) ; sélection d'organisation 240 px.
+- La carte de partage (`app/opengraph-image.tsx`) reprend le même tracé (`PATH_D`, exporté par le composant sans
+  changer son rendu), rogné sur ses lettres.
+- Historique : un mot-symbole typographique (Albert Sans 700 et pastille azur) a été essayé pendant cette
+  direction, puis abandonné à la demande de l'utilisateur, qui garde son logo.
 
 ## Honnêteté
 
@@ -271,11 +267,11 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 | Connexion, inscription | `components/auth/auth-screen.tsx` (coquille et apparence Clerk), `auth-brand-panel.tsx`, `auth-form-a11y.tsx` ; messages Clerk dans `app/layout.tsx` |
 | Routes publiques et protégées | `lib/config/app-routes.ts` (middleware et coque), `middleware.ts`, `components/authenticated-shell.tsx` |
 | 404 | `app/not-found.tsx` |
-| Logo | `components/esneo-full-logo.tsx`, `components/landing/esneo-wordmark.tsx` |
+| Logo | `components/esneo-full-logo.tsx` (logo script d'origine), classe `.eg-logo` dans `app/landing.css` |
 | Photos | `components/site/images.ts`, `public/media/esneo/` ; prompts dans `docs/media/esneo/` |
 | Journal Hallmark | `.hallmark/log.json` |
 
-Ne sont plus importés par aucune page (4ᵉ direction), conservés en attendant leur suppression :
-`components/marketing/landing.tsx`, `components/site/{site-nav,hero-positioning,status-board,pipeline-pinned,reveal,carousel-hint,faq-index}.tsx`,
-`app/esneo-site.css`, la police Hanken Grotesk (`app/layout.tsx`, utilisée seulement par `esneo-site.css`), et les
-photos `bureau-hd`, `esplanade-hd`, `consultant-hd`, `dossier-anonyme`, `fin-ecran`, `hero.webp`.
+L'ancien système des pages publiques (4ᵉ direction) a été supprimé : `components/marketing/landing.tsx`, les
+composants de `components/site/` sauf `images.ts` et `fr.ts`, `app/esneo-site.css`, la police Hanken Grotesk et les
+photos qui ne servaient plus (`bureau-hd`, `esplanade-hd`, `consultant-hd`, `dossier-anonyme`, `fin-ecran`,
+`hero.webp`).

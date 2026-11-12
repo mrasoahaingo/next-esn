@@ -1,12 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
-import {
-  BRAND_AZUR,
-  ESNEO_WORDMARK_DOT,
-  ESNEO_WORDMARK_PATH,
-  ESNEO_WORDMARK_VIEWBOX,
-} from '@/components/esneo-full-logo';
+import { PATH_D } from '@/components/esneo-full-logo';
 
 export const alt = 'Esneo — Moins de paperasse. Plus de face-à-face. L’IA propose, vous validez.';
 export const size = { width: 1200, height: 630 };
@@ -29,9 +24,11 @@ export default async function OpengraphImage() {
             justifyContent: 'space-between',
           }}
         >
-          <svg width={168} height={32} viewBox={ESNEO_WORDMARK_VIEWBOX}>
-            <path d={ESNEO_WORDMARK_PATH} fill="#edf0f6" />
-            <circle cx={ESNEO_WORDMARK_DOT.cx} cy={ESNEO_WORDMARK_DOT.cy} r={ESNEO_WORDMARK_DOT.r} fill={BRAND_AZUR} />
+          {/* Logo script d'origine, rogné sur ses lettres (x 199,5 → 2606,7 dans la viewBox 2816 × 510). */}
+          <svg width={170} height={36} viewBox="199.5 0 2407.2 510">
+            <g fill="#edf0f6" transform="translate(0 -535)">
+              <path d={PATH_D} />
+            </g>
           </svg>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 58, lineHeight: 1.02, letterSpacing: -2.4, fontWeight: 500 }}>

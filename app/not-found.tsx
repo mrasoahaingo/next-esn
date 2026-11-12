@@ -23,7 +23,7 @@ export default function NotFound() {
     <main className="eg eg-404">
       <div className="eg-404__copy">
         <Link href="/" className="eg-404__brand" aria-label="Esneo, accueil">
-          <EsneoFullLogo className="eg-404__logo" title="Esneo" aria-hidden />
+          <EsneoFullLogo className="eg-logo eg-404__logo" title="Esneo" aria-hidden />
         </Link>
         <h1 className="eg-h2 eg-404__title">Cette page n’existe pas.</h1>
         <p className="eg-404__text">

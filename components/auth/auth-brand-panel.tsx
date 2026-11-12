@@ -7,7 +7,7 @@ import { fr } from '@/components/site/fr';
 
 /**
  * Panneau des pages d'authentification : une photo du métier (générée par IA),
- * le mot-symbole, puis la promesse sur une vitre posée sur la photo. Bureau :
+ * le logo, puis la promesse sur une vitre posée sur la photo. Bureau :
  * photo pleine hauteur, vitre de 30rem en bas, légende en pastille sur la
  * photo. Téléphone : bande de 9rem, la promesse réduite à son titre ; légende
  * et note sur les données passent sous le formulaire (AuthScreen). Statique.
@@ -31,7 +31,7 @@ export function AuthBrandPanel({
 
       <Link href="/" className="eg-auth__brand" aria-label="Retour à l’accueil Esneo">
         <ArrowLeft aria-hidden />
-        <EsneoFullLogo className="eg-auth__logo" title="Esneo" aria-hidden />
+        <EsneoFullLogo className="eg-logo eg-auth__logo" title="Esneo" aria-hidden />
       </Link>
 
       <p className="eg-credit eg-auth__chip">{credit}</p>

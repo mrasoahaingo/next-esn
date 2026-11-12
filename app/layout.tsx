@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Albert_Sans, Geist, Geist_Mono, Hanken_Grotesk } from "next/font/google";
+import { Albert_Sans, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { frFR } from "@clerk/localizations";
@@ -21,16 +21,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Ancien système des pages publiques (`.es`, app/esneo-site.css) : plus importé
-// depuis la bascule de la landing ; chargé tant que ces fichiers existent.
-const hanken = Hanken_Grotesk({
-  variable: "--font-hanken",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-});
-
 // Pages publiques (landing, connexion, inscription, 404 — `.eg`, app/landing.css) :
-// Albert Sans porte la voix et le mot-symbole ; l'interface garde Geist. Voir DESIGN.md.
+// Albert Sans porte la voix ; l'interface garde Geist. Voir DESIGN.md.
 const albert = Albert_Sans({
   variable: "--font-albert",
   subsets: ["latin"],
@@ -78,7 +70,7 @@ export default function RootLayout({
   return (
     <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${albert.variable} ${hanken.variable} app-surface antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${albert.variable} app-surface antialiased`}
       >
         <ClerkProvider
           afterSignOutUrl="/sign-in"

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AuthSwitch } from '@/components/landing/auth-switch';
 import { ArrowRight, Menu, X } from 'lucide-react';
-import { EsneoWordmark } from '@/components/landing/esneo-wordmark';
+import { EsneoFullLogo } from '@/components/esneo-full-logo';
 
 const LINKS = [
   { href: '#fonctionnement', label: 'Fonctionnement' },
@@ -89,7 +89,7 @@ export function LandingNav(): React.JSX.Element {
       <div className="eg-nav__inner">
         <span className="eg-nav__glass" aria-hidden />
         <Link href="/" className="eg-nav__brand" aria-label="Esneo, accueil">
-          <EsneoWordmark className="eg-nav__logo" />
+          <EsneoFullLogo className="eg-logo eg-nav__logo" title="Esneo" aria-hidden />
         </Link>
 
         <nav className="eg-nav__links" aria-label="Principale">
