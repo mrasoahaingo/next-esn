@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import { PHOTOS } from '@/components/site/images';
 import { fr } from '@/components/site/fr';
 import { LandingNav } from '@/components/landing/landing-nav';
-import { HeroReview } from '@/components/landing/hero-review';
+import { HeroStage } from '@/components/landing/hero/hero-stage';
 import { StatusWindow } from '@/components/landing/status-window';
 import { TourProgress } from '@/components/landing/tour-progress';
 import { LandingFaq } from '@/components/landing/landing-faq';
@@ -171,16 +171,9 @@ export function Landing(): React.JSX.Element {
               {/* La fenêtre de positionnement, entière dans son cadre ; si elle
                   dépasse (documents, tablette, téléphone), elle défile dans le cadre. */}
               <div className="eg-hero__frame hero__media span-6">
-                <div className="eg-hero__window">
-                  <HeroReview />
-                </div>
-                <div className="eg-float ly-float">
-                  <p className="eg-float__row">
-                    <span className="eg-float__live">Extraction 5/5</span>
-                    <span className="eg-float__ok">Validé</span>
-                  </p>
-                  <p className="eg-float__title">CV_Camille_Durand.pdf</p>
-                </div>
+                {/* La fenêtre et sa carte, jouées une fois puis rendues au visiteur
+                    (components/landing/hero/hero-stage.tsx). */}
+                <HeroStage />
               </div>
             </div>
           </div>

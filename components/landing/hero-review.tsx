@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react';
 import { Check, FileText, Info, Lock, Mail, RotateCcw, X } from 'lucide-react';
 import { fr } from '@/components/site/fr';
 
@@ -23,6 +23,8 @@ const ITEMS: ReadonlyArray<{
   short: string;
   text: string;
   quote: string;
+  /** Où la citation se trouve dans le CV (montré quand on l'ouvre). */
+  source: string;
   /** Conséquence quand le point est validé. */
   kept: string;
   /** Résumé de la conséquence, une fois les documents prêts. */
@@ -34,6 +36,7 @@ const ITEMS: ReadonlyArray<{
     short: 'Java et Spring Boot',
     text: 'Java 17 et Spring Boot : 6 ans, dont la mission en cours',
     quote: '« Migration du moteur de tarification vers Spring Boot 3 (2024) »',
+    source: 'Expériences · Assureur IARD, 2024',
     kept: 'Mis en avant dans le CV adapté',
     effect: 'Java et Spring Boot : mis en avant dans le CV adapté.',
   },
@@ -43,6 +46,7 @@ const ITEMS: ReadonlyArray<{
     short: 'Kafka',
     text: 'Kafka : une seule mention, sur un projet de 2019',
     quote: '« Bus d’événements Kafka pour les notifications clients (2019) »',
+    source: 'Expériences · Projet de 2019',
     kept: 'Le CV adapté ne survendra pas Kafka',
     effect: 'Kafka : présenté tel quel, sans survente.',
   },
@@ -52,6 +56,7 @@ const ITEMS: ReadonlyArray<{
     short: 'Disponibilité au 6 janvier',
     text: 'Disponibilité au 6 janvier : le CV indique une mission en cours',
     quote: '« Assureur IARD, La Défense · depuis mars 2022, en cours »',
+    source: 'Expériences · Mission en cours',
     kept: 'Question ajoutée à l’e-mail au consultant',
     effect: 'Disponibilité : question posée dans l’e-mail à Camille.',
   },
@@ -71,12 +76,31 @@ const RESIZE_MS = 420;
 const freshVerdicts = (): Record<string, Verdict> =>
   Object.fromEntries(ITEMS.map((i) => [i.id, 'pending'])) as Record<string, Verdict>;
 
+/**
+ * L'état de départ affiché (rendu serveur, sans script, mouvement réduit,
+ * téléphone) : celui où s'arrête la démo animée du héros, le point fort et le
+ * point à clarifier relus, le point faible laissé au visiteur.
+ */
+export const POSTER_VERDICTS: Readonly<Record<string, Verdict>> = { java: 'kept', kafka: 'pending', dispo: 'kept' };
+
+/** Ce que la scène animée du héros (components/landing/hero) peut faire. */
+export type HeroReviewApi = {
+  /** Retour à la relecture vierge (scène masquée par sa page à ce moment). */
+  restart: () => void;
+  /** La même décision qu'un clic sur « Valider » ou « Écarter ». */
+  decide: (id: string, v: 'kept' | 'dropped') => void;
+  /** Ouvre la citation d'un point (ou referme, avec null), comme un clic dessus. */
+  quote: (id: string | null) => void;
+};
+
 const reducedMotion = (): boolean => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function HeroReview(): React.JSX.Element {
-  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>(freshVerdicts);
+export function HeroReview({ apiRef }: { apiRef?: MutableRefObject<HeroReviewApi | null> } = {}): React.JSX.Element {
+  const [verdicts, setVerdicts] = useState<Record<string, Verdict>>(() => ({ ...POSTER_VERDICTS }));
   const [phase, setPhase] = useState<Phase>('review');
   const [made, setMade] = useState(0);
+  /** La citation ouverte en entier (une à la fois), par-dessus la suite. */
+  const [quote, setQuote] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const stackRef = useRef<HTMLDivElement>(null);
   const docsHeadRef = useRef<HTMLDivElement>(null);
@@ -192,8 +216,47 @@ export function HeroReview(): React.JSX.Element {
     setVerdicts((prev) => ({ ...prev, [id]: prev[id] === v ? 'pending' : v }));
   };
 
+  // Une citation ouverte se referme par Échap ou par un appui ailleurs que sur elle.
+  useEffect(() => {
+    if (!quote) return;
+    const onDown = (e: PointerEvent) => {
+      const el = e.target instanceof Element ? e.target.closest('[data-quote]') : null;
+      if (el?.getAttribute('data-quote') !== quote) setQuote(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setQuote(null);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [quote]);
+
+  // La scène du héros pilote la même logique que les boutons.
+  useEffect(() => {
+    if (!apiRef) return;
+    apiRef.current = {
+      restart: () => {
+        timers.current.ids.forEach((id) => window.clearTimeout(id));
+        timers.current.ids = [];
+        setVerdicts(freshVerdicts());
+        setQuote(null);
+        setMade(0);
+        setPhase('review');
+      },
+      decide: (id, v) => setVerdicts((prev) => ({ ...prev, [id]: v })),
+      quote: setQuote,
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef]);
+
   const generate = () => {
     if (!ready) return;
+    setQuote(null);
     setPhase('generating');
     setMade(0);
     const bag = timers.current;
@@ -292,10 +355,30 @@ export function HeroReview(): React.JSX.Element {
                         <div className="eg-point__body">
                           <span className={`eg-chip eg-chip--${k.tone}`}>{k.label}</span>
                           <p className="eg-point__text">{fr(item.text)}</p>
-                          <p className="eg-quote">
-                            <span className="eg-quote__label">Citation du CV</span>
-                            {fr(item.quote)}
-                          </p>
+                          {/* La citation tient sur une ligne ; un clic l'ouvre en entier,
+                              avec sa place dans le CV, dans une carte posée sous elle
+                              (rien ne bouge autour : CLS nul). */}
+                          <div className="eg-quote" data-quote={item.id} data-open={quote === item.id || undefined}>
+                            <button
+                              type="button"
+                              className="eg-quote__line"
+                              data-target={`quote-${item.id}`}
+                              data-cursor="pointer"
+                              aria-expanded={quote === item.id}
+                              aria-controls={`eg-quote-${item.id}`}
+                              onClick={() => setQuote((q) => (q === item.id ? null : item.id))}
+                            >
+                              <span className="eg-quote__label">Citation du CV</span>
+                              <span className="eg-quote__text">{fr(item.quote)}</span>
+                            </button>
+                            <div className="eg-quote__full" id={`eg-quote-${item.id}`} aria-hidden={quote !== item.id || undefined}>
+                              <p className="eg-quote__src">
+                                <FileText aria-hidden />
+                                <span>{fr(`CV_Camille_Durand.pdf · ${item.source}`)}</span>
+                              </p>
+                              <p className="eg-quote__whole">{fr(item.quote)}</p>
+                            </div>
+                          </div>
                           <p
                             className={`eg-point__note${v === 'kept' ? ' eg-point__note--ok' : ''}`}
                             data-empty={v === 'pending' || undefined}
@@ -317,6 +400,8 @@ export function HeroReview(): React.JSX.Element {
                           <button
                             type="button"
                             className="eg-ctl eg-ctl--keep"
+                            data-target={`keep-${item.id}`}
+                            data-cursor="pointer"
                             aria-pressed={v === 'kept'}
                             onClick={() => decide(item.id, 'kept')}
                             aria-label={`Valider : ${item.text}`}
@@ -327,6 +412,8 @@ export function HeroReview(): React.JSX.Element {
                           <button
                             type="button"
                             className="eg-ctl eg-ctl--drop"
+                            data-target={`drop-${item.id}`}
+                            data-cursor="pointer"
                             aria-pressed={v === 'dropped'}
                             onClick={() => decide(item.id, 'dropped')}
                             aria-label={`Écarter : ${item.text}`}

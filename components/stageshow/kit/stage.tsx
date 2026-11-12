@@ -87,6 +87,17 @@ export interface StageProps<S> {
    * sur le départ et joue.
    */
   autoplay?: boolean
+  /**
+   * Esneo : `false` pour une scène déjà masquée par sa page au premier coup
+   * d'œil (le héros, caché tant que sa démo n'est pas prête) : pas de fondu,
+   * retour au départ et lecture tout de suite.
+   */
+  rewind?: boolean
+  /**
+   * Esneo : le visiteur a pris la main. La lecture s'arrête net, la scène
+   * garde l'état de ce moment ; le curseur est retiré par la page.
+   */
+  halt?: boolean
   /** The accent color for this stage (any CSS color). Sets --ss-accent, its soft fill and the gradient's second stop together. */
   accent?: string
   /** What the scene sits on. `orbs`: a pale tile lit by a few huge, soft
@@ -130,6 +141,8 @@ export function Stage<S extends object>({
   fill: fillProp = false,
   fluid = false,
   autoplay = false,
+  rewind = true,
+  halt = false,
   theme: themeProp = 'light',
   className,
   children,
@@ -440,6 +453,12 @@ export function Stage<S extends object>({
       setState(poster ?? initial)
       return cancelReset
     }
+    // Esneo : arrêtée par le visiteur, la scène ne bouge plus (le nettoyage
+    // du passage précédent a déjà interrompu la lecture).
+    if (halt) {
+      stage.removeAttribute('data-offscreen')
+      return cancelReset
+    }
     // A changed script, layout or motion preference starts a fresh scene.
     // Cleanup only releases resources; it never schedules another reset.
     const holdPoster = play === 'once' && poster !== undefined && !autoplay
@@ -561,6 +580,11 @@ export function Stage<S extends object>({
       if (first) {
         first = false
         if (!entry.isIntersecting) return reset()
+        if (!rewind) {
+          reset()
+          start()
+          return
+        }
         // Déjà à l'écran : fondu du contenu, retour au départ, puis lecture
         rewinding = true
         stage.setAttribute('data-rewind', '')
@@ -610,7 +634,7 @@ export function Stage<S extends object>({
       autoRef.current = null
       cancelReset()
     }
-  }, [still, script, makeAct, play, layout]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [still, script, makeAct, play, layout, halt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useLayoutEffect(() => {
     if (cursor && !still && !dragging.current) autoRef.current?.(pos.current)

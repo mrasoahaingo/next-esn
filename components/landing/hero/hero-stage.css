@@ -1,0 +1,72 @@
+/* La démo du héros (hero-stage.tsx, voir REHEARSAL.md) : la scène stageshow
+ * prend la place du contenu du cadre, sans rien changer à sa mise en page. */
+.eg-hero__live {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+}
+.eg-hero__live > .ss-fit {
+  min-height: 0;
+  height: 100%;
+}
+/* Le kit fige la typographie de ses scènes ; ici, la fenêtre est la vraie :
+ * elle garde celle de la page, et ses textes se sélectionnent. */
+.eg-ss-hero .ss-stage {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  white-space: inherit;
+  color: inherit;
+  user-select: auto;
+}
+@media (min-width: 64rem) {
+  /* La fenêtre à sa hauteur (elle défile au-delà du cadre), la carte juste
+   * dessous, pour pouvoir chevaucher son bord. */
+  .eg-ss-hero .ss-stage {
+    grid-template-rows: minmax(0, auto) auto;
+    align-content: start;
+  }
+  /* Le satellite, au bord de la fenêtre et devant elle : il chevauche la
+   * marge basse de sa barre d'action (pas de contenu dessous). Absent au
+   * départ de la démo, il monte à sa place à la fin. */
+  .eg-ss-hero .eg-float {
+    position: relative;
+    z-index: 2;
+    will-change: transform;
+    margin-top: -0.5rem;
+    box-shadow: 0 18px 36px -18px var(--glass-shade);
+    transition:
+      opacity 0.4s ease,
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .eg-ss-hero .eg-float:not([data-in]) {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* Avec script et mouvement, à partir de 60rem : la fenêtre est cachée dès la
+ * première peinture (html.m-enter est posé avant elle), le temps de revenir
+ * à la relecture vierge ; elle entre en fondu quand la démo est prête. Sans
+ * script, en mouvement réduit ou sous 60rem : le poster, tout de suite. Si le
+ * script n'arrive jamais, elle apparaît d'elle-même au bout de 3 s. */
+@media (min-width: 60rem) and (prefers-reduced-motion: no-preference) {
+  .eg-hero__live > .ss-fit {
+    transition: opacity 0.45s ease;
+  }
+  html.m-enter .eg-hero__live:not([data-live]) > .ss-fit {
+    opacity: 0;
+    pointer-events: none;
+    animation: eg-hero-late 0.45s ease 3s forwards;
+  }
+}
+@keyframes eg-hero-late {
+  to {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
