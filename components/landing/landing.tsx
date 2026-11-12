@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { AuthSwitch } from '@/components/landing/auth-switch';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { PHOTOS } from '@/components/site/images';
 import { fr } from '@/components/site/fr';
 import { LandingNav } from '@/components/landing/landing-nav';
@@ -27,8 +27,9 @@ const FACE_A_FACE = {
 import '@/app/landing.css';
 
 /* Landing Esneo — Hallmark · Workbench, direction « Verre de nuit » (voir app/landing.css et DESIGN.md).
- * La page est une visite de l'outil : des fenêtres de verre posées sur la
- * paperasse qu'elles remplacent, et sur les gens à qui elles rendent du temps.
+ * « Vous choisissez le profil. Esneo fait le dossier. » La page est une visite
+ * de l'outil : des fenêtres de verre posées sur les documents qu'elles
+ * remplacent, et sur les gens à qui elles rendent du temps.
  * Aucune preuve sociale, aucun prix, aucun chiffre d'usage (PRODUCT.md) ;
  * candidats, consultants et missions sont des exemples. Les faits de « Vos
  * données » sont vérifiés dans le code (voir le rapport du tour 3, r2). */
@@ -139,65 +140,76 @@ export function Landing(): React.JSX.Element {
       <LandingNav />
 
       <main id="contenu">
-        {/* ─── Héros : le titre, puis la fenêtre de positionnement sur la photo ─ */}
+        {/* ─── Héros : le texte à gauche, la fenêtre vivante à droite ──────────── */}
         <section className="eg-hero" aria-labelledby="eg-h1">
-          <div className="eg-wrap eg-hero__top">
-            <h1 id="eg-h1" className="eg-display">
-              <span className="eg-display__line">Moins de paperasse.</span>{' '}
-              <span className="eg-display__line">
-                Plus de <span className="eg-nowrap">face-à-face.</span>
-              </span>
-            </h1>
-            <p className="eg-lede">
-              {fr(
-                'Chasseurs de têtes, ingénieurs d’affaires, chargés de recrutement : Esneo lit les CV, décortique les fiches de poste ou de mission et prépare les positionnements. Vous relisez, vous validez, et le temps gagné va à vos candidats, consultants et clients.',
-              )}
-            </p>
-            <div className="eg-hero__cta">
-              <AuthSwitch
-                signedOut={
-                  <>
-                    <Link href="/sign-up" className="eg-btn eg-btn--primary eg-btn--lg eg-hero__go">
-                      Essayer sur vos CV
+          <div className="eg-wrap eg-hero__grid">
+            <div className="eg-hero__copy">
+              <h1 id="eg-h1" className="eg-display">
+                <span className="eg-display__line">Vous choisissez le profil.</span>{' '}
+                <span className="eg-display__line">Esneo fait le dossier.</span>
+              </h1>
+              <p className="eg-lede">
+                {fr(
+                  'Chasseurs de têtes, ingénieurs d’affaires, chargés de recrutement : Esneo lit le CV et la demande, vous validez.',
+                )}
+              </p>
+              <div className="eg-hero__cta">
+                <AuthSwitch
+                  signedOut={
+                    <>
+                      <Link href="/sign-up" className="eg-btn eg-btn--primary eg-btn--lg eg-hero__go">
+                        Essayer sur vos CV
+                        <ArrowRight aria-hidden />
+                      </Link>
+                      <p className="eg-hero__fine">Sans carte bancaire.</p>
+                    </>
+                  }
+                  signedIn={
+                    <Link href="/dashboard" className="eg-btn eg-btn--primary eg-btn--lg eg-hero__go">
+                      Ouvrir l’app
                       <ArrowRight aria-hidden />
                     </Link>
-                    <p className="eg-hero__fine">Sans carte bancaire.</p>
-                  </>
-                }
-                signedIn={
-                  <Link href="/dashboard" className="eg-btn eg-btn--primary eg-btn--lg eg-hero__go">
-                    Ouvrir l’app
-                    <ArrowRight aria-hidden />
-                  </Link>
-                }
-              />
-              <a href="#fonctionnement" className="eg-btn eg-btn--quiet eg-btn--lg eg-hero__more">
-                Voir comment ça marche
-              </a>
-            </div>
-          </div>
-
-          <div className="eg-wrap">
-            <p className="eg-hint">
-              <span className="eg-hint__dot" aria-hidden />
-              {fr('Relisez l’exemple : validez chaque point si l’IA a vu juste, écartez-le sinon, puis générez le CV adapté.')}
-            </p>
-            <div className="eg-stage">
-              <figure className="eg-stage__photo">
-                <Image
-                  src={PHOTOS.hero.src}
-                  alt={PHOTOS.hero.alt}
-                  width={PHOTOS.hero.width}
-                  height={PHOTOS.hero.height}
-                  preload
-                  sizes="(min-width: 76rem) 1216px, 100vw"
+                  }
                 />
-                <figcaption className="eg-credit eg-credit--story">
-                  <span className="eg-credit__story">{fr('Avant Esneo : 21\u00a0h, encore des CV à ressaisir.')}</span>
-                  <span>Photographie générée par IA, personne fictive</span>
-                </figcaption>
-              </figure>
-              <HeroReview />
+                <a href="#fonctionnement" className="eg-btn eg-btn--quiet eg-btn--lg eg-hero__more">
+                  Voir comment ça marche
+                </a>
+              </div>
+            </div>
+
+            <div className="eg-hero__demo">
+              <p className="eg-hint">
+                <span className="eg-hint__dot" aria-hidden />
+                {fr('Relisez l’exemple : validez ou écartez chaque point, puis générez le CV adapté.')}
+              </p>
+              <div className="eg-stage">
+                <figure className="eg-stage__photo">
+                  <Image
+                    src={PHOTOS.hero.src}
+                    alt={PHOTOS.hero.alt}
+                    width={PHOTOS.hero.width}
+                    height={PHOTOS.hero.height}
+                    preload
+                    sizes="(min-width: 75rem) 56vw, 100vw"
+                  />
+                  <figcaption className="eg-credit eg-credit--story">
+                    <span className="eg-credit__story">{fr('Avant Esneo : 21\u00a0h, encore des CV à ressaisir.')}</span>
+                    <span>Photographie générée par IA, personne fictive</span>
+                  </figcaption>
+                </figure>
+                {/* Bureau : la tête du CV PDF de Camille dépasse derrière la fenêtre. */}
+                <SheetCv />
+                <HeroReview />
+                {/* Notification d'extraction, posée en coin, qui entre une seule fois (décor). */}
+                <p className="eg-toast" aria-hidden>
+                  <Check className="eg-toast__icon" aria-hidden />
+                  <span>CV extrait</span>
+                  <span className="eg-chip eg-chip--ok">
+                    <span className="eg-dot" aria-hidden />
+                    Validé
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -414,29 +426,39 @@ export function Landing(): React.JSX.Element {
         </section>
       </main>
 
-      {/* ─── Pied Ft1 : le logo en mât, pleine largeur ──────────────────────── */}
+      {/* ─── Pied : logo et accroche, liens, mentions ─────────────────────── */}
       <footer className="eg-foot">
         <div className="eg-wrap eg-foot__band">
-          <p className="eg-foot__tag">
-            {fr('L’outil des ESN et des cabinets : CV, fiches de poste, positionnements.')}
-          </p>
+          <div className="eg-foot__brand">
+            <Link href="/" className="eg-foot__home" aria-label="Esneo, accueil">
+              <EsneoFullLogo className="eg-logo eg-foot__logo" title="Esneo" aria-hidden />
+            </Link>
+            <p className="eg-foot__tag">
+              {fr('L’outil des ESN et des cabinets : CV, fiches de poste, positionnements.')}
+            </p>
+          </div>
           <nav className="eg-foot__links" aria-label="Pied de page">
             <a href="#fonctionnement">Fonctionnement</a>
             <a href="#fiabilite">Fiabilité</a>
             <a href="#donnees">Vos données</a>
             <a href="#questions">Questions</a>
             <AuthSwitch
-              signedOut={<Link href="/sign-in">Se connecter</Link>}
+              signedOut={
+                <>
+                  <Link href="/sign-in">Se connecter</Link>
+                  <Link href="/sign-up">Créer un compte</Link>
+                </>
+              }
               signedIn={<Link href="/dashboard">Ouvrir l’app</Link>}
             />
           </nav>
         </div>
-        <div className="eg-wrap eg-foot__mast">
-          <EsneoFullLogo className="eg-logo eg-foot__mark" title="Esneo" />
+        <div className="eg-wrap eg-foot__legal">
+          <p>
+            {fr('Photographies générées par IA, personnes fictives · Candidats, consultants et missions affichés : exemples fictifs.')}
+          </p>
+          <p>© 2026 Esneo</p>
         </div>
-        <p className="eg-wrap eg-foot__fine">
-          {fr('© 2026 Esneo · Photographies générées par IA, personnes fictives · Candidats, consultants et missions affichés : exemples fictifs.')}
-        </p>
       </footer>
     </div>
   );

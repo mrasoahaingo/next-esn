@@ -8,10 +8,10 @@
     "fonts": "Albert Sans 600 (display + voice) · Geist (product UI) · Geist Mono (data)",
     "enrichment": "Tier-A HTML/CSS product fragments in glass windows over the paper they replace + one existing AI photo (hero, darkened)",
     "nav": "N10 floating-on-scroll-morph",
-    "footer": "Ft1 mast-headed",
+    "footer": "sober footer: logo + tagline, links, legal line (Ft1 mast-headed until r9)",
     "deviations": "Glassmorphism (genre ban) and same three theme axes as the previous build (no serif) — both imposed by the user; the user keeps their original script logo (components/esneo-full-logo.tsx) everywhere, including the full-width footer mast; blur only over photos/sheets at ≥ 60rem, opaque panels elsewhere, halos anchored to hero and lit trust band, numbered tour with progress rail, height glide on the hero work area (user request)",
-    "brief": "Esneo · landing SaaS (verre, dark first, glow, animé) — chasseurs de têtes, ingénieurs d'affaires, chargés de recrutement; r6: replaces / and extends to /sign-in, /sign-up and the 404",
-    "iteration": "r9 — the user's original script logo everywhere (nav, phone menu, footer mast, sign-in, sign-up, 404, OG card); legacy public-page system deleted. Previous: r8 finishing touches after jury r7 (DA 9.2 / acheteur 9.4 / UX 9.1)",
+    "brief": "Esneo · landing SaaS (verre, dark first, glow, animé) — chasseurs de têtes, ingénieurs d'affaires, chargés de recrutement; headline « Vous choisissez le profil. Esneo fait le dossier. »; r6: replaces / and extends to /sign-in, /sign-up and the 404",
+    "iteration": "r10 — new headline « Vous choisissez le profil. Esneo fait le dossier. »; hero « text + live window » (two columns from 75rem, stage bleeding to the right edge, CV PDF head behind the window, one-shot glass toast « CV extrait · Validé », whole window above the fold at 1440 × 900; review window laid out by container queries); sober footer with the logo at nav size. Previous: r9 original script logo everywhere, legacy system deleted",
     "direction": "« Verre de nuit » (5ᵉ, DESIGN.md)",
     "surfaces": "/ · /sign-in · /sign-up · 404 (app/not-found.tsx)"
   },

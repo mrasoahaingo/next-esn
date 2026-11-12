@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { PATH_D } from '@/components/esneo-full-logo';
 
-export const alt = 'Esneo — Moins de paperasse. Plus de face-à-face. L’IA propose, vous validez.';
+export const alt = 'Esneo — Vous choisissez le profil. Esneo fait le dossier. L’IA propose, vous validez.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -17,7 +17,7 @@ export default async function OpengraphImage() {
       <div style={{ width: '100%', height: '100%', display: 'flex', background: '#07090e', color: '#edf0f6' }}>
         <div
           style={{
-            width: 560,
+            width: 700,
             padding: '56px 56px 52px',
             display: 'flex',
             flexDirection: 'column',
@@ -31,15 +31,17 @@ export default async function OpengraphImage() {
             </g>
           </svg>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 58, lineHeight: 1.02, letterSpacing: -2.4, fontWeight: 500 }}>
-              Moins de paperasse. Plus de face-à-face.
+            <div style={{ display: 'flex', flexDirection: 'column', fontSize: 46, lineHeight: 1.08, letterSpacing: -1.6, fontWeight: 500 }}>
+              <div>Vous choisissez le profil.</div>
+              <div>Esneo fait le dossier.</div>
             </div>
             <div style={{ marginTop: 24, fontSize: 26, color: '#c3c7d1' }}>L’IA propose, vous validez.</div>
           </div>
           <div style={{ display: 'flex', fontSize: 18, color: '#a0a5af' }}>ESN et cabinets · Photo générée par IA</div>
         </div>
-        <div style={{ flex: 1, display: 'flex', background: '#3466e6' }}>
-          <img src={src} alt="" width={640} height={630} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+        {/* Satori ignore object-position : l'image (1200 × 630) est décalée pour garder la personne. */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#3466e6' }}>
+          <img src={src} alt="" width={1200} height={630} style={{ width: 1200, height: 630, marginLeft: -440 }} />
         </div>
       </div>
     ),

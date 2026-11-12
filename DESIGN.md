@@ -82,13 +82,15 @@ Entre 4 et 5, deux tours de maquettes GPT Image 2.6 (`docs/media/esneo/propositi
 
   Aucune ne battait le site en ligne (9.1).
 
-La 5ᵉ direction garde ce que le jury du tour 2 a retenu : le titre de *flou* (« Moins de paperasse. Plus de
-face-à-face. »), le verre posé sur la paperasse et sur les gens. Elle garde aussi la carte de positionnement
-interactive de la 4ᵉ.
+La 5ᵉ direction garde ce que le jury du tour 2 a retenu : le verre posé sur la paperasse et sur les gens, et la
+carte de positionnement interactive de la 4ᵉ. Le titre de *flou* (« Moins de paperasse. Plus de face-à-face. »),
+repris d'abord, a été remplacé en r10 à la demande de l'utilisateur par **« Vous choisissez le profil. Esneo fait
+le dossier. »** : le partage des rôles en une phrase, que la démonstration du héros prouve aussitôt.
 
-Construite avec Hallmark (macrostructure Workbench, registre atmosphérique « Lumen », nav N10, pied Ft1), elle a été
+Construite avec Hallmark (macrostructure Workbench, registre atmosphérique « Lumen », nav N10, pied Ft1 jusqu’en r9), elle a été
 itérée sur six tours de jury (r1 → r5 : 7.8 / 8.4 / 8.3 → 9.2 / 9.3 / 9.2). L'utilisateur l'a validée, puis elle a
-remplacé `/` en r6, avec connexion, inscription, 404 et le nouveau logo.
+remplacé `/` en r6, avec connexion, inscription et 404. En r10, le héros passe en deux colonnes (texte et fenêtre
+vivante dès le premier écran) et le pied devient sobre.
 
 ## Thèse
 
@@ -130,8 +132,10 @@ Clerk ne lit pas l'OKLCH : `components/auth/auth-screen.tsx` en reprend les équ
 ## Typographie
 
 - **Albert Sans** (`--font-albert`, `app/layout.tsx`) pour la voix de la page : titres en 600, romain, interlettrage
-  −0,03 em, casse de phrase ; texte courant en 400. Échelle : `--text-display` (héros, deux lignes à toutes les
-  largeurs), `--text-h2`, `--text-step`, `--text-h3`, `--text-lg`, `--text-base`, `--text-sm`, `--text-xs`,
+  −0,03 em, casse de phrase ; texte courant en 400. Titre du héros : `--text-display` au téléphone (les phrases
+  peuvent passer à la ligne), puis, à partir de 40rem, `clamp(2.5rem, 9.2cqi, 4.5rem)` réglé sur la largeur de sa
+  colonne (« Vous choisissez le profil. » mesure 10,44 em), une phrase par ligne ; environ 2,8rem à 1440 px, pour
+  rester un SaaS et pas une affiche. Échelle : `--text-h2`, `--text-step`, `--text-h3`, `--text-lg`, `--text-base`, `--text-sm`, `--text-xs`,
   `--text-2xs`.
 - **Geist**, la police du produit, dans les fenêtres d'interface (`.eg-win`, `.eg-review`, `.eg-sheet`), à la
   vraie taille de l'app (13–15 px).
@@ -146,14 +150,14 @@ Conteneur `--page-max` 76rem, marges `--gutter` `clamp(1rem, 4vw, 3rem)`, espace
 | Section | Composition |
 |---|---|
 | Nav (N10) | barre transparente qui devient une pilule de verre flottante au défilement (classe `is-floating`) ; sur téléphone, « Créer un compte » et un bouton menu ouvrant une feuille de verre sur un voile |
-| Héros | titre sur deux lignes, chapeau, « Essayer sur vos CV » / « Sans carte bancaire. » / « Voir comment ça marche » ; une consigne, puis la scène : photo assombrie (légende « Avant Esneo : 21 h, encore des CV à ressaisir. ») portant la fenêtre de positionnement. Hauteur de scène réservée (CLS 0) |
+| Héros | « texte + fenêtre vivante ». À partir de 75rem, deux colonnes 5/12 et 7/12 : à gauche, le titre (deux phrases, une par ligne), le chapeau sur deux lignes, « Essayer sur vos CV », « Voir comment ça marche », « Sans carte bancaire. » ; à droite, une consigne courte collée à la scène, puis la scène, qui déborde jusqu'au bord droit de la page : photo assombrie (la personne reste visible à droite), légende « Avant Esneo : 21 h, encore des CV à ressaisir. » en haut à gauche sur un voile d'angle, tête du CV PDF de Camille qui dépasse derrière la fenêtre, notification de verre « CV extrait · Validé » posée sur son coin, et la fenêtre de positionnement entière (38rem) : à 1440 × 900, en-tête, score, les trois points et la barre d'action tiennent au premier écran. De 60 à 75rem, une colonne : texte, puis la scène avec la fenêtre et une bande libre pour la légende. Au téléphone, texte puis scène, comme avant. La fenêtre se met en page par requêtes de conteneur (résumé sur une ligne et points serrés entre 36 et 50rem, résumé en colonne au-delà). Hauteur de scène réservée (CLS 0) |
 | Visite (Workbench) | « Du CV reçu au positionnement prêt. » ; quatre écrans numérotés 01–04, reliés par un fil qui se remplit au défilement ; chaque écran est posé sur ce qu'il remplace (CV, fiche de mission, classement, photo du face-à-face) |
 | Fiabilité | bande éclairée : « L'IA propose, vous validez. », quatre engagements, et le tableau de suivi sur la photo du point staffing (« Réessayer » est cliquable) |
 | Vos données | « Ce que deviennent vos CV. » : quatre faits vérifiés dans le code (espace par organisation, droits par rôle, chemin vers l'IA, suppression y compris le PDF d'origine), en quatre colonnes |
 | Bientôt | deux vitres restées givrées sur une mini-interface éteinte : Prospection ; Claude branché sur Esneo via un connecteur (MCP) ; chacune marquée « Bientôt » |
 | Questions | titre à gauche, accordéon à droite (empilés sur téléphone) |
 | Action finale | verre teinté azur (opaque) : « Essayez Esneo sur vos propres CV. », la suite en clair, bouton clair, phrase sur l'usage des données |
-| Pied (Ft1) | une ligne d'accroche et les liens, puis le logo en mât, lettres pleine largeur de la colonne (taille en `cqi`), puis la ligne des mentions (photos IA, exemples fictifs) |
+| Pied | sobre : le logo à la taille de celui de la nav (lettres ≈ 120 px) et une ligne d'accroche ; les liens (Fonctionnement, Fiabilité, Vos données, Questions, Se connecter, Créer un compte) ; puis, sous un filet, la mention des photos IA et des exemples fictifs, et le copyright |
 | Connexion / inscription | colonne du formulaire : titre « Se connecter » ou « Créer votre compte » (le seul h1 : 1,75rem au téléphone, 2rem au bureau), formulaire Clerk aligné à gauche jusqu'à « Secured by Clerk », sur un halo azur discret (hauteur réservée, CLS nul), puis la phrase sur les données. Téléphone : photo en bande de 9rem, marque en haut, la promesse réduite à une ligne discrète (`ink-2`, 400) sur le voile ; « Sans carte bancaire. » sous le titre de l'inscription ; légende IA sous le formulaire ; sur 375 × 667, le premier champ et « Continuer » sont visibles dès l'arrivée. Bureau ≥ 60rem : deux colonnes, photo pleine hauteur à gauche (marque en haut, légende en pastille à droite, vitre de 30rem en bas : promesse en 500, plus petite que le h1, et son chapeau), cadrée pour laisser voir le CV papier de la photo de connexion |
 | 404 | page entière pour tout chemin inconnu (le middleware ne protège que les routes de l'app) ; téléphone : photo du couloir en tête, puis marque, « Cette page n'existe pas. », texte, « Retour à l'accueil » et « Se connecter » (« Ouvrir l'app » une fois connecté, même bascule que la landing) ; bureau : texte 5/12 à gauche, photo 7/12 à droite. Les voiles de la photo partent du papier plein (3rem) : aucune couture |
 
@@ -168,8 +172,9 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
   mêmes fenêtres sont opaques. L'écran 3 (classement) ne recouvre que le fond : il reste opaque partout.
 - **Trois couches floutées au plus à l'écran**, rayon jamais animé : `--glass-blur` 24px, `--glass-blur-photo`
   20px, `--nav-blur` 22px, givre de « Bientôt » 4px. Saturation 165 %.
-- **Où** : fenêtres produit, pilule de navigation et menu, vitres givrées de « Bientôt », vitre de la promesse
-  (connexion, inscription, bureau seulement : au téléphone, la promesse se pose sur le voile de la bande photo).
+- **Où** : fenêtres produit, notification « CV extrait · Validé » du héros (sur la photo, bureau seulement), pilule
+  de navigation et menu, vitres givrées de « Bientôt », vitre de la promesse (connexion, inscription, bureau
+  seulement : au téléphone, la promesse se pose sur le voile de la bande photo).
   Ni cartes de contenu en verre, ni verre sur fond uni.
 - **Reflet** : une bande claire masquée et inclinée (`skewX(-14deg)`) glisse sur la vitre pendant qu'elle traverse
   l'écran (`animation-timeline: view()`). Seulement à partir de 60rem, sans mouvement réduit, si le navigateur le
@@ -178,7 +183,8 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
   remplissages passent à leur version opaque (`--glass-fill-solid`, `--nav-fill-solid`, `--frost-fill-solid`) et
   le flou est retiré.
 - **Contraste mesuré sur le pire pixel** derrière chaque texte posé sur du verre ou une photo (script Playwright :
-  texte rendu transparent, capture, luminance maximale sous chaque ligne). Minimum r7 : 4,84:1 sur la landing,
+  texte rendu transparent, capture, luminance maximale sous chaque ligne). Minimum r10 : 4,84:1 sur la landing
+  (légende du héros 7,2:1 sur son voile d'angle, notification 7,8:1),
   9,3:1 sur la vitre des pages d'authentification, 7,7:1 pour leur légende, 9,9:1 pour la marque (flèche et
   logo, élément non textuel) sur la photo, grâce à un voile d'angle dédié.
 
@@ -186,7 +192,8 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 
 - **Signature** : la démonstration du héros. Les panneaux apparaissent en fondu ; la zone de travail glisse en
   hauteur (`transition: height`, dérogation acceptée, hauteur mesurée hors animation) quand les documents
-  apparaissent.
+  apparaissent. La notification « CV extrait · Validé » entre une seule fois (640 ms, après 900 ms), sans
+  animation si le mouvement est réduit.
 - Le fil de la visite se remplit au défilement (`animation-timeline: view()`, `scaleY`). Repli JavaScript qui écrit
   `--p` et n'écrit `data-state` que lorsqu'il change.
 - Nav : morphose barre → pilule sur `transform` et `opacity` (520 ms, `--ease-out`). Menu : entrée 220 ms.
@@ -205,8 +212,8 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - Sur les pages publiques, la classe `.eg-logo` (`app/landing.css`) le règle par sa hauteur (`--logo-h`) et rogne
   les marges latérales de la `viewBox` (le tracé occupe x 199,5 → 2606,7) pour que les lettres s'alignent sur la
   colonne : nav 1,5rem de haut (dans une pilule de 60 px) ; connexion et inscription 1,25rem au téléphone, 1,375rem
-  au bureau, sur le voile d'angle de la photo (9,9:1 au moins sur le pixel le plus clair) ; 404 1,5rem ; pied en
-  mât, lettres pleine largeur de la colonne (hauteur `100cqi × 510 / 2407,2`).
+  au bureau, sur le voile d'angle de la photo (9,9:1 au moins sur le pixel le plus clair) ; 404 1,5rem ; pied
+  1,625rem (lettres ≈ 120 px).
 - Dans l'app, rien ne change : barre latérale 120 × 22 px, centré (`w-30`) ; sélection d'organisation 240 px.
 - La carte de partage (`app/opengraph-image.tsx`) reprend le même tracé (`PATH_D`, exporté par le composant sans
   changer son rendu), rogné sur ses lettres.

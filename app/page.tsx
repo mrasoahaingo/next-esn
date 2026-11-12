@@ -1,8 +1,8 @@
 import { Landing } from '@/components/landing/landing';
 
-const TITLE = 'Esneo — Moins de paperasse. Plus de face-à-face.';
+const TITLE = 'Esneo — Vous choisissez le profil. Esneo fait le dossier.';
 const DESCRIPTION =
-  'Pour les ESN et les cabinets : Esneo lit les CV, décortique les fiches de poste ou de mission et prépare les positionnements. Vous relisez, vous validez, et le temps gagné va à vos candidats, consultants et clients.';
+  'Pour les chasseurs de têtes, ingénieurs d’affaires et chargés de recrutement : Esneo lit le CV et la fiche de poste ou de mission, prépare le positionnement, le CV adapté et les e-mails. Vous relisez, vous validez.';
 
 export const metadata = {
   title: TITLE,
