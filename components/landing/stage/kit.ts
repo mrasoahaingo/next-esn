@@ -5,6 +5,7 @@ export { Stage } from '@/components/stageshow/kit/stage';
 export type { Act } from '@/components/stageshow/kit/act';
 export { Window, Bar } from '@/components/stageshow/kit/window';
 export { Collapse } from '@/components/stageshow/kit/motion/Collapse';
+export { Connector } from '@/components/stageshow/kit/motion/Connector';
 export { Count } from '@/components/stageshow/kit/motion/Count';
 export { Fly } from '@/components/stageshow/kit/motion/Fly';
 export { Roll } from '@/components/stageshow/kit/motion/Roll';

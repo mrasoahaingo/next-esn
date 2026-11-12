@@ -1,28 +1,32 @@
 'use client';
 
-import { Badge, Bar, Roll, Stage, Window, type Act } from '@/components/landing/stage/kit';
+import { MoreHorizontal } from 'lucide-react';
+import { Badge, Bar, Connector, Roll, Stage, Window, type Act } from '@/components/landing/stage/kit';
+import { fr } from '@/components/site/fr';
 
 /**
- * Écran 2 (golds « choreography » et « loading ») : la demande du client,
- * posée au-dessus de la fenêtre (hors de la scène, elle suit ses repères
- * `data-ss-m1` à `data-ss-m4`), est la source. Le niveau attendu roule à sa
- * valeur ; les deux points indispensables se résolvent ensemble (60 ms
- * d'écart), puis le souhaité, puis le bonus ; à chaque point, le passage de
- * la demande d'où il sort se marque, et son niveau se pose un temps après
- * (réponses dépendantes). Le point à clarifier, en squelette dès le départ,
- * se résout en dernier. Chaque barre part avant que ses mots n'arrivent ;
- * rien ne revient en arrière. Poster = la fiche entière, passages marqués.
+ * Écran 2, composition « panneau sur le produit » (gold `panel-annotation`) :
+ * la fiche de mission est le produit, épinglée en haut à gauche ; la demande
+ * du client est l'outil, un panneau de papier plus petit, devant, à cheval
+ * sur le bord droit de la fenêtre, au-dessus de sa marge (jamais de la
+ * liste). Mouvement (golds « choreography » et « loading ») : le niveau roule,
+ * les deux indispensables se résolvent ensemble (60 ms), puis le souhaité,
+ * puis le bonus ; à chaque point, le passage de la demande d'où il sort se
+ * marque. Une seule ligne, après coup, en encre neutre : du passage cité au
+ * point qu'il a produit, par le sol vide. Le point à clarifier, en squelette
+ * dès le départ, se résout en dernier. Compact : le panneau au-dessus de la
+ * fenêtre, sur sa seule barre de titre, sans ligne (les marques suffisent).
  */
 const POINTS: ReadonlyArray<{ text: string; tier: string; tone: 'accent' | 'neutral'; low?: boolean; sk: number }> = [
-  { text: 'Java et Spring Boot', tier: 'Indispensable', tone: 'accent', sk: 132 },
-  { text: 'Encadrement d’équipe', tier: 'Indispensable', tone: 'accent', sk: 148 },
-  { text: 'Kafka, architecture événementielle', tier: 'Souhaité', tone: 'neutral', sk: 196 },
-  { text: 'Culture assurance', tier: 'Bonus', tone: 'neutral', low: true, sk: 118 },
+  { text: 'Java et Spring Boot', tier: 'Indispensable', tone: 'accent', sk: 118 },
+  { text: 'Encadrement d’équipe', tier: 'Indispensable', tone: 'accent', sk: 132 },
+  { text: 'Kafka, événementiel', tier: 'Souhaité', tone: 'neutral', sk: 110 },
+  { text: 'Culture assurance', tier: 'Bonus', tone: 'neutral', low: true, sk: 104 },
 ];
 
-type S = { level: boolean; points: number; tiers: number; clarify: boolean };
-const initial: S = { level: false, points: 0, tiers: 0, clarify: false };
-const poster: S = { level: true, points: POINTS.length, tiers: POINTS.length, clarify: true };
+type S = { level: boolean; points: number; tiers: number; link: boolean; clarify: boolean };
+const initial: S = { level: false, points: 0, tiers: 0, link: false, clarify: false };
+const poster: S = { level: true, points: POINTS.length, tiers: POINTS.length, link: true, clarify: true };
 
 async function script(a: Act<S>): Promise<void> {
   await a.wait(700);
@@ -41,7 +45,9 @@ async function script(a: Act<S>): Promise<void> {
     a.put({ tiers: n });
     await a.wait(420);
   }
-  await a.wait(250);
+  a.mark('link');
+  a.put({ link: true });
+  await a.wait(700);
   a.mark('clarify');
   a.put({ clarify: true });
   await a.wait(2800);
@@ -58,11 +64,20 @@ function Tier({ on, tone, low, children }: { on: boolean; tone: 'accent' | 'neut
   );
 }
 
+/** Un passage de la demande d'où sort un point clé. */
+function Src({ on, target, children }: { on: boolean; target?: string; children: string }): React.JSX.Element {
+  return (
+    <span className="esm-mail__src" data-on={on || undefined} data-target={target}>
+      {children}
+    </span>
+  );
+}
+
 export function MissionStage({ autoplay = false }: { autoplay?: boolean }): React.JSX.Element {
   return (
     <Stage<S>
       width={560}
-      height={450}
+      height={424}
       fluid
       initial={initial}
       poster={poster}
@@ -72,66 +87,91 @@ export function MissionStage({ autoplay = false }: { autoplay?: boolean }): Reac
       theme="dark"
       className="eg-ss esm"
     >
-      {(s) => (
-        <>
-          {/* Repères lus par la demande du client (hors scène) avec :has() :
-              le passage n se marque quand le point n arrive. */}
-          <i
-            className="eg-ss-state"
-            data-ss-m1={s.points > 0 || undefined}
-            data-ss-m2={s.points > 1 || undefined}
-            data-ss-m3={s.points > 2 || undefined}
-            data-ss-m4={s.points > 3 || undefined}
-            hidden
-          />
-          <Window title="Fiche de mission">
-            <div className="eg-ss-body">
-              <div className="eg-ss-head">
-                <div>
-                  <div className="eg-ss-title">Tech lead Java</div>
-                  <div className="eg-ss-sub">Assureur IARD, La Défense · démarrage 6 janvier</div>
+      {(s, rect) => {
+        const panel = rect('mail');
+        const src = rect('src-4');
+        const tier = rect('tier-4');
+        // Compact : le panneau est en haut de la scène, et il n'y a pas de ligne.
+        const wide = panel.width > 0 && panel.y > 60;
+        return (
+          <>
+            <Window title="Fiche de mission" className="esm-win" toolbar={<MoreHorizontal size={16} aria-hidden />}>
+              <div className="eg-ss-body">
+                <div className="eg-ss-head">
+                  <div>
+                    <div className="eg-ss-title">Tech lead Java</div>
+                    <div className="eg-ss-sub">Assureur IARD, La Défense · démarrage 6 janvier</div>
+                  </div>
                 </div>
-              </div>
-              <div className="esm-level">
-                <span>Niveau attendu</span>
-                <span className="esm-level__value" data-on={s.level || undefined}>
-                  <Roll>{s.level ? 'Senior, 8 ans et plus' : 'Analyse en cours'}</Roll>
-                </span>
-              </div>
-              <div className="esm-label">Points clés, par importance</div>
-              {POINTS.map((p, i) => (
-                <div
-                  key={p.text}
-                  className="esm-point"
-                  data-ready={s.points > i || undefined}
-                  style={{ ['--d' as string]: `${i === 1 ? 60 : 0}ms` }}
-                >
-                  <span className="esm-point__rank">{i + 1}</span>
-                  <span className="esx-slot">
-                    <Bar w={p.sk} h={8} r={4} tone={2} className="esx-sk" />
-                    <span className="esm-point__text">{p.text}</span>
+                <div className="esm-level">
+                  <span>Niveau attendu</span>
+                  <span className="esm-level__value" data-on={s.level || undefined}>
+                    <Roll>{s.level ? 'Senior, 8 ans et plus' : 'Analyse en cours'}</Roll>
                   </span>
-                  <Tier on={s.tiers > i} tone={p.tone} low={p.low}>
-                    {p.tier}
+                </div>
+                <div className="esm-label">Points clés, par importance</div>
+                {POINTS.map((p, i) => (
+                  <div
+                    key={p.text}
+                    className="esm-point"
+                    data-ready={s.points > i || undefined}
+                    style={{ ['--d' as string]: `${i === 1 ? 60 : 0}ms` }}
+                  >
+                    <span className="esm-point__rank">{i + 1}</span>
+                    <span className="esx-slot">
+                      <Bar w={p.sk} h={8} r={4} tone={2} className="esx-sk" />
+                      <span className="esm-point__text">{p.text}</span>
+                    </span>
+                    <span data-target={`tier-${i + 1}`}>
+                      <Tier on={s.tiers > i} tone={p.tone} low={p.low}>
+                        {p.tier}
+                      </Tier>
+                    </span>
+                  </div>
+                ))}
+                {/* Le point à clarifier a sa place dès le départ, en squelette. */}
+                <div className="esm-label esm-label--clarify">À clarifier avant de répondre</div>
+                <div className="esm-point esm-point--clarify" data-ready={s.clarify || undefined}>
+                  <span className="esm-point__rank">?</span>
+                  <span className="esx-slot">
+                    <Bar w={140} h={8} r={4} tone={2} className="esx-sk" />
+                    <span className="esm-point__text">{fr('Télétravail : non précisé')}</span>
+                  </span>
+                  <Tier on={s.clarify} tone="warning">
+                    À clarifier
                   </Tier>
                 </div>
-              ))}
-              {/* Le point à clarifier a sa place dès le départ, en squelette. */}
-              <div className="esm-label esm-label--clarify">À clarifier avant de répondre</div>
-              <div className="esm-point esm-point--clarify" data-ready={s.clarify || undefined}>
-                <span className="esm-point__rank">?</span>
-                <span className="esx-slot">
-                  <Bar w={150} h={8} r={4} tone={2} className="esx-sk" />
-                  <span className="esm-point__text">Télétravail : non précisé</span>
-                </span>
-                <Tier on={s.clarify} tone="warning">
-                  À clarifier
-                </Tier>
               </div>
-            </div>
-          </Window>
-        </>
-      )}
+            </Window>
+            {/* La demande du client : du papier, devant, sur la marge droite. */}
+            <section className="esm-mail" data-target="mail" aria-hidden>
+              <p className="esm-mail__kind">Demande du client</p>
+              <p className="esm-mail__subject">{fr('Objet : Tech lead Java H/F, démarrage le 6 janvier')}</p>
+              <p className="esm-mail__body">
+                <Src on={s.points > 0}>Java et Spring Boot</Src>
+                {', pour '}
+                <Src on={s.points > 1}>encadrer une équipe</Src>
+                {' de 5. '}
+                <Src on={s.points > 2}>Kafka apprécié</Src>
+                {fr(' ; ')}
+                <Src on={s.points > 3} target="src-4">
+                  culture assurance
+                </Src>
+                {' en plus.'}
+              </p>
+            </section>
+            {wide && tier.width > 0 && (
+              <Connector
+                show={s.link}
+                from={{ x: src.x + src.width / 2, y: panel.y + panel.height + 6 }}
+                to={{ x: tier.x + tier.width + 8, y: tier.y + tier.height / 2 }}
+                route="v"
+                className="esm-link"
+              />
+            )}
+          </>
+        );
+      }}
     </Stage>
   );
 }

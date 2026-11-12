@@ -10,17 +10,10 @@ import { StatusWindow } from '@/components/landing/status-window';
 import { TourProgress } from '@/components/landing/tour-progress';
 import { LandingFaq } from '@/components/landing/landing-faq';
 import { EsneoFullLogo } from '@/components/esneo-full-logo';
-import { SheetCv, SheetMission } from '@/components/landing/tour-windows';
 import { TourStage } from '@/components/landing/stage/tour-stage';
 
 /* Photo existante (brut .media/esneo/fin-1.png, converti sans retouche en
  * public/media/esneo/face-a-face.webp) : le face-à-face que l'outil libère. */
-const FACE_A_FACE = {
-  src: '/media/esneo/face-a-face.webp',
-  width: 1024,
-  height: 1536,
-  alt: 'Dans un open space parisien, une ingénieure d’affaires et un consultant rient ensemble devant un ordinateur posé sur une table haute.',
-} as const;
 
 import '@/app/landing.css';
 
@@ -94,14 +87,12 @@ function StepShot({ step }: { step: (typeof STEPS)[number]['key'] }): React.JSX.
   if (step === 'a')
     return (
       <div className="eg-shot__stage">
-        <SheetCv />
         <TourStage scene="extract" />
       </div>
     );
   if (step === 'b')
     return (
       <div className="eg-shot__stage">
-        <SheetMission />
         <TourStage scene="mission" />
       </div>
     );
@@ -113,16 +104,6 @@ function StepShot({ step }: { step: (typeof STEPS)[number]['key'] }): React.JSX.
     );
   return (
     <div className="eg-shot__stage">
-      <figure className="eg-shot__photo">
-        <Image
-          src={FACE_A_FACE.src}
-          alt={FACE_A_FACE.alt}
-          width={FACE_A_FACE.width}
-          height={FACE_A_FACE.height}
-          sizes="(min-width: 60rem) 640px, 100vw"
-        />
-        <figcaption className="eg-credit">Photographie générée par IA, personnes fictives</figcaption>
-      </figure>
       <TourStage scene="email" />
     </div>
   );
