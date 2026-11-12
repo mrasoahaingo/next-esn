@@ -5,10 +5,10 @@ import { Badge, Bar, Stage, Stream, type Act } from '@/components/landing/stage/
 
 /**
  * Écran 4, composition « cartes empilées » (gold `stacked-cards`) : deux
- * cartes de même largeur et même bord gauche, à 12 px l'une de l'autre,
- * centrées : en haut, entière, le brouillon d'e-mail (le sujet, ce que l'œil
- * voit d'abord) ; dessous, la photo du face-à-face, qui file par le bas sous
- * les visages : le temps rendu au contact. Mouvement (gold « ai-chat ») : « Rédaction du brouillon… » et son squelette
+ * cartes de même largeur et même bord gauche, à 12 px l'une de l'autre : en
+ * haut, le plus grand, le brouillon d'e-mail (le sujet, ce que l'œil voit
+ * d'abord) ; dessous, une bande plus courte, la photo du face-à-face cadrée
+ * sur les visages (le temps rendu au contact), sa mention sous l'image. Mouvement (gold « ai-chat ») : « Rédaction du brouillon… » et son squelette
  * tiennent un temps, puis sortent entièrement (comme « Thinking ») ; alors
  * seulement l'e-mail au consultant s'écrit mot à mot, chaque mot déjà à sa
  * place (pas de reflux), vouvoyé, avec la question de disponibilité. Il reste
@@ -35,7 +35,8 @@ async function script(a: Act<S>): Promise<void> {
   // Le squelette sort d'abord (220 ms), puis le premier mot arrive
   a.mark('clear');
   a.put({ cleared: true });
-  await a.wait(300);
+  // Le premier mot entre pendant que le squelette finit de sortir : pas de blanc.
+  await a.wait(120);
   a.mark('stream');
   for (let i = 1; i <= WORDS; i++) {
     a.put({ words: i });

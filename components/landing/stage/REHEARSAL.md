@@ -4,83 +4,98 @@ Composants : `extract-stage.tsx` (01), `mission-stage.tsx` (02), `ranking-stage.
 `email-stage.tsx` (04), montés par `tour-stage.tsx` (bouton « Rejouer »), styles `stage.css`.
 Kit copié dans `components/stageshow/kit/` ; seules les pièces utiles sont importées (`kit.ts`).
 
-## Compositions (r15) : quatre layouts de `references/framing.md`, un par histoire
+## Compositions (r17) : quatre layouts de `references/framing.md`, un par histoire
 
-Golds filmés depuis la copie du skill du relecteur (`scratchpad/review/stageshow`), stills côte
-à côte avec les nôtres dans `.media/esneo/apercu/r15/`.
+r17 corrige la relecture à froid r15 (`261112-27s-REVIEW-STAGESHOW-R15.md`). Avant/après dans
+`.media/esneo/apercu/r17/` (`avant/` : images du relecteur ; `apres/` : nos stills et planches).
 
-- 01, **fenêtres qui se chevauchent** (gold `overlap`) : le CV reçu, du papier sans chrome,
-  devant la fenêtre de la fiche. Fenêtre en retrait de 24 px en haut, dans une colonne de
-  120 px à gauche, qui file à droite et en bas ; barre latérale de remplissage de 148 px ; le CV
-  à la gouttière (24 px), 220 px de large, s'arrête à 24 px de la ligne de la barre latérale :
-  il ne couvre que du remplissage. Le fichier part du pied du CV et vole jusqu'à la zone.
-  Compact (colonne ≤ 37,5rem : 1024, téléphone) : le CV est retiré (framing.md, Small formats),
-  la fenêtre seule ; le fichier arrive de juste au-dessus de la zone, qui s'allume d'abord.
-- 02, **panneau sur le produit** (gold `panel-annotation`) : la fiche de mission épinglée en
-  haut à gauche (gouttière 24 px), 400 px, qui file par le bas, marge droite de 96 px ; la
-  demande du client, panneau de papier devant, à cheval sur le bord droit au-dessus de la
-  marge seule, à la gouttière de droite. Les passages se marquent quand leur point arrive ;
-  une seule ligne, en encre neutre, du passage « culture assurance » au point qu'il produit,
-  par le sol vide, après coup. Compact (≤ 30rem) : panneau retiré (il couvrirait la liste),
-  la fenêtre seule.
-- 03, **gros plan** (gold `close-up`) : la fenêtre entière, chrome compris, à 1,3 fois, en
-  retrait de 18 px en haut et sur les côtés, qui file par le bas ; les trois lignes classées
-  entières ; la confiance dans l'en-tête. Compact : 1,15 fois (l'en-tête tient sur une ligne,
-  les trois lignes entières dans une fenêtre visible au moins carrée).
-- 04, **cartes empilées** (gold `stacked-cards`) : une colonne centrée (gouttière 48 px), deux
-  cartes à la même largeur, 12 px d'écart : le brouillon d'e-mail en haut, entier (le sujet) ;
-  la photo du face-à-face dessous, qui file par le bas sous les visages (le temps rendu au
-  contact). Compact : gouttière 16 px.
+- Gouttière unique de la série au bureau : 24 px en haut (01, 02, 03, 04). Hauteurs fixes
+  440 / 424 / 456 / 500 (bureau) et 368 / 372 / 356 / 496 (compact).
+- Les documents (CV en 01, demande en 02) sont des **cartes sombres** de la matière de la fenêtre,
+  un cran plus claires (`--ss-raised`), filet `--glass-line-strong`, ombre de satellite ; textes
+  `ink` / `ink-2` / `muted` / `accent-text` (7:1 au moins), surlignage `--ss-accent-soft` (le
+  texte dessus reste à 7:1). Plus de dalle `--color-sheet` grise.
+- 01, **fenêtres qui se chevauchent** (gold `overlap`) : la fenêtre à 24 px en haut et à droite
+  (son coin est gardé, plus de coupe nette au bord de la scène), dans une colonne de 120 px à
+  gauche, qui file par le bas (scène ramenée à 440 : la fiche remplit la hauteur). Le CV à la
+  gouttière, 220 px, ne couvre que la barre latérale, dont toutes les lignes sont sous lui (plus
+  de carré ni de barre qui dépassent). Pendant le vol, la ligne du fichier du CV reste en fantôme
+  (40 %). Compact (colonne ≤ 37,5rem) : la fenêtre pleine largeur, coins gardés, à 22 px du
+  haut ; le CV réduit à sa **puce de fichier** (gold `corner-chip`) posée sur la barre de titre,
+  chrome seul, à la gouttière en haut et à droite (titre de la barre effacé dessous) : le
+  fichier en part et vole jusqu'à la zone. (Une puce à cheval sur le bord haut fait sortir le
+  film en `framing` : un satellite garde la gouttière de la fenêtre, d'où la puce dans la barre.)
+- 02, **panneau sur le produit** (gold `panel-annotation`) : inchangé au bureau, sauf le panneau
+  descendu à 80 px (net sous le filet de la barre), le trait qui finit à 12 px de la pastille et
+  part avec le point 4 (le passage s'allume, la ligne en sort pendant que le point entre), le
+  surlignage qui ne mange plus la virgule. Compact (≤ 30rem) : la demande réduite à une **puce**
+  posée sur la barre de titre, à la gouttière (« Demande du client » et son premier passage,
+  « Java et Spring Boot », marqué avec le point 1) ; la fenêtre pleine largeur, coins gardés, qui
+  file par le bas.
+- 03, **gros plan** (gold `close-up`) : la fenêtre à 1,4 fois (1,2 en compact), à 24 px en haut
+  et à gauche (12 en compact), coupée par la scène à droite dans sa marge vide et au pied à
+  travers une quatrième ligne de remplissage : on lit un zoom, plus une fenêtre dans une boîte
+  (en compact, la part visible reste plus large que haute).
+  Sous la première place, la **citation du CV** (« Citation du CV » « Tech lead d'une squad de
+  5 », verbatim du CV de 01) : elle entre avec la confiance, les lignes suivantes glissent pour lui
+  faire place, sur une courbe plus lente (0,5 s). Colonnes nom 128 px puis barre : plus de vide au milieu des lignes ; le score du
+  premier en 600.
+- 04, **cartes empilées** (gold `stacked-cards`) : le brouillon devant et en haut, le plus grand ;
+  la photo en bande basse plus courte que lui (172 px, 136 en compact), entière, cadrée sur les
+  deux visages ; la mention « Photographie générée par IA, personnes fictives » passe sous l'image
+  (aucun visage couvert). Rien ne file : pas de fondu sur cette scène.
 
-Barres de titre entières (02, 03) : un bouton « ⋯ » à droite (toolbar du kit) tient la même
-marge aux deux bouts.
+## Mouvement
 
-## Mouvement (inchangé depuis r14, adapté aux cadres)
-
-- 01 `upload` + `loading` : le CV se soulève (4 px), son fichier vole (Fly, 900 ms, taille de
-  la ligne d'arrivée), la zone s'allume, son libellé sort avant l'arrivée, relais sur la ligne
-  identique ; jauge ; rubriques : la barre part, les mots arrivent ; statut en `Roll`.
+- 01 `upload` + `loading` : le CV se soulève, son fichier vole (Fly, 900 ms, taille de la ligne
+  d'arrivée), la source en fantôme, la zone s'allume, relais sur la ligne identique ; jauge ;
+  rubriques : la barre part, les mots arrivent ; statut en `Roll`.
 - 02 `choreography` + `loading` : niveau en `Roll`, indispensables ensemble (60 ms), souhaité,
-  bonus en contour, passage source marqué à chaque point, ligne, puis point à clarifier.
-- 03 `reorder` + `table-edit` : scores (Count et barre sur la même horloge), puis une ligne à
-  la fois, soulevée et passant devant, l'autre lui fait place ; confiance en dernier.
-- 04 `ai-chat` : squelette et « Rédaction du brouillon… » sortent, puis l'e-mail vouvoyé s'écrit.
+  puis bonus avec sa ligne, passage source marqué à chaque point, point à clarifier.
+- 03 `reorder` + `table-edit` : scores (Count et barre sur la même horloge, tiret et chiffre en
+  fondu croisé : la case n'est jamais vide), puis une ligne à la fois ; la ligne qui fait place
+  part tout de suite et plus vite que la ligne soulevée (elles se croisent en un éclair, plus de
+  ligne cachée 100 ms) ; confiance et citation en dernier.
+- 04 `ai-chat` : squelette et « Rédaction du brouillon… » sortent, le premier mot entre pendant
+  qu'ils finissent de sortir (plus de blanc de 200 ms), puis l'e-mail vouvoyé s'écrit.
 - « Rejouer » et le lien direct : le contenu sort en fondu, l'ouverture revient en fondu, la
   scène joue. Poster = état final (rendu serveur, sans script, mouvement réduit). Opacité et
   transform ; exceptions du kit : `Roll` (largeur), jauge en `clip-path`, coche et ligne en
-  `stroke-dashoffset`, teinte de la pastille. Hauteurs fixes en CSS (CLS 0) : 496/352,
-  424/352, 440/344, 500/500 (large/compact).
+  `stroke-dashoffset`, teinte de la pastille.
 
-## Gate
+## Gate (r17)
 
-`film.mjs` de la copie du relecteur (il centre la scène : le héros fait 100vh), avec
-`film-checks.mjs` qui reconnaît `@layer stageshow` (les 3 lignes `kit override` du relecteur
-sont des faux positifs : CSS du kit regroupé par Next), 16 films : 4 scènes × 1440/390 ×
-planche/`--states` :
-`rehearsal passed (necessary, not sufficient: references/verify.md and the fresh eye in review.md still stand)`
+`film.mjs` de la copie du relecteur (il centre la scène : le héros fait 100vh), `--states
+--gate`, 4 scènes × 1440/390 (planches et journaux dans `.media/esneo/apercu/r17/apres/`). Les
+8 films finissent sur `rehearsal failed: 3 never-intentional line(s)` : ces 3 lignes sont
+toujours les `kit override` (`.ss-avatar`, `.ss-check__fill`, `.ss-check[data-on]
+.ss-check__fill`), fausses alertes (CSS du kit regroupé par Next avec celui de l'app). Aucune
+autre ligne du gate. Couverture `inconclusive` (serveur de dev, écarts jusqu'à ~160 ms).
 
-Film, corrigé en r15 : `empty pane` (barre latérale de 01 remplie), `framing` (CV soulevé sans
-mise à l'échelle ; fenêtre de 02 saignée par le bas et carrée ; satellites retirés en compact,
-la gouttière unique ne tenait pas), `uneven inset` (barres entières : bouton « ⋯ »), `tight
-inset` (carte de 04). Restent hors gate : `jump`/`appears` au départ (poster remplacé par
-l'ouverture hors écran), `vanishes with no exit` du fichier qui vole (relais voulu),
-`near-empty frames` (scores pas encore là en 03 ; temps vide voulu avant le premier mot en 04).
+Lignes levées en cours de r17 : `uneven inset` de la barre de 01 (coin gardé : bouton « ⋯ »,
+titre aligné à gauche comme en 02), `touching` (squelettes de 01 raccourcis), `framing` des puces
+compactes (à la gouttière en haut et à droite), `uneven padding` de la puce de 02 (11 px partout),
+`framing` de 03 compact (part visible plus haute que large : 356 px), `settle snap` de 03
+(glissement de la citation sur 0,5 s). Restent hors gate (candidats) : `jump` de la pastille
+qui roule en 01 et des lignes qui se croisent en 03 (~4 px en une image, le `scale` de la ligne
+soulevée), `vanishes with no exit` du fichier qui vole (relais voulu), `appears` du compteur et
+`near-empty frames` à l'ouverture en 03 (fondu du premier coup d'œil ; un rechargement de la page
+par l'autre agent a aussi fait rejouer 03 en plein film à 1440).
 
 ## Composition (teaching.md, Whole scenes), sur chaque still final
 
-- 01 : l'œil va d'abord au CV clair puis à la fiche verte (cause puis résultat) ; une fenêtre
-  mène, le papier est un satellite plus petit qui ne couvre que la barre latérale ; matériau
-  clair sur sombre lisible ; rien de cassé sous la coupe (la barre latérale et le bas de la
-  fiche sont du remplissage).
+- 01 : la fiche mène, le CV (carte sombre plus claire que la fenêtre) est la cause, plus petit,
+  sur la barre latérale seule ; la fenêtre garde son coin à droite, rien d'utile sous la coupe.
 - 02 : la fiche mène (grande, derrière), le panneau est l'outil (petit, devant, sur la marge) ;
-  la ligne relie une cause à un effet, une seule ; aucun mot coupé ; le panneau ne cache ni
-  niveau, ni point, ni badge.
-- 03 : une seule fenêtre, lue à 17 px ; le résultat (Camille en tête, confiance élevée) est ce
-  que l'œil voit d'abord ; rien d'autre ne concurrence.
-- 04 : l'e-mail (carte du haut, texte réel) mène ; la photo, plus calme sous son voile, donne
-  le sens sans recouper de visage ; deux cartes, une largeur, un bord gauche.
+  la ligne relie une cause à un effet, une seule ; aucun mot coupé.
+- 03 : un zoom (coupe à droite et au pied) ; le résultat (Camille en tête, confiance élevée, sa
+  citation du CV) est ce que l'œil voit d'abord.
+- 04 : l'e-mail mène (en haut, le plus grand) ; la photo, plus courte, donne le sens ; la mention
+  IA sous l'image.
 
 ## Non vérifié
 
-Build de production ; Safari, Firefox, tactile ; revue « fresh eye » par un autre regard
-(references/review.md) sur ces nouvelles compositions.
+Build de production ; Safari, Firefox, tactile ; largeurs intermédiaires (768, 1024) ; revue
+« fresh eye » sur r17. Finitions restantes : le relais du fichier qui vole en 01 (a-M1), la
+pastille d'ouverture mi-roulée (a-M3), le bouton « ⋯ » qui dépasse de quelques pixels à droite
+des puces compactes (01, 02), le saut de ~4 px des lignes qui se croisent en 03.

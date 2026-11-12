@@ -14,8 +14,8 @@ import { fr } from '@/components/site/fr';
  * puis le bonus ; à chaque point, le passage de la demande d'où il sort se
  * marque. Une seule ligne, après coup, en encre neutre : du passage cité au
  * point qu'il a produit, par le sol vide. Le point à clarifier, en squelette
- * dès le départ, se résout en dernier. Compact : le panneau au-dessus de la
- * fenêtre, sur sa seule barre de titre, sans ligne (les marques suffisent).
+ * dès le départ, se résout en dernier. Compact : la demande réduite à une
+ * puce posée sur la barre de titre, son premier passage marqué, sans ligne.
  */
 const POINTS: ReadonlyArray<{ text: string; tier: string; tone: 'accent' | 'neutral'; low?: boolean; sk: number }> = [
   { text: 'Java et Spring Boot', tier: 'Indispensable', tone: 'accent', sk: 118 },
@@ -39,14 +39,16 @@ async function script(a: Act<S>): Promise<void> {
   await a.wait(380);
   a.put({ tiers: 2 });
   await a.wait(560);
-  for (const n of [3, 4]) {
-    a.put({ points: n });
-    await a.wait(320);
-    a.put({ tiers: n });
-    await a.wait(420);
-  }
+  a.put({ points: 3 });
+  await a.wait(320);
+  a.put({ tiers: 3 });
+  await a.wait(420);
+  // Le dernier point et sa ligne ensemble : le passage s'allume, la ligne en
+  // part pendant que le point entre (la cause, puis l'effet, sans retard).
   a.mark('link');
-  a.put({ link: true });
+  a.put({ points: 4, link: true });
+  await a.wait(320);
+  a.put({ tiers: 4 });
   await a.wait(700);
   a.mark('clarify');
   a.put({ clarify: true });
@@ -160,11 +162,17 @@ export function MissionStage({ autoplay = false }: { autoplay?: boolean }): Reac
                 {' en plus.'}
               </p>
             </section>
+            {/* Compact : la demande réduite à une puce posée sur la barre de titre
+                (chrome seul) ; son premier passage se marque comme au bureau. */}
+            <p className="esm-chip" aria-hidden>
+              <span className="esm-chip__kind">Demande du client</span>
+              <Src on={s.points > 0}>Java et Spring Boot</Src>
+            </p>
             {wide && tier.width > 0 && (
               <Connector
                 show={s.link}
                 from={{ x: src.x + src.width / 2, y: panel.y + panel.height + 6 }}
-                to={{ x: tier.x + tier.width + 8, y: tier.y + tier.height / 2 }}
+                to={{ x: tier.x + tier.width + 12, y: tier.y + tier.height / 2 }}
                 route="v"
                 className="esm-link"
               />

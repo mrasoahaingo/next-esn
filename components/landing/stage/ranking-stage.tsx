@@ -1,13 +1,14 @@
 'use client';
 
-import { MoreHorizontal } from 'lucide-react';
-import { Avatar, Badge, Count, Meter, Stage, Window, type Act } from '@/components/landing/stage/kit';
+import { Avatar, Badge, Bar, Count, Meter, Stage, Window, type Act } from '@/components/landing/stage/kit';
 
 /**
- * Écran 3, composition « gros plan » (gold `close-up`) : la fenêtre entière,
- * chrome compris, agrandie 1,3 fois, en retrait en haut et sur les côtés, qui
- * file par le bas ; les trois lignes classées, le sujet, sont entières.
- * La confiance se pose dans l'en-tête, à côté du titre. Mouvement (golds
+ * Écran 3, composition « gros plan » (gold `close-up`) : la fenêtre, chrome
+ * compris, agrandie 1,4 fois, à la gouttière en haut et à gauche, coupée par
+ * la scène à droite (sa marge vide) et au pied (une quatrième ligne, du
+ * remplissage, tranchée) ; les trois lignes classées, le sujet, sont entières.
+ * Sous la première, la citation du CV qui fonde le score (la page promet que
+ * chaque point renvoie au CV). La confiance se pose dans l'en-tête. Mouvement (golds
  * « reorder » et « table-edit ») : les scores arrivent un à un,
  * chiffre et barre sur la même horloge ; une fois tous connus (la cause
  * visible), le classement se fait une ligne à la fois, comme un glisser : la
@@ -74,12 +75,11 @@ export function RankingStage({ autoplay = false }: { autoplay?: boolean }): Reac
     >
       {(s) => (
         <div className="esr-zoom">
-          <Window title="Positionnements" toolbar={<MoreHorizontal size={16} aria-hidden />}>
+          <Window title="Positionnements">
             <div className="eg-ss-body">
               <div className="eg-ss-head">
                 <div>
                   <div className="eg-ss-title">Tech lead Java</div>
-                  <div className="eg-ss-sub">Trois profils, classés par score pondéré</div>
                 </div>
                 <span className="esr-conf" data-on={s.top || undefined}>
                   <Badge tone="success" dot>
@@ -98,7 +98,8 @@ export function RankingStage({ autoplay = false }: { autoplay?: boolean }): Reac
                       className="esr-slot"
                       data-lifted={s.lifted === p.id || undefined}
                       data-room={s.room === p.id || undefined}
-                      style={{ ['--slot' as string]: slot }}
+                      data-past={(s.top && slot > 0) || undefined}
+                      style={{ ['--slot' as string]: slot, ['--past' as string]: s.top && slot > 0 ? 1 : 0 }}
                     >
                       <div className="esr-row" data-top={top || undefined}>
                         {/* La personne dont parle l'histoire en azur, les autres
@@ -123,6 +124,27 @@ export function RankingStage({ autoplay = false }: { autoplay?: boolean }): Reac
                     </div>
                   );
                 })}
+                {/* La preuve sous le premier : elle entre avec la confiance, les
+                    lignes suivantes glissent pour lui faire place. */}
+                <p className="esr-cite" data-on={s.top || undefined}>
+                  <span className="esr-cite__label">Citation du CV</span>
+                  <span className="esr-cite__text">« Tech lead d’une squad de 5 »</span>
+                </p>
+                {/* Quatrième ligne, du remplissage : la scène la tranche (gros plan). */}
+                <div
+                  className="esr-slot esr-slot--filler"
+                  aria-hidden
+                  data-past={s.top || undefined}
+                  style={{ ['--slot' as string]: 3, ['--past' as string]: s.top ? 1 : 0 }}
+                >
+                  <div className="esr-row">
+                    <Bar w={32} h={32} r={16} tone={2} />
+                    <div>
+                      <Bar w={104} h={8} r={4} tone={2} />
+                      <Bar w={64} h={7} r={3.5} tone={1} className="esr-filler__sub" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </Window>

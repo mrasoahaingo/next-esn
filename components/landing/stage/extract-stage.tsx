@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Upload } from 'lucide-react';
+import { FileText, MoreHorizontal, Upload } from 'lucide-react';
 import { Badge, Bar, Check, Fly, Meter, Roll, Stage, Window, type Act } from '@/components/landing/stage/kit';
 
 /**
@@ -12,16 +12,16 @@ import { Badge, Bar, Check, Fly, Meter, Roll, Stage, Window, type Act } from '@/
  * dépôt, qui s'allume et dont le libellé sort avant l'arrivée ; posé, il
  * devient la ligne du fichier (même géométrie, un seul objet). Jauge, puis
  * rubriques de haut en bas : la barre part, les mots arrivent ensuite. Le
- * statut est une seule pastille dont le libellé roule. Compact : la feuille,
- * réduite, se pose au-dessus de la fenêtre sur sa barre de titre. Poster = la
- * fiche prête.
+ * statut est une seule pastille dont le libellé roule. Compact : la feuille
+ * réduite à sa puce de fichier, à cheval sur la barre de titre ; le vol en
+ * part. Poster = la fiche prête.
  */
 const ROWS: ReadonlyArray<{ label: string; value: string; sk: number }> = [
-  { label: 'Identité', value: 'Camille Durand · Tech lead Java', sk: 196 },
+  { label: 'Identité', value: 'Camille Durand · Tech lead Java', sk: 160 },
   { label: 'Expériences', value: '6 postes, 11 ans', sk: 118 },
   { label: 'Compétences', value: '24 relevées', sk: 92 },
   { label: 'Langues', value: 'Français, anglais C1', sk: 132 },
-  { label: 'Formation', value: 'Master informatique, 2013', sk: 168 },
+  { label: 'Formation', value: 'Master informatique, 2013', sk: 150 },
 ];
 const KO = 412;
 const FILE = 'CV_Camille_Durand.pdf';
@@ -95,16 +95,17 @@ export function ExtractStage({ autoplay = false }: { autoplay?: boolean }): Reac
         const from = anchor.width ? { ...to, x: anchor.x, y: anchor.y } : { ...to, y: to.y - 10 };
         return (
           <>
-            <Window title="Nouvelle fiche" className="esx-win">
+            {/* Barre entière (son coin est gardé) : le bouton « ⋯ » tient la même
+                marge aux deux bouts. */}
+            <Window title="Nouvelle fiche" className="esx-win" toolbar={<MoreHorizontal size={16} aria-hidden />}>
               <div className="esx-app">
                 {/* Barre latérale de l'app : du remplissage, que la feuille couvre. */}
                 <aside className="esx-side" aria-hidden>
-                  <Bar w={22} h={22} r={6} tone={3} />
                   {[72, 96, 64, 84, 58].map((w, i) => (
                     <Bar key={`a${w}`} w={w} h={8} r={4} tone={i === 1 ? 3 : 2} />
                   ))}
                   <span className="esx-side__gap" />
-                  {[88, 70, 94, 62, 80, 74].map((w) => (
+                  {[88, 70, 94, 62].map((w) => (
                     <Bar key={`b${w}`} w={w} h={8} r={4} tone={2} />
                   ))}
                 </aside>
@@ -158,7 +159,7 @@ export function ExtractStage({ autoplay = false }: { autoplay?: boolean }): Reac
             </Window>
             {/* Le CV reçu : du papier, devant la fenêtre. Son pied porte le
                 fichier, d'où part le vol. */}
-            <section className="esx-cv" data-lifted={s.lift || undefined} aria-hidden>
+            <section className="esx-cv" data-lifted={s.lift || undefined} data-fly={(s.lift && !s.file) || undefined} aria-hidden>
               <p className="esx-cv__name">Camille Durand</p>
               <p className="esx-cv__role">Tech lead Java · 11 ans · Paris</p>
               <div className="esx-cv__more">
