@@ -28,7 +28,7 @@ See: `.planning/PROJECT.md` (milestone v1.3)
 Phase: 9 of 14 (DB + Schema Foundation + Proxycurl Audit)
 Plan: — of —
 Status: Ready to plan
-Last activity: 2026-09-21 — Completed quick task 260921-seo: Écritures Supabase non contrôlées traitées + règle ESLint de prévention
+Last activity: 2026-11-12 — Completed quick task 261112-27s: landing « Verre de nuit » (Hallmark), auth et 404 alignées, suppression des fichiers d'une fiche
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -68,6 +68,7 @@ None.
 | 260921-ksd | Assainissement des caractères interdits par Postgres avant tout écrit JSONB + plafond de retry | 2026-09-21 | 116fb14 | [260921-ksd-assainir-les-caracteres-interdits-par-po](./quick/260921-ksd-assainir-les-caracteres-interdits-par-po/) |
 | 260921-seo | Écritures Supabase non contrôlées traitées (17 sites) + règle ESLint de prévention | 2026-09-21 | 2a1b793 | [260921-seo-traiter-les-11-ecritures-supabase-non-co](./quick/260921-seo-traiter-les-11-ecritures-supabase-non-co/) |
 | 261111-q9p | Refonte visuelle des pages publiques (landing, auth, 404) : photos GPT Image 2.6, jury de 3 juges | 2026-11-12 | ea6fb48 | [261111-q9p-refonte-visuelle-des-pages-publiques-esn](./quick/261111-q9p-refonte-visuelle-des-pages-publiques-esn/) |
+| 261112-27s | Agent designer + jury, puis landing « Verre de nuit » (Hallmark), auth/404 alignées, vraie 404, suppression des fichiers d'une fiche | 2026-11-12 | 7a6a2cd | [261112-27s-agent-designer-propositions-maquettes-gp](./quick/261112-27s-agent-designer-propositions-maquettes-gp/) |
 
 ## Session continuity
 

@@ -39,7 +39,12 @@ remplacée change de nom de fichier : `/_next/image` et le CDN la mettent en cac
 
 ## Outil
 
-`outils/gw-image.mjs`, depuis la racine du dépôt ; la clé `AI_GATEWAY_API_KEY` est lue par Node dans `.env.local` :
+**Par défaut : kie.ai.** `outils/kie-image.mjs` (mêmes options, clé `KIE_API_KEY` dans `.env.local`, modèles
+`gpt-image-2-6/sunburst-text-to-image` et `gpt-image-2-6/flare-text-to-image`, `--size` converti au rapport kie.ai
+le plus proche, `--resolution 2K` par défaut). Les crédits de l'AI Gateway servent d'abord aux appels LLM de
+l'application ; l'outil Gateway reste le repli quand kie.ai n'a plus de crédit.
+
+Repli : `outils/gw-image.mjs`, depuis la racine du dépôt ; la clé `AI_GATEWAY_API_KEY` est lue par Node dans `.env.local` :
 
 ```bash
 node --env-file=.env.local docs/media/esneo/outils/gw-image.mjs \
