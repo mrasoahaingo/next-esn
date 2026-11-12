@@ -3,8 +3,8 @@
  * display + voice: Albert Sans 600 (roman, −0.03em) · product UI: Geist · data: Geist Mono · axes: dark / grotesk-sans / cool
  * diversification: same three axes as the previous build (Graphite Pro) — user override (no serif), accepted deviation from the rotation rule
  * logo: the user's original script logo (components/esneo-full-logo.tsx, SVG, currentColor), sized by height via .eg-logo, margins cropped to the letters
- * enrichment: Tier A — HTML/CSS product fragments in glass windows over the paper they replace + one existing AI photo (hero, darkened)
- * glass: explicit user override of the genre ban — product windows, hero toast, nav pill, frosted "Bientôt" panes only; ≤ 3 blurred layers on screen; blur radius never animated
+ * enrichment: Tier A — HTML/CSS product fragments in glass windows over the paper they replace; the hero shows the product window alone
+ * glass: explicit user override of the genre ban — product windows, nav pill, frosted "Bientôt" panes only; ≤ 3 blurred layers on screen; blur radius never animated
  * tone: luxe technique · context: inferred by orchestrator · studied: no · pre-emit critique: P4 H5 E4 S5 R4 V4
  * r2 (jury tour 3): blur only over a photo or a sheet (hero, screens 1/2/4, tracking board; nav pill; frosted panes), opaque panels elsewhere,
  *   no blur on product windows under 60rem · halos anchored to hero and the lit trust band · numbered tour 01–04 with a progress rail
@@ -24,9 +24,13 @@
  *   removed and « Se connecter » when signed out, card title below the form h1 on desktop, per-page titles and descriptions
  * r9: the user's original script logo everywhere (nav, footer, auth, 404, OG card) · legacy public-page system deleted
  *   (marketing landing, site components, esneo-site.css, Hanken, unused photos)
- * r10: headline « Vous choisissez le profil. Esneo fait le dossier. » · hero « text + live window » (5/12 – 7/12 from 75rem,
- *   stage bleeding right, CV head behind the window, one-shot glass toast, whole window above the fold at 1440 × 900) ·
- *   review window laid out by container queries · sober footer, logo at nav size (no cqi mast)
+ * r10: headline « Vous choisissez le profil. Esneo fait le dossier. » · review window laid out by container queries ·
+ *   sober footer, logo at nav size (no cqi mast)
+ * r11 (tasteskill 2.5.1, design-taste-frontend, deal: hero split): the hero alone on the first screen (100svh, 120/64);
+ *   text span-5 (14px notice line at y 120, h1 500 at 72/40, lead 20/30 ≤ 42ch, two 44px buttons); the product window
+ *   alone in a span-6 frame from column 7 (596 × 716), lit field, no line, ending on the right line; one flat 300px card
+ *   24px in from its lower-left corner, dot breathing 2.4s; window scrolls inside the frame when taller, sticky action
+ *   bar from 640px; no caption, no photo; data-enter entrance once; buttons step on hover, press on click
  * loosened by user request: glass (genre ban), repeated theme axes, height transition on the hero work area (layout property)
  */
 
@@ -129,8 +133,6 @@ html:has(.eg-landing) {
   --nav-fill-solid: oklch(19% 0.018 265);
   --nav-blur: 22px;
   --bar-fill: oklch(19.5% 0.018 265);
-  --toast-fill: oklch(19% 0.02 265 / 0.8);
-  --toast-fill-solid: oklch(19% 0.02 265);
   --mask-solid: linear-gradient(#000 0 0);
   --mask-sheet: linear-gradient(180deg, #000 0%, #000 38%, transparent 88%);
   --mask-band: linear-gradient(90deg, transparent 0%, #000 35%, #000 65%, transparent 100%);
@@ -150,9 +152,6 @@ html:has(.eg-landing) {
   --text-h3: clamp(1.25rem, 1.12rem + 0.45vw, 1.5rem);
   --text-step: clamp(1.5rem, 1.05rem + 1.5vw, 2.375rem);
   --text-h2: clamp(1.75rem, 1rem + 3.2vw, 3.5rem);
-  /* Titre du héros au téléphone ; à partir de 40rem, il se règle sur la largeur
-   * de sa colonne (voir .eg-display). */
-  --text-display: clamp(2.125rem, 8.2vw + 0.1rem, 2.75rem);
 
   /* Espace (4 pt) */
   --space-3xs: 0.125rem;
@@ -295,30 +294,6 @@ html:has(.eg-landing) {
 }
 
 /* ─── Typographie ─────────────────────────────────────────────────────── */
-.eg-display {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-style: normal;
-  font-size: var(--text-display);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
-  color: var(--color-ink);
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.eg-display__line {
-  display: block;
-}
-/* « Vous choisissez le profil. » mesure 10,44 em : à 9,2 % de la colonne du
- * texte (conteneur), chaque phrase tient sur sa ligne. */
-@media (min-width: 40rem) {
-  .eg-display {
-    font-size: clamp(2.5rem, 9.2cqi, 4.5rem);
-  }
-  .eg-display__line {
-    white-space: nowrap;
-  }
-}
 .eg-h2 {
   font-family: var(--font-display);
   font-weight: 600;
@@ -418,7 +393,7 @@ html:has(.eg-landing) {
   }
 }
 .eg-btn--light:active {
-  transform: translateY(0);
+  transform: translateY(1px) scale(0.985);
 }
 @media (hover: hover) {
   .eg-btn--primary:not([aria-disabled='true']):hover {
@@ -428,14 +403,16 @@ html:has(.eg-landing) {
   .eg-btn--quiet:not([aria-disabled='true']):hover {
     background: var(--color-quiet-hover);
     border-color: var(--glass-line-strong);
+    transform: translateY(-1px);
   }
 }
+/* Survol : le bouton avance d'un cran ; appui : il s'enfonce (1px sous le repos, 0,985). */
 .eg-btn--primary:not([aria-disabled='true']):active {
   background: var(--color-accent-press);
-  transform: translateY(0);
+  transform: translateY(1px) scale(0.985);
 }
 .eg-btn--quiet:not([aria-disabled='true']):active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.985);
 }
 .eg-btn[disabled],
 .eg-btn[aria-disabled='true'] {
@@ -984,101 +961,276 @@ html:has(.eg-landing) {
   gap: var(--space-xs);
 }
 
-/* ─── Héros ───────────────────────────────────────────────────────────── */
-/* Texte à gauche, fenêtre vivante à droite (à partir de 75rem) ; une colonne
- * en dessous, texte d'abord. Halo 1 : ancré au héros, sous la fenêtre. */
+/* ─── Héros (tasteskill 2.5.1 · hero: split) ──────────────────────────── */
+/* Exactement le premier écran. Texte sur cinq colonnes (annonce, h1, chapeau,
+ * deux boutons), la fenêtre du produit sur six à partir de la colonne 7,
+ * alignée en haut sur l'annonce et finissant sur la ligne de droite, rayon sur
+ * les quatre coins ; dessous, une seule carte plate. Sous 1024 px, le texte
+ * puis la fenêtre dans ce qui reste (240 px au moins). Fond : la lumière azur du
+ * haut (halo 1). Entrée une fois au chargement (data-enter). */
 .eg-hero {
   position: relative;
   z-index: 0;
-  padding-top: clamp(6.5rem, 10vw, 7.25rem);
-  padding-bottom: clamp(3rem, 15vw - 2rem, 11.25rem);
+  box-sizing: border-box;
+  height: 100svh;
+  padding: 6rem 0 1.5rem;
 }
 .eg-hero::before {
   content: '';
   position: absolute;
-  inset: 0 0 -14rem;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(42rem 30rem at 50% -10%, var(--color-halo-1), transparent 70%);
+  background: radial-gradient(64rem 34rem at 62% -12%, var(--color-halo-1), transparent 70%);
+}
+.eg-hero > .eg-wrap {
+  height: 100%;
 }
 .eg-hero__grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: clamp(2.5rem, 5vw, 3rem);
-}
-/* La colonne du texte sert de conteneur : le titre se règle sur sa largeur. */
-.eg-hero__copy {
-  container-type: inline-size;
-  display: grid;
-  justify-items: start;
-  gap: var(--space-lg);
-  min-width: 0;
-}
-.eg-hero__demo {
-  min-width: 0;
-}
-.eg-hero__cta {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-sm);
+  flex-direction: column;
+  height: 100%;
 }
-.eg-hero__go {
-  order: 0;
+.eg-hero__text {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.eg-hero__kicker {
+  margin: 0 0 1rem;
+  font-size: var(--text-sm);
+  line-height: 1.25rem;
+  color: var(--color-ink-2);
+}
+.eg-hero__h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+.eg-hero__lead {
+  margin-top: 1.5rem;
+  max-width: 42ch;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  color: var(--color-ink-2);
+}
+.eg-hero__actions {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  gap: var(--space-sm);
+  margin-top: 2rem;
 }
 .eg-hero__fine {
-  order: 1;
-  flex-basis: 100%;
-  margin-top: calc(-1 * var(--space-xs));
-  padding-left: 1.5rem;
-  font-size: var(--text-xs);
+  margin-top: var(--space-sm);
+  font-size: var(--text-sm);
+  line-height: 1.25rem;
   color: var(--color-ink-2);
 }
-.eg-hero__more {
-  order: 2;
+/* Le cadre : un panneau éclairé qui tient la fenêtre. Hauteur fixe : il fait
+ * défiler la fenêtre quand elle le dépasse, rien ne bouge autour (CLS nul). */
+.eg-hero__frame {
+  position: relative;
+  flex: 1 1 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 15rem;
+  margin-top: 2rem;
+  overflow: hidden;
+  border-radius: var(--radius-window);
+  /* Un champ éclairé, sans filet : la fenêtre est la seule boîte. */
+  background:
+    radial-gradient(120% 70% at 80% 0%, var(--color-accent-wash), transparent 62%),
+    linear-gradient(180deg, var(--color-paper-3), var(--color-paper-2));
 }
-/* Consigne courte, collée à la fenêtre. */
-.eg-hint {
+.eg-hero__window {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-line-strong) transparent;
+}
+.eg-hero__window .eg-review {
+  margin: 0;
+  width: 100%;
+  border-radius: var(--radius-window) var(--radius-window) var(--radius-control) var(--radius-control);
+}
+/* Fenêtre opaque (rien de flouté dessous) : la zone de lecture n'a pas besoin de
+ * fond foncé de plus, la barre d'action reprend le fond de la fenêtre. */
+.eg-hero__window .eg-review__main {
+  background: none;
+}
+/* Dans le héros, la vitre ne défile pas de reflet : rien ne bouge au défilement. */
+.eg-hero .eg-glass::after {
+  content: none;
+}
+/* La carte posée sur le cadre, 24 px en retrait de son coin bas-gauche, sous
+ * la fenêtre : plate, opaque, filet fin, un fait de l'outil. Bureau seulement. */
+.eg-float {
+  display: none;
+}
+.eg-float__row {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-xs);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
   font-size: var(--text-xs);
-  line-height: 1.45;
   color: var(--color-ink-2);
 }
-.eg-hint__dot {
-  flex: none;
+.eg-float__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-ink);
+}
+.eg-float__live::before {
+  content: '';
   width: 0.4375rem;
   height: 0.4375rem;
   border-radius: 50%;
-  background: var(--color-accent-text);
-  box-shadow: 0 0 0 3px var(--color-accent-wash);
-  transform: translateY(-0.05rem);
+  background: var(--color-ok);
+  box-shadow: 0 0 0 0 var(--color-ok-edge);
+  animation: eg-live 2.4s ease-out infinite;
 }
-.eg-stage {
-  position: relative;
-  min-height: var(--stage-min, auto);
-  margin-top: var(--space-sm);
+.eg-float__ok {
+  font-weight: 500;
+  color: var(--color-ok);
 }
-.eg-stage__photo {
-  position: relative;
-  aspect-ratio: 5 / 4;
-  border-radius: var(--radius-window);
-  overflow: hidden;
-  background: var(--color-paper-2);
+.eg-float__title {
+  margin-top: 0.25rem;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-ink);
 }
-.eg-stage__photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 96% 30%;
+/* Entrée, une fois au chargement (html.m-enter, posé par la landing ; sans script,
+ * le héros reste tel qu'écrit) : l'annonce et le h1 montent, puis le chapeau, les
+ * boutons et la mention, 12 px, en cascade ; la fenêtre se pose de 0,98 à 1 sans
+ * jamais disparaître. Transform et opacité seulement, environ 1,1 s. */
+@media (prefers-reduced-motion: no-preference) {
+  html.m-enter .eg-hero[data-enter] :is(.eg-hero__kicker, .eg-hero__h1) {
+    animation: eg-enter-rise 700ms var(--ease-out) both;
+  }
+  html.m-enter .eg-hero[data-enter] .eg-hero__h1 {
+    animation-delay: 60ms;
+  }
+  html.m-enter .eg-hero[data-enter] .eg-hero__lead {
+    animation: eg-enter-up 520ms var(--ease-out) 350ms both;
+  }
+  html.m-enter .eg-hero[data-enter] .eg-hero__actions {
+    animation: eg-enter-up 520ms var(--ease-out) 410ms both;
+  }
+  html.m-enter .eg-hero[data-enter] .eg-hero__fine {
+    animation: eg-enter-up 520ms var(--ease-out) 470ms both;
+  }
+  html.m-enter .eg-hero[data-enter] .eg-hero__frame {
+    animation: eg-enter-settle 900ms var(--ease-out) both;
+  }
 }
-.eg-stage__photo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, var(--color-veil-soft) 0%, var(--color-veil-mid) 55%, var(--color-veil) 100%);
+@keyframes eg-enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
+@keyframes eg-enter-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes eg-enter-settle {
+  from {
+    transform: scale(0.98);
+  }
+  to {
+    transform: none;
+  }
+}
+/* Téléphone : la fenêtre recadrée se fond au bas du cadre ; elle défile au-dessus
+ * de ce fondu jusqu'à sa barre d'action. */
+@media (max-width: 39.99rem) {
+  .eg-hero__frame::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 3rem;
+    background: linear-gradient(180deg, transparent, var(--color-paper-2));
+    pointer-events: none;
+  }
+  .eg-hero__window .eg-review {
+    margin-bottom: 3rem;
+  }
+}
+@media (min-width: 40rem) {
+  .eg-hero {
+    padding: 7.5rem 0 4rem;
+  }
+  .eg-hero__h1 {
+    font-size: clamp(2.5rem, 14.4cqi, 4.5rem);
+  }
+  .eg-hero__lead {
+    font-size: 1.25rem;
+    line-height: 1.875rem;
+  }
+  .eg-hero__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-self: flex-start;
+  }
+  /* À partir de 640 px, la barre d'action de la fenêtre reste au bas du cadre. */
+  .eg-hero__window .eg-review__foot {
+    position: sticky;
+    bottom: 0;
+    background: var(--glass-fill);
+  }
+}
+@media (min-width: 64rem) {
+  .eg-hero__grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    align-items: stretch;
+  }
+  .eg-hero__text {
+    grid-column: 1 / span 5;
+    align-self: start;
+  }
+  .eg-hero__frame {
+    grid-column: 7 / span 6;
+    height: 100%;
+    min-height: 0;
+    margin-top: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+  .eg-float {
+    display: grid;
+    width: min(18.75rem, 100% - 3rem);
+    margin: var(--space-xs) var(--space-lg) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--glass-line-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-paper);
+  }
+}
+
+/* Légende en pastille sur une photo (visite, fiabilité, connexion, 404). */
 .eg-credit {
   position: absolute;
   top: var(--space-sm);
@@ -1092,210 +1244,9 @@ html:has(.eg-landing) {
   color: var(--color-ink-2);
   white-space: nowrap;
 }
-.eg-credit--story {
-  display: grid;
-  gap: 0.125rem;
-  top: auto;
-  bottom: 6.75rem;
-  left: var(--space-md);
-  right: var(--space-md);
-  padding: 0;
-  background: none;
-  white-space: normal;
-  text-shadow: 0 1px 8px var(--color-paper);
-}
-.eg-credit__story {
-  font-size: clamp(0.75rem, 3.35vw, 0.875rem);
-  font-weight: 600;
-  color: var(--color-ink);
-}
-.eg-credit--story > span:last-child {
-  font-size: var(--text-2xs);
-}
+/* La fenêtre se met en page selon sa propre largeur (requêtes de conteneur). */
 .eg-review {
-  /* La fenêtre se met en page selon sa propre largeur (requêtes de conteneur) :
-   * la même démo tient dans la colonne du héros comme en pleine largeur. */
   container: review / inline-size;
-  margin-top: -6rem;
-}
-/* La tête du CV et la notification n'apparaissent qu'au bureau. */
-.eg-stage .eg-sheet--cv,
-.eg-toast {
-  display: none;
-}
-@media (min-width: 60rem) {
-  .eg-hero::before {
-    background: radial-gradient(56rem 40rem at 80% 16%, var(--color-halo-1), transparent 70%);
-  }
-  .eg-hero__cta {
-    align-items: center;
-  }
-  .eg-hero__fine {
-    order: 3;
-    flex-basis: auto;
-    margin-top: 0;
-    padding-left: var(--space-xs);
-  }
-  .eg-lede {
-    max-width: 40rem;
-  }
-  .eg-stage {
-    padding: 4.5rem clamp(2rem, 4vw, 3.5rem) 0;
-  }
-  /* Hauteur fixe : la photo ne se recadre plus quand la fenêtre change d'état ;
-   * la fenêtre déborde dessous. */
-  .eg-stage__photo {
-    position: absolute;
-    inset: 0 0 auto;
-    height: clamp(30rem, 44vw, 36rem);
-    aspect-ratio: auto;
-  }
-  .eg-stage__photo img {
-    object-position: 100% 30%;
-  }
-  /* Pas de voile sous la fenêtre : seulement une lisière à gauche et en bas,
-   * pour que les lumières de la ville passent en bokeh dans le verre. */
-  .eg-stage__photo::after {
-    background:
-      linear-gradient(0deg, var(--color-paper) 0%, transparent 26%),
-      linear-gradient(90deg, var(--color-veil-mid) 0%, transparent 14%);
-  }
-  /* La légende tient dans la bande libre à droite de la fenêtre. */
-  .eg-stage__photo .eg-credit {
-    top: auto;
-    bottom: var(--space-md);
-    left: auto;
-    right: var(--space-md);
-    max-width: 13rem;
-    padding: 0.5rem 0.75rem;
-    border-radius: var(--radius-control);
-    background: var(--color-credit-bg);
-    text-shadow: none;
-  }
-  .eg-review {
-    margin-top: 0;
-    width: min(100% - 15rem, 54rem);
-  }
-  /* La tête du CV de Camille dépasse au-dessus de la fenêtre, comme les
-   * feuilles de la visite : papier éteint, masque, légère rotation. */
-  .eg-stage .eg-sheet--cv {
-    display: grid;
-    top: 1.75rem;
-    left: clamp(3rem, 6vw, 5rem);
-    width: 19rem;
-    height: 11rem;
-    transform: rotate(-2.5deg);
-  }
-  /* Notification de verre posée en coin : elle entre une seule fois. */
-  .eg-toast {
-    position: absolute;
-    z-index: var(--z-raised);
-    top: 2rem;
-    right: clamp(1rem, 2vw, 1.5rem);
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: 0.4375rem 0.5rem 0.4375rem 0.75rem;
-    border-radius: var(--radius-pill);
-    background:
-      radial-gradient(120% 90% at 10% 0%, var(--glass-sheen), transparent 60%),
-      linear-gradient(var(--toast-fill), var(--toast-fill));
-    box-shadow:
-      inset 0 1px 0 var(--glass-spec-inset),
-      inset 0 0 0 1px var(--glass-edge),
-      0 18px 40px -18px var(--glass-shade);
-    -webkit-backdrop-filter: blur(var(--glass-blur-photo)) saturate(var(--glass-sat));
-    backdrop-filter: blur(var(--glass-blur-photo)) saturate(var(--glass-sat));
-    font-family: var(--font-ui);
-    font-size: var(--text-xs);
-    font-weight: 500;
-    color: var(--color-ink);
-    white-space: nowrap;
-    animation: eg-toast-in 640ms var(--ease-out) 900ms both;
-  }
-  .eg-toast__icon {
-    width: 0.875rem;
-    height: 0.875rem;
-    color: var(--color-ok);
-  }
-}
-@media (min-width: 75rem) {
-  .eg-hero {
-    padding-top: 6.5rem;
-    padding-bottom: clamp(5rem, 8vw, 8rem);
-  }
-  .eg-hero::before {
-    background: radial-gradient(48rem 36rem at 72% 30%, var(--color-halo-1), transparent 70%);
-  }
-  .eg-hero__grid {
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    align-items: start;
-    column-gap: 3rem;
-  }
-  /* Le titre s'aligne sur le haut de la fenêtre, pas sur la hauteur réservée. */
-  .eg-hero__copy {
-    padding-top: 6.5rem;
-  }
-  .eg-lede {
-    max-width: none;
-    font-size: 1.0625rem;
-  }
-  .eg-hero__fine {
-    order: 3;
-    flex-basis: 100%;
-    padding-left: 0.25rem;
-  }
-  /* La scène déborde jusqu'au bord droit de la page : la personne de la photo
-   * reste visible à droite de la fenêtre. */
-  .eg-stage {
-    margin-top: 0.625rem;
-    margin-right: calc((var(--cw) - 100vw) / 2);
-    padding: 4.5rem 0 0;
-  }
-  .eg-stage__photo {
-    height: 26rem;
-    border-radius: var(--radius-window) 0 0 var(--radius-window);
-  }
-  .eg-stage__photo img {
-    object-position: 100% 32%;
-  }
-  /* Voile d'angle sous la légende (le ciel est clair en haut de la photo). */
-  .eg-stage__photo::after {
-    background:
-      radial-gradient(34rem 8rem at 0 0, var(--color-veil) 0%, var(--color-veil) 45%, transparent 100%),
-      linear-gradient(0deg, var(--color-paper) 0%, transparent 26%),
-      linear-gradient(90deg, var(--color-veil-mid) 0%, transparent 14%);
-  }
-  /* Bande du haut : la légende à gauche, la tête du CV à droite (sous la
-   * moitié droite de la fenêtre), la notification posée sur son coin. */
-  .eg-stage__photo .eg-credit {
-    top: 0.75rem;
-    bottom: auto;
-    left: 1rem;
-    right: auto;
-    max-width: 18.5rem;
-    padding: 0;
-    background: none;
-    text-shadow: 0 1px 8px var(--color-paper);
-  }
-  .eg-stage__photo .eg-credit__story {
-    font-size: var(--text-xs);
-  }
-  .eg-review {
-    width: min(100%, 38rem);
-  }
-  .eg-stage .eg-sheet--cv {
-    top: 1.375rem;
-    left: calc(min(100%, 38rem) - 19.5rem);
-    width: 18rem;
-    height: 10rem;
-    transform: rotate(1.75deg);
-  }
-  .eg-toast {
-    top: 0.375rem;
-    right: auto;
-    left: calc(min(100%, 38rem) - 10.75rem);
-  }
 }
 
 /* Fenêtre de positionnement */
@@ -1666,10 +1617,6 @@ html:has(.eg-landing) {
   border-radius: 0 0 var(--radius-window) var(--radius-window);
   background: var(--bar-fill);
 }
-.eg-review[data-sticky='true'] .eg-review__foot {
-  position: sticky;
-  bottom: 0;
-}
 .eg-review__foot .eg-btn {
   width: 100%;
 }
@@ -1705,10 +1652,7 @@ html:has(.eg-landing) {
   .eg-point__actions {
     display: flex;
   }
-  .eg-review__foot,
-  .eg-review[data-sticky='true'] .eg-review__foot,
-  .eg-review[data-phase='done'] .eg-review__foot {
-    position: relative;
+  .eg-review__foot {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1719,6 +1663,38 @@ html:has(.eg-landing) {
   .eg-review__foot .eg-btn {
     width: auto;
     min-width: 18rem;
+  }
+}
+/* Petite fenêtre (héros à 1024, tablette étroite) : le résumé se resserre,
+ * identité et score sur une ligne, la mission dessous, la note du score. */
+@container review (min-width: 26rem) and (max-width: 35.99rem) {
+  .eg-review__summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'who score' 'facts score' 'note note';
+    gap: 0.25rem var(--space-md);
+    padding-block: 0.75rem;
+  }
+  .eg-review__who {
+    grid-area: who;
+  }
+  .eg-score {
+    grid-area: score;
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+  .eg-score__n {
+    font-size: 1.125rem;
+  }
+  .eg-review__facts {
+    grid-area: facts;
+    grid-column: auto;
+  }
+  .eg-review__facts > div + div {
+    display: none;
+  }
+  .eg-review__scorenote {
+    grid-area: note;
+    min-height: 1lh;
   }
 }
 /* Fenêtre moyenne (colonne du héros) : le résumé tient sur une ligne,
@@ -1773,9 +1749,47 @@ html:has(.eg-landing) {
   }
   .eg-point__actions {
     flex-direction: column;
+    gap: 0.375rem;
   }
   .eg-review__main {
-    padding-block: 0.5rem 0.25rem;
+    padding-block: 0.375rem 0.125rem;
+  }
+  /* Serré pour tenir entière dans le cadre du héros (716 px à 1440). */
+  .eg-review .eg-win__bar {
+    min-height: 2.75rem;
+    padding-block: 0.25rem;
+  }
+  .eg-review__summary {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) auto;
+    padding-block: 0.625rem;
+    row-gap: 0.375rem;
+  }
+  .eg-review__facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+  /* La note du score suffit ici : le fait « Score pondéré » attend la grande fenêtre. */
+  .eg-review__facts > div + div {
+    display: none;
+  }
+  .eg-score {
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+  .eg-score__n {
+    font-size: 1.125rem;
+  }
+  .eg-review__head {
+    padding-block: 0 0.125rem;
+  }
+  .eg-point {
+    padding-block: 0.5rem;
+  }
+  .eg-point__body {
+    row-gap: 0.25rem;
+  }
+  .eg-review__foot {
+    padding-block: 0.625rem;
   }
 }
 /* Grande fenêtre : le résumé passe en colonne à gauche, score agrandi. */
@@ -1827,7 +1841,9 @@ html:has(.eg-landing) {
 
 /* ─── Visite guidée ───────────────────────────────────────────────────── */
 .eg-tour {
-  padding-block: clamp(0.5rem, 2vw, 2rem) clamp(5rem, 10vw, 7rem);
+  /* Le héros fait exactement un écran : l'écart jusqu'au titre de la visite
+   * rejoint celui des autres sections. */
+  padding-block: clamp(5.5rem, 8vw, 6.5rem) clamp(5rem, 10vw, 7rem);
 }
 .eg-tour__head .eg-sub {
   max-width: 40rem;
@@ -3233,14 +3249,12 @@ html:has(.eg-landing) {
     transform: scaleY(1);
   }
 }
-@keyframes eg-toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-0.5rem) scale(0.96);
+@keyframes eg-live {
+  70% {
+    box-shadow: 0 0 0 0.4375rem transparent;
   }
-  to {
-    opacity: 1;
-    transform: none;
+  100% {
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 @keyframes eg-menu-in {
@@ -3266,9 +3280,6 @@ html:has(.eg-landing) {
   .eg .eg-auth__card {
     --glass-fill-photo: var(--glass-fill-solid);
   }
-  .eg {
-    --toast-fill: var(--toast-fill-solid);
-  }
 }
 @media (prefers-reduced-transparency: reduce) {
   .eg {
@@ -3281,13 +3292,9 @@ html:has(.eg-landing) {
   .eg .eg-auth__card {
     --glass-fill-photo: var(--glass-fill-solid);
   }
-  .eg {
-    --toast-fill: var(--toast-fill-solid);
-  }
   .eg .eg-glass,
   .eg .eg-nav__glass,
   .eg .eg-menu,
-  .eg .eg-toast,
   .eg .eg-frost__pane {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -3312,9 +3319,6 @@ html:has(.eg-landing) {
   }
   .eg .eg-menu {
     animation-name: eg-fade;
-  }
-  .eg .eg-toast {
-    animation: none !important;
   }
   .eg .eg-nav__inner,
   .eg .eg-nav__brand,

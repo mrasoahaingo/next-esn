@@ -77,9 +77,7 @@ export function HeroReview(): React.JSX.Element {
   const [verdicts, setVerdicts] = useState<Record<string, Verdict>>(freshVerdicts);
   const [phase, setPhase] = useState<Phase>('review');
   const [made, setMade] = useState(0);
-  const [sticky, setSticky] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const headRef = useRef<HTMLDivElement>(null);
   const stackRef = useRef<HTMLDivElement>(null);
   const docsHeadRef = useRef<HTMLDivElement>(null);
   const footRef = useRef<HTMLDivElement>(null);
@@ -94,66 +92,9 @@ export function HeroReview(): React.JSX.Element {
     return () => bag.ids.forEach((id) => window.clearTimeout(id));
   }, []);
 
-  // Téléphone : la barre d'action ne colle au bas de l'écran qu'une fois
-  // l'en-tête de la fenêtre passé sous la nav, et tant que la fenêtre est là.
-  useEffect(() => {
-    const head = headRef.current;
-    const root = rootRef.current;
-    if (!head || !root || !('IntersectionObserver' in window)) return;
-    let headGone = false;
-    let rootIn = false;
-    const sync = () => setSticky(headGone && rootIn);
-    const ioHead = new IntersectionObserver(
-      ([e]) => {
-        headGone = !e.isIntersecting && e.boundingClientRect.top < 0;
-        sync();
-      },
-      { rootMargin: '-88px 0px 0px 0px' },
-    );
-    const ioRoot = new IntersectionObserver(([e]) => {
-      rootIn = e.isIntersecting;
-      sync();
-    });
-    ioHead.observe(head);
-    ioRoot.observe(root);
-    return () => {
-      ioHead.disconnect();
-      ioRoot.disconnect();
-    };
-  }, []);
-
-  // Scène stable : la scène réserve la hauteur du plus haut état de la fenêtre
-  // pour que rien ne bouge en dessous quand la fenêtre raccourcit.
-  useEffect(() => {
-    const root = rootRef.current;
-    const stage = root?.parentElement;
-    if (!root || !stage || !('ResizeObserver' in window)) return;
-    let reserve = 0;
-    let first = 0;
-    let width = stage.offsetWidth;
-    const ro = new ResizeObserver(() => {
-      if (stage.offsetWidth !== width) {
-        width = stage.offsetWidth;
-        reserve = 0;
-        first = 0;
-        stage.style.removeProperty('--stage-min');
-      }
-      // Mesures fractionnaires : un arrondi ferait bouger la suite d'un pixel.
-      const raw = root.getBoundingClientRect().bottom - stage.getBoundingClientRect().top;
-      if (!first) first = raw;
-      // Au téléphone, les notes de décision (non réservées sous 40rem) et les
-      // documents peuvent dépasser la relecture : une avance, une fois.
-      const pad = stage.offsetWidth < 640 ? 132 : 0;
-      const next = Math.max(reserve, raw, first + pad);
-      if (next > reserve + 0.01) {
-        reserve = next;
-        stage.style.setProperty('--stage-min', `${reserve.toFixed(2)}px`);
-      }
-    });
-    ro.observe(root);
-    ro.observe(stage);
-    return () => ro.disconnect();
-  }, []);
+  // La fenêtre vit dans le cadre du héros (components/landing/landing.tsx) : il a
+  // une hauteur fixe (CLS nul) et la fait défiler quand elle le dépasse, barre
+  // d'action collée à son bas à partir de 640 px (app/landing.css).
 
   // Hauteur connue de la zone de travail, tenue à jour hors animation.
   useEffect(() => {
@@ -279,11 +220,11 @@ export function HeroReview(): React.JSX.Element {
   return (
     <div
       ref={rootRef}
-      className="eg-glass eg-glass--photo eg-review"
+      className="eg-glass eg-review"
+      data-ui="window"
       role="group"
       aria-label="Exemple interactif : relire un positionnement proposé par l’IA"
       data-phase={phase}
-      data-sticky={sticky}
     >
       <div className="eg-win__bar">
         <p className="eg-win__crumb">
@@ -299,7 +240,7 @@ export function HeroReview(): React.JSX.Element {
       </div>
 
       <div className="eg-review__body">
-        <div className="eg-review__summary" ref={headRef}>
+        <div className="eg-review__summary">
           <div className="eg-review__who">
             <p className="eg-review__name">Camille Durand</p>
             <p className="eg-review__role">{fr('Tech lead Java · 11 ans d’expérience')}</p>

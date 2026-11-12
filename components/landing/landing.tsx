@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { AuthSwitch } from '@/components/landing/auth-switch';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { PHOTOS } from '@/components/site/images';
 import { fr } from '@/components/site/fr';
 import { LandingNav } from '@/components/landing/landing-nav';
@@ -133,6 +133,9 @@ function StepShot({ step }: { step: (typeof STEPS)[number]['key'] }): React.JSX.
 export function Landing(): React.JSX.Element {
   return (
     <div className="eg eg-landing">
+      {/* Entrée du héros (tasteskill, motion.md) : la classe m-enter arme l'animation
+          d'entrée ; sans script, le héros reste tel qu'écrit. */}
+      <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('m-enter')" }} />
       <a href="#contenu" className="eg-skip">
         Passer au contenu
       </a>
@@ -140,75 +143,52 @@ export function Landing(): React.JSX.Element {
       <LandingNav />
 
       <main id="contenu">
-        {/* ─── Héros : le texte à gauche, la fenêtre vivante à droite ──────────── */}
-        <section className="eg-hero" aria-labelledby="eg-h1">
-          <div className="eg-wrap eg-hero__grid">
-            <div className="eg-hero__copy">
-              <h1 id="eg-h1" className="eg-display">
-                <span className="eg-display__line">Vous choisissez le profil.</span>{' '}
-                <span className="eg-display__line">Esneo fait le dossier.</span>
-              </h1>
-              <p className="eg-lede">
-                {fr(
-                  'Chasseurs de têtes, ingénieurs d’affaires, chargés de recrutement : Esneo lit le CV et la demande, vous validez.',
-                )}
-              </p>
-              <div className="eg-hero__cta">
-                <AuthSwitch
-                  signedOut={
-                    <>
-                      <Link href="/sign-up" className="eg-btn eg-btn--primary eg-btn--lg eg-hero__go">
+        {/* ─── Héros (tasteskill 2.5.1, tirage hero: split) : le texte sur cinq
+            colonnes, la fenêtre du produit sur six, une carte posée dessous ──── */}
+        <section className="eg-hero hero hero--split" data-enter aria-labelledby="eg-h1">
+          <div className="eg-wrap wrap">
+            <div className="eg-hero__grid grid hero__grid hero-text">
+              <div className="eg-hero__text hero__text span-5">
+                <p className="eg-hero__kicker hero__kicker">Logiciel de positionnement pour ESN et cabinets de recrutement</p>
+                <h1 id="eg-h1" className="eg-hero__h1">Vous choisissez le profil. Esneo fait le dossier.</h1>
+                <p className="eg-hero__lead hero__lead">
+                  {fr('Déposez un CV en PDF ou Word et la fiche de poste : Esneo rend un score sur 100, chaque point cité dans le CV.')}
+                </p>
+                <div className="eg-hero__actions btn-row">
+                  <AuthSwitch
+                    signedOut={
+                      <Link href="/sign-up" className="eg-btn eg-btn--primary btn btn--primary">
                         Essayer sur vos CV
                         <ArrowRight aria-hidden />
                       </Link>
-                      <p className="eg-hero__fine">Sans carte bancaire.</p>
-                    </>
-                  }
-                  signedIn={
-                    <Link href="/dashboard" className="eg-btn eg-btn--primary eg-btn--lg eg-hero__go">
-                      Ouvrir l’app
-                      <ArrowRight aria-hidden />
-                    </Link>
-                  }
-                />
-                <a href="#fonctionnement" className="eg-btn eg-btn--quiet eg-btn--lg eg-hero__more">
-                  Voir comment ça marche
-                </a>
-              </div>
-            </div>
-
-            <div className="eg-hero__demo">
-              <p className="eg-hint">
-                <span className="eg-hint__dot" aria-hidden />
-                {fr('Relisez l’exemple : validez ou écartez chaque point, puis générez le CV adapté.')}
-              </p>
-              <div className="eg-stage">
-                <figure className="eg-stage__photo">
-                  <Image
-                    src={PHOTOS.hero.src}
-                    alt={PHOTOS.hero.alt}
-                    width={PHOTOS.hero.width}
-                    height={PHOTOS.hero.height}
-                    preload
-                    sizes="(min-width: 75rem) 56vw, 100vw"
+                    }
+                    signedIn={
+                      <Link href="/dashboard" className="eg-btn eg-btn--primary btn btn--primary">
+                        Ouvrir l’app
+                        <ArrowRight aria-hidden />
+                      </Link>
+                    }
                   />
-                  <figcaption className="eg-credit eg-credit--story">
-                    <span className="eg-credit__story">{fr('Avant Esneo : 21\u00a0h, encore des CV à ressaisir.')}</span>
-                    <span>Photographie générée par IA, personne fictive</span>
-                  </figcaption>
-                </figure>
-                {/* Bureau : la tête du CV PDF de Camille dépasse derrière la fenêtre. */}
-                <SheetCv />
-                <HeroReview />
-                {/* Notification d'extraction, posée en coin, qui entre une seule fois (décor). */}
-                <p className="eg-toast" aria-hidden>
-                  <Check className="eg-toast__icon" aria-hidden />
-                  <span>CV extrait</span>
-                  <span className="eg-chip eg-chip--ok">
-                    <span className="eg-dot" aria-hidden />
-                    Validé
-                  </span>
-                </p>
+                  <a href="#fonctionnement" className="eg-btn eg-btn--quiet btn btn--secondary">
+                    Voir comment ça marche
+                  </a>
+                </div>
+                <AuthSwitch signedOut={<p className="eg-hero__fine">Sans carte bancaire.</p>} signedIn={null} />
+              </div>
+
+              {/* La fenêtre de positionnement, entière dans son cadre ; si elle
+                  dépasse (documents, tablette, téléphone), elle défile dans le cadre. */}
+              <div className="eg-hero__frame hero__media span-6">
+                <div className="eg-hero__window">
+                  <HeroReview />
+                </div>
+                <div className="eg-float ly-float">
+                  <p className="eg-float__row">
+                    <span className="eg-float__live">Extraction 5/5</span>
+                    <span className="eg-float__ok">Validé</span>
+                  </p>
+                  <p className="eg-float__title">CV_Camille_Durand.pdf</p>
+                </div>
               </div>
             </div>
           </div>

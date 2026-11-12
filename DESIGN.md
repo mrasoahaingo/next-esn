@@ -89,8 +89,9 @@ le dossier. »** : le partage des rôles en une phrase, que la démonstration du
 
 Construite avec Hallmark (macrostructure Workbench, registre atmosphérique « Lumen », nav N10, pied Ft1 jusqu’en r9), elle a été
 itérée sur six tours de jury (r1 → r5 : 7.8 / 8.4 / 8.3 → 9.2 / 9.3 / 9.2). L'utilisateur l'a validée, puis elle a
-remplacé `/` en r6, avec connexion, inscription et 404. En r10, le héros passe en deux colonnes (texte et fenêtre
-vivante dès le premier écran) et le pied devient sobre.
+remplacé `/` en r6, avec connexion, inscription et 404. En r10, le pied devient sobre. En r11, le héros est refait
+avec tasteskill 2.5.1 (`design-taste-frontend`, tirage `hero: split`) : texte sur cinq colonnes, la fenêtre du
+produit sur six, une carte plate dessous ; la photo du héros sort.
 
 ## Thèse
 
@@ -132,10 +133,9 @@ Clerk ne lit pas l'OKLCH : `components/auth/auth-screen.tsx` en reprend les équ
 ## Typographie
 
 - **Albert Sans** (`--font-albert`, `app/layout.tsx`) pour la voix de la page : titres en 600, romain, interlettrage
-  −0,03 em, casse de phrase ; texte courant en 400. Titre du héros : `--text-display` au téléphone (les phrases
-  peuvent passer à la ligne), puis, à partir de 40rem, `clamp(2.5rem, 9.2cqi, 4.5rem)` réglé sur la largeur de sa
-  colonne (« Vous choisissez le profil. » mesure 10,44 em), une phrase par ligne ; environ 2,8rem à 1440 px, pour
-  rester un SaaS et pas une affiche. Échelle : `--text-h2`, `--text-step`, `--text-h3`, `--text-lg`, `--text-base`, `--text-sm`, `--text-xs`,
+  −0,03 em, casse de phrase ; texte courant en 400. Titre du héros (tasteskill, `--ly-h1`) : 500, interligne 1,02, −0,03 em ; 40 px au
+  téléphone, puis `clamp(2.5rem, 14.4cqi, 4.5rem)` réglé sur la largeur de sa colonne (environ 71 px à 1440 dans
+  493 px), trois lignes au plus à toutes les largeurs. Échelle : `--text-h2`, `--text-step`, `--text-h3`, `--text-lg`, `--text-base`, `--text-sm`, `--text-xs`,
   `--text-2xs`.
 - **Geist**, la police du produit, dans les fenêtres d'interface (`.eg-win`, `.eg-review`, `.eg-sheet`), à la
   vraie taille de l'app (13–15 px).
@@ -150,7 +150,7 @@ Conteneur `--page-max` 76rem, marges `--gutter` `clamp(1rem, 4vw, 3rem)`, espace
 | Section | Composition |
 |---|---|
 | Nav (N10) | barre transparente qui devient une pilule de verre flottante au défilement (classe `is-floating`) ; sur téléphone, « Créer un compte » et un bouton menu ouvrant une feuille de verre sur un voile |
-| Héros | « texte + fenêtre vivante ». À partir de 75rem, deux colonnes 5/12 et 7/12 : à gauche, le titre (deux phrases, une par ligne), le chapeau sur deux lignes, « Essayer sur vos CV », « Voir comment ça marche », « Sans carte bancaire. » ; à droite, une consigne courte collée à la scène, puis la scène, qui déborde jusqu'au bord droit de la page : photo assombrie (la personne reste visible à droite), légende « Avant Esneo : 21 h, encore des CV à ressaisir. » en haut à gauche sur un voile d'angle, tête du CV PDF de Camille qui dépasse derrière la fenêtre, notification de verre « CV extrait · Validé » posée sur son coin, et la fenêtre de positionnement entière (38rem) : à 1440 × 900, en-tête, score, les trois points et la barre d'action tiennent au premier écran. De 60 à 75rem, une colonne : texte, puis la scène avec la fenêtre et une bande libre pour la légende. Au téléphone, texte puis scène, comme avant. La fenêtre se met en page par requêtes de conteneur (résumé sur une ligne et points serrés entre 36 et 50rem, résumé en colonne au-delà). Hauteur de scène réservée (CLS 0) |
+| Héros | tasteskill 2.5.1, `hero: split` (tirage `deal.mjs --type software --has ui,photo`). Exactement le premier écran (`100svh`, 120 / 64 px de marge ; 96 / 24 au téléphone), fond : la lumière azur du haut. À partir de 64rem, grille de 12 colonnes (24 px) sur la ligne de la page : texte sur cinq (annonce de 14 px à y 120 « Logiciel de positionnement pour ESN et cabinets de recrutement », h1 16 px dessous, chapeau 20/30 sur trois lignes au plus et 42ch, « Essayer sur vos CV » et « Voir comment ça marche » à 44 px, « Sans carte bancaire. ») ; la fenêtre de positionnement, seule boîte, dans un cadre de six colonnes à partir de la colonne 7 (596 × 716 à x 732, y 120), sur un champ éclairé sans filet, rayon sur les quatre coins, finissant sur la ligne de droite ; dessous, une seule carte plate et opaque de 300 px, 24 px en retrait du coin bas-gauche du cadre, « Extraction 5/5 · Validé · CV_Camille_Durand.pdf », son point respire toutes les 2,4 s ; elle ne couvre jamais la fenêtre. À 1440 × 900 la fenêtre tient entière en relecture ; quand elle dépasse (documents, 1280, 1024, tablette, téléphone), elle défile dans le cadre, barre d'action collée au bas à partir de 640 px. Sous 1024 px, le texte puis le cadre dans ce qui reste (240 px au moins), la carte retirée ; au téléphone, boutons empilés pleine largeur, la fenêtre recadrée se fond au bas du cadre. Aucune légende sur ni sous l'image (règle 1 du skill) : la mention IA reste dans la ligne du pied. Entrée une fois au chargement (`data-enter`, `html.m-enter`) |
 | Visite (Workbench) | « Du CV reçu au positionnement prêt. » ; quatre écrans numérotés 01–04, reliés par un fil qui se remplit au défilement ; chaque écran est posé sur ce qu'il remplace (CV, fiche de mission, classement, photo du face-à-face) |
 | Fiabilité | bande éclairée : « L'IA propose, vous validez. », quatre engagements, et le tableau de suivi sur la photo du point staffing (« Réessayer » est cliquable) |
 | Vos données | « Ce que deviennent vos CV. » : quatre faits vérifiés dans le code (espace par organisation, droits par rôle, chemin vers l'IA, suppression y compris le PDF d'origine), en quatre colonnes |
@@ -168,13 +168,13 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - **Le flou seulement là où il réfracte quelque chose.** `.eg-glass` est par défaut un panneau opaque (arête
   spéculaire `inset`, reflet radial, ombre portée longue), sans `backdrop-filter`. Le flou n'existe qu'avec
   `.eg-glass--blur` (sur une feuille ou une photo : écrans 1, 2 et 4 de la visite, tableau de suivi) et
-  `.eg-glass--photo` (fenêtre du héros, vitre des pages d'authentification au bureau), **à partir de 60rem**. En dessous, les
+  `.eg-glass--photo` (vitre des pages d'authentification au bureau), **à partir de 60rem**. La fenêtre du héros
+  est opaque (plus de photo dessous). En dessous, les
   mêmes fenêtres sont opaques. L'écran 3 (classement) ne recouvre que le fond : il reste opaque partout.
 - **Trois couches floutées au plus à l'écran**, rayon jamais animé : `--glass-blur` 24px, `--glass-blur-photo`
   20px, `--nav-blur` 22px, givre de « Bientôt » 4px. Saturation 165 %.
-- **Où** : fenêtres produit, notification « CV extrait · Validé » du héros (sur la photo, bureau seulement), pilule
-  de navigation et menu, vitres givrées de « Bientôt », vitre de la promesse (connexion, inscription, bureau
-  seulement : au téléphone, la promesse se pose sur le voile de la bande photo).
+- **Où** : fenêtres produit, pilule de navigation et menu, vitres givrées de « Bientôt », vitre de la promesse
+  (connexion, inscription, bureau seulement : au téléphone, la promesse se pose sur le voile de la bande photo).
   Ni cartes de contenu en verre, ni verre sur fond uni.
 - **Reflet** : une bande claire masquée et inclinée (`skewX(-14deg)`) glisse sur la vitre pendant qu'elle traverse
   l'écran (`animation-timeline: view()`). Seulement à partir de 60rem, sans mouvement réduit, si le navigateur le
@@ -183,8 +183,8 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
   remplissages passent à leur version opaque (`--glass-fill-solid`, `--nav-fill-solid`, `--frost-fill-solid`) et
   le flou est retiré.
 - **Contraste mesuré sur le pire pixel** derrière chaque texte posé sur du verre ou une photo (script Playwright :
-  texte rendu transparent, capture, luminance maximale sous chaque ligne). Minimum r10 : 4,84:1 sur la landing
-  (légende du héros 7,2:1 sur son voile d'angle, notification 7,8:1),
+  texte rendu transparent, capture, luminance maximale sous chaque ligne). Minimum r11 : 4,84:1 sur la landing
+  (texte du héros 4,84:1, carte 11,7:1),
   9,3:1 sur la vitre des pages d'authentification, 7,7:1 pour leur légende, 9,9:1 pour la marque (flèche et
   logo, élément non textuel) sur la photo, grâce à un voile d'angle dédié.
 
@@ -192,8 +192,11 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 
 - **Signature** : la démonstration du héros. Les panneaux apparaissent en fondu ; la zone de travail glisse en
   hauteur (`transition: height`, dérogation acceptée, hauteur mesurée hors animation) quand les documents
-  apparaissent. La notification « CV extrait · Validé » entre une seule fois (640 ms, après 900 ms), sans
-  animation si le mouvement est réduit.
+  apparaissent.
+- **Entrée du héros**, une fois au chargement (tasteskill, motion.md) : l'annonce et le h1 montent (700 ms), puis
+  le chapeau, les boutons et la mention (12 px, 520 ms, en cascade de 60 ms) ; le cadre de la fenêtre se pose de
+  0,98 à 1 en 900 ms sans jamais disparaître. Transform et opacité seulement ; sans script ou en mouvement réduit,
+  le héros reste tel qu'écrit. Les boutons avancent d'un pixel au survol et s'enfoncent à l'appui (1 px, 0,985).
 - Le fil de la visite se remplit au défilement (`animation-timeline: view()`, `scaleY`). Repli JavaScript qui écrit
   `--p` et n'écrit `data-state` que lorsqu'il change.
 - Nav : morphose barre → pilule sur `transform` et `opacity` (520 ms, `--ease-out`). Menu : entrée 220 ms.
