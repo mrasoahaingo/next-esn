@@ -31,6 +31,11 @@
  *   alone in a span-6 frame from column 7 (596 × 716), lit field, no line, ending on the right line; one flat 300px card
  *   24px in from its lower-left corner, dot breathing 2.4s; window scrolls inside the frame when taller, sticky action
  *   bar from 640px; no caption, no photo; data-enter entrance once; buttons step on hover, press on click
+ * r12: full-bleed background photo (hero-droite, img.layer under veils: dense under the text, azure light, 8rem fade to
+ *   paper); the window is glass again over it (fill 0.74, blur 20px, opaque under 60rem); hero text ≥ 4.84:1 worst pixel
+ * r13 (stageshow): the four tour screens are animated scenes (components/landing/stage, REHEARSAL.md): once on entering
+ *   view, final state as poster, « Rejouer » on the caption line, column-wide windows bleeding right with a masked foot,
+ *   fixed heights, transform/opacity only; static tour windows and the reveal script removed
  * loosened by user request: glass (genre ban), repeated theme axes, height transition on the hero work area (layout property)
  */
 
@@ -974,16 +979,31 @@ html:has(.eg-landing) {
   box-sizing: border-box;
   height: 100svh;
   padding: 6rem 0 1.5rem;
+  background: var(--color-paper);
 }
-.eg-hero::before {
+/* Fond pleine largeur, bord à bord : la photo du héros (img.layer, z 0) sous les
+ * voiles de la direction (::after, z 0), le contenu au-dessus (.wrap, z 1).
+ * Téléphone : recadrée sur la ville, voile presque uniforme sous le texte ;
+ * partout, la lumière azur du haut et un fondu vers le papier sur 8rem. */
+.eg-hero__bg {
+  z-index: 0;
+  object-fit: cover;
+  object-position: 34% 40%;
+}
+.eg-hero::after {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
-  background: radial-gradient(64rem 34rem at 62% -12%, var(--color-halo-1), transparent 70%);
+  background:
+    linear-gradient(0deg, var(--color-paper) 0, transparent 8rem),
+    radial-gradient(64rem 34rem at 62% -12%, var(--color-halo-1), transparent 70%),
+    linear-gradient(180deg, var(--color-veil-mid) 0%, var(--color-veil) 30%, var(--color-veil) 70%, var(--color-veil-mid) 100%);
 }
 .eg-hero > .eg-wrap {
+  position: relative;
+  z-index: 1;
   height: 100%;
 }
 .eg-hero__grid {
@@ -1046,10 +1066,9 @@ html:has(.eg-landing) {
   margin-top: 2rem;
   overflow: hidden;
   border-radius: var(--radius-window);
-  /* Un champ éclairé, sans filet : la fenêtre est la seule boîte. */
-  background:
-    radial-gradient(120% 70% at 80% 0%, var(--color-accent-wash), transparent 62%),
-    linear-gradient(180deg, var(--color-paper-3), var(--color-paper-2));
+  /* Sans fond ni filet : la photo passe sous la vitre, la fenêtre est la seule boîte.
+   * Remplissage du verre plus dense que d'habitude, pour le contraste du texte. */
+  --glass-fill-photo: oklch(18% 0.02 265 / 0.74);
 }
 .eg-hero__window {
   min-height: 0;
@@ -1062,11 +1081,6 @@ html:has(.eg-landing) {
   margin: 0;
   width: 100%;
   border-radius: var(--radius-window) var(--radius-window) var(--radius-control) var(--radius-control);
-}
-/* Fenêtre opaque (rien de flouté dessous) : la zone de lecture n'a pas besoin de
- * fond foncé de plus, la barre d'action reprend le fond de la fenêtre. */
-.eg-hero__window .eg-review__main {
-  background: none;
 }
 /* Dans le héros, la vitre ne défile pas de reflet : rien ne bouge au défilement. */
 .eg-hero .eg-glass::after {
@@ -1134,6 +1148,17 @@ html:has(.eg-landing) {
   html.m-enter .eg-hero[data-enter] .eg-hero__frame {
     animation: eg-enter-settle 900ms var(--ease-out) both;
   }
+  html.m-enter .eg-hero[data-enter] .eg-hero__bg {
+    animation: eg-enter-photo 1100ms var(--ease-out) both;
+  }
+}
+@keyframes eg-enter-photo {
+  from {
+    transform: scale(1.05);
+  }
+  to {
+    transform: none;
+  }
 }
 @keyframes eg-enter-rise {
   from {
@@ -1171,7 +1196,7 @@ html:has(.eg-landing) {
     position: absolute;
     inset: auto 0 0;
     height: 3rem;
-    background: linear-gradient(180deg, transparent, var(--color-paper-2));
+    background: linear-gradient(180deg, transparent, var(--glass-fill-solid));
     pointer-events: none;
   }
   .eg-hero__window .eg-review {
@@ -1198,10 +1223,19 @@ html:has(.eg-landing) {
   .eg-hero__window .eg-review__foot {
     position: sticky;
     bottom: 0;
-    background: var(--glass-fill);
+    background: var(--bar-fill);
   }
 }
 @media (min-width: 64rem) {
+  .eg-hero__bg {
+    object-position: 70% 38%;
+  }
+  .eg-hero::after {
+    background:
+      linear-gradient(0deg, var(--color-paper) 0, transparent 8rem),
+      radial-gradient(64rem 34rem at 62% -12%, var(--color-halo-1), transparent 70%),
+      linear-gradient(90deg, var(--color-veil) 0%, var(--color-veil) 34%, var(--color-veil-mid) 54%, var(--color-veil-soft) 80%, var(--color-veil-mid) 100%);
+  }
   .eg-hero__grid {
     display: grid;
     grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1843,7 +1877,7 @@ html:has(.eg-landing) {
 .eg-tour {
   /* Le héros fait exactement un écran : l'écart jusqu'au titre de la visite
    * rejoint celui des autres sections. */
-  padding-block: clamp(5.5rem, 8vw, 6.5rem) clamp(5rem, 10vw, 7rem);
+  padding-block: clamp(6.5rem, 10vw, 9rem) clamp(5rem, 10vw, 7rem);
 }
 .eg-tour__head .eg-sub {
   max-width: 40rem;
@@ -2027,7 +2061,7 @@ html:has(.eg-landing) {
 @media (min-width: 40rem) {
   .eg-shot--a .eg-shot__stage,
   .eg-shot--b .eg-shot__stage {
-    padding-top: 3.25rem;
+    padding-top: 4.5rem;
   }
   .eg-sheet {
     position: absolute;
@@ -2552,22 +2586,8 @@ html:has(.eg-landing) {
   .eg-shot--d .eg-shot__photo {
     width: 76%;
   }
-  .eg-shot--d .eg-win {
-    width: 86%;
-  }
-}
-
-/* Apparition sobre : depuis un état déjà visible, une seule fois. */
-.eg-js [data-reveal] {
-  opacity: 0.25;
-  transform: translateY(1.75rem);
-  transition:
-    opacity var(--dur-reveal) var(--ease-out),
-    transform var(--dur-reveal) var(--ease-out);
-}
-.eg-js [data-reveal].is-in {
-  opacity: 1;
-  transform: none;
+  /* La fenêtre de l'e-mail prend toute la colonne : elle file au-delà du même
+   * bord droit que la photo, jamais coupée par-dessus l'image. */
 }
 
 /* ─── Fiabilité ───────────────────────────────────────────────────────── */
@@ -3277,7 +3297,8 @@ html:has(.eg-landing) {
     --frost-fill: var(--frost-fill-solid);
     --frost-fill-deep: var(--frost-fill-solid);
   }
-  .eg .eg-auth__card {
+  .eg .eg-auth__card,
+  .eg .eg-hero__frame {
     --glass-fill-photo: var(--glass-fill-solid);
   }
 }
@@ -3289,7 +3310,8 @@ html:has(.eg-landing) {
     --frost-fill: var(--frost-fill-solid);
     --frost-fill-deep: var(--frost-fill-solid);
   }
-  .eg .eg-auth__card {
+  .eg .eg-auth__card,
+  .eg .eg-hero__frame {
     --glass-fill-photo: var(--glass-fill-solid);
   }
   .eg .eg-glass,
@@ -3317,6 +3339,15 @@ html:has(.eg-landing) {
     animation-duration: 1.6s !important;
     animation-iteration-count: infinite !important;
   }
+  /* Le fil de la visite est dessiné entier et les numéros changent d'état sans
+   * transition : rien n'anime en entrant à l'écran. */
+  .eg .eg-steps::after {
+    transform: none !important;
+    transition: none !important;
+  }
+  .eg .eg-step__n {
+    transition: none !important;
+  }
   .eg .eg-menu {
     animation-name: eg-fade;
   }
@@ -3325,8 +3356,7 @@ html:has(.eg-landing) {
   .eg .eg-nav__end,
   .eg .eg-nav__glass,
   .eg .eg-btn,
-  .eg .eg-ctl,
-  .eg [data-reveal] {
+  .eg .eg-ctl {
     transform: none !important;
   }
 }

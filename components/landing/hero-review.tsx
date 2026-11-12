@@ -220,7 +220,7 @@ export function HeroReview(): React.JSX.Element {
   return (
     <div
       ref={rootRef}
-      className="eg-glass eg-review"
+      className="eg-glass eg-glass--photo eg-review"
       data-ui="window"
       role="group"
       aria-label="Exemple interactif : relire un positionnement proposé par l’IA"

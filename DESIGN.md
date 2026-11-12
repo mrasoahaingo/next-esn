@@ -91,7 +91,9 @@ Construite avec Hallmark (macrostructure Workbench, registre atmosphérique « L
 itérée sur six tours de jury (r1 → r5 : 7.8 / 8.4 / 8.3 → 9.2 / 9.3 / 9.2). L'utilisateur l'a validée, puis elle a
 remplacé `/` en r6, avec connexion, inscription et 404. En r10, le pied devient sobre. En r11, le héros est refait
 avec tasteskill 2.5.1 (`design-taste-frontend`, tirage `hero: split`) : texte sur cinq colonnes, la fenêtre du
-produit sur six, une carte plate dessous ; la photo du héros sort.
+produit sur six, une carte plate dessous ; la photo du héros sort. En r12, la photo de La Défense revient en fond
+plein cadre sous des voiles, la fenêtre redevient du verre. En r13, les quatre écrans de la visite deviennent des
+scènes animées (skill stageshow), jouées une fois à l'entrée à l'écran.
 
 ## Thèse
 
@@ -150,8 +152,8 @@ Conteneur `--page-max` 76rem, marges `--gutter` `clamp(1rem, 4vw, 3rem)`, espace
 | Section | Composition |
 |---|---|
 | Nav (N10) | barre transparente qui devient une pilule de verre flottante au défilement (classe `is-floating`) ; sur téléphone, « Créer un compte » et un bouton menu ouvrant une feuille de verre sur un voile |
-| Héros | tasteskill 2.5.1, `hero: split` (tirage `deal.mjs --type software --has ui,photo`). Exactement le premier écran (`100svh`, 120 / 64 px de marge ; 96 / 24 au téléphone), fond : la lumière azur du haut. À partir de 64rem, grille de 12 colonnes (24 px) sur la ligne de la page : texte sur cinq (annonce de 14 px à y 120 « Logiciel de positionnement pour ESN et cabinets de recrutement », h1 16 px dessous, chapeau 20/30 sur trois lignes au plus et 42ch, « Essayer sur vos CV » et « Voir comment ça marche » à 44 px, « Sans carte bancaire. ») ; la fenêtre de positionnement, seule boîte, dans un cadre de six colonnes à partir de la colonne 7 (596 × 716 à x 732, y 120), sur un champ éclairé sans filet, rayon sur les quatre coins, finissant sur la ligne de droite ; dessous, une seule carte plate et opaque de 300 px, 24 px en retrait du coin bas-gauche du cadre, « Extraction 5/5 · Validé · CV_Camille_Durand.pdf », son point respire toutes les 2,4 s ; elle ne couvre jamais la fenêtre. À 1440 × 900 la fenêtre tient entière en relecture ; quand elle dépasse (documents, 1280, 1024, tablette, téléphone), elle défile dans le cadre, barre d'action collée au bas à partir de 640 px. Sous 1024 px, le texte puis le cadre dans ce qui reste (240 px au moins), la carte retirée ; au téléphone, boutons empilés pleine largeur, la fenêtre recadrée se fond au bas du cadre. Aucune légende sur ni sous l'image (règle 1 du skill) : la mention IA reste dans la ligne du pied. Entrée une fois au chargement (`data-enter`, `html.m-enter`) |
-| Visite (Workbench) | « Du CV reçu au positionnement prêt. » ; quatre écrans numérotés 01–04, reliés par un fil qui se remplit au défilement ; chaque écran est posé sur ce qu'il remplace (CV, fiche de mission, classement, photo du face-à-face) |
+| Héros | tasteskill 2.5.1, `hero: split` (tirage `deal.mjs --type software --has ui,photo`). Exactement le premier écran (`100svh`, 120 / 64 px de marge ; 96 / 24 au téléphone). Fond (r12) : la photo de La Défense à l'heure bleue (`hero-droite.webp`) bord à bord, `img.layer` sous le contenu (`next/image` `fill`, préchargée, `sizes` réglé sur le rapport d'aspect pour ne jamais l'agrandir), cadrée pour que la ville passe derrière le texte et que la personne se tienne derrière le bord droit de la fenêtre ; assombrie par les voiles de la direction : dense sous le texte (`--color-veil`, puis `--color-veil-mid`, `--color-veil-soft` vers la droite ; presque uniforme au téléphone), la lumière azur du haut, et un fondu vers `--color-paper` sur les 8 derniers rem. Texte du héros à 4,84:1 au moins sur le pire pixel, à toutes les largeurs. À partir de 64rem, grille de 12 colonnes (24 px) sur la ligne de la page : texte sur cinq (annonce de 14 px à y 120 « Logiciel de positionnement pour ESN et cabinets de recrutement », h1 16 px dessous, chapeau 20/30 sur trois lignes au plus et 42ch, « Essayer sur vos CV » et « Voir comment ça marche » à 44 px, « Sans carte bancaire. ») ; la fenêtre de positionnement, seule boîte, dans un cadre de six colonnes à partir de la colonne 7 (596 × 716 à x 732, y 120), sans fond ni filet, rayon sur les quatre coins, finissant sur la ligne de droite ; depuis r12, la fenêtre est du verre (remplissage 0,74, flou 20 px, arête spéculaire ; opaque sous 60rem et en transparence réduite) posé sur la photo de fond ; dessous, une seule carte plate et opaque de 300 px, 24 px en retrait du coin bas-gauche du cadre, « Extraction 5/5 · Validé · CV_Camille_Durand.pdf », son point respire toutes les 2,4 s ; elle ne couvre jamais la fenêtre. À 1440 × 900 la fenêtre tient entière en relecture ; quand elle dépasse (documents, 1280, 1024, tablette, téléphone), elle défile dans le cadre, barre d'action collée au bas à partir de 640 px. Sous 1024 px, le texte puis le cadre dans ce qui reste (240 px au moins), la carte retirée ; au téléphone, boutons empilés pleine largeur, la fenêtre recadrée se fond au bas du cadre. Aucune légende sur ni sous l'image (règle 1 du skill) : la mention IA reste dans la ligne du pied. Entrée une fois au chargement (`data-enter`, `html.m-enter`) |
+| Visite (Workbench) | « Du CV reçu au positionnement prêt. » ; quatre écrans numérotés 01–04, reliés par un fil qui se remplit au défilement ; chaque écran est posé sur ce qu'il remplace (CV, fiche de mission, classement, photo du face-à-face). Depuis r13, chaque écran est une scène animée (`components/landing/stage/`, kit stageshow) : une fenêtre de la largeur de la colonne, calée à gauche, qui file au-delà du bord droit et se fond à son pied ; hauteur fixe (424 / 450 / 412 / 300 px, 352 / 340 en compact sous 30rem de colonne) ; « Rejouer » sur la ligne de la légende, à droite |
 | Fiabilité | bande éclairée : « L'IA propose, vous validez. », quatre engagements, et le tableau de suivi sur la photo du point staffing (« Réessayer » est cliquable) |
 | Vos données | « Ce que deviennent vos CV. » : quatre faits vérifiés dans le code (espace par organisation, droits par rôle, chemin vers l'IA, suppression y compris le PDF d'origine), en quatre colonnes |
 | Bientôt | deux vitres restées givrées sur une mini-interface éteinte : Prospection ; Claude branché sur Esneo via un connecteur (MCP) ; chacune marquée « Bientôt » |
@@ -168,8 +170,8 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - **Le flou seulement là où il réfracte quelque chose.** `.eg-glass` est par défaut un panneau opaque (arête
   spéculaire `inset`, reflet radial, ombre portée longue), sans `backdrop-filter`. Le flou n'existe qu'avec
   `.eg-glass--blur` (sur une feuille ou une photo : écrans 1, 2 et 4 de la visite, tableau de suivi) et
-  `.eg-glass--photo` (vitre des pages d'authentification au bureau), **à partir de 60rem**. La fenêtre du héros
-  est opaque (plus de photo dessous). En dessous, les
+  `.eg-glass--photo` (fenêtre du héros sur sa photo de fond, vitre des pages d'authentification au bureau),
+  **à partir de 60rem**. En dessous, les
   mêmes fenêtres sont opaques. L'écran 3 (classement) ne recouvre que le fond : il reste opaque partout.
 - **Trois couches floutées au plus à l'écran**, rayon jamais animé : `--glass-blur` 24px, `--glass-blur-photo`
   20px, `--nav-blur` 22px, givre de « Bientôt » 4px. Saturation 165 %.
@@ -200,8 +202,17 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - Le fil de la visite se remplit au défilement (`animation-timeline: view()`, `scaleY`). Repli JavaScript qui écrit
   `--p` et n'écrit `data-state` que lorsqu'il change.
 - Nav : morphose barre → pilule sur `transform` et `opacity` (520 ms, `--ease-out`). Menu : entrée 220 ms.
-- Apparitions de la visite (`components/landing/landing-reveal.tsx`) : chaque fenêtre part d'une opacité de 0,25
-  et se pose une fois. Sans script, rien n'est masqué.
+- **Scènes de la visite** (r13, `components/landing/stage/`, voir `REHEARSAL.md`) : chacune joue une fois quand
+  elle entre à l'écran (IntersectionObserver du kit), garde son état final, se remet à son départ si on la quitte
+  avant la fin, et se met en pause hors écran. Déjà à l'écran au chargement (page rechargée sur la visite), elle
+  garde son poster ; sans réponse de l'observateur, le contenu reste visible. 01 : le PDF se pose dans la zone de dépôt, jauge d'envoi, rubriques
+  résolues de haut en bas depuis un squelette, « Fiche prête à relire ». 02 : le niveau attendu change dans sa
+  case, les points clés se résolvent par importance, leur niveau un temps après, puis « À clarifier ». 03 : les
+  scores roulent un à un, puis les profils glissent à leur rang, « Confiance élevée ». 04 : l'e-mail vouvoyé
+  s'écrit mot à mot, question de disponibilité, « Brouillon à relire ». Opacité et transform seulement, rien ne se
+  remet en page. Le poster (état final) est le rendu serveur, sans script et en mouvement réduit. « Rejouer »
+  (44 px, nom accessible explicite) n'existe qu'après hydratation et disparaît en mouvement réduit. Rien n'est lié
+  au défilement.
 - Durées : 120 / 220 / 420 / 520 / 900 ms ; courbes `--ease-out` `cubic-bezier(0.16, 1, 0.3, 1)`.
 - `prefers-reduced-motion: reduce` : fondus de 150 ms au plus, pas de transformation, pas de
   reflet ni de fil animé, défilement instantané. Le contenu est intact.

@@ -1,0 +1,594 @@
+/* Scènes animées de la visite (stageshow, voir REHEARSAL.md).
+ * Le look « Verre de nuit » mappé sur les jetons du kit (references/looks.md) :
+ * aucune couleur en dur, Geist dans les interfaces, l'azur seule couleur
+ * d'accent. La page est le fond : la scène n'a pas de plateau. */
+.eg-ss .ss-stage {
+  --ss-canvas: var(--color-paper);
+  --ss-surface: var(--color-paper-2);
+  --ss-chrome: var(--color-paper-3);
+  --ss-well: var(--color-paper);
+  --ss-raised: var(--color-paper-3);
+  --ss-line: var(--glass-line-strong);
+  --ss-line-faint: var(--glass-line);
+  --ss-text-strong: var(--color-ink);
+  --ss-text: var(--color-ink-2);
+  --ss-text-faint: var(--color-muted);
+  --ss-icon: var(--color-ink-2);
+  --ss-icon-faint: var(--color-muted);
+  --ss-accent: var(--color-accent);
+  --ss-accent-2: var(--color-accent-hover);
+  --ss-accent-soft: var(--color-accent-wash);
+  --ss-accent-text: var(--color-accent-text);
+  --ss-success: var(--color-ok);
+  --ss-success-soft: var(--color-ok-wash);
+  --ss-success-text: var(--color-ok);
+  --ss-warning: var(--color-warn);
+  --ss-warning-soft: var(--color-warn-wash);
+  --ss-warning-text: var(--color-warn);
+  --ss-danger: var(--color-err);
+  --ss-danger-soft: var(--color-err-wash);
+  --ss-danger-text: var(--color-err);
+  --ss-font: var(--font-ui);
+  --ss-mono: var(--font-mono);
+  --ss-radius-window: 16px;
+  --ss-radius-lg: 12px;
+  --ss-radius-md: 10px;
+  --ss-radius-sm: 8px;
+  /* Le liseré de verre est tracé par un contour intérieur (voir .ss-window) :
+   * un anneau extérieur serait coupé par le bord de la scène. */
+  --ss-shadow-window: none;
+  overflow: hidden;
+  background: transparent;
+  /* La fenêtre se fond dans la page à son pied, sur la surface vide sous le
+   * contenu (gold « fade-crop ») : une coupe qui s'explique. */
+  --eg-ss-fade: 48px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--eg-ss-fade)), transparent);
+}
+
+/* Rejouer : sur la ligne de la légende, à droite, hors de l'interface ; une
+ * cible de 44 px. Monté après l'hydratation (sans script, rien à rejouer),
+ * absent quand le mouvement est réduit (la scène reste sur son poster). */
+.eg-tour-stage {
+  position: relative;
+  container: tour / inline-size;
+}
+.eg-replay {
+  position: absolute;
+  top: 100%;
+  right: -0.5rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.75rem;
+  margin-top: calc(var(--space-md) + (1.5em - 2.75rem) / 2);
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control, 0.625rem);
+  background: none;
+  color: var(--color-ink-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  cursor: pointer;
+  transition: color var(--dur-short) var(--ease-out);
+}
+.eg-replay svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  transition: transform var(--dur-short) var(--ease-out);
+}
+@media (hover: hover) {
+  .eg-replay:hover {
+    color: var(--color-ink);
+  }
+  .eg-replay:hover svg {
+    transform: rotate(-45deg);
+  }
+}
+.eg-replay:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .eg-replay {
+    display: none;
+  }
+}
+/* La légende laisse la place du bouton, réservée dès le rendu serveur : le
+ * bouton arrive à l'hydratation sans faire repasser la légende à la ligne. */
+.eg-shot:has(.eg-tour-stage) .eg-note {
+  padding-right: 5.5rem;
+}
+
+/* Une fenêtre par scène, calée sur le bord gauche de la colonne (comme la
+ * légende) ; elle file au-delà du bord droit et se fond à son pied. Seule de
+ * la surface vide passe la coupe : le contenu garde 20 px avant le bord, donc
+ * ce qui porte l'histoire (statuts, coches, niveaux) reste dedans. */
+.eg-ss .ss-window {
+  --eg-ss-bleed: 40px;
+  position: absolute;
+  top: 0;
+  right: calc(-1 * var(--eg-ss-bleed));
+  bottom: 0;
+  left: 0;
+  outline: 1px solid var(--glass-line-strong);
+  outline-offset: -1px;
+}
+.eg-ss-body {
+  min-height: 600px;
+  padding: 18px calc(20px + var(--eg-ss-bleed)) 0 20px;
+  background: var(--ss-surface);
+  color: var(--ss-text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.eg-ss-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.eg-ss-title {
+  color: var(--ss-text-strong);
+  font-size: 15px;
+  font-weight: 600;
+}
+.eg-ss-sub {
+  margin-top: 4px;
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+
+/* ─── Écran 1 : le PDF arrive, la fiche se remplit ─────────────────────── */
+/* La carte du fichier a sa taille dès le départ : vide, c'est la zone de
+ * dépôt (contour pointillé) ; le fichier s'y pose en fondu, sa jauge glisse
+ * sous le nom puis s'efface. */
+.esx-file {
+  position: relative;
+  display: grid;
+  min-height: 60px;
+  padding: 12px;
+  border-radius: var(--ss-radius-lg);
+  background: transparent;
+  outline: 1px dashed var(--ss-line);
+  outline-offset: -1px;
+  transition: background-color 0.3s ease, outline-color 0.3s ease;
+}
+.esx-file[data-file] {
+  background: var(--ss-raised);
+  outline-color: transparent;
+}
+.esx-file > .esx-drop,
+.esx-file > .esx-file__row {
+  grid-area: 1 / 1;
+  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.esx-file__row {
+  will-change: transform;
+}
+/* L'icône de dépôt à la place de celle du fichier (centre à 18 px), sur un
+ * pixel entier. */
+.esx-drop {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+.esx-drop svg {
+  flex: none;
+  margin-left: 10px;
+}
+.esx-file__row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(6px);
+}
+.esx-file[data-file] .esx-drop {
+  opacity: 0;
+}
+.esx-file[data-file] .esx-file__row {
+  opacity: 1;
+  transform: none;
+}
+.esx-file__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ss-radius-md);
+  background: var(--ss-accent-soft);
+  color: var(--ss-accent-text);
+}
+.esx-file__name {
+  color: var(--ss-text-strong);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.esx-file__meter {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  left: 60px;
+  height: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.esx-file[data-file]:not([data-sent]) .esx-file__meter {
+  opacity: 1;
+}
+.esx-file__meta {
+  color: var(--ss-text-faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.esx-list {
+  margin-top: 18px;
+}
+.esx-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  border-top: 1px solid var(--ss-line-faint);
+}
+.esx-row__label {
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+.esx-slot {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-width: 0;
+}
+.esx-slot > * {
+  grid-area: 1 / 1;
+}
+.esx-row__value {
+  color: var(--ss-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.esx-sk {
+  transition: opacity 0.24s ease;
+}
+.esx-row[data-ready] .esx-row__value {
+  opacity: 1;
+}
+.esx-row[data-ready] .esx-sk {
+  opacity: 0;
+}
+
+/* ─── Écran 2 : la fiche de mission, points clés classés ────────────────── */
+.esm-level {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+.esm-level__value {
+  color: var(--ss-text-strong);
+  font-weight: 500;
+}
+/* Fondu croisé d'une valeur dans sa case (pas de changement de largeur). */
+.eg-swap {
+  display: inline-grid;
+}
+.eg-swap > * {
+  grid-area: 1 / 1;
+  will-change: transform;
+  transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.eg-swap__from {
+  color: var(--ss-text-faint);
+  font-weight: 400;
+}
+.eg-swap__to,
+.eg-swap[data-on] .eg-swap__from {
+  opacity: 0;
+}
+.eg-swap__to {
+  transform: translateY(0.4em);
+}
+.eg-swap[data-on] .eg-swap__from {
+  transform: translateY(-0.4em);
+}
+.eg-swap[data-on] .eg-swap__to {
+  opacity: 1;
+  transform: none;
+}
+.esm-label {
+  margin: 4px 0 2px;
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+.esm-point {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border-top: 1px solid var(--ss-line-faint);
+}
+.esm-point__rank {
+  color: var(--ss-text-faint);
+  font-family: var(--ss-mono);
+  font-size: 12px;
+}
+.esm-point__text {
+  color: var(--ss-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+.esm-point[data-ready] .esm-point__text {
+  opacity: 1;
+}
+.esm-point[data-ready] .esx-sk {
+  opacity: 0;
+}
+.esm-tier {
+  display: grid;
+  justify-items: end;
+  align-items: center;
+}
+.esm-tier > * {
+  grid-area: 1 / 1;
+  transition: opacity 0.28s ease;
+}
+.esm-tier__badge,
+.esm-tier[data-on] .esm-tier__sk {
+  opacity: 0;
+}
+.esm-tier[data-on] .esm-tier__badge {
+  opacity: 1;
+}
+.esr-conf {
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+.esr-conf[data-on] {
+  opacity: 1;
+}
+.esm-clarify {
+  margin-top: 12px;
+  will-change: transform;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.esm-clarify[data-on] {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── Écran 3 : trois profils classés par score ────────────────────────── */
+.esr {
+  --esr-h: 64px;
+}
+.esr-list {
+  position: relative;
+  height: calc(3 * var(--esr-h));
+}
+.esr-slot {
+  position: absolute;
+  inset: 0 0 auto;
+  /* Sur un calque pour de bon : le texte ne saute pas d'une fraction de pixel
+   * à l'arrivée du glissement. */
+  will-change: transform;
+  transform: translateY(calc(var(--slot) * var(--esr-h)));
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.esr-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 132px 44px;
+  align-items: center;
+  gap: 12px;
+  height: calc(var(--esr-h) - 4px);
+  padding: 0 12px;
+  border-radius: var(--ss-radius-lg);
+  transition: background-color 0.3s ease;
+}
+.esr-row[data-top] {
+  background: var(--ss-raised);
+}
+/* Initiales sombres sur les pastilles claires du kit (7:1 au moins). */
+.esr-row .ss-avatar__initial {
+  color: var(--color-paper);
+}
+.esr-row__name {
+  color: var(--ss-text-strong);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.esr-row__kind {
+  margin-top: 2px;
+  color: var(--ss-text-faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.esr-row__meter {
+  display: block;
+  width: 100%;
+}
+.esr-row__score {
+  display: grid;
+  justify-items: end;
+  color: var(--ss-text-strong);
+  font-family: var(--ss-mono);
+  font-size: 15px;
+}
+.esr-row__score > * {
+  grid-area: 1 / 1;
+  transition: opacity 0.24s ease;
+}
+.esr-row__pending {
+  color: var(--ss-text-faint);
+}
+.esr-row__value,
+.esr-row__score[data-known] .esr-row__pending {
+  opacity: 0;
+}
+.esr-row__score[data-known] .esr-row__value {
+  opacity: 1;
+}
+.esr-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ss-line-faint);
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+
+/* ─── Écran 4 : l'e-mail au consultant s'écrit ─────────────────────────── */
+.ese-field {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ss-line-faint);
+}
+.ese-field__label {
+  color: var(--ss-text-faint);
+  font-size: 12px;
+}
+.ese-field__value {
+  color: var(--ss-text-strong);
+}
+.ese-text {
+  display: block;
+  padding-top: 14px;
+  color: var(--ss-text-strong);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ese-draft {
+  position: relative;
+}
+.ese-drafting {
+  position: absolute;
+  inset: 14px 0 auto;
+  display: grid;
+  gap: 10px;
+  color: var(--ss-text-faint);
+  transition: opacity 0.3s ease;
+}
+.ese-draft[data-writing] .ese-drafting {
+  opacity: 0;
+}
+/* Les mots arrivent en fondu seul (le flou du kit retiré : opacité et
+ * transform uniquement sur la landing). */
+.ese-text .ss-stream__w {
+  filter: none;
+}
+.ese-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.ese-foot[data-on] {
+  opacity: 1;
+}
+
+/* ─── Tailles : la scène prend la largeur de la colonne (Stage fluid) et une
+ * hauteur fixe, la même au rendu serveur et après hydratation (CLS 0). Sous
+ * 30rem de colonne (téléphone, colonnes étroites à 1024), le dessin compact :
+ * marges serrées, libellés plus courts, jauges retirées, hauteur propre. */
+.ss-fit.esx {
+  height: 424px;
+}
+.ss-fit.esm {
+  height: 450px;
+}
+.ss-fit.esr {
+  height: 412px;
+}
+.ss-fit.ese {
+  height: 300px;
+}
+@container tour (max-width: 30rem) {
+  /* Une fenêtre de bureau se lit en paysage : la part visible reste au moins
+   * aussi large que haute (hauteurs ≤ 352 pour une colonne ≥ 358). */
+  .eg-ss .ss-stage {
+    --eg-ss-fade: 32px;
+  }
+  .eg-ss .ss-window {
+    --eg-ss-bleed: 32px;
+  }
+  .eg-ss-body {
+    padding: 14px calc(16px + var(--eg-ss-bleed)) 0 16px;
+  }
+  .eg-ss-head {
+    margin-bottom: 10px;
+  }
+  .esm .eg-ss-sub,
+  .esr .eg-ss-sub,
+  .esm-clarify .esm-label {
+    display: none;
+  }
+  .esx-file {
+    min-height: 52px;
+    padding: 8px;
+  }
+  .esx-file__meter {
+    right: 8px;
+    bottom: 8px;
+    left: 56px;
+  }
+  .esx-list {
+    margin-top: 12px;
+  }
+  .esx-row {
+    grid-template-columns: 92px minmax(0, 1fr) 16px;
+    min-height: 34px;
+  }
+  .esm-point {
+    min-height: 34px;
+  }
+  .esm-clarify {
+    margin-top: 8px;
+  }
+  .esr {
+    --esr-h: 56px;
+  }
+  .esr-row {
+    grid-template-columns: 32px minmax(0, 1fr) 40px;
+  }
+  .esr-row__meter {
+    display: none;
+  }
+  .ss-fit.esx,
+  .ss-fit.esm,
+  .ss-fit.esr {
+    height: 352px;
+  }
+  .ss-fit.ese {
+    height: 340px;
+  }
+}

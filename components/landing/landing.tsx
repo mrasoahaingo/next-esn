@@ -5,15 +5,13 @@ import { ArrowRight } from 'lucide-react';
 import { PHOTOS } from '@/components/site/images';
 import { fr } from '@/components/site/fr';
 import { LandingNav } from '@/components/landing/landing-nav';
-import { LandingReveal } from '@/components/landing/landing-reveal';
 import { HeroReview } from '@/components/landing/hero-review';
-import { ExtractWindow } from '@/components/landing/extract-window';
 import { StatusWindow } from '@/components/landing/status-window';
-import { DocsWindow } from '@/components/landing/docs-window';
 import { TourProgress } from '@/components/landing/tour-progress';
 import { LandingFaq } from '@/components/landing/landing-faq';
 import { EsneoFullLogo } from '@/components/esneo-full-logo';
-import { MissionWindow, ScoreWindow, SheetCv, SheetMission } from '@/components/landing/tour-windows';
+import { SheetCv, SheetMission } from '@/components/landing/tour-windows';
+import { TourStage } from '@/components/landing/stage/tour-stage';
 
 /* Photo existante (brut .media/esneo/fin-1.png, converti sans retouche en
  * public/media/esneo/face-a-face.webp) : le face-à-face que l'outil libère. */
@@ -97,20 +95,20 @@ function StepShot({ step }: { step: (typeof STEPS)[number]['key'] }): React.JSX.
     return (
       <div className="eg-shot__stage">
         <SheetCv />
-        <ExtractWindow />
+        <TourStage scene="extract" />
       </div>
     );
   if (step === 'b')
     return (
       <div className="eg-shot__stage">
         <SheetMission />
-        <MissionWindow />
+        <TourStage scene="mission" />
       </div>
     );
   if (step === 'c')
     return (
       <div className="eg-shot__stage">
-        <ScoreWindow />
+        <TourStage scene="ranking" />
       </div>
     );
   return (
@@ -125,7 +123,7 @@ function StepShot({ step }: { step: (typeof STEPS)[number]['key'] }): React.JSX.
         />
         <figcaption className="eg-credit">Photographie générée par IA, personnes fictives</figcaption>
       </figure>
-      <DocsWindow />
+      <TourStage scene="email" />
     </div>
   );
 }
@@ -139,13 +137,26 @@ export function Landing(): React.JSX.Element {
       <a href="#contenu" className="eg-skip">
         Passer au contenu
       </a>
-      <LandingReveal />
       <LandingNav />
 
       <main id="contenu">
         {/* ─── Héros (tasteskill 2.5.1, tirage hero: split) : le texte sur cinq
             colonnes, la fenêtre du produit sur six, une carte posée dessous ──── */}
         <section className="eg-hero hero hero--split" data-enter aria-labelledby="eg-h1">
+          {/* Fond pleine largeur : La Défense à l'heure bleue, assombrie par les voiles
+              de la direction (voile dense sous le texte, fondu vers le papier en bas).
+              Décor, sans légende : la mention IA est dans la ligne du pied. */}
+          <Image
+            className="eg-hero__bg layer"
+            src={PHOTOS.hero.src}
+            alt=""
+            aria-hidden
+            fill
+            preload
+            /* Recadrée en cover : sur un écran plus haut que 16/9, l'image doit couvrir la
+               hauteur, d'où 178vh (sinon une image de 390 px s'étire sur 844 de haut). */
+            sizes="(max-aspect-ratio: 16/9) 178vh, 100vw"
+          />
           <div className="eg-wrap wrap">
             <div className="eg-hero__grid grid hero__grid hero-text">
               <div className="eg-hero__text hero__text span-5">
@@ -216,7 +227,7 @@ export function Landing(): React.JSX.Element {
                   <h3 className="eg-step__title">{fr(s.title)}</h3>
                   <p>{fr(s.body)}</p>
                 </div>
-                <figure className={`eg-shot eg-shot--${s.key}`} data-reveal>
+                <figure className={`eg-shot eg-shot--${s.key}`}>
                   <StepShot step={s.key} />
                   <figcaption className="eg-note">{s.note}</figcaption>
                 </figure>
