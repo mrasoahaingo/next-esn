@@ -3,71 +3,63 @@
 Composants : `extract-stage.tsx` (01), `mission-stage.tsx` (02), `ranking-stage.tsx` (03),
 `email-stage.tsx` (04), montés par `tour-stage.tsx` (bouton « Rejouer »), styles `stage.css`.
 Kit copié dans `components/stageshow/kit/` ; seules les pièces utiles sont importées (`kit.ts`).
+Les feuilles posées au-dessus des écrans 01 et 02 (`tour-windows.tsx`) restent hors de la
+scène (son cadrage reste la fenêtre) et suivent son état par un repère caché lu en `:has()`.
 
-Gold :
-- 01 `upload` + `loading` : zone de dépôt qui devient une ligne de fichier avec jauge, puis
-  rubriques en squelette à leur géométrie, résolues de haut en bas, statut sur sa pastille.
-- 02 `choreography` + `loading` : niveau qui change dans sa case, points clés en squelette
-  résolus dans l'ordre, leur niveau un temps après (dépendance), point à clarifier en dernier.
-- 03 `reorder` + `table-edit` : les scores roulent un à un (Count), puis, tous connus, les lignes
-  glissent à leur rang ; la confiance arrive en dernier. Un tiret tant qu'un score n'existe pas.
-- 04 `ai-chat` : « Rédaction du brouillon… » en squelette, puis l'e-mail vouvoyé s'écrit mot à
-  mot à sa place (Stream), question de disponibilité ; « Brouillon à relire » à la fin.
-- Golds lus dans le skill, pas filmés : le serveur d'aperçu du skill demande un `npm install`
-  dans le dossier du skill, qu'on ne modifie pas.
+Gold (r14 : filmés par la relecture à froid, `scratchpad/review/gold/`) :
+- 01 `upload` + `loading` : le CV papier se soulève, son fichier s'en détache au bord de la
+  fenêtre et descend (Fly, 900 ms) ; la zone de dépôt s'allume et son libellé sort avant
+  l'arrivée ; le fichier s'y pose et devient la ligne (même géométrie, un seul objet). Puis
+  jauge, puis rubriques de haut en bas : la barre part, les mots arrivent ensuite.
+- 02 `choreography` + `loading` : niveau en `Roll` ; les deux indispensables ensemble (60 ms),
+  puis le souhaité, puis le bonus (en contour) ; chaque passage source se marque dans la
+  demande du client ; le point à clarifier, en squelette dès le départ, se résout en dernier.
+- 03 `reorder` + `table-edit` : scores (Count et barre sur la même horloge, 700 ms), puis le
+  classement une ligne à la fois : la ligne déplacée se soulève (z-index, ombre, 1,02), voyage
+  700 ms sur la courbe de trajet ; celle qu'elle passe glisse 320 ms, 200 ms après. Camille
+  (en azur, la personne de l'histoire) monte, puis Yanis passe Hugo. La place du haut n'est
+  jamais vide.
+- 04 `ai-chat` : « Rédaction du brouillon… » et son squelette sortent entièrement (220 ms), puis
+  l'e-mail vouvoyé s'écrit mot à mot à sa place (Stream).
 
-Changé par rapport aux golds : look « Verre de nuit » (jetons mappés dans `stage.css`, Geist,
-azur seul accent), pas de curseur, `play="once"` à l'entrée à l'écran, poster = état final.
-Patchs du kit (commentés « Esneo » dans `stage.tsx`) : premier rendu = poster (serveur, sans
-script, avant lecture) ; le poster reste tant que l'IntersectionObserver ne s'est pas prononcé
-(hors écran : remise au départ invisible puis lecture à l'entrée ; déjà à l'écran au montage :
-poster gardé, sauf `autoplay` après « Rejouer ») ; option `fluid` (la page dimensionne la scène
-en CSS, pas d'échelle). La scène est marquée `data-ui="window"` (interface, pas section).
+Règle de r14 : plus aucun fondu croisé où deux textes se superposent. Statuts et niveau en
+`Roll` (kit) ; barre puis mots, pastille vide puis niveau, tiret puis score : la sortie finit
+avant l'entrée (`--eg-ss-out`, 140 ms).
 
-Mise en page : la scène prend la largeur de la colonne, hauteur fixe en CSS, identique au rendu
-serveur et après hydratation (CLS 0). Fenêtre calée à gauche, qui file de 40 px (32 en compact)
-au-delà du bord droit (seule de la surface vide passe la coupe), pied fondu par masque.
-Compact (colonne ≤ 30rem : téléphone, colonnes de 1024) : requête de conteneur, pas de second
-script ; marges serrées, lignes plus basses, jauges et sous-titres retirés, hauteur ≤ 352 px
-(une fenêtre de bureau visible reste au moins carrée).
-Mouvement : opacité et transform seulement, rien ne se remet en page (pas de Collapse ni de
-Roll : fondus croisés dans des cases de taille fixe). Exceptions du kit gardées : jauge en
-`clip-path` (Meter), coche en `stroke-dashoffset`, pastille de statut en States (léger flou).
+Patchs du kit (commentés « Esneo » dans `stage.tsx`) : premier rendu = poster ; le poster reste
+tant que l'IntersectionObserver ne s'est pas prononcé ; hors écran, remise au départ invisible
+puis lecture quand un quart de la scène est visible ; déjà à l'écran au montage (lien direct),
+`data-rewind` : le contenu sort en fondu, revient au départ, rentre en fondu, et la scène joue
+(toujours la même lecture, cinq essais sur cinq) ; `autoplay` après « Rejouer » ; option `fluid`.
+« Rejouer » : le contenu de la fenêtre sort en fondu (280 ms, la fenêtre reste), la scène est
+remontée sur son ouverture, son contenu rentre en fondu (300 ms), puis elle joue.
 
-Beats : 01 dépôt 0,5 s → envoi 1 s → 5 rubriques (0,43 s chacune) → prête, environ 6 s.
-02 niveau 0,6 s → 4 points (0,56 s chacun) → à clarifier, environ 4 s.
-03 trois scores (0,65 s) → classement 0,35 s après → confiance, environ 4 s.
-04 squelette 1,4 s → 37 mots à 55 ms → badge, environ 4 s. Puis l'état final reste.
+Mise en page (inchangée) : largeur de la colonne, hauteur fixe en CSS (CLS 0), fenêtre calée à
+gauche qui file de 40 px (32 en compact) au-delà du bord droit, pied fondu. Compact sous 30rem
+de colonne. En 04, photo recadrée (`object-position` 42 % 38 %) et voile plus dense à partir de
+40rem : les visages au-dessus de la fenêtre, l'e-mail d'abord.
+Exceptions du kit gardées : `Roll` (largeur), jauge en `clip-path`, coche en
+`stroke-dashoffset`, teinte de la pastille (transition de couleur du kit).
 
-Captured : 1440 et 390 (`--width`), thème sombre seulement, mouvement réduit (poster, pas de
-bouton), sans JavaScript (poster dans le HTML, pas de bouton).
+Captured (r14) : 1440 et 390, `--states` à 1440 et 390, zooms au ralenti x5, « Rejouer » sur
+les quatre scènes, lien direct `/#fonctionnement` ×5, mouvement réduit, sans JavaScript.
+Comparaisons avec les images de la relecture : `.media/esneo/apercu/r14/`.
 
-Gate (`film.mjs --select '.eg-shot--<k> .ss-fit' --gate`, 1440 et 390, les 8 films) :
+Gate (`film.mjs` de la copie du relecteur, qui centre la scène, avec `film-checks.mjs` qui
+reconnaît `@layer stageshow`), 16 films (4 scènes × 1440/390 × planche/`--states`) :
 `rehearsal passed (necessary, not sufficient: references/verify.md and the fresh eye in review.md still stand)`
 
 Film :
-- `kit override` (phone, island, status) → faux positif : Next regroupe le CSS du kit et de
-  l'app dans un même fichier sans chemin `/kit/`. Copie locale de `film-checks.mjs` qui
-  reconnaît le CSS du kit à sa couche `@layer stageshow` ; plus aucune ligne.
-- `framing: narrower than tall` à 390 → hauteurs compactes ≤ 352.
-- `uneven inset` (barre de titre entière dans la scène) → la fenêtre file au-delà du bord droit.
-- `uneven inset` (ligne de point sans niveau) → pastille vide à la taille du niveau dès le
-  squelette.
-- `empty pane` (02 et 04 au départ) → squelettes à la géométrie du contenu.
-- `jump` des chiffres du poids du fichier → taille statique (connue au dépôt).
-- `near-empty frames` (03 au départ, scores pas encore là) → reste : c'est l'état « en cours ».
-- Le film agrandit la fenêtre à la hauteur de la page : le héros (100svh) grandissait avec et
-  repoussait la scène. Copie locale de `film.mjs` qui fige le héros à 900 px (`FILM_CSS`).
+- `kit override` (`.ss-avatar`, `.ss-check__fill`) → faux positif : Next regroupe le CSS du kit
+  sans chemin `/kit/` ; écarté par la reconnaissance de la couche `@layer stageshow`.
+- `framing` (feuille dans la scène, gouttières inégales) → la feuille reste hors scène.
+- `loose stack` (« À clarifier » au-dessus de son point) → libellé et point en frères.
+- `fly size` / `handoff shift` → le vol garde la taille de la ligne d'arrivée.
+- Restent, hors gate : `appears with no entrance` et `jump` au tout début de a (remplacement
+  du poster par l'ouverture, scène hors écran) ; `vanishes with no exit` du fichier qui vole
+  (relais voulu avec la ligne identique) ; `near-empty frames` en c (scores pas encore là) et
+  en d (le temps vide voulu entre le squelette et le premier mot, 200 ms).
 
-Consistency (tasteskill, 1440 et 390, passe complète) : loop-pause, scroll-reveal, reduced-motion,
-hidden-content passent. Restent sur les scènes : `cut-text` sur les bandes de chiffres de Count
-(masquées par conception), `focus-visible` sur le premier « Rejouer » (anneau de 2 px vérifié à
-la main, au clavier ; l'outil capture pendant le défilement doux de la page), `spill` de la
-fenêtre de l'écran 04 sous la photo au téléphone (composition d'avant r13, réduite de 394 à 258 px).
-
-Assumptions : rechargée déjà défilée sur la visite, la scène visible garde son poster (rien ne
-recule sous les yeux) ; « Rejouer » la joue.
-Unresolved : « Layout checks remain deferred » (note manuelle, 01 et 04 à 1440) ; « half-pixel
-glyph » sur l'icône de dépôt à 1440 (avertissement, hors liste du gate).
-Not checked : revue « fresh eye » (references/review.md) par un autre regard ; Safari et
-Firefox ; lecteurs d'écran au-delà du nom accessible du bouton ; golds filmés côte à côte.
+Consistency : voir le rapport de r14.
+Not checked : build de production ; Safari, Firefox, tactile ; lecteurs d'écran au-delà du
+nom accessible du bouton.

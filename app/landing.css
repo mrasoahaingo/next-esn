@@ -36,6 +36,9 @@
  * r13 (stageshow): the four tour screens are animated scenes (components/landing/stage, REHEARSAL.md): once on entering
  *   view, final state as poster, « Rejouer » on the caption line, column-wide windows bleeding right with a masked foot,
  *   fixed heights, transform/opacity only; static tour windows and the reveal script removed
+ * r14 (cold review): lifted one-row reorder, no crossfaded text (Roll, exit before entry), CV sheet lifts and its file
+ *   flies into the drop zone, client e-mail marks each point's source (sheets read a hidden state marker with :has()),
+ *   d photo at 42% 38% under a denser veil, fade-out/fade-in replay and deep-link playback
  * loosened by user request: glass (genre ban), repeated theme axes, height transition on the hero work area (layout property)
  */
 
@@ -2585,6 +2588,14 @@ html:has(.eg-landing) {
   }
   .eg-shot--d .eg-shot__photo {
     width: 76%;
+  }
+  /* Les visages au-dessus de la fenêtre de l'e-mail, jamais coupés aux yeux ;
+   * un voile plus dense pour que l'e-mail reste ce que l'œil voit d'abord. */
+  .eg-shot--d .eg-shot__photo img {
+    object-position: 42% 38%;
+  }
+  .eg-shot--d .eg-shot__photo::after {
+    background: linear-gradient(180deg, var(--color-veil-mid) 0%, var(--color-veil-mid) 45%, var(--color-veil) 100%);
   }
   /* La fenêtre de l'e-mail prend toute la colonne : elle file au-delà du même
    * bord droit que la photo, jamais coupée par-dessus l'image. */

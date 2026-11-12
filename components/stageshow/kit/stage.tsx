@@ -77,10 +77,14 @@ export interface StageProps<S> {
   fluid?: boolean
   /**
    * Esneo : avec `play="once"` et un `poster`, la scène garde le poster tant
-   * que l'observateur ne s'est pas prononcé. Hors écran, elle se remet à son
-   * départ (invisible) puis joue en entrant ; déjà à l'écran au montage, elle
-   * garde le poster, sauf `autoplay` (Rejouer) qui la rejoue aussitôt. Un
-   * observateur qui ne répond jamais laisse le contenu visible.
+   * que l'observateur ne s'est pas prononcé (un observateur qui ne répond
+   * jamais laisse le contenu visible). Hors écran, elle se remet à son départ
+   * sans qu'on le voie, puis joue quand un quart d'elle est à l'écran. Déjà à
+   * l'écran au montage (lien direct, rechargement), elle pose `data-rewind`
+   * sur la scène (la page fond le contenu), revient à son départ, retire
+   * l'attribut (le contenu revient en fondu) et joue : toujours la même
+   * lecture, jamais de saut. `autoplay` (après « Rejouer ») monte directement
+   * sur le départ et joue.
    */
   autoplay?: boolean
   /** The accent color for this stage (any CSS color). Sets --ss-accent, its soft fill and the gradient's second stop together. */
@@ -154,7 +158,7 @@ export function Stage<S extends object>({
   // Esneo : le premier rendu (serveur, sans script, avant la lecture) montre le
   // poster, l'état final ; l'effet de lecture remet la scène à son départ hors
   // écran, puis la joue quand elle entre à l'écran.
-  const [state, setState] = useState<S>(() => poster ?? initial)
+  const [state, setState] = useState<S>(() => (autoplay ? initial : poster ?? initial))
   const stateRef = useRef(state)
   stateRef.current = state
   const [scale, setScale] = useState(1)
@@ -438,9 +442,11 @@ export function Stage<S extends object>({
     }
     // A changed script, layout or motion preference starts a fresh scene.
     // Cleanup only releases resources; it never schedules another reset.
-    const holdPoster = play === 'once' && poster !== undefined
+    const holdPoster = play === 'once' && poster !== undefined && !autoplay
     if (!holdPoster) reset()
     let first = holdPoster
+    let rewinding = false
+    let rewindTimer = 0
     const root = fitRef.current!
     let ctrl: AbortController | null = null
     let onScreen = false
@@ -505,7 +511,7 @@ export function Stage<S extends object>({
     }
 
     const start = () => {
-      if (ctrl || done || !onScreen || document.hidden) return
+      if (ctrl || done || rewinding || !onScreen || document.hidden) return
       if (play === 'hover' && !hovering) return
       cancelReset()
       if (cursor) place(resolve(restAt()))
@@ -547,20 +553,32 @@ export function Stage<S extends object>({
     const markOffscreen = () => stage.toggleAttribute('data-offscreen', !onScreen || document.hidden)
     markOffscreen()
     const io = new IntersectionObserver(([entry]) => {
-      onScreen = entry.isIntersecting
+      // Esneo : visible = au moins un quart de la scène à l'écran, pour que le
+      // premier temps ne parte pas quand seul son bord est entré.
+      onScreen = entry.isIntersecting && (entry.intersectionRatio >= 0.25 || entry.intersectionRect.height >= window.innerHeight * 0.5)
       // Off screen its CSS animations pause too, so nothing runs out of view
       markOffscreen()
       if (first) {
         first = false
-        if (!onScreen) return reset()
-        if (!autoplay) {
-          done = true
-          return
-        }
-        reset()
+        if (!entry.isIntersecting) return reset()
+        // Déjà à l'écran : fondu du contenu, retour au départ, puis lecture
+        rewinding = true
+        stage.setAttribute('data-rewind', '')
+        rewindTimer = window.setTimeout(() => {
+          reset()
+          // Le contenu reste caché le temps que l'ouverture soit posée (ses
+          // propres fondus finis), puis revient en fondu et la scène joue.
+          rewindTimer = window.setTimeout(() => {
+            stage.removeAttribute('data-rewind')
+            rewinding = false
+            start()
+          }, 420)
+        }, 260)
+        return
       }
-      onScreen ? start() : stop()
-    })
+      if (!entry.isIntersecting) stop()
+      else if (onScreen) start()
+    }, { threshold: [0, 0.25, 0.5] })
     io.observe(root)
     const onVisibility = () => {
       markOffscreen()
@@ -580,6 +598,8 @@ export function Stage<S extends object>({
       root.addEventListener('pointerleave', leave)
     }
     return () => {
+      window.clearTimeout(rewindTimer)
+      stage.removeAttribute('data-rewind')
       io.disconnect()
       document.removeEventListener('visibilitychange', onVisibility)
       root.removeEventListener('pointerenter', enter)

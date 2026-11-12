@@ -141,32 +141,127 @@
   font-size: 12px;
 }
 
-/* ─── Écran 1 : le PDF arrive, la fiche se remplit ─────────────────────── */
-/* La carte du fichier a sa taille dès le départ : vide, c'est la zone de
- * dépôt (contour pointillé) ; le fichier s'y pose en fondu, sa jauge glisse
- * sous le nom puis s'efface. */
+/* Sortie avant l'entrée : partout où une chose en remplace une autre au même
+ * endroit (barre puis mots, pastille vide puis niveau, tiret puis score), la
+ * première a fini de partir quand la seconde commence à arriver. */
+:root {
+  --eg-ss-out: 0.14s;
+}
+
+/* « Rejouer » et premier coup d'œil (lien direct) : le contenu de la fenêtre
+ * sort en fondu, la fenêtre reste ; l'ouverture revient en fondu. La surface
+ * du corps est aussi celle de la fenêtre, pour que le fondu ne change pas la
+ * teinte. */
+.eg-ss .ss-window__body {
+  background: var(--ss-surface);
+}
+.eg-ss-body {
+  transition: opacity 0.26s ease;
+}
+.eg-tour-stage[data-leaving] .eg-ss-body,
+.eg-ss .ss-stage[data-rewind] .eg-ss-body {
+  opacity: 0;
+}
+[data-replay] .eg-ss-body {
+  animation: eg-ss-in 0.3s ease both;
+}
+@keyframes eg-ss-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ─── Feuilles posées au-dessus (écrans 1 et 2, à partir de 40rem) ─────── */
+/* Hors de la scène, elles lisent son repère d'état caché avec :has(). */
+.eg-shot--a .eg-sheet--cv {
+  transition:
+    translate 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    scale 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.eg-shot--a:has([data-ss-lift]) .eg-sheet--cv {
+  translate: 0 -3px;
+  scale: 1.015;
+}
+/* Les passages de la demande d'où sortent les points clés. */
+.eg-sheet__src {
+  position: relative;
+}
+.eg-sheet__src::before {
+  content: '';
+  position: absolute;
+  inset: -1px -3px;
+  z-index: -1;
+  border-radius: 3px;
+  background: color-mix(in oklch, var(--color-sheet-accent) 24%, transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.eg-shot--b:has([data-ss-m1]) [data-src='1']::before,
+.eg-shot--b:has([data-ss-m2]) [data-src='2']::before,
+.eg-shot--b:has([data-ss-m3]) [data-src='3']::before,
+.eg-shot--b:has([data-ss-m4]) [data-src='4']::before {
+  opacity: 1;
+}
+.eg-shot--b:has(.eg-tour-stage[data-leaving]) .eg-sheet__src::before,
+.eg-shot--b:has(.ss-stage[data-rewind]) .eg-sheet__src::before {
+  opacity: 0;
+}
+
+/* ─── Écran 1 : le CV se dépose, la fiche se remplit ───────────────────── */
+.esx-head {
+  justify-content: flex-start;
+  gap: 10px;
+}
+/* La carte du fichier a sa taille dès le départ. Vide, c'est la zone de
+ * dépôt : son contour pointillé est un calque à sa taille finale, qui ne fait
+ * que s'effacer ; le fichier qui approche l'allume (calque azur) et fait
+ * sortir le libellé ; posé, il devient la ligne du fichier. */
 .esx-file {
   position: relative;
   display: grid;
   min-height: 60px;
   padding: 12px;
   border-radius: var(--ss-radius-lg);
-  background: transparent;
+}
+.esx-file > .esx-file__edge,
+.esx-file > .esx-file__glow,
+.esx-file > .esx-file__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 0.26s ease;
+}
+.esx-file__edge {
   outline: 1px dashed var(--ss-line);
   outline-offset: -1px;
-  transition: background-color 0.3s ease, outline-color 0.3s ease;
 }
-.esx-file[data-file] {
+.esx-file__glow {
+  background: var(--ss-accent-soft);
+  outline: 1px dashed var(--ss-accent);
+  outline-offset: -1px;
+  opacity: 0;
+}
+.esx-file__fill {
   background: var(--ss-raised);
-  outline-color: transparent;
+  opacity: 0;
+}
+.esx-file[data-over] .esx-file__edge {
+  opacity: 0;
+}
+.esx-file[data-over]:not([data-file]) .esx-file__glow {
+  opacity: 1;
+}
+.esx-file[data-file] .esx-file__edge {
+  opacity: 0;
+}
+.esx-file[data-file] .esx-file__fill {
+  opacity: 1;
 }
 .esx-file > .esx-drop,
 .esx-file > .esx-file__row {
+  position: relative;
   grid-area: 1 / 1;
-  transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.esx-file__row {
-  will-change: transform;
 }
 /* L'icône de dépôt à la place de celle du fichier (centre à 18 px), sur un
  * pixel entier. */
@@ -176,28 +271,50 @@
   gap: 22px;
   color: var(--ss-text-faint);
   font-size: 12px;
+  transition: opacity 0.18s ease;
 }
 .esx-drop svg {
   flex: none;
   margin-left: 10px;
 }
-.esx-file__row {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  opacity: 0;
-  transform: translateY(6px);
-}
+.esx-file[data-over] .esx-drop,
 .esx-file[data-file] .esx-drop {
   opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.18s ease,
+    visibility 0s linear 0.18s;
 }
-.esx-file[data-file] .esx-file__row {
+.esx-file:not([data-file]) .esx-file__row {
+  visibility: hidden;
+}
+.esx-file__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+/* L'identité du fichier est posée par le vol (même géométrie) : elle
+ * apparaît d'un coup, quand le fichier qui vole disparaît. */
+.esx-file__id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  height: 36px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.esx-file__row .esx-file__id {
+  opacity: 0;
+}
+.esx-file[data-file] .esx-file__row .esx-file__id {
   opacity: 1;
-  transform: none;
 }
 .esx-file__icon {
   display: grid;
+  flex: none;
   place-items: center;
   width: 36px;
   height: 36px;
@@ -212,6 +329,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.esx-file__meta {
+  color: var(--ss-text-faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease 0.12s;
+}
+.esx-file[data-file] .esx-file__meta {
+  opacity: 1;
+}
 .esx-file__meter {
   position: absolute;
   right: 12px;
@@ -224,11 +352,48 @@
 .esx-file[data-file]:not([data-sent]) .esx-file__meter {
   opacity: 1;
 }
-.esx-file__meta {
-  color: var(--ss-text-faint);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+/* Le fichier qui vole : sur le papier, une étiquette sombre pour se lire ;
+ * pendant le dernier tiers du vol, il prend l'allure de la ligne où il se
+ * pose (pas de changement d'allure à l'atterrissage). */
+.esx-ghost {
+  position: relative;
+  display: flex;
+}
+.esx-ghost::before {
+  content: '';
+  position: absolute;
+  inset: -6px -12px -6px -6px;
+  border-radius: var(--ss-radius-lg);
+  background: var(--ss-raised);
+  box-shadow: 0 14px 28px -12px var(--glass-shade);
+  transition: opacity 0.28s ease;
+}
+.ss-fly[data-go] .esx-ghost::before {
+  opacity: 0;
+  transition-delay: 0.6s;
+}
+.esx-ghost .esx-file__id {
+  position: relative;
+}
+/* Arrondi d'un demi-pixel près entre le vol et la ligne : jamais de « … ». */
+.esx-ghost .esx-file__name {
+  overflow: visible;
+  text-overflow: clip;
+}
+/* Où le fichier se détache : au bord haut de la fenêtre, sous la feuille,
+ * à gauche du titre (invisible ; mesuré par le vol). */
+.esx-anchor {
+  display: none;
+}
+@media (min-width: 40rem) {
+  .esx-anchor {
+    position: absolute;
+    top: 2px;
+    left: 24%;
+    display: block;
+    visibility: hidden;
+    translate: -50% 0;
+  }
 }
 .esx-list {
   margin-top: 18px;
@@ -254,22 +419,32 @@
 .esx-slot > * {
   grid-area: 1 / 1;
 }
-.esx-row__value {
+/* La barre sort d'abord ; les mots montent en place une fois qu'elle a
+ * disparu (gold « loading »). */
+.esx-sk {
+  transition: opacity var(--eg-ss-out) ease var(--d, 0ms);
+}
+.esx-row__value,
+.esm-point__text {
+  will-change: transform;
   color: var(--ss-text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   opacity: 0;
-  transition: opacity 0.32s ease;
+  translate: 0 3px;
+  transition:
+    opacity 0.3s ease,
+    translate 0.36s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.esx-sk {
-  transition: opacity 0.24s ease;
-}
-.esx-row[data-ready] .esx-row__value {
-  opacity: 1;
-}
-.esx-row[data-ready] .esx-sk {
+[data-ready] > .esx-slot > .esx-sk {
   opacity: 0;
+}
+[data-ready] > .esx-slot > .esx-row__value,
+[data-ready] > .esx-slot > .esm-point__text {
+  opacity: 1;
+  translate: none;
+  transition-delay: calc(var(--eg-ss-out) + var(--d, 0ms));
 }
 
 /* ─── Écran 2 : la fiche de mission, points clés classés ────────────────── */
@@ -284,33 +459,6 @@
 .esm-level__value {
   color: var(--ss-text-strong);
   font-weight: 500;
-}
-/* Fondu croisé d'une valeur dans sa case (pas de changement de largeur). */
-.eg-swap {
-  display: inline-grid;
-}
-.eg-swap > * {
-  grid-area: 1 / 1;
-  will-change: transform;
-  transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.eg-swap__from {
-  color: var(--ss-text-faint);
-  font-weight: 400;
-}
-.eg-swap__to,
-.eg-swap[data-on] .eg-swap__from {
-  opacity: 0;
-}
-.eg-swap__to {
-  transform: translateY(0.4em);
-}
-.eg-swap[data-on] .eg-swap__from {
-  transform: translateY(-0.4em);
-}
-.eg-swap[data-on] .eg-swap__to {
-  opacity: 1;
-  transform: none;
 }
 .esm-label {
   margin: 4px 0 2px;
@@ -330,20 +478,7 @@
   font-family: var(--ss-mono);
   font-size: 12px;
 }
-.esm-point__text {
-  color: var(--ss-text-strong);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0;
-  transition: opacity 0.32s ease;
-}
-.esm-point[data-ready] .esm-point__text {
-  opacity: 1;
-}
-.esm-point[data-ready] .esx-sk {
-  opacity: 0;
-}
+/* Le niveau : la pastille vide sort, puis le badge se pose. */
 .esm-tier {
   display: grid;
   justify-items: end;
@@ -351,14 +486,26 @@
 }
 .esm-tier > * {
   grid-area: 1 / 1;
+}
+.esm-tier__sk {
+  transition: opacity var(--eg-ss-out) ease var(--d, 0ms);
+}
+.esm-tier__badge {
+  opacity: 0;
   transition: opacity 0.28s ease;
 }
-.esm-tier__badge,
 .esm-tier[data-on] .esm-tier__sk {
   opacity: 0;
 }
 .esm-tier[data-on] .esm-tier__badge {
   opacity: 1;
+  transition-delay: calc(var(--eg-ss-out) + var(--d, 0ms));
+}
+/* Bonus : le niveau le plus bas, en contour seulement. */
+.esm-tier[data-low] .ss-badge {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ss-line);
+  color: var(--ss-text);
 }
 .esr-conf {
   opacity: 0;
@@ -367,16 +514,8 @@
 .esr-conf[data-on] {
   opacity: 1;
 }
-.esm-clarify {
-  margin-top: 12px;
-  will-change: transform;
-  opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.esm-clarify[data-on] {
-  opacity: 1;
-  transform: none;
+.esm-label--clarify {
+  margin-top: 16px;
 }
 
 /* ─── Écran 3 : trois profils classés par score ────────────────────────── */
@@ -387,16 +526,28 @@
   position: relative;
   height: calc(3 * var(--esr-h));
 }
+/* Gold « reorder » : chaque ligne tient sa place par un transform. Celle qui
+ * fait de la place glisse quand le milieu de la ligne soulevée la croise ;
+ * la ligne soulevée passe au-dessus, sur la courbe de trajet. */
 .esr-slot {
   position: absolute;
   inset: 0 0 auto;
+  z-index: 0;
   /* Sur un calque pour de bon : le texte ne saute pas d'une fraction de pixel
    * à l'arrivée du glissement. */
   will-change: transform;
   transform: translateY(calc(var(--slot) * var(--esr-h)));
-  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.esr-slot[data-room] {
+  transition-delay: 0.2s;
+}
+.esr-slot[data-lifted] {
+  z-index: 2;
+  transition: transform 0.7s cubic-bezier(0.45, 0, 0.1, 1);
 }
 .esr-row {
+  position: relative;
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) 132px 44px;
   align-items: center;
@@ -404,12 +555,40 @@
   height: calc(var(--esr-h) - 4px);
   padding: 0 12px;
   border-radius: var(--ss-radius-lg);
-  transition: background-color 0.3s ease;
+  transition: scale 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.esr-row[data-top] {
+/* Fond et ombre de levée : deux calques en opacité. */
+.esr-row::before,
+.esr-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.26s ease;
+}
+.esr-row::before {
   background: var(--ss-raised);
 }
-/* Initiales sombres sur les pastilles claires du kit (7:1 au moins). */
+.esr-row::after {
+  box-shadow: 0 16px 32px -14px var(--glass-shade);
+}
+.esr-row[data-top]::before,
+.esr-slot[data-lifted] .esr-row::before,
+.esr-slot[data-lifted] .esr-row::after {
+  opacity: 1;
+}
+.esr-slot[data-lifted] .esr-row {
+  scale: 1.02;
+}
+.esr-row {
+  will-change: transform;
+}
+.esr-row > * {
+  position: relative;
+}
+/* Initiales sombres sur les pastilles du kit (7:1 au moins). */
 .esr-row .ss-avatar__initial {
   color: var(--color-paper);
 }
@@ -428,6 +607,11 @@
   display: block;
   width: 100%;
 }
+/* La barre suit le chiffre : même durée, même courbe que Count. */
+.esr-row__meter .ss-meter__fill {
+  transition-duration: 0.7s;
+  transition-timing-function: cubic-bezier(0.3, 0.75, 0.1, 1);
+}
 .esr-row__score {
   display: grid;
   justify-items: end;
@@ -437,17 +621,21 @@
 }
 .esr-row__score > * {
   grid-area: 1 / 1;
-  transition: opacity 0.24s ease;
 }
 .esr-row__pending {
   color: var(--ss-text-faint);
+  transition: opacity var(--eg-ss-out) ease;
 }
-.esr-row__value,
+.esr-row__value {
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
 .esr-row__score[data-known] .esr-row__pending {
   opacity: 0;
 }
 .esr-row__score[data-known] .esr-row__value {
   opacity: 1;
+  transition-delay: var(--eg-ss-out);
 }
 .esr-top {
   display: flex;
@@ -487,15 +675,18 @@
 .ese-draft {
   position: relative;
 }
+/* « Rédaction du brouillon… » et son squelette sortent entièrement avant le
+ * premier mot (gold « ai-chat » : Thinking a disparu quand la réponse
+ * arrive). */
 .ese-drafting {
   position: absolute;
   inset: 14px 0 auto;
   display: grid;
   gap: 10px;
   color: var(--ss-text-faint);
-  transition: opacity 0.3s ease;
+  transition: opacity 0.22s ease;
 }
-.ese-draft[data-writing] .ese-drafting {
+.ese-draft[data-cleared] .ese-drafting {
   opacity: 0;
 }
 /* Les mots arrivent en fondu seul (le flou du kit retiré : opacité et
@@ -517,7 +708,8 @@
 }
 
 /* ─── Tailles : la scène prend la largeur de la colonne (Stage fluid) et une
- * hauteur fixe, la même au rendu serveur et après hydratation (CLS 0). Sous
+ * hauteur fixe, la même au rendu serveur et après hydratation (CLS 0) ; les
+ * écrans 1 et 2 y ajoutent la bande de leur feuille à partir de 40rem. Sous
  * 30rem de colonne (téléphone, colonnes étroites à 1024), le dessin compact :
  * marges serrées, libellés plus courts, jauges retirées, hauteur propre. */
 .ss-fit.esx {
@@ -549,7 +741,7 @@
   }
   .esm .eg-ss-sub,
   .esr .eg-ss-sub,
-  .esm-clarify .esm-label {
+  .esm-label--clarify {
     display: none;
   }
   .esx-file {
@@ -561,6 +753,22 @@
     bottom: 8px;
     left: 56px;
   }
+  /* Sans feuille, le fichier naît juste au-dessus de la zone : la zone
+   * s'allume et son libellé sort dès qu'il apparaît, pour qu'il ne passe
+   * jamais sur des mots. */
+  .ss-stage:has([data-ss-lift]) .esx-file:not([data-file]) .esx-drop {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.18s ease,
+      visibility 0s linear 0.18s;
+  }
+  .ss-stage:has([data-ss-lift]) .esx-file:not([data-file]) .esx-file__edge {
+    opacity: 0;
+  }
+  .ss-stage:has([data-ss-lift]) .esx-file:not([data-file]) .esx-file__glow {
+    opacity: 1;
+  }
   .esx-list {
     margin-top: 12px;
   }
@@ -571,7 +779,7 @@
   .esm-point {
     min-height: 34px;
   }
-  .esm-clarify {
+  .esm-point--clarify {
     margin-top: 8px;
   }
   .esr {

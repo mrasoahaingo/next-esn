@@ -204,12 +204,17 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - Nav : morphose barre → pilule sur `transform` et `opacity` (520 ms, `--ease-out`). Menu : entrée 220 ms.
 - **Scènes de la visite** (r13, `components/landing/stage/`, voir `REHEARSAL.md`) : chacune joue une fois quand
   elle entre à l'écran (IntersectionObserver du kit), garde son état final, se remet à son départ si on la quitte
-  avant la fin, et se met en pause hors écran. Déjà à l'écran au chargement (page rechargée sur la visite), elle
-  garde son poster ; sans réponse de l'observateur, le contenu reste visible. 01 : le PDF se pose dans la zone de dépôt, jauge d'envoi, rubriques
+  avant la fin, et se met en pause hors écran. Déjà à l'écran au chargement (lien direct, rechargement), son
+  contenu sort en fondu, revient à l'ouverture et la scène joue ; sans réponse de l'observateur, le contenu
+  reste visible. 01 : le PDF se pose dans la zone de dépôt, jauge d'envoi, rubriques
   résolues de haut en bas depuis un squelette, « Fiche prête à relire ». 02 : le niveau attendu change dans sa
   case, les points clés se résolvent par importance, leur niveau un temps après, puis « À clarifier ». 03 : les
   scores roulent un à un, puis les profils glissent à leur rang, « Confiance élevée ». 04 : l'e-mail vouvoyé
-  s'écrit mot à mot, question de disponibilité, « Brouillon à relire ». Opacité et transform seulement, rien ne se
+  s'écrit mot à mot, question de disponibilité, « Brouillon à relire ». r14 (relecture à froid) : en 01 le CV
+  papier se soulève et son fichier descend se poser dans la zone de dépôt ; en 02 chaque passage de la demande
+  du client se marque quand son point arrive ; en 03 le reclassement se fait une ligne à la fois, soulevée et
+  passant devant (gold `reorder`) ; plus aucun fondu croisé de deux textes (Roll, ou sortie avant l'entrée) ;
+  « Rejouer » et le lien direct font sortir le contenu en fondu puis rentrer l'ouverture, jamais de coupe. Opacité et transform seulement, rien ne se
   remet en page. Le poster (état final) est le rendu serveur, sans script et en mouvement réduit. « Rejouer »
   (44 px, nom accessible explicite) n'existe qu'après hydratation et disparaît en mouvement réduit. Rien n'est lié
   au défilement.
