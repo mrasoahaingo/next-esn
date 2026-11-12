@@ -40,7 +40,39 @@ export function stageSpace(root: HTMLElement, fallback: number) {
   return { left: bounds.left, top: bounds.top, scale: (root.offsetWidth && bounds.width / root.offsetWidth) || fallback || 1, borderX: root.clientLeft, borderY: root.clientTop }
 }
 
+/**
+ * A host page may tilt the stage in 3D (perspective and rotateX on an
+ * ancestor marked data-ss-tilt). getBoundingClientRect then returns the
+ * projected boxes, not the stage's own pixels: there, rects come from the
+ * layout instead (offsets and scrolls, transforms ignored). Every scroll
+ * container between a target and the stage must be positioned, so that it is
+ * an offset parent.
+ */
+const tilted = (root: HTMLElement) => root.closest('[data-ss-tilt]') !== null
+function offsetRectOf(root: HTMLElement, el: HTMLElement): Rect {
+  let x = 0
+  let y = 0
+  for (let n: HTMLElement | null = el; n && n !== root; ) {
+    x += n.offsetLeft
+    y += n.offsetTop
+    const parent = n.offsetParent as HTMLElement | null
+    if (!parent || parent === root || !root.contains(parent)) {
+      // The stage itself is not positioned: offsets are from further up
+      if (parent && parent !== root) {
+        x -= root.offsetLeft + root.clientLeft
+        y -= root.offsetTop + root.clientTop
+      }
+      break
+    }
+    x += parent.clientLeft - parent.scrollLeft
+    y += parent.clientTop - parent.scrollTop
+    n = parent
+  }
+  return { x, y, width: el.offsetWidth, height: el.offsetHeight }
+}
+
 export function rectOf(root: HTMLElement, el: HTMLElement, fallback: number, space = stageSpace(root, fallback)): Rect {
+  if (tilted(root)) return offsetRectOf(root, el)
   const b = el.getBoundingClientRect()
   const { scale } = space
   // From the inside of the stage's border, where its absolute children are placed
@@ -53,6 +85,8 @@ export function rectOf(root: HTMLElement, el: HTMLElement, fallback: number, spa
 // fraction of a pixel for every press and settle back after
 export function targetRectOf(root: HTMLElement, el: HTMLElement, fallback: number, space = stageSpace(root, fallback)): Rect {
   const r = rectOf(root, el, fallback, space)
+  // Layout rects already ignore the element's own transform
+  if (tilted(root)) return r
   const style = getComputedStyle(el)
   const t = style.transform
   const m = t && t !== 'none' ? t.match(/^matrix\(([^)]+)\)$/) : null

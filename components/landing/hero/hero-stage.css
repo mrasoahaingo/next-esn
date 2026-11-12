@@ -70,3 +70,135 @@
     pointer-events: auto;
   }
 }
+
+/* ─── Plan incliné (r18) ───────────────────────────────────────────────
+ * Au bureau, la fenêtre est posée comme sur une table : la perspective est sur
+ * le cadre, l'inclinaison sur .eg-hero__live, qui porte ensemble la fenêtre,
+ * la carte de citation, le satellite et le curseur de la démo (ils suivent le
+ * plan). Le bord haut fuit, la surface déborde en bas et à droite, vers le
+ * bord de l'écran. La scène mesure ses cibles dans la mise en page
+ * (data-ss-tilt, kit/measure.ts) : le curseur vise juste malgré la 3D.
+ * Flou progressif : deux couches de verre masquées en dégradé, sur les bords
+ * lointains seulement (haut, coin gauche, bas) ; les trois points, Valider /
+ * Écarter et le compteur restent nets. Avec la vitre, trois couches floutées
+ * au plus (DESIGN.md). Rayon jamais animé. Sous 60rem : à plat, sans flou. */
+.eg-hero__haze {
+  display: none;
+}
+@media (min-width: 60rem) {
+  .eg-hero {
+    overflow: clip;
+  }
+  .eg-hero .eg-hero__frame {
+    overflow: visible;
+    perspective: 1500px;
+    perspective-origin: 30% 0%;
+  }
+  .eg-hero__live {
+    --tilt-x: 26deg;
+    --tilt-z: -5deg;
+    /* Vers la droite de la largeur de la marge de page : le coin bas-droit
+     * passe le bord de l'écran, le compteur de la barre d'action reste dedans. */
+    --tilt-move: calc(max(var(--gutter), (100vw - var(--page-max)) / 2) - 0.5rem), 5%;
+    --tilt-scale: 1.2;
+    position: relative;
+    transform-origin: 50% 100%;
+    transform: translate(var(--tilt-move)) rotateX(var(--tilt-x)) rotateZ(var(--tilt-z)) scale(var(--tilt-scale));
+  }
+  /* La fenêtre défile dans son propre contour (le cadre ne rogne plus), et
+   * elle est positionnée : la scène mesure ses cibles par les décalages. */
+  .eg-hero__window {
+    position: relative;
+    border-radius: var(--radius-window);
+  }
+  /* De 60 à 64rem, le cadre est sous le texte, large et bas : le plan
+   * s'incline moins et reste dans la page. */
+  @media (max-width: 63.99rem) {
+    .eg-hero__live {
+      --tilt-x: 16deg;
+      --tilt-z: -2deg;
+      --tilt-move: 0px, 0px;
+      --tilt-scale: 1;
+    }
+    .eg-hero .eg-hero__frame:hover > .eg-hero__live,
+    .eg-hero .eg-hero__live:focus-within {
+      --tilt-move: 0px, 0px;
+      --tilt-scale: 1;
+    }
+  }
+  .eg-hero__haze {
+    display: block;
+    position: absolute;
+    inset: -2rem -2rem -1rem;
+    z-index: 3;
+    pointer-events: none;
+  }
+  .eg-hero__haze > span {
+    position: absolute;
+    inset: 0;
+    -webkit-backdrop-filter: blur(var(--haze-blur));
+    backdrop-filter: blur(var(--haze-blur));
+    -webkit-mask-image: var(--haze-mask);
+    mask-image: var(--haze-mask);
+  }
+  /* Voile léger : le bord haut (en-tête), le coin gauche et le bas. */
+  .eg-hero__haze > span:first-child {
+    --haze-blur: 3px;
+    --haze-mask:
+      linear-gradient(180deg, #000 0, transparent 20%, transparent 88%, #000 100%),
+      radial-gradient(60% 45% at 0 0, #000, transparent 72%);
+  }
+  /* Voile fort : seulement les franges les plus lointaines. */
+  .eg-hero__haze > span:last-child {
+    --haze-blur: 10px;
+    --haze-mask:
+      linear-gradient(180deg, #000 0, transparent 9%, transparent 95%, #000 100%),
+      radial-gradient(38% 30% at 0 0, #000, transparent 72%);
+  }
+}
+/* Quand le visiteur prend la main (pointeur sur le cadre, ou focus dans la
+ * fenêtre), le plan se redresse à moitié : boutons plus faciles à viser et à
+ * lire. Le survol se lit sur le cadre, dont la boîte ne bouge pas : le plan
+ * qui se redresse ne fait pas sortir le pointeur. Mouvement réduit : le plan
+ * reste tel quel, rien ne bouge. */
+@media (min-width: 60rem) and (prefers-reduced-motion: no-preference) {
+  .eg-hero__live {
+    transition: transform 520ms var(--ease-out);
+  }
+  .eg-hero__live:focus-within {
+    --tilt-x: 12deg;
+    --tilt-z: -2deg;
+    --tilt-move: 4%, 3%;
+    --tilt-scale: 1.04;
+  }
+  .eg-hero__haze > span {
+    transition: opacity 0.45s ease;
+  }
+  html.m-enter .eg-hero__live:not([data-live]) > .eg-hero__haze > span {
+    opacity: 0;
+    animation: eg-hero-haze-late 0.45s ease 3s forwards;
+  }
+}
+@media (min-width: 60rem) and (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .eg-hero__frame:hover > .eg-hero__live {
+    --tilt-x: 12deg;
+    --tilt-z: -2deg;
+    --tilt-move: 4%, 3%;
+    --tilt-scale: 1.04;
+  }
+}
+@keyframes eg-hero-haze-late {
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .eg-hero__haze {
+    display: none !important;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .eg-hero__haze {
+    display: none !important;
+  }
+}

@@ -40,16 +40,16 @@ const subscribe = (cb: () => void): (() => void) => {
 
 /**
  * Ramène une cible à l'écran dans la fenêtre qui défile (et elle seule : la
- * page ne bouge jamais), si elle n'y est pas.
+ * page ne bouge jamais), si elle n'y est pas. Mesuré en pixels de la scène
+ * (a.rect), pas à l'écran : la scène est inclinée en 3D au bureau.
  */
 async function reveal(a: Act<S>, name: string): Promise<void> {
-  const el = document.querySelector<HTMLElement>(`.eg-hero [data-target="${name}"]`);
-  const box = el?.closest<HTMLElement>('.eg-hero__window');
-  if (!el || !box) return;
-  const r = el.getBoundingClientRect();
-  const b = box.getBoundingClientRect();
-  if (r.top >= b.top + 8 && r.bottom <= b.bottom - 72) return;
-  box.scrollBy({ top: r.top - b.top - b.height * 0.4, behavior: 'smooth' });
+  const box = document.querySelector<HTMLElement>('.eg-hero .eg-hero__window');
+  if (!box) return;
+  const r = a.rect(name);
+  const b = a.rect('hero-window');
+  if (!r.height || (r.y >= b.y + 8 && r.y + r.height <= b.y + b.height - 72)) return;
+  box.scrollBy({ top: r.y - b.y - b.height * 0.4, behavior: 'smooth' });
   await a.wait(500);
 }
 
@@ -144,7 +144,10 @@ export function HeroStage(): React.JSX.Element {
   }, [wide, halted]);
 
   return (
-    <div className="eg-hero__live" data-live={live || undefined}>
+    // data-ss-tilt : au bureau, la fenêtre, la carte de citation, le satellite
+    // et le curseur sont posés ensemble sur un plan incliné (hero-stage.css) ;
+    // la scène mesure alors ses cibles dans la mise en page, pas à l'écran.
+    <div className="eg-hero__live" data-live={live || undefined} data-ss-tilt>
       <Stage<S>
         width={596}
         height={716}
@@ -174,6 +177,12 @@ export function HeroStage(): React.JSX.Element {
           </>
         )}
       </Stage>
+      {/* Le flou progressif du plan incliné (bords lointains seulement) :
+          deux couches de verre masquées en dégradé, au-dessus de la scène. */}
+      <div className="eg-hero__haze" aria-hidden>
+        <span />
+        <span />
+      </div>
     </div>
   );
 }
