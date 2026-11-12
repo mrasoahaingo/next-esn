@@ -7,18 +7,18 @@ import { OrgBrandingProvider } from '@/components/org-branding-provider';
 import { AppHeader } from '@/components/app-header';
 import { OnboardingModal } from '@/components/onboarding-modal';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-
-const PUBLIC_PREFIXES = ['/sign-in', '/sign-up', '/org-selection'] as const;
-
-function isPublicPath(pathname: string) {
-  // The root path is the public marketing landing page.
-  if (pathname === '/') return true;
-  return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
+import { isAppPath, matchesPrefix, ORG_SELECTION_PREFIX } from '@/lib/config/app-routes';
 
 export function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const { isLoaded, userId } = useAuth();
   const pathname = usePathname();
+
+  // Pages publiques (landing, connexion, inscription, 404 d'un chemin inconnu) :
+  // rendues tout de suite, côté serveur comme sans JavaScript, sans attendre
+  // Clerk. Elles portent leur propre `main` et défilent normalement.
+  if (!isAppPath(pathname)) {
+    return <>{children}</>;
+  }
 
   if (!isLoaded) {
     return (
@@ -28,15 +28,8 @@ export function AuthenticatedShell({ children }: { children: React.ReactNode }) 
     );
   }
 
-  // The root path is the public marketing landing — always render it bare,
-  // whether or not the user is signed in. Window-scroll (no inner container)
-  // so GSAP ScrollTrigger, which observes the window, fires correctly.
-  if (pathname === '/') {
-    return <>{children}</>;
-  }
-
   if (!userId) {
-    if (isPublicPath(pathname)) {
+    if (matchesPrefix(pathname, ORG_SELECTION_PREFIX)) {
       return (
         <div className="flex h-svh overflow-hidden">
           <main className="flex-1 overflow-y-auto">{children}</main>

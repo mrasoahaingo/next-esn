@@ -1,20 +1,21 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { APP_ROUTE_PREFIXES } from '@/lib/config/app-routes'
 
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/org-selection(.*)',
-  '/.well-known/(.*)',
-  // Carte de partage de la landing (app/opengraph-image.tsx), lue par les robots sans session.
-  '/opengraph-image(.*)',
+// Liste explicite des routes protégées : les pages de l'app (dossiers de `app/`,
+// voir lib/config/app-routes.ts) et toutes les routes API. Le reste est public
+// (landing, connexion, inscription, sélection d'organisation, fichiers
+// `.well-known`, image OG) ; un chemin inconnu tombe ainsi sur la vraie 404.
+const isProtectedRoute = createRouteMatcher([
+  ...APP_ROUTE_PREFIXES.flatMap((prefix) => [prefix, `${prefix}/(.*)`]),
+  '/api(.*)',
+  '/trpc(.*)',
 ])
 
 const isAdminRoute = createRouteMatcher(['/admin(.*)', '/templates(.*)'])
 
 export default clerkMiddleware(async (auth, request) => {
-  if (isPublicRoute(request)) return
+  if (!isProtectedRoute(request)) return
 
   try {
     const session = await auth.protect()
