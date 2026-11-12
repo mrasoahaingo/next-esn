@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Hanken_Grotesk } from "next/font/google";
+import { Albert_Sans, Geist, Geist_Mono, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { frFR } from "@clerk/localizations";
@@ -21,27 +21,50 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Pages publiques (landing, connexion, inscription, 404 — `.es`, app/esneo-site.css) :
-// Hanken Grotesk 400/500 porte la voix ; les fragments d'interface gardent Geist,
-// la police du produit. Voir DESIGN.md.
+// Ancien système des pages publiques (`.es`, app/esneo-site.css) : plus importé
+// depuis la bascule de la landing ; chargé tant que ces fichiers existent.
 const hanken = Hanken_Grotesk({
   variable: "--font-hanken",
   subsets: ["latin"],
   weight: ["400", "500"],
 });
 
+// Pages publiques (landing, connexion, inscription, 404 — `.eg`, app/landing.css) :
+// Albert Sans porte la voix et le mot-symbole ; l'interface garde Geist. Voir DESIGN.md.
+const albert = Albert_Sans({
+  variable: "--font-albert",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
 // Champs Clerk sans texte indicatif (le libellé suffit) ; « Create a password »
-// venait d'une clé absente de frFR.
+// venait d'une clé absente de frFR. Les messages d'erreur les plus vus sont
+// réécrits en français courant (frFR les calque sur l'anglais).
 const clerkLocalization = {
   ...frFR,
   formFieldInputPlaceholder__signUpPassword: '',
   formFieldInputPlaceholder__password: '',
   formFieldInputPlaceholder__emailAddress: '',
+  unstable__errors: {
+    ...frFR.unstable__errors,
+    form_identifier_not_found: 'Aucun compte n’utilise cette adresse. Vérifiez-la ou créez un compte.',
+    form_identifier_exists__email_address: 'Un compte utilise déjà cette adresse. Connectez-vous ou choisissez une autre adresse.',
+    form_password_incorrect: 'Mot de passe incorrect. Réessayez ou réinitialisez-le.',
+    form_password_or_identifier_incorrect: 'L’adresse e-mail ou le mot de passe est incorrect. Réessayez ou utilisez une autre méthode.',
+    form_password_validation_failed: 'Mot de passe incorrect.',
+    form_password_pwned: 'Ce mot de passe figure dans une fuite de données connue. Choisissez-en un autre.',
+    form_password_pwned__sign_in: 'Ce mot de passe figure dans une fuite de données connue. Réinitialisez-le.',
+    form_param_format_invalid__email_address: 'Saisissez une adresse e-mail valide.',
+    form_param_nil: 'Ce champ est obligatoire.',
+    form_code_incorrect: 'Code incorrect.',
+  },
 } as typeof frFR;
 
 export const metadata: Metadata = {
   title: "Esneo",
-  description: "Automatisation de CVs et positionnement",
+  description:
+    "Esneo lit les CV, décortique les fiches de poste ou de mission et prépare les positionnements des ESN et des cabinets. L’IA propose, vous validez.",
   icons: {
     icon: "/esneo-icon.svg",
   },
@@ -53,9 +76,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${hanken.variable} app-surface antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${albert.variable} ${hanken.variable} app-surface antialiased`}
       >
         <ClerkProvider
           afterSignOutUrl="/sign-in"

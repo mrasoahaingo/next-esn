@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-11-12",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "dark / grotesk-sans / cool (azur)",
+    "vibe": "verre iOS de nuit, lumière azur, sobre",
+    "fonts": "Albert Sans 600 (display + voice) · Geist (product UI) · Geist Mono (data)",
+    "enrichment": "Tier-A HTML/CSS product fragments in glass windows over the paper they replace + one existing AI photo (hero, darkened)",
+    "nav": "N10 floating-on-scroll-morph",
+    "footer": "Ft1 mast-headed",
+    "deviations": "Glassmorphism (genre ban) and same three theme axes as the previous build (no serif) — both imposed by the user; typographic wordmark « esneo » + azur status dot is now the site-wide logo (components/esneo-full-logo.tsx, SVG, currentColor + azur dot), also in the product sidebar; blur only over photos/sheets at ≥ 60rem, opaque panels elsewhere, halos anchored to hero and lit trust band, numbered tour with progress rail, height glide on the hero work area (user request)",
+    "brief": "Esneo · landing SaaS (verre, dark first, glow, animé) — chasseurs de têtes, ingénieurs d'affaires, chargés de recrutement; r6: replaces / and extends to /sign-in, /sign-up and the 404",
+    "iteration": "r8 — jury r7 (DA 9.2 / acheteur 9.4 / UX 9.1, goal reached): finishing touches — Clerk footer left-aligned, phone promise ink-2/400 under the form h1, « Sans carte bancaire. » under the sign-up h1 on phones, error-coloured focus ring, 404 gradients from solid paper and signed-out « Se connecter », lighter desktop card title, per-page metadata. Previous: r7 SSR/no-JS public pages, explicit protected routes and real 404, vectorised wordmark",
+    "direction": "« Verre de nuit » (5ᵉ, DESIGN.md)",
+    "surfaces": "/ · /sign-in · /sign-up · 404 (app/not-found.tsx)"
+  },
+  {
     "date": "2026-06-30",
     "macrostructure": "Marquee Hero",
     "theme": "Graphite Pro (graphite dark · single azur accent)",

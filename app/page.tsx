@@ -1,8 +1,8 @@
-import { Landing } from '@/components/marketing/landing';
+import { Landing } from '@/components/landing/landing';
 
-const TITLE = 'Esneo — Du CV au positionnement, piloté par l’IA';
+const TITLE = 'Esneo — Moins de paperasse. Plus de face-à-face.';
 const DESCRIPTION =
-  'La plateforme des ESN pour structurer les CV de vos consultants, analyser les besoins clients et proposer le bon positionnement. L’IA propose, vous validez.';
+  'Pour les ESN et les cabinets : Esneo lit les CV, décortique les fiches de poste ou de mission et prépare les positionnements. Vous relisez, vous validez, et le temps gagné va à vos candidats, consultants et clients.';
 
 export const metadata = {
   title: TITLE,
