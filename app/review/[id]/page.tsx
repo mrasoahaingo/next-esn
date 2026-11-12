@@ -247,6 +247,7 @@ export default function ReviewPage() {
     }
     deleteCandidate.mutate(candidateId, {
       onSuccess: () => router.push('/dashboard'),
+      onError: (error) => toast.error(error.message, { duration: 8000 }),
     });
   }, [candidateData?.workflow_run_id, activeRunId, candidateId, isLoading, stop, cancelWorkflow, deleteCandidate, router]);
 
