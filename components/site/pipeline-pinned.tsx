@@ -78,6 +78,9 @@ export function PipelinePinned() {
       <h2 id="es-how-h" className="es-head es-how__head" data-reveal>
         Du dépôt au positionnement, en quatre temps.
       </h2>
+      <div className="es-how__band" aria-hidden>
+        <Image src={PHOTOS.bureau.src} alt="" width={PHOTOS.bureau.width} height={PHOTOS.bureau.height} sizes="100vw" />
+      </div>
       <ol className="es-how__steps">
         {STEPS.map((s, i) => (
           <li
@@ -91,16 +94,7 @@ export function PipelinePinned() {
             <h3>{s.title}</h3>
             <p>{fr(s.body)}</p>
             <div className="es-how__inline" aria-hidden>
-              <Image
-                src={PHOTOS.bureau.src}
-                alt=""
-                width={PHOTOS.bureau.width}
-                height={PHOTOS.bureau.height}
-                sizes="200vw"
-                className="es-how__inline-photo"
-                style={{ transformOrigin: ['6% 6%', '72% 28%', '74% 62%', '96% 40%'][i] }}
-              />
-              <div className="es-how__inline-ui">{s.ui()}</div>
+              {s.ui()}
             </div>
           </li>
         ))}

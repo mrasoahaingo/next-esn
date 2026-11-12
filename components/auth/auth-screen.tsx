@@ -29,8 +29,7 @@ export const borderlessAppearance = {
     cardBox: { width: '100%', border: 'none', boxShadow: 'none', background: 'transparent', borderRadius: 0, overflow: 'visible' },
     card: { background: 'transparent', boxShadow: 'none', border: 'none', paddingInline: 4, paddingBlock: 8, overflow: 'visible' },
     logoBox: { display: 'none' },
-    headerTitle: { color: '#ffffff', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em' },
-    headerSubtitle: { color: '#a6abb4' },
+    header: { display: 'none' },
     footer: { background: 'transparent', backgroundImage: 'none', borderTop: 'none', boxShadow: 'none', '& > *': { borderTop: 'none' } },
     footerItem: { borderTop: 'none !important' },
     formButtonPrimary: {
@@ -51,9 +50,13 @@ export const borderlessAppearance = {
       border: 'none !important',
       boxShadow: 'none !important',
       backgroundColor: '#22262e',
+      justifyContent: 'flex-start',
+      paddingInline: 14,
       '&:hover': { backgroundColor: '#2b3039' },
     },
     dividerLine: { display: 'none' },
+    dividerRow: { justifyContent: 'flex-start' },
+    footerAction: { justifyContent: 'flex-start' },
     formFieldInput: field,
     formFieldLabel: { color: '#ffffff' },
     formFieldErrorText: { color: '#ff9b8c' },
@@ -98,7 +101,7 @@ export function AuthScreen({
           </div>
           <div className="es-auth__form">{children}</div>
           <p className="es-auth__note es-auth__note--mobile">
-            {'Vos CV ne quittent l’espace de votre organisation que pour l’extraction, l’analyse et la rédaction, confiées à des modèles d’IA tiers. '}
+            {'Vos CV ne sont confiés à des modèles d’IA tiers que pour l’extraction, l’analyse et la rédaction. '}
             {PHOTO_CREDIT}
           </p>
         </section>

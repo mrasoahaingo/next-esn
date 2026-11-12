@@ -23,7 +23,7 @@ export function AuthBrandPanel({ title, lede, photo }: { title: string; lede: st
         <h1 className="es-auth__title">{title}</h1>
         <p className="es-auth__lede">{lede}</p>
         <p className="es-auth__note">
-          Vos CV ne quittent l’espace de votre organisation que pour l’extraction, l’analyse et la rédaction, confiées à des modèles d’IA tiers. {PHOTO_CREDIT}
+          Vos CV ne sont confiés à des modèles d’IA tiers que pour l’extraction, l’analyse et la rédaction. {PHOTO_CREDIT}
         </p>
       </div>
     </aside>

@@ -439,7 +439,7 @@ export function Landing() {
                   <ArrowRight className="size-4" aria-hidden />
                 </Link>
                 <p className="es-cta__fine">
-                  {fr('Sans carte bancaire. Vos CV ne quittent l’espace de votre organisation que pour l’extraction, l’analyse et la rédaction, confiées à des modèles d’IA tiers.')}
+                  {fr('Sans carte bancaire. Vos CV ne sont confiés à des modèles d’IA tiers que pour l’extraction, l’analyse et la rédaction.')}
                 </p>
               </Show>
               <Show when="signed-in">
