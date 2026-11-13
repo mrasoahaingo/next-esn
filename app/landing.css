@@ -1351,6 +1351,12 @@ html:has(.eg-landing) {
     column-gap: 1.5rem;
     align-items: stretch;
   }
+  /* Le héros remonte de 100 px : le contenu garde sa hauteur, le haut cède
+   * 100 px au bas. */
+  .eg-hero {
+    padding-top: calc(7.5rem - 100px);
+    padding-bottom: calc(4rem + 100px);
+  }
   /* Le slogan au milieu de la hauteur, face au cœur de la fenêtre inclinée. */
   .eg-hero__text {
     grid-column: 1 / span 5;

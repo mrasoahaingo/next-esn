@@ -77,7 +77,7 @@
  * la fenêtre, la carte de citation, le satellite et le curseur de la démo (ils
  * suivent le plan). Couché en arrière et tourné : le bas est le plus large, le
  * bord gauche penche vers la gauche en descendant, la fenêtre descend sous le
- * pli. Mêmes fonctions dans le même ordre à chaque état, pour la transition.
+ * pli.
  * La scène mesure ses cibles dans la mise en page (data-ss-tilt,
  * kit/measure.ts) : le curseur vise juste malgré la 3D.
  * Flou progressif : hors du plan, une bande à plat au bas du héros, sur toute
@@ -94,10 +94,12 @@
   .eg-hero .eg-hero__frame {
     overflow: visible;
   }
+  /* Le plan ne bouge jamais : ni survol, ni focus (un clic dans la fenêtre
+   * donnerait le focus et ferait bouger le plan sous le pointeur). */
   .eg-hero__live {
     /* Vers la gauche : le bord droit projeté reste dans le conteneur. */
     --tilt-move: -21%, 23%;
-    --tilt-scale: 1.24;
+    --tilt-scale: 1.116;
     --tilt-x: 33deg;
     --tilt-y: -21deg;
     --tilt-z: 13deg;
@@ -122,11 +124,6 @@
       --tilt-y: -8deg;
       --tilt-z: 4deg;
       --tilt-skew: 0deg;
-    }
-    .eg-hero .eg-hero__frame:hover > .eg-hero__live,
-    .eg-hero .eg-hero__live:focus-within {
-      --tilt-move: 0px, 0px;
-      --tilt-scale: 1;
     }
   }
   .eg-hero__haze {
@@ -154,34 +151,6 @@
   .eg-hero__haze > span:last-child {
     --haze-blur: 10px;
     --haze-mask: linear-gradient(0deg, #000 0, transparent 50%);
-  }
-}
-/* Quand le visiteur prend la main (pointeur sur le cadre, ou focus dans la
- * fenêtre), le plan se redresse à moitié : boutons plus faciles à viser et à
- * lire. Le survol se lit sur le cadre, dont la boîte ne bouge pas : le plan
- * qui se redresse ne fait pas sortir le pointeur. Mouvement réduit : le plan
- * reste tel quel, rien ne bouge. */
-@media (min-width: 60rem) and (prefers-reduced-motion: no-preference) {
-  .eg-hero__live {
-    transition: transform 520ms var(--ease-out);
-  }
-  .eg-hero__live:focus-within {
-    --tilt-move: -10%, 10%;
-    --tilt-scale: 1.1;
-    --tilt-x: 16deg;
-    --tilt-y: -10deg;
-    --tilt-z: 6deg;
-    --tilt-skew: 0deg;
-  }
-}
-@media (min-width: 60rem) and (prefers-reduced-motion: no-preference) and (hover: hover) {
-  .eg-hero__frame:hover > .eg-hero__live {
-    --tilt-move: -10%, 10%;
-    --tilt-scale: 1.1;
-    --tilt-x: 16deg;
-    --tilt-y: -10deg;
-    --tilt-z: 6deg;
-    --tilt-skew: 0deg;
   }
 }
 @media (prefers-reduced-transparency: reduce) {
