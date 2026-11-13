@@ -78,7 +78,11 @@ export function useDeleteCandidate() {
   return useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/candidates/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete candidate');
+      if (!res.ok) {
+        // La route explique l'échec (fichiers non effacés, fiche introuvable) : on le remonte tel quel.
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? 'La suppression du candidat a échoué.');
+      }
       return res.json();
     },
     onSuccess: () => {

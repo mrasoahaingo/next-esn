@@ -1,5 +1,21 @@
 [
   {
+    "date": "2026-11-12",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "dark / grotesk-sans / cool (azur)",
+    "vibe": "verre iOS de nuit, lumière azur, sobre",
+    "fonts": "Albert Sans 600 (display + voice) · Geist (product UI) · Geist Mono (data)",
+    "enrichment": "Tier-A HTML/CSS product fragments in glass windows over the paper they replace; the hero shows the live product window alone (tasteskill split)",
+    "nav": "N10 floating-on-scroll-morph",
+    "footer": "sober footer: logo + tagline, links, legal line (Ft1 mast-headed until r9)",
+    "deviations": "Glassmorphism (genre ban) and same three theme axes as the previous build (no serif) — both imposed by the user; the user keeps their original script logo (components/esneo-full-logo.tsx) everywhere, including the full-width footer mast; blur only over photos/sheets at ≥ 60rem, opaque panels elsewhere, halos anchored to hero and lit trust band, numbered tour with progress rail, height glide on the hero work area (user request)",
+    "brief": "Esneo · landing SaaS (verre, dark first, glow, animé) — chasseurs de têtes, ingénieurs d'affaires, chargés de recrutement; headline « Vous choisissez le profil. Esneo fait le dossier. »; r6: replaces / and extends to /sign-in, /sign-up and the 404",
+    "iteration": "r15 — the four tour scenes recomposed with four framing.md layouts: overlap (paper CV in front of the form), panel-annotation (client e-mail on the form's margin, one neutral leader), close-up (1.3x ranked list), stacked-cards (e-mail draft over the face-to-face photo); compact drops the paper satellites; 16 film.mjs --gate passes. r14 — cold-review fixes on the four tour scenes: one-row-at-a-time lifted reorder (gold reorder), no more crossfaded text (Roll, exit before entry), the CV sheet lifts and its file flies into the drop zone, the client e-mail marks each key point's source, d photo recropped under a denser veil, fade-out/fade-in replay and deterministic deep-link playback; film.mjs --gate passed on 16 films. r13 — the four tour screens become stageshow scenes (kit copied to components/stageshow/kit, scenes in components/landing/stage): CV dropped then rubrics resolved from a skeleton; mission key points resolved by importance then « À clarifier »; three scores roll then the profiles slide into rank; the e-mail to the consultant streams word by word. Once on entering view, poster = final state (SSR, no JS, reduced motion), « Rejouer » on the caption line, fixed heights (CLS 0), transform/opacity only, compact design under a 30rem column; film.mjs --gate passed at 1440 and 390 for all four. Previous: r12 — full-bleed hero-droite background under veils (text ≥ 4.84:1 worst pixel), hero window glass again; r11 — hero rebuilt with tasteskill 2.5.1, hero: split.",
+    "direction": "« Verre de nuit » (5ᵉ, DESIGN.md)",
+    "surfaces": "/ · /sign-in · /sign-up · 404 (app/not-found.tsx)"
+  },
+  {
     "date": "2026-06-30",
     "macrostructure": "Marquee Hero",
     "theme": "Graphite Pro (graphite dark · single azur accent)",

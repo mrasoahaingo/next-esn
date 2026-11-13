@@ -1,0 +1,165 @@
+/* La démo du héros (hero-stage.tsx, voir REHEARSAL.md) : la scène stageshow
+ * prend la place du contenu du cadre, sans rien changer à sa mise en page. */
+.eg-hero__live {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+}
+.eg-hero__live > .ss-fit {
+  min-height: 0;
+  height: 100%;
+}
+/* Le kit fige la typographie de ses scènes ; ici, la fenêtre est la vraie :
+ * elle garde celle de la page, et ses textes se sélectionnent. */
+.eg-ss-hero .ss-stage {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  white-space: inherit;
+  color: inherit;
+  user-select: auto;
+}
+@media (min-width: 64rem) {
+  /* La fenêtre à sa hauteur (elle défile au-delà du cadre), la carte juste
+   * dessous, pour pouvoir chevaucher son bord. */
+  .eg-ss-hero .ss-stage {
+    grid-template-rows: minmax(0, auto) auto;
+    align-content: start;
+  }
+  /* Le satellite, au bord de la fenêtre et devant elle : il chevauche la
+   * marge basse de sa barre d'action (pas de contenu dessous). Absent au
+   * départ de la démo, il monte à sa place à la fin. */
+  .eg-ss-hero .eg-float {
+    position: relative;
+    z-index: 2;
+    will-change: transform;
+    margin-top: -0.5rem;
+    box-shadow: 0 18px 36px -18px var(--glass-shade);
+    transition:
+      opacity 0.4s ease,
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .eg-ss-hero .eg-float:not([data-in]) {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* Avec script et mouvement, à partir de 60rem : la fenêtre est cachée dès la
+ * première peinture (html.m-enter est posé avant elle), le temps de revenir
+ * à la relecture vierge ; elle entre en fondu quand la démo est prête. Sans
+ * script, en mouvement réduit ou sous 60rem : le poster, tout de suite. Si le
+ * script n'arrive jamais, elle apparaît d'elle-même au bout de 3 s. */
+@media (min-width: 60rem) and (prefers-reduced-motion: no-preference) {
+  .eg-hero__live > .ss-fit {
+    transition: opacity 0.45s ease;
+  }
+  html.m-enter .eg-hero__live:not([data-live]) > .ss-fit {
+    opacity: 0;
+    pointer-events: none;
+    animation: eg-hero-late 0.45s ease 3s forwards;
+  }
+}
+@keyframes eg-hero-late {
+  to {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ─── Plan incliné (r18) ───────────────────────────────────────────────
+ * Au bureau, la fenêtre est posée comme sur une table : perspective et
+ * inclinaison tiennent dans le transform de .eg-hero__live, qui porte ensemble
+ * la fenêtre, la carte de citation, le satellite et le curseur de la démo (ils
+ * suivent le plan). Couché en arrière et tourné : le bas est le plus large, le
+ * bord gauche penche vers la gauche en descendant, la fenêtre descend sous le
+ * pli.
+ * La scène mesure ses cibles dans la mise en page (data-ss-tilt,
+ * kit/measure.ts) : le curseur vise juste malgré la 3D.
+ * Flou progressif : hors du plan, une bande à plat au bas du héros, sur toute
+ * sa largeur (.eg-hero__haze, enfant de la section) : deux couches de verre
+ * masquées en dégradé vertical, plus fortes vers le bas. Avec la vitre, trois couches floutées
+ * au plus (DESIGN.md). Rayon jamais animé. Sous 60rem : à plat, sans flou. */
+.eg-hero__haze {
+  display: none;
+}
+@media (min-width: 60rem) {
+  .eg-hero {
+    overflow: clip;
+  }
+  .eg-hero .eg-hero__frame {
+    overflow: visible;
+  }
+  /* Le plan ne bouge jamais : ni survol, ni focus (un clic dans la fenêtre
+   * donnerait le focus et ferait bouger le plan sous le pointeur). */
+  .eg-hero__live {
+    /* Vers la gauche : le bord droit projeté reste dans le conteneur. */
+    --tilt-move: -21%, 23%;
+    --tilt-scale: 1.116;
+    --tilt-x: 33deg;
+    --tilt-y: -21deg;
+    --tilt-z: 13deg;
+    --tilt-skew: 1deg;
+    position: relative;
+    transform: perspective(1296px) translate(var(--tilt-move)) scale(var(--tilt-scale))
+      rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) rotateZ(var(--tilt-z)) skewX(var(--tilt-skew));
+  }
+  /* La fenêtre défile dans son propre contour (le cadre ne rogne plus), et
+   * elle est positionnée : la scène mesure ses cibles par les décalages. */
+  .eg-hero__window {
+    position: relative;
+    border-radius: var(--radius-window);
+  }
+  /* De 60 à 64rem, le cadre est sous le texte, large et bas : le plan
+   * s'incline moins et reste dans la page. */
+  @media (max-width: 63.99rem) {
+    .eg-hero__live {
+      --tilt-move: 0px, 4%;
+      --tilt-scale: 1;
+      --tilt-x: 18deg;
+      --tilt-y: -8deg;
+      --tilt-z: 4deg;
+      --tilt-skew: 0deg;
+    }
+  }
+  .eg-hero__haze {
+    display: block;
+    position: absolute;
+    inset: auto 0 0;
+    height: 38%;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .eg-hero__haze > span {
+    position: absolute;
+    inset: 0;
+    -webkit-backdrop-filter: blur(var(--haze-blur));
+    backdrop-filter: blur(var(--haze-blur));
+    -webkit-mask-image: var(--haze-mask);
+    mask-image: var(--haze-mask);
+  }
+  /* Voile léger : toute la bande, de plus en plus net vers le haut. */
+  .eg-hero__haze > span:first-child {
+    --haze-blur: 3px;
+    --haze-mask: linear-gradient(0deg, #000 0, transparent 100%);
+  }
+  /* Voile fort : la moitié basse de la bande. */
+  .eg-hero__haze > span:last-child {
+    --haze-blur: 10px;
+    --haze-mask: linear-gradient(0deg, #000 0, transparent 50%);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .eg-hero__haze {
+    display: none !important;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .eg-hero__haze {
+    display: none !important;
+  }
+}

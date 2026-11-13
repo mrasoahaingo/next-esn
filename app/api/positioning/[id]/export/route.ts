@@ -3,6 +3,7 @@ import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
 import { generateCvPdf } from '@/lib/services/pdf.service';
 import { getTemplateConfig, sanitizePdfExportPrefix } from '@/lib/utils/template';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 
 export async function POST(
   req: NextRequest,
@@ -42,7 +43,9 @@ export async function POST(
       .from('cv-formatted')
       .getPublicUrl(fileName);
 
-    await supabase
+    // supabase-js ne lève pas : sans lire `{ error }`, un échec d'écriture renverrait une URL
+    // de PDF que plus aucune ligne ne référence — un faux succès indiscernable d'un vrai.
+    const { error: updateError } = await supabase
       .from('positionings')
       .update({
         tailored_cv: cvData,
@@ -53,6 +56,36 @@ export async function POST(
       })
       .eq('id', id)
       .eq('org_id', orgId);
+
+    if (updateError) {
+      logSupabaseWriteError({
+        table: 'positionings',
+        recordId: id,
+        operation: 'positioning.export.update',
+        supabaseError: updateError,
+      });
+
+      // PDF orphelin : le fichier est uploadé et son URL calculée, mais aucune ligne ne la
+      // référencera. On préfère le supprimer — un nouvel export le regénère à l'identique —
+      // plutôt que de laisser s'accumuler dans le bucket des fichiers qu'aucune ligne ne
+      // référence et qu'aucun écran ne permet de purger. L'échec du nettoyage est lui-même
+      // logué mais ne doit jamais masquer l'erreur d'écriture initiale.
+      const { error: cleanupError } = await supabase.storage
+        .from('cv-formatted')
+        .remove([fileName]);
+
+      if (cleanupError) {
+        logSupabaseWriteError({
+          table: 'storage:cv-formatted',
+          recordId: fileName,
+          operation: 'positioning.export.orphan-cleanup',
+          supabaseError: cleanupError,
+        });
+      }
+
+      // Le catch du handler transforme déjà ce throw en 500 portant ce message.
+      throw new Error("Échec de l'enregistrement de l'export : " + updateError.message);
+    }
 
     return NextResponse.json({ fileUrl });
   } catch (error: unknown) {
