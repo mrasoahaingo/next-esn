@@ -36,6 +36,10 @@ import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import type { PositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import { logPositioningAnalysisSnapshot } from '@/lib/services/positioning-analysis-snapshot-log';
+import {
+  logPositioningDecisionShadow,
+  runPositioningDecisionShadow,
+} from '@/lib/services/positioning-decision-shadow';
 import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
 
 async function fetchAndAnalyze(positioningId: string) {
@@ -179,6 +183,18 @@ async function fetchAndAnalyze(positioningId: string) {
       throw attachWorkflowStepKey(e, branch);
     }
   }
+
+  // Mode ombre « score par décision » : lancé sans `await`, donc en parallèle des branches. La
+  // fonction ne rejette jamais (elle résout `null` sur toute erreur) : aucun rejet non géré,
+  // même si l'analyse lève plus bas. Lancé avant le `try` pour rester visible du `finally`.
+  // Il n'écrit rien dans le flux NDJSON et ne touche pas à `acc`.
+  const decisionShadowRun = runPositioningDecisionShadow({
+    positioningId: positioningRowId,
+    cv,
+    jobAnalysis,
+    priorAnswers,
+  });
+  let decisionShadowLogged = false;
 
   try {
     const [rSk, rEx, rGa, rQu] = await Promise.all([
@@ -402,9 +418,38 @@ async function fetchAndAnalyze(positioningId: string) {
       }
     }
 
+    // Mode ombre : attendu APRÈS la persistance, pour ne jamais la retarder. L'attente est
+    // bornée par le délai de 15 s du client de décision, compté depuis le lancement ; la
+    // fonction ne rejette jamais, l'étape ne peut donc pas échouer ici.
+    await logPositioningDecisionShadow(supabase, {
+      shadowRun: decisionShadowRun,
+      positioningId: positioningRowId,
+      candidateId: candidateRowId,
+      orgId: orgId ?? undefined,
+      workflowRunId,
+      llmMatchScore: typeof acc.matchScore === 'number' ? acc.matchScore : null,
+      llmMatchScoreConfidence: acc.matchScoreConfidence ?? null,
+    });
+    decisionShadowLogged = true;
+
     return { positioningId, durationMs, persisted };
   } finally {
     writer.releaseLock();
+    // Chaque appel modèle doit être comptabilisé dans `ai_usage_log` : si l'analyse a échoué
+    // avant la journalisation nominale, la ligne ombre est écrite quand même, sans score LLM.
+    // `logPositioningDecisionShadow` ne rejette jamais : l'erreur d'origine de l'étape n'est
+    // pas masquée, seulement retardée d'au plus le reliquat du délai de 15 s.
+    if (!decisionShadowLogged) {
+      await logPositioningDecisionShadow(supabase, {
+        shadowRun: decisionShadowRun,
+        positioningId: positioningRowId,
+        candidateId: candidateRowId,
+        orgId: orgId ?? undefined,
+        workflowRunId,
+        llmMatchScore: null,
+        llmMatchScoreConfidence: null,
+      });
+    }
   }
 }
 
