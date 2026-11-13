@@ -72,12 +72,12 @@
 }
 
 /* ─── Plan incliné (r18) ───────────────────────────────────────────────
- * Au bureau, la fenêtre est posée comme sur une table : la perspective est sur
- * le cadre, l'inclinaison sur .eg-hero__live, qui porte ensemble la fenêtre,
- * la carte de citation, le satellite et le curseur de la démo (ils suivent le
- * plan). Couché en arrière, point de fuite en haut à droite : le bas est le
- * plus large, le bord gauche penche fortement vers la gauche en descendant, le
- * bord droit reste presque vertical, le bord haut monte un peu vers la droite.
+ * Au bureau, la fenêtre est posée comme sur une table : perspective et
+ * inclinaison tiennent dans le transform de .eg-hero__live, qui porte ensemble
+ * la fenêtre, la carte de citation, le satellite et le curseur de la démo (ils
+ * suivent le plan). Couché en arrière et tourné : le bas est le plus large, le
+ * bord gauche penche vers la gauche en descendant, la fenêtre descend sous le
+ * pli. Mêmes fonctions dans le même ordre à chaque état, pour la transition.
  * La scène mesure ses cibles dans la mise en page (data-ss-tilt,
  * kit/measure.ts) : le curseur vise juste malgré la 3D.
  * Flou progressif : deux couches de verre masquées en dégradé, sur le bord
@@ -93,18 +93,17 @@
   }
   .eg-hero .eg-hero__frame {
     overflow: visible;
-    perspective: 900px;
-    perspective-origin: 100% 0%;
   }
   .eg-hero__live {
-    --tilt-x: 42deg;
-    --tilt-y: -6deg;
-    --tilt-z: -5deg;
-    --tilt-move: 0px, 6%;
-    --tilt-scale: 1.15;
+    --tilt-move: -4%, 23%;
+    --tilt-scale: 1.24;
+    --tilt-x: 33deg;
+    --tilt-y: -21deg;
+    --tilt-z: 13deg;
+    --tilt-skew: 1deg;
     position: relative;
-    transform-origin: 50% 100%;
-    transform: translate(var(--tilt-move)) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) rotateZ(var(--tilt-z)) scale(var(--tilt-scale));
+    transform: perspective(1296px) translate(var(--tilt-move)) scale(var(--tilt-scale))
+      rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) rotateZ(var(--tilt-z)) skewX(var(--tilt-skew));
   }
   /* La fenêtre défile dans son propre contour (le cadre ne rogne plus), et
    * elle est positionnée : la scène mesure ses cibles par les décalages. */
@@ -116,11 +115,12 @@
    * s'incline moins et reste dans la page. */
   @media (max-width: 63.99rem) {
     .eg-hero__live {
-      --tilt-x: 18deg;
-      --tilt-y: -2deg;
-      --tilt-z: -2deg;
-      --tilt-move: 0px, 0px;
+      --tilt-move: 0px, 4%;
       --tilt-scale: 1;
+      --tilt-x: 18deg;
+      --tilt-y: -8deg;
+      --tilt-z: 4deg;
+      --tilt-skew: 0deg;
     }
     .eg-hero .eg-hero__frame:hover > .eg-hero__live,
     .eg-hero .eg-hero__live:focus-within {
@@ -168,11 +168,12 @@
     transition: transform 520ms var(--ease-out);
   }
   .eg-hero__live:focus-within {
+    --tilt-move: -2%, 10%;
+    --tilt-scale: 1.1;
     --tilt-x: 16deg;
-    --tilt-y: -2deg;
-    --tilt-z: -2deg;
-    --tilt-move: 0px, 3%;
-    --tilt-scale: 1.04;
+    --tilt-y: -10deg;
+    --tilt-z: 6deg;
+    --tilt-skew: 0deg;
   }
   .eg-hero__haze > span {
     transition: opacity 0.45s ease;
@@ -184,11 +185,12 @@
 }
 @media (min-width: 60rem) and (prefers-reduced-motion: no-preference) and (hover: hover) {
   .eg-hero__frame:hover > .eg-hero__live {
+    --tilt-move: -2%, 10%;
+    --tilt-scale: 1.1;
     --tilt-x: 16deg;
-    --tilt-y: -2deg;
-    --tilt-z: -2deg;
-    --tilt-move: 0px, 3%;
-    --tilt-scale: 1.04;
+    --tilt-y: -10deg;
+    --tilt-z: 6deg;
+    --tilt-skew: 0deg;
   }
 }
 @keyframes eg-hero-haze-late {
