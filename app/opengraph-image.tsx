@@ -9,7 +9,7 @@ export const contentType = 'image/png';
 
 /** Carte de partage (« Verre de nuit ») : papier de nuit à gauche (promesse), photo du héros à droite. */
 export default async function OpengraphImage() {
-  const photo = await readFile(join(process.cwd(), 'public/media/esneo/og-hero.jpg'));
+  const photo = await readFile(join(process.cwd(), 'public/media/esneo/og-vide.jpg'));
   const src = `data:image/jpeg;base64,${photo.toString('base64')}`;
 
   return new ImageResponse(
@@ -41,7 +41,7 @@ export default async function OpengraphImage() {
         </div>
         {/* Satori ignore object-position : l'image (1200 × 630) est décalée pour garder la personne. */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', background: '#3466e6' }}>
-          <img src={src} alt="" width={1200} height={630} style={{ width: 1200, height: 630, marginLeft: -440 }} />
+          <img src={src} alt="" width={1200} height={630} style={{ width: 1200, height: 630, marginLeft: -560 }} />
         </div>
       </div>
     ),

@@ -13,11 +13,11 @@ chaque image, finals en WebP.
 | `connexion-cour.webp` (1024×1536) | `connexion-b.txt` | 1 sur 2 | `/sign-in` (cadrée au bureau pour laisser voir le CV papier) |
 | `inscription.webp` (1024×1536) | `inscription.txt` | 2 sur 2 | `/sign-up` |
 | `couloir.webp` (2000×1125) | `couloir.txt` | 2 sur 2 | page 404 |
-| `og-hero.jpg` (1200×630) | `hero.txt` | 1 | carte de partage (`app/opengraph-image.tsx`), tirée de la première scène du héros |
+| `og-vide.jpg` (1200×630) | `hero-vide.txt` | 1 sur 2 | carte de partage (`app/opengraph-image.tsx`) depuis le 2026-11-13 : le fond du héros sans personne, recadré à droite sur la Grande Arche et les tours. Brut `.media/esneo/hero-vide-1.png`, JPEG q82 |
 
 Supprimées le 2026-11-12 avec l'ancien système des pages publiques, car plus aucune page ne les utilisait :
 `hero.webp`, `esplanade-hd.webp`, `consultant-hd.webp`, `dossier-anonyme.webp`, `fin-ecran.webp`, `bureau-hd.webp`.
-Leurs prompts restent dans `prompts/` pour mémoire. Remplacée le 2026-11-13 : `hero-droite.webp` (la personne au téléphone), prompt `hero-droite.txt`.
+Leurs prompts restent dans `prompts/` pour mémoire. Remplacées le 2026-11-13 : `hero-droite.webp` et `og-hero.jpg` (la personne au téléphone), prompts `hero-droite.txt` et `hero.txt`.
 
 Chemins, dimensions et textes de remplacement : `components/site/images.ts` (source unique), sauf
 `face-a-face.webp`, déclarée dans `components/landing/landing.tsx`. Une image remplacée change de nom de fichier :
