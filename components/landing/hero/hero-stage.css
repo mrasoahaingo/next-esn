@@ -80,9 +80,9 @@
  * pli. Mêmes fonctions dans le même ordre à chaque état, pour la transition.
  * La scène mesure ses cibles dans la mise en page (data-ss-tilt,
  * kit/measure.ts) : le curseur vise juste malgré la 3D.
- * Flou progressif : deux couches de verre masquées en dégradé, sur le bord
- * gauche et en bas, plus fort au coin bas-gauche ; l'en-tête, le score et les
- * boutons de droite restent nets. Avec la vitre, trois couches floutées
+ * Flou progressif : hors du plan, une bande à plat au bas du héros, sur toute
+ * sa largeur (.eg-hero__haze, enfant de la section) : deux couches de verre
+ * masquées en dégradé vertical, plus fortes vers le bas. Avec la vitre, trois couches floutées
  * au plus (DESIGN.md). Rayon jamais animé. Sous 60rem : à plat, sans flou. */
 .eg-hero__haze {
   display: none;
@@ -95,7 +95,8 @@
     overflow: visible;
   }
   .eg-hero__live {
-    --tilt-move: -4%, 23%;
+    /* Vers la gauche : le bord droit projeté reste dans le conteneur. */
+    --tilt-move: -21%, 23%;
     --tilt-scale: 1.24;
     --tilt-x: 33deg;
     --tilt-y: -21deg;
@@ -131,8 +132,9 @@
   .eg-hero__haze {
     display: block;
     position: absolute;
-    inset: -2rem -2rem -1rem;
-    z-index: 3;
+    inset: auto 0 0;
+    height: 38%;
+    z-index: 2;
     pointer-events: none;
   }
   .eg-hero__haze > span {
@@ -143,19 +145,15 @@
     -webkit-mask-image: var(--haze-mask);
     mask-image: var(--haze-mask);
   }
-  /* Voile léger : le bord gauche et le bas. */
+  /* Voile léger : toute la bande, de plus en plus net vers le haut. */
   .eg-hero__haze > span:first-child {
     --haze-blur: 3px;
-    --haze-mask:
-      linear-gradient(90deg, #000 0, transparent 30%),
-      linear-gradient(0deg, #000 0, transparent 25%);
+    --haze-mask: linear-gradient(0deg, #000 0, transparent 100%);
   }
-  /* Voile fort : la frange gauche et le coin bas-gauche. */
+  /* Voile fort : la moitié basse de la bande. */
   .eg-hero__haze > span:last-child {
     --haze-blur: 10px;
-    --haze-mask:
-      linear-gradient(90deg, #000 0, transparent 12%),
-      radial-gradient(50% 35% at 0 100%, #000, transparent 75%);
+    --haze-mask: linear-gradient(0deg, #000 0, transparent 50%);
   }
 }
 /* Quand le visiteur prend la main (pointeur sur le cadre, ou focus dans la
@@ -168,34 +166,22 @@
     transition: transform 520ms var(--ease-out);
   }
   .eg-hero__live:focus-within {
-    --tilt-move: -2%, 10%;
+    --tilt-move: -10%, 10%;
     --tilt-scale: 1.1;
     --tilt-x: 16deg;
     --tilt-y: -10deg;
     --tilt-z: 6deg;
     --tilt-skew: 0deg;
-  }
-  .eg-hero__haze > span {
-    transition: opacity 0.45s ease;
-  }
-  html.m-enter .eg-hero__live:not([data-live]) > .eg-hero__haze > span {
-    opacity: 0;
-    animation: eg-hero-haze-late 0.45s ease 3s forwards;
   }
 }
 @media (min-width: 60rem) and (prefers-reduced-motion: no-preference) and (hover: hover) {
   .eg-hero__frame:hover > .eg-hero__live {
-    --tilt-move: -2%, 10%;
+    --tilt-move: -10%, 10%;
     --tilt-scale: 1.1;
     --tilt-x: 16deg;
     --tilt-y: -10deg;
     --tilt-z: 6deg;
     --tilt-skew: 0deg;
-  }
-}
-@keyframes eg-hero-haze-late {
-  to {
-    opacity: 1;
   }
 }
 @media (prefers-reduced-transparency: reduce) {

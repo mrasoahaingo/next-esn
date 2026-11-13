@@ -177,6 +177,12 @@ export function Landing(): React.JSX.Element {
               </div>
             </div>
           </div>
+          {/* Flou progressif au bas du héros, à plat, hors du plan incliné, sur
+              toute la largeur (hero-stage.css) : deux couches de verre. */}
+          <div className="eg-hero__haze" aria-hidden>
+            <span />
+            <span />
+          </div>
         </section>
 
         {/* ─── Visite guidée : quatre écrans numérotés, reliés par un fil ───── */}

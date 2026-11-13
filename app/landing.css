@@ -1351,9 +1351,10 @@ html:has(.eg-landing) {
     column-gap: 1.5rem;
     align-items: stretch;
   }
+  /* Le slogan au milieu de la hauteur, face au cœur de la fenêtre inclinée. */
   .eg-hero__text {
     grid-column: 1 / span 5;
-    align-self: start;
+    align-self: center;
   }
   .eg-hero__frame {
     grid-column: 7 / span 6;
