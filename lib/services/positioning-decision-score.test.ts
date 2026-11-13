@@ -515,8 +515,16 @@ describe('buildDecisionStateText', () => {
   it('E1 — contient le CV préparé comme pour les branches, indenté sur 2 espaces', () => {
     const text = buildDecisionStateText({ cv, priorAnswers: null, referenceDate });
 
-    expect(text.startsWith('## CV du candidat (JSON)\n\n')).toBe(true);
+    expect(text).toContain('\n\n## CV du candidat (JSON)\n\n');
     expect(text).toContain(JSON.stringify(prepareCvForMatchingPrompt(cv, referenceDate), null, 2));
+  });
+
+  it('E1 bis — commence par la date de référence, sans laquelle un poste en cours n’a pas de durée', () => {
+    const text = buildDecisionStateText({ cv, priorAnswers: null, referenceDate });
+
+    expect(
+      text.startsWith("Date de référence (aujourd'hui) : 2026-06-15\n\n## CV du candidat (JSON)\n\n"),
+    ).toBe(true);
   });
 
   it('E2 — ajoute les réponses du recruteur quand il y en a', () => {

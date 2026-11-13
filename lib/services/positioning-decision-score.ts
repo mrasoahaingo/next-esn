@@ -386,9 +386,13 @@ export function computeDecisionScore(params: {
 // ─── État envoyé au modèle (D6) ──────────────────────────────────
 
 /**
- * Texte de l'état : le CV (même normalisation que les branches d'analyse) puis les réponses du
- * recruteur (même rendu que dans les prompts). Ni barème, ni règles d'usage, ni bloc de récence :
- * le barème est porté par les questions.
+ * Texte de l'état : la date de référence, le CV (même normalisation que les branches d'analyse)
+ * puis les réponses du recruteur (même rendu que dans les prompts). Ni barème, ni règles d'usage,
+ * ni bloc de récence : le barème est porté par les questions.
+ *
+ * La date de référence est indispensable : un poste en cours n'a pas de date de fin, et sans elle
+ * le modèle ne peut pas évaluer une exigence de durée (« 3+ ans »). Constaté par appel réel : le
+ * verdict sur un tel critère passe de « partiel / fort » indécis à « fort » une fois la date fournie.
  */
 export function buildDecisionStateText(params: {
   cv: ExtractedCV;
@@ -396,7 +400,9 @@ export function buildDecisionStateText(params: {
   /** Instant de référence pour le poste en cours / les années d'expérience (défaut : maintenant). */
   referenceDate?: Date;
 }): string {
-  const cvPrepared = prepareCvForMatchingPrompt(params.cv, params.referenceDate ?? new Date());
+  const referenceDate = params.referenceDate ?? new Date();
+  const referenceDay = referenceDate.toISOString().slice(0, 10);
+  const cvPrepared = prepareCvForMatchingPrompt(params.cv, referenceDate);
   const answersBlock = buildPriorAnswersPromptBlock(params.priorAnswers ?? null);
-  return `## CV du candidat (JSON)\n\n${JSON.stringify(cvPrepared, null, 2)}${answersBlock}`;
+  return `Date de référence (aujourd'hui) : ${referenceDay}\n\n## CV du candidat (JSON)\n\n${JSON.stringify(cvPrepared, null, 2)}${answersBlock}`;
 }
