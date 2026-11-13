@@ -42,7 +42,6 @@ import {
   Users,
   GraduationCap,
   BarChart3,
-  SearchCheck,
   RefreshCw,
   FoldVertical,
   UnfoldVertical,
@@ -990,19 +989,6 @@ export function UnifiedSidebar() {
               </SidebarMenuItem>
               {canManageTeam && (
                 <>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      isActive={pathname.startsWith('/radar')}
-                      onClick={() => navigate('/radar')}
-                      className={cn(
-                        'text-xs',
-                        pathname.startsWith('/radar') && 'bg-neon/10 text-neon'
-                      )}
-                    >
-                      <SearchCheck className="h-4 w-4" />
-                      <span className="font-medium">Radar Prospect</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       isActive={pathname.startsWith('/settings/organization')}

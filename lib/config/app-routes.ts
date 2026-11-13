@@ -1,6 +1,6 @@
 // ─── Routes de l'app ─────────────────────────────────────────────────────────
 // Préfixes des pages de l'app derrière la connexion : un par dossier de `app/`
-// (le groupe `(dashboard)` compte pour `dashboard` et `radar`), hors pages
+// (le groupe `(dashboard)` compte pour `dashboard`), hors pages
 // publiques (`/`, `/sign-in`, `/sign-up`) et hors `/org-selection`, traitée à
 // part. Tout chemin hors de cette liste est public : un chemin inconnu tombe
 // sur la vraie 404 au lieu de renvoyer vers la connexion.
@@ -8,7 +8,6 @@
 // (repli partagé : components/route-loading.tsx).
 export const APP_ROUTE_PREFIXES = [
   '/dashboard',
-  '/radar',
   '/positions',
   '/review',
   '/settings',
