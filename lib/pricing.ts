@@ -28,6 +28,15 @@ export const MODEL_PRICING_USD: Record<string, ModelPricingUsd> = {
     outputUsdPer1M: 0.3,
     cacheReadUsdPer1M: 0.01875,
   },
+  /**
+   * Modèle de décision du mode ombre (API Decisions de l'AI Gateway). Facturation observée :
+   * 1 116 tokens → 0,0001116 $, soit 0,10 $ / 1M en entrée ; le tarif régional est 0,11 $.
+   * Aucun token de sortie. L'état n'est facturé qu'une fois, quel que soit le nombre de questions.
+   */
+  'openai/gpt-6-luna-decisions': {
+    inputUsdPer1M: 0.1,
+    outputUsdPer1M: 0,
+  },
 };
 
 export function getModelPricing(aiModel: string): ModelPricingUsd | undefined {

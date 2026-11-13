@@ -16,6 +16,11 @@ export const TASK_KEY = {
   POSITIONING_ANALYSIS_SYNTHESIS: 'positioning.analysis.synthesis',
   /** Ligne d’audit : snapshot complet (analyse + réponses + modèles) dans `ai_usage_log.output_payload`. */
   POSITIONING_ANALYSIS_SNAPSHOT: 'positioning.analysis.snapshot',
+  /**
+   * Mode ombre : ligne de comparaison score par décision / `matchScore` du LLM dans
+   * `ai_usage_log.output_payload`. Aucune ligne `llm_tasks` associée (pas de prompt en base).
+   */
+  POSITIONING_ANALYSIS_DECISION_SHADOW: 'positioning.analysis.decisionShadow',
 
   POSITIONING_GENERATE_TAILORED_CV: 'positioning.generate.tailoredCv',
   POSITIONING_GENERATE_EMAIL: 'positioning.generate.email',
