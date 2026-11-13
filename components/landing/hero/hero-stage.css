@@ -75,12 +75,13 @@
  * Au bureau, la fenêtre est posée comme sur une table : la perspective est sur
  * le cadre, l'inclinaison sur .eg-hero__live, qui porte ensemble la fenêtre,
  * la carte de citation, le satellite et le curseur de la démo (ils suivent le
- * plan). Le bord haut fuit, la surface déborde en bas et à droite, vers le
- * bord de l'écran. La scène mesure ses cibles dans la mise en page
+ * plan). Le plan part du coin bas-gauche, le plus proche (pivot du plan) et
+ * le plus large, et fuit vers le haut-droit (point de fuite en haut à droite,
+ * rotateY + rotateZ positifs). La scène mesure ses cibles dans la mise en page
  * (data-ss-tilt, kit/measure.ts) : le curseur vise juste malgré la 3D.
- * Flou progressif : deux couches de verre masquées en dégradé, sur les bords
- * lointains seulement (haut, coin gauche, bas) ; les trois points, Valider /
- * Écarter et le compteur restent nets. Avec la vitre, trois couches floutées
+ * Flou progressif : deux couches de verre masquées en dégradé, en bas
+ * seulement, plus fort au coin bas-gauche, au premier plan ; l'en-tête, les
+ * points et leurs boutons restent nets. Avec la vitre, trois couches floutées
  * au plus (DESIGN.md). Rayon jamais animé. Sous 60rem : à plat, sans flou. */
 .eg-hero__haze {
   display: none;
@@ -91,19 +92,18 @@
   }
   .eg-hero .eg-hero__frame {
     overflow: visible;
-    perspective: 1500px;
-    perspective-origin: 30% 0%;
+    perspective: 1100px;
+    perspective-origin: 100% 0%;
   }
   .eg-hero__live {
-    --tilt-x: 26deg;
-    --tilt-z: -5deg;
-    /* Vers la droite de la largeur de la marge de page : le coin bas-droit
-     * passe le bord de l'écran, le compteur de la barre d'action reste dedans. */
-    --tilt-move: calc(max(var(--gutter), (100vw - var(--page-max)) / 2) - 0.5rem), 5%;
-    --tilt-scale: 1.2;
+    --tilt-x: 30deg;
+    --tilt-y: 18deg;
+    --tilt-z: 6deg;
+    --tilt-move: -1rem, 5%;
+    --tilt-scale: 1.12;
     position: relative;
-    transform-origin: 50% 100%;
-    transform: translate(var(--tilt-move)) rotateX(var(--tilt-x)) rotateZ(var(--tilt-z)) scale(var(--tilt-scale));
+    transform-origin: 0% 100%;
+    transform: translate(var(--tilt-move)) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) rotateZ(var(--tilt-z)) scale(var(--tilt-scale));
   }
   /* La fenêtre défile dans son propre contour (le cadre ne rogne plus), et
    * elle est positionnée : la scène mesure ses cibles par les décalages. */
@@ -116,7 +116,8 @@
   @media (max-width: 63.99rem) {
     .eg-hero__live {
       --tilt-x: 16deg;
-      --tilt-z: -2deg;
+      --tilt-y: 8deg;
+      --tilt-z: 2deg;
       --tilt-move: 0px, 0px;
       --tilt-scale: 1;
     }
@@ -141,19 +142,19 @@
     -webkit-mask-image: var(--haze-mask);
     mask-image: var(--haze-mask);
   }
-  /* Voile léger : le bord haut (en-tête), le coin gauche et le bas. */
+  /* Voile léger : le bas, jusqu'au tiers, élargi au coin bas-gauche. */
   .eg-hero__haze > span:first-child {
     --haze-blur: 3px;
     --haze-mask:
-      linear-gradient(180deg, #000 0, transparent 20%, transparent 88%, #000 100%),
-      radial-gradient(60% 45% at 0 0, #000, transparent 72%);
+      linear-gradient(0deg, #000 0, transparent 30%),
+      radial-gradient(70% 50% at 0 100%, #000, transparent 75%);
   }
-  /* Voile fort : seulement les franges les plus lointaines. */
+  /* Voile fort : seulement la frange basse, au premier plan. */
   .eg-hero__haze > span:last-child {
     --haze-blur: 10px;
     --haze-mask:
-      linear-gradient(180deg, #000 0, transparent 9%, transparent 95%, #000 100%),
-      radial-gradient(38% 30% at 0 0, #000, transparent 72%);
+      linear-gradient(0deg, #000 0, transparent 14%),
+      radial-gradient(45% 32% at 0 100%, #000, transparent 75%);
   }
 }
 /* Quand le visiteur prend la main (pointeur sur le cadre, ou focus dans la
@@ -167,8 +168,9 @@
   }
   .eg-hero__live:focus-within {
     --tilt-x: 12deg;
-    --tilt-z: -2deg;
-    --tilt-move: 4%, 3%;
+    --tilt-y: 6deg;
+    --tilt-z: 2deg;
+    --tilt-move: 0px, 3%;
     --tilt-scale: 1.04;
   }
   .eg-hero__haze > span {
@@ -182,8 +184,9 @@
 @media (min-width: 60rem) and (prefers-reduced-motion: no-preference) and (hover: hover) {
   .eg-hero__frame:hover > .eg-hero__live {
     --tilt-x: 12deg;
-    --tilt-z: -2deg;
-    --tilt-move: 4%, 3%;
+    --tilt-y: 6deg;
+    --tilt-z: 2deg;
+    --tilt-move: 0px, 3%;
     --tilt-scale: 1.04;
   }
 }

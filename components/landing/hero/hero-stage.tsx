@@ -177,7 +177,7 @@ export function HeroStage(): React.JSX.Element {
           </>
         )}
       </Stage>
-      {/* Le flou progressif du plan incliné (bords lointains seulement) :
+      {/* Le flou progressif du plan incliné (en bas, au premier plan) :
           deux couches de verre masquées en dégradé, au-dessus de la scène. */}
       <div className="eg-hero__haze" aria-hidden>
         <span />
