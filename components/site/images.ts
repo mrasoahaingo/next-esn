@@ -14,10 +14,10 @@ export type SitePhoto = {
 
 export const PHOTOS = {
   hero: {
-    src: '/media/esneo/hero-droite.webp',
+    src: '/media/esneo/hero-vide.webp',
     width: 2000,
     height: 1125,
-    alt: 'À l’heure bleue, dans un bureau en étage à La Défense, une ingénieure d’affaires au téléphone se tient près de la baie vitrée, face aux tours éclairées ; des CV imprimés attendent sur la table.',
+    alt: 'À l’heure bleue, un bureau vide en étage à La Défense, face aux tours éclairées et à la Grande Arche ; des CV imprimés, un stylo et un ordinateur fermé attendent sur la table.',
   },
   staffing: {
     src: '/media/esneo/staffing.webp',

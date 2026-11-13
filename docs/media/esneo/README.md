@@ -7,7 +7,7 @@ chaque image, finals en WebP.
 
 | Fichier final (`public/media/esneo/`) | Prompt (`prompts/`) | Variante retenue | Usage |
 |---|---|---|---|
-| `hero-droite.webp` (2000×1125) | `hero-droite.txt` | 2 sur 2 | héros de la landing : la fenêtre de positionnement posée sur la photo, assombrie (légende « Avant Esneo : 21 h, encore des CV à ressaisir. ») |
+| `hero-vide.webp` (2000×1125) | `hero-vide.txt` | 1 sur 2 | héros de la landing depuis le 2026-11-13 : le même bureau à l'heure bleue, sans personne, sous la fenêtre de positionnement inclinée. Généré par l'AI Gateway (`gw-image.mjs --no-style`, le bloc de style commun parlant de personnes ; `KIE_API_KEY` absente), brut `.media/esneo/hero-vide-1.png`, WebP q80 |
 | `face-a-face.webp` (1024×1536) | `fin.txt` | 1 sur 2 | visite, écran 4 (CV adapté et e-mails) : le face-à-face que l'outil libère. Brut `.media/esneo/fin-1.png`, converti sans retouche (1024 px, WebP q80) |
 | `staffing.webp` (1536×1024) | `staffing.txt` | 1 sur 2 | section Fiabilité : le tableau de suivi posé sur le point staffing |
 | `connexion-cour.webp` (1024×1536) | `connexion-b.txt` | 1 sur 2 | `/sign-in` (cadrée au bureau pour laisser voir le CV papier) |
@@ -17,7 +17,7 @@ chaque image, finals en WebP.
 
 Supprimées le 2026-11-12 avec l'ancien système des pages publiques, car plus aucune page ne les utilisait :
 `hero.webp`, `esplanade-hd.webp`, `consultant-hd.webp`, `dossier-anonyme.webp`, `fin-ecran.webp`, `bureau-hd.webp`.
-Leurs prompts restent dans `prompts/` pour mémoire.
+Leurs prompts restent dans `prompts/` pour mémoire. Remplacée le 2026-11-13 : `hero-droite.webp` (la personne au téléphone), prompt `hero-droite.txt`.
 
 Chemins, dimensions et textes de remplacement : `components/site/images.ts` (source unique), sauf
 `face-a-face.webp`, déclarée dans `components/landing/landing.tsx`. Une image remplacée change de nom de fichier :
