@@ -271,7 +271,7 @@ async function parallelExtractAndStream(
     gatewayModelId: string,
     /** Timeout en ms pour cette branche (défaut 45 000). La branche experiences utilise 90 000
      *  car elle produit le plus de tokens (10+ expériences × 10 champs + description[]) et cumule
-     *  le plus de temps de réflexion Gemini 2.5 Flash avant le premier token JSON. */
+     *  le plus de temps de raisonnement du modèle avant le premier token JSON. */
     timeoutMs = 45_000,
   ): Promise<void> {
     const branchStart = Date.now();

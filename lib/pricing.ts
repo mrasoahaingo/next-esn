@@ -1,12 +1,13 @@
 /**
  * Barème USD par million de tokens, aligné sur les identifiants `ai_usage_log.ai_model`
- * (même chaîne que le modèle passé au AI Gateway, ex. `google/gemini-2.5-flash`).
+ * (même chaîne que le modèle passé au AI Gateway, ex. `openai/gpt-6-luna`).
  *
- * Mettre à jour les montants selon la grille officielle du fournisseur
- * (ex. https://ai.google.dev/pricing) — les tarifs changent.
+ * Mettre à jour les montants selon le catalogue du Gateway
+ * (https://ai-gateway.vercel.sh/v1/models/<id>/endpoints) — les tarifs changent.
+ * Les appels partant en zone UE (garde-fou de `lib/ai.ts`), c'est le tarif de cette zone qui s'applique.
  *
  * Tokens cache : si `cacheReadUsdPer1M` est défini, `cache_read_tokens` est facturé à ce tarif
- * (souvent différent du prompt « normal » côté Google).
+ * (souvent différent du prompt « normal »).
  */
 export type ModelPricingUsd = {
   inputUsdPer1M: number;
@@ -22,7 +23,22 @@ export const MODEL_PRICING_USD: Record<string, ModelPricingUsd> = {
     inputUsdPer1M: 0,
     outputUsdPer1M: 0,
   },
+  'openai/gpt-6-luna': {
+    // Tarif zone UE (fournisseur openai, ZDR) ; au-delà de 272 001 tokens d'entrée la grille passe
+    // à 0,22 / 0,825 — palier non modélisé, coût sous-estimé pour ces appels.
+    inputUsdPer1M: 0.11,
+    outputUsdPer1M: 0.55,
+    cacheReadUsdPer1M: 0.011,
+  },
+  'openai/gpt-6-luna-decisions': {
+    // Tarif zone UE (fournisseur openai, ZDR) ; modèle de décision facturé à l'entrée seulement
+    // (catalogue : completion 0). Même palier non modélisé au-delà de 272 001 tokens (0,22).
+    inputUsdPer1M: 0.11,
+    outputUsdPer1M: 0,
+    cacheReadUsdPer1M: 0.011,
+  },
   'google/gemini-2.5-flash': {
+    // Modèle historique (lignes antérieures à quick 261124-mk0 dans ai_usage_log).
     // Ordre de grandeur type « Flash » — à ajuster selon la facturation réelle
     inputUsdPer1M: 0.075,
     outputUsdPer1M: 0.3,

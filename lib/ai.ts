@@ -12,11 +12,17 @@ const gateway = createGateway({
 });
 
 /** Identifiant gateway / facturation ; doit exister dans `lib/pricing.ts` (`MODEL_PRICING_USD`). */
-export const modelName = 'google/gemini-2.5-flash';
+export const modelName = 'openai/gpt-6-luna';
 
 /**
  * Température 0 pour toutes les tâches factuelles (transcription, extraction, analyse, JSON structuré).
  * Réduit la variance entre exécutions et limite les inventions par rapport au prompt / aux pièces jointes.
+ *
+ * Pour les modèles OpenAI de raisonnement (dont `openai/gpt-6-luna`), le garde-fou retire
+ * automatiquement `temperature` et `topP` (refusés par l'API) ; ils restent utiles si un admin
+ * choisit un modèle non-raisonnement. `maxTokens` n'est pas un paramètre d'ai 6 (seul
+ * `maxOutputTokens` existe) : il est ignoré, et volontairement non renommé — sur un modèle de
+ * raisonnement, `maxOutputTokens` inclut les tokens de raisonnement et tronquerait les JSON longs.
  */
 export const llmFactualGenerationSettings = {
   temperature: 0,
@@ -26,16 +32,23 @@ export const llmFactualGenerationSettings = {
 
 /**
  * Paramètres pour les tâches d'extraction mécanique (transcription PDF, extraction CV).
- * Désactive le thinking de Gemini 2.5 Flash : l'extraction est une copie structurée de données,
- * pas une tâche de raisonnement. Sans thinking, le premier token JSON arrive immédiatement
- * au lieu d'attendre 30-90s de réflexion → résout le timeout sur la branche experiences.
+ * L'extraction est une copie structurée de données, pas une tâche de raisonnement : on réduit
+ * l'effort de raisonnement pour que le premier token JSON arrive vite, au lieu d'attendre 30-90 s
+ * de réflexion (timeout historique de la branche experiences).
+ *
+ * `reasoningEffort: 'low'` : valeur la plus basse acceptée par tous les modèles OpenAI de
+ * raisonnement ; une valeur refusée ferait échouer toute l'extraction. Le catalogue du Gateway ne
+ * liste pas `minimal` pour gpt-6-luna.
+ *
+ * `temperature` / `topP` : retirés par le garde-fou pour les modèles OpenAI de raisonnement.
+ * `maxTokens` : ignoré par ai 6, volontairement non renommé (voir `llmFactualGenerationSettings`).
  */
 export const llmExtractionSettings = {
   temperature: 0,
   maxTokens: 8192,
   topP: 0.95,
   providerOptions: {
-    google: { thinkingConfig: { thinkingBudget: 0 } },
+    openai: { reasoningEffort: 'low' },
   },
 };
 
