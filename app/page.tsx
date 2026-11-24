@@ -1,8 +1,8 @@
-import { Landing } from '@/components/marketing/landing';
+import { Landing } from '@/components/landing/landing';
 
-const TITLE = 'Esneo — Du CV au positionnement, piloté par l’IA';
+const TITLE = 'Esneo — Vous choisissez le profil. Esneo fait le dossier.';
 const DESCRIPTION =
-  'La plateforme des ESN pour extraire les CVs, analyser les missions et positionner les consultants — avec un feedback clair et fiable à chaque étape.';
+  'Pour les chasseurs de têtes, ingénieurs d’affaires et chargés de recrutement : Esneo lit le CV et la fiche de poste ou de mission, prépare le positionnement, le CV adapté et les e-mails. Vous relisez, vous validez.';
 
 export const metadata = {
   title: TITLE,
