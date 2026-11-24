@@ -217,7 +217,7 @@ Plans:
 | 6 | v1.2 | 3/3 | Complete | 2026-06-04 |
 | 7 | v1.2 | 0/TBD | Parked | — |
 | 8 | v1.2 | 0/TBD | Parked | — |
-| 9 | v1.3 | 0/TBD | Not started | — |
+| 9 | v1.3 | 2/4 | In Progress|  |
 | 10 | v1.3 | 0/TBD | Not started | — |
 | 11 | v1.3 | 0/TBD | Not started | — |
 | 12 | v1.3 | 0/TBD | Not started | — |
