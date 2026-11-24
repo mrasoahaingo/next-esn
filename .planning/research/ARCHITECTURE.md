@@ -1,5 +1,7 @@
 # Architecture Patterns: v1.3 Prospection
 
+> **Attention — mise à jour Phase 9 (2026-11) :** Proxycurl est mort et `lib/radar/` a été supprimé (commit 7ecd35e). Remplaçants : ScrapIn (signaux LinkedIn) + Dropcontact (email). Les mentions de Proxycurl ci-dessous sont historiques — voir `.planning/phases/09-db-schema-foundation-proxycurl-audit/09-PROXYCURL-AUDIT.md`. Le schéma de référence est la migration `*_prospection_domain.sql`.
+
 **Domain:** B2B prospecting pipeline integrated into existing ESN SaaS
 **Researched:** 2026-07-03
 **Milestone:** v1.3 Prospection (new feature domain, from scratch under `/prospection`)

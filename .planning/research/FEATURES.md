@@ -1,5 +1,7 @@
 # Feature Research: Signal-Based B2B Prospecting (ESN)
 
+> **Attention — mise à jour Phase 9 (2026-11) :** Proxycurl est mort et `lib/radar/` a été supprimé (commit 7ecd35e). Remplaçants : ScrapIn (signaux LinkedIn) + Dropcontact (email). Les mentions de Proxycurl ci-dessous sont historiques — voir `.planning/phases/09-db-schema-foundation-proxycurl-audit/09-PROXYCURL-AUDIT.md`. Le schéma de référence est la migration `*_prospection_domain.sql`.
+
 **Domain:** Signal-based B2B sales/recruiting prospecting tool for ESN (Entreprises de Services Numériques)
 **Researched:** 2026-07-03
 **Milestone:** v1.3 Prospection
