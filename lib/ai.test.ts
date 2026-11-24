@@ -11,8 +11,12 @@ import {
   GATEWAY_COMPLIANCE_OPTIONS,
   applyGatewayCompliance,
   guardLanguageModel,
+  llmExtractionSettings,
+  modelName,
+  usageModelIds,
   type GatewayCallParams,
 } from '@/lib/ai';
+import { DEFAULT_GATEWAY_MODEL_ID } from '@/lib/llm/constants';
 
 const EU_REGION = { scope: 'zone', geoRegion: 'eu' };
 const EXPECTED_GATEWAY = { zeroDataRetention: true, inferenceRegion: EU_REGION };
@@ -157,5 +161,18 @@ describe('garde-fou Gateway ZDR + UE (lib/ai.ts)', () => {
     const gw = out.providerOptions?.gateway as { inferenceRegion: { geoRegion: string } };
     gw.inferenceRegion.geoRegion = 'us';
     expect(GATEWAY_COMPLIANCE_OPTIONS.inferenceRegion.geoRegion).toBe('eu');
+  });
+});
+
+describe('modèle par défaut openai/gpt-6-luna', () => {
+  it('modelName, DEFAULT_GATEWAY_MODEL_ID et usageModelIds pointent sur openai/gpt-6-luna', () => {
+    expect(modelName).toBe('openai/gpt-6-luna');
+    expect(DEFAULT_GATEWAY_MODEL_ID).toBe(modelName);
+    for (const id of Object.values(usageModelIds)) expect(id).toBe(modelName);
+  });
+
+  it('les réglages d’extraction réduisent le raisonnement OpenAI et n’ont plus d’option Gemini', () => {
+    expect(llmExtractionSettings.providerOptions).toEqual({ openai: { reasoningEffort: 'low' } });
+    expect(llmExtractionSettings.providerOptions).not.toHaveProperty('google');
   });
 });
