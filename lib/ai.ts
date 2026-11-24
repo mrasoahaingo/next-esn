@@ -110,11 +110,29 @@ export function isOpenAiReasoningGatewayModel(gatewayModelId: string): boolean {
 /** Middleware garde-fou : ZDR + UE sur chaque appel, retrait temperature/topP pour les modèles de raisonnement. */
 export function createGatewayGuardMiddleware(gatewayModelId: string): LanguageModelMiddleware {
   const stripSampling = isOpenAiReasoningGatewayModel(gatewayModelId);
+  const isOpenAi = gatewayModelId.startsWith('openai/');
   return {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
-      const compliant = applyGatewayCompliance(params);
+      let compliant = applyGatewayCompliance(params);
+      if (isOpenAi) compliant = relaxOpenAiStrictJsonSchema(compliant);
       return stripSampling ? { ...compliant, temperature: undefined, topP: undefined } : compliant;
+    },
+  };
+}
+
+/**
+ * Le mode strict des sorties structurées OpenAI exige que chaque propriété figure dans `required` :
+ * nos schémas Zod ont des champs optionnels (`keyPointId`, `answer`…) et l'appel est alors refusé
+ * (« Invalid schema for response_format … Missing 'keyPointId' »). On désactive le mode strict par
+ * défaut ; la sortie reste validée par Zod côté SDK. Un appelant peut le réactiver explicitement.
+ */
+export function relaxOpenAiStrictJsonSchema(params: GatewayCallParams): GatewayCallParams {
+  return {
+    ...params,
+    providerOptions: {
+      ...params.providerOptions,
+      openai: { strictJsonSchema: false, ...(params.providerOptions?.openai ?? {}) },
     },
   };
 }
