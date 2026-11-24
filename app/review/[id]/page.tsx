@@ -1,3 +1,4 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R5 V3 */
 'use client';
 
 import { useLayoutEffect, useCallback, useMemo, useRef, useEffect } from 'react';
@@ -21,10 +22,21 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Loader2, AlertCircle, Sparkles, PanelLeft, BadgeCheck, Clock, Cpu, Pencil, Target, Square, Save, CheckCircle2, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PageHeader } from '@/components/app/page-header';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
 import { Experiences } from '../components/Experiences';
@@ -34,7 +46,64 @@ import { PdfPreview } from '../components/PdfPreview';
 import { PdfPreviewSync } from '../components/PdfPreviewSync';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
-import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import { candidateFileName, candidateNameFromFile } from '../components/candidate-file-name';
+
+const SECTION_LABELS = {
+  personalInfo: 'Extraction de l’identité…',
+  summary: 'Rédaction du résumé…',
+  skills: 'Analyse des compétences…',
+  education: 'Extraction des formations…',
+  experiences: 'Analyse des expériences…',
+} as const;
+
+const IMPORT_DATE_FORMAT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+function formatImportDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return IMPORT_DATE_FORMAT.format(date);
+}
+
+/** Supprimer : `ghost` icône derrière l'`AlertDialog`, la seule confirmation de l'écran. */
+function DeleteCandidateDialog({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
+  return (
+    <AlertDialog>
+      <Tooltip>
+        <AlertDialogTrigger
+          render={
+            <TooltipTrigger
+              render={
+                <Button variant="ghost" size="icon" disabled={pending} aria-label="Supprimer ce CV">
+                  {pending ? <Spinner /> : <Trash2 />}
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent side="bottom">Supprimer ce CV</TooltipContent>
+      </Tooltip>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Supprimer ce CV ?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Cette action est irréversible. Le CV et toutes ses données seront définitivement supprimés.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Annuler</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Supprimer
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function ReviewPage() {
   const params = useParams();
   const queryClient = useQueryClient();
@@ -67,7 +136,7 @@ export default function ReviewPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
-      toast.success('Extraction terminee avec succes');
+      // Succès silencieux (DESIGN.md § Mouvement) : la zone d'état passe à « Extraction terminée ».
       setDirty(false);
     },
   });
@@ -113,7 +182,7 @@ export default function ReviewPage() {
     [cvWorkflowRows],
   );
 
-  /** Comme le positionnement : liste d’étapes pendant l’extraction ou en erreur ; masquée une fois terminé. */
+  /** Comme le positionnement : liste d’étapes pendant l’extraction ou en erreur ; repliée une fois terminé. */
   const showCvWorkflowUi =
     isLoading ||
     candidateData?.status === 'extracting' ||
@@ -122,6 +191,11 @@ export default function ReviewPage() {
 
   const isExtractionWorkflowActive =
     isLoading || candidateData?.status === 'extracting';
+
+  const extractionCompleted =
+    !showCvWorkflowUi &&
+    !!candidateData &&
+    ['reviewing', 'ready', 'generated'].includes(candidateData.status);
 
   // Derive time tracking from candidateData during render (no useState + layout effect sync)
   const aiDurationMs = candidateData?.ai_extraction_duration_ms ?? null;
@@ -290,366 +364,236 @@ export default function ReviewPage() {
   // Determine if positioning is available
   const canPosition = !isLoading && !!cvData;
 
-  if (!cvData && !isLoading) {
-    const needsManualExtraction = candidateData?.status === 'uploaded';
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 h-full bg-background text-foreground">
-        {needsManualExtraction ? (
-          <div className="flex max-w-md flex-col items-center gap-3 text-center text-muted-foreground">
-            <p className="text-sm">
-              L&apos;extraction n&apos;a pas encore été lancée ou a été interrompue. Lancez-la pour continuer.
-            </p>
-            <Button
-              type="button"
-              onClick={handleRetryExtraction}
-              disabled={isExtractionWorkflowActive}
-            >
-              {isExtractionWorkflowActive && <Spinner data-icon="inline-start" />}
-              {candidateData?.status === 'error'
-                ? "Relancer l'extraction"
-                : "Lancer l'extraction"}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center text-muted-foreground">
-            <Loader2 className="animate-spin mr-2" /> Chargement...
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          {candidateData?.status === 'extracting' && extractionCancelRunId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancelExtraction}
-              disabled={cancelWorkflow.isPending}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              {cancelWorkflow.isPending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Square className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Annuler l&apos;extraction
-            </Button>
-          )}
-          <AlertDialog>
-            <AlertDialogTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={deleteCandidate.isPending}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  {deleteCandidate.isPending ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                  )}
-                  Supprimer
-                </Button>
-              }
-            />
-            <AlertDialogContent className="bg-panel border-overlay/10">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Supprimer ce CV ?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Cette action est irréversible. Le CV et toutes ses données seront définitivement supprimés.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Supprimer
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
-    );
-  }
+  // Which of the two `updateCandidate` callers is in flight (same mutation, two buttons)
+  const validatePending = updateCandidate.isPending && updateCandidate.variables?.status === 'ready';
+  const savePending = updateCandidate.isPending && !validatePending;
+
+  // ─── En-tête : titre, description, faits ───────────────────────────────────
+  const hasData = !!cvData;
+  const needsManualExtraction =
+    !hasData && !isLoading && (candidateData?.status === 'uploaded' || candidateData?.status === 'error');
+  const showCancelExtraction =
+    (isLoading || candidateData?.status === 'extracting') && !!extractionCancelRunId;
+
+  const originalFileUrl = (candidateData as { original_file_url?: string } | undefined)?.original_file_url;
+  const fileName = candidateFileName(originalFileUrl);
+  const candidateName = useMemo(() => {
+    const pi =
+      (cvData as Partial<ExtractedCV> | null)?.personalInfo ??
+      (candidateData?.extracted_data as Partial<ExtractedCV> | null | undefined)?.personalInfo;
+    const name = [pi?.firstName, pi?.lastName].filter(Boolean).join(' ').trim();
+    return name.length > 0 ? name : null;
+  }, [cvData, candidateData?.extracted_data]);
+
+  const title =
+    candidateName ??
+    (isExtractionWorkflowActive
+      ? 'CV en cours d’extraction'
+      : needsManualExtraction
+        ? 'CV à extraire'
+        : (candidateNameFromFile(originalFileUrl) ?? 'CV'));
+
+  const importDate = formatImportDate((candidateData as { created_at?: string } | undefined)?.created_at);
+  const description = !candidateData ? 'Chargement…' : importDate ? `CV importé le ${importDate}` : null;
+
+  const totalSessionMs = (aiDurationMs ?? 0) + (userTimeSeconds ?? 0) * 1000;
+  const showSessionTime = totalSessionMs > 0;
+  const saveBadge =
+    isDirty && !isLoading ? (
+      <Badge variant="outline" className="border-warning/40 font-sans text-warning">
+        Modifications non sauvegardées
+      </Badge>
+    ) : isReady && !isDirty ? (
+      <Badge variant="outline" className="border-success/40 font-sans text-success">
+        Validé
+      </Badge>
+    ) : hasData && !isLoading ? (
+      <span>Enregistré</span>
+    ) : null;
+
+  const meta =
+    fileName || showSessionTime || saveBadge ? (
+      <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+        {fileName ? <span className="break-all">{fileName}</span> : null}
+        {showSessionTime ? (
+          <>
+            {fileName ? <span aria-hidden="true">·</span> : null}
+            <Tooltip>
+              <TooltipTrigger
+                render={<span className="cursor-help underline decoration-dotted underline-offset-4" />}
+              >
+                {formatDuration(totalSessionMs)} de session
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {aiDurationMs != null && aiDurationMs > 0 ? (
+                  <p>Extraction IA : {formatDuration(aiDurationMs)}</p>
+                ) : null}
+                {userTimeSeconds != null && userTimeSeconds > 0 ? (
+                  <p>Édition : {formatSeconds(userTimeSeconds)}</p>
+                ) : null}
+              </TooltipContent>
+            </Tooltip>
+          </>
+        ) : null}
+        {saveBadge ? (
+          <>
+            {fileName || showSessionTime ? <span aria-hidden="true">·</span> : null}
+            {saveBadge}
+          </>
+        ) : null}
+      </span>
+    ) : null;
+
+  const actions = (
+    <>
+      <DeleteCandidateDialog pending={deleteCandidate.isPending} onConfirm={handleDelete} />
+
+      {showCancelExtraction ? (
+        <Button variant="ghost" onClick={handleCancelExtraction} disabled={cancelWorkflow.isPending}>
+          {cancelWorkflow.isPending ? <Spinner data-icon="inline-start" /> : null}
+          Annuler l&apos;extraction
+        </Button>
+      ) : null}
+
+      {isDirty && hasData && !isLoading ? (
+        <Button variant="ghost" onClick={handleSave} disabled={!canSave}>
+          {savePending ? <Spinner data-icon="inline-start" /> : null}
+          Sauvegarder
+        </Button>
+      ) : null}
+
+      {canPosition ? (
+        <Button variant="outline" nativeButton={false} render={<Link href={`/review/${params.id}/positioning`} />}>
+          Positionner le CV
+        </Button>
+      ) : (
+        <Tooltip>
+          <TooltipTrigger render={<Button variant="outline" disabled />}>Positionner le CV</TooltipTrigger>
+          <TooltipContent side="bottom">Attendez la fin de l&apos;extraction avant de positionner</TooltipContent>
+        </Tooltip>
+      )}
+
+      {needsManualExtraction ? (
+        <Button type="button" onClick={handleRetryExtraction} disabled={isExtractionWorkflowActive}>
+          {isExtractionWorkflowActive ? <Spinner data-icon="inline-start" /> : null}
+          {candidateData?.status === 'error' ? 'Relancer l’extraction' : 'Lancer l’extraction'}
+        </Button>
+      ) : null}
+
+      {canMarkReady ? (
+        <Button onClick={handleMarkReady} disabled={updateCandidate.isPending}>
+          {validatePending ? <Spinner data-icon="inline-start" /> : null}
+          Valider le CV
+        </Button>
+      ) : null}
+    </>
+  );
+
+  const statusZone = (
+    <ExtractionProgress
+      data={cvData}
+      isStreaming={isLoading}
+      streamMeta={streamMeta}
+      rows={cvWorkflowRows}
+      summaryLine={cvWorkflowSummary}
+      showSteps={showCvWorkflowUi}
+      completed={extractionCompleted}
+      durationMs={aiDurationMs}
+      error={
+        error
+          ? { message: error.message, onRetry: handleRetryExtraction, retryPending: isExtractionWorkflowActive }
+          : null
+      }
+      extractionModelsLabel={extractionModels?.label}
+      extractionModelsByTask={extractionModels?.byTask}
+    />
+  );
+
+  const showForm = hasData || isLoading;
 
   return (
-    <div className="grid min-h-full bg-background text-foreground">
-      <div className="px-4 pt-4 md:px-6">
-        {/* Top bar */}
-        <div className="rounded-2xl glass-panel p-4">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-3">
-            <div className="flex items-center gap-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/20 text-primary neon-ring">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
-                  <PanelLeft className="h-3 w-3 text-accent" />
-                  CV Builder
-                </div>
-                <h1 className="text-lg font-semibold title-gradient">
-                  {isLoading ? 'Extraction en cours...' : 'Edition du CV'}
-                </h1>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              {/* Cancel extraction */}
-              {isLoading && extractionCancelRunId && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCancelExtraction}
-                  disabled={cancelWorkflow.isPending}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  {cancelWorkflow.isPending ? (
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Square className="mr-1.5 h-3.5 w-3.5" />
-                  )}
-                  Annuler
-                </Button>
-              )}
+    <div className="min-h-full bg-background px-4 py-5 text-foreground md:px-6">
+      <PageHeader title={title} description={description} meta={meta} actions={actions} status={statusZone} />
 
-              {/* Delete candidate */}
-              <AlertDialog>
-                <Tooltip>
-                  <AlertDialogTrigger
-                    render={
-                      <TooltipTrigger
-                        render={
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={deleteCandidate.isPending}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            {deleteCandidate.isPending ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
-                        }
-                      />
-                    }
-                  />
-                  <TooltipContent side="bottom" className="text-xs">
-                    Supprimer ce CV
-                  </TooltipContent>
-                </Tooltip>
-                <AlertDialogContent className="bg-panel border-overlay/10">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Supprimer ce CV ?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Cette action est irréversible. Le CV et toutes ses données seront définitivement supprimés.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDelete}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Supprimer
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              {/* Time tracking indicators */}
-              {(aiDurationMs || userTimeSeconds) && (
-                <Tooltip>
-                  <TooltipTrigger>
-                    <div className="flex items-center gap-2 rounded-lg border border-overlay/10 bg-overlay/[0.06] px-3 py-1.5">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {formatDuration((aiDurationMs ?? 0) + (userTimeSeconds ?? 0) * 1000)}
-                      </span>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">
-                    <div className="space-y-1">
-                      {aiDurationMs != null && aiDurationMs > 0 && (
-                        <p className="flex items-center gap-1.5">
-                          <Cpu className="h-3 w-3 text-accent" />
-                          Extraction IA : <span className="font-semibold">{formatDuration(aiDurationMs)}</span>
-                        </p>
-                      )}
-                      {userTimeSeconds != null && userTimeSeconds > 0 && (
-                        <p className="flex items-center gap-1.5">
-                          <Pencil className="h-3 w-3 text-violet" />
-                          Edition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
-                        </p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-
-              {isDirty && !isLoading && (
-                <Badge variant="outline" className="border-amber-500/30 text-amber-400 text-xs">
-                  Modifications non sauvegardées
-                </Badge>
-              )}
-
-              {isReady && !isDirty && (
-                <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 text-xs">
-                  <CheckCircle2 className="mr-1 h-3 w-3" />
-                  Prêt
-                </Badge>
-              )}
-
-              <Button
-                variant="outline"
-                onClick={handleSave}
-                disabled={!canSave}
-              >
-                {updateCandidate.isPending && !canMarkReady ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                Sauvegarder
-              </Button>
-
-              {canMarkReady ? (
-                <Button
-                  onClick={handleMarkReady}
-                  disabled={updateCandidate.isPending}
-                >
-                  {updateCandidate.isPending ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <BadgeCheck className="mr-2 h-4 w-4" />
-                  )}
-                  Valider le CV
-                </Button>
-              ) : null}
-
-              {canPosition ? (
-                <Button variant="outline" nativeButton={false} render={<Link href={`/review/${params.id}/positioning`} />}>
-                  <Target className="mr-2 h-4 w-4" />
-                  Positionner le CV
-                </Button>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button variant="outline" disabled>
-                        <Target className="mr-2 h-4 w-4" />
-                        Positionner le CV
-                      </Button>
-                    }
-                  />
-                  <TooltipContent side="bottom" className="text-xs">
-                    Attendez la fin de l&apos;extraction avant de positionner
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-          </div>
-
-          {/* Extraction progress */}
-          <ExtractionProgress
-            data={cvData}
-            isStreaming={isLoading}
-            streamMeta={streamMeta}
-            workflowStepRows={showCvWorkflowUi ? cvWorkflowRows : undefined}
-            workflowSummaryLine={showCvWorkflowUi ? cvWorkflowSummary : undefined}
-            hideStepsList={!showCvWorkflowUi}
-            extractionModelsLabel={extractionModels?.label}
-            extractionModelsByTask={extractionModels?.byTask}
-          />
-          {!showCvWorkflowUi &&
-            candidateData &&
-            ['reviewing', 'ready', 'generated'].includes(candidateData.status) && (
-              <details className="mt-3 rounded-xl border border-border/60 bg-card/30 px-3 py-2 [&_summary::-webkit-details-marker]:hidden [&_summary]:list-none">
-                <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
-                  Détail des étapes d&apos;extraction
-                </summary>
-                <div className="mt-3 border-t border-border/40 pt-3">
-                  <WorkflowStepList rows={cvWorkflowRows} summaryLine={null} />
-                </div>
-              </details>
-            )}
-        </div>
-
-      </div>
-
-      {/* Split layout */}
-      <div className="grid grid-cols-1 gap-4 px-4 py-4 md:px-6 lg:grid-cols-2">
-        {/* Left: Form */}
-        <div className="space-y-4">
-          {error && (
-            <div className="flex items-center rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive">
-              <AlertCircle className="mr-2 h-5 w-5" />
-              {error.message}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRetryExtraction}
-                disabled={isExtractionWorkflowActive}
-                className="ml-auto"
-              >
-                {isExtractionWorkflowActive && <Spinner data-icon="inline-start" />}
-                Réessayer
-              </Button>
-            </div>
+      {/* Diptyque asymétrique : le dossier à gauche, ce qu'il devient à droite */}
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="min-w-0 space-y-8 lg:col-span-7">
+          {showForm ? (
+            <>
+              <SectionShell status={status('personalInfo')} label={SECTION_LABELS.personalInfo}>
+                <PersonalInfo
+                  data={safeData?.personalInfo}
+                  onChange={handlePersonalInfo}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
+              <SectionShell status={status('summary')} label={SECTION_LABELS.summary}>
+                <Summary
+                  data={safeData?.summary}
+                  onChange={handleSummary}
+                  readOnly={isLoading}
+                  spacingAfter={sectionSpacing.summary}
+                  onSpacingChange={(v) => handleSectionSpacing('summary', v)}
+                />
+              </SectionShell>
+              <SectionShell status={status('skills')} label={SECTION_LABELS.skills}>
+                <Skills
+                  data={safeSkills}
+                  onChange={handleSkills}
+                  readOnly={isLoading}
+                  spacingAfter={sectionSpacing.skills}
+                  onSpacingChange={(v) => handleSectionSpacing('skills', v)}
+                />
+              </SectionShell>
+              <SectionShell status={status('education')} label={SECTION_LABELS.education}>
+                <Education
+                  data={safeEducation}
+                  onChange={handleEducation}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
+              <SectionShell status={status('experiences')} label={SECTION_LABELS.experiences}>
+                <Experiences
+                  data={safeExperiences}
+                  onChange={handleExperiences}
+                  skills={safeSkills}
+                  onSkillsChange={handleSkills}
+                  readOnly={isLoading}
+                />
+              </SectionShell>
+            </>
+          ) : (
+            <>
+              {/* Établi vide : les mêmes sections, en attente */}
+              <SectionShell status="pending" label="Identité">
+                {null}
+              </SectionShell>
+              <SectionShell status="pending" label="Résumé">
+                {null}
+              </SectionShell>
+              <SectionShell status="pending" label="Compétences">
+                {null}
+              </SectionShell>
+              <SectionShell status="pending" label="Formations">
+                {null}
+              </SectionShell>
+              <SectionShell status="pending" label="Expériences">
+                {null}
+              </SectionShell>
+            </>
           )}
-          <SectionShell status={status('personalInfo')} label="Extraction de l'identité...">
-            <PersonalInfo
-              data={safeData?.personalInfo}
-              onChange={handlePersonalInfo}
-              readOnly={isLoading}
-            />
-          </SectionShell>
-          <SectionShell status={status('summary')} label="Rédaction du résumé...">
-            <Summary
-              data={safeData?.summary}
-              onChange={handleSummary}
-              readOnly={isLoading}
-              spacingAfter={sectionSpacing.summary}
-              onSpacingChange={(v) => handleSectionSpacing('summary', v)}
-            />
-          </SectionShell>
-          <SectionShell status={status('skills')} label="Analyse des compétences...">
-            <Skills
-              data={safeSkills}
-              onChange={handleSkills}
-              readOnly={isLoading}
-              spacingAfter={sectionSpacing.skills}
-              onSpacingChange={(v) => handleSectionSpacing('skills', v)}
-            />
-          </SectionShell>
-          <SectionShell status={status('education')} label="Extraction des formations...">
-            <Education
-              data={safeEducation}
-              onChange={handleEducation}
-              readOnly={isLoading}
-            />
-          </SectionShell>
-          <SectionShell status={status('experiences')} label="Analyse des expériences...">
-            <Experiences
-              data={safeExperiences}
-              onChange={handleExperiences}
-              skills={safeSkills}
-              onSkillsChange={handleSkills}
-              readOnly={isLoading}
-            />
-          </SectionShell>
         </div>
 
-        {/* Right: PDF Preview */}
-        <>
-          <PdfPreviewSync
-            data={cvData}
-            onResetPreview={() => setPdfBlobUrl(null)}
-            templateId={pdfTemplateId}
-          />
-          <PdfPreview />
-        </>
+        <aside className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:self-start" aria-label="Aperçu PDF">
+          {showForm ? (
+            <PdfPreviewSync
+              data={cvData}
+              onResetPreview={() => setPdfBlobUrl(null)}
+              templateId={pdfTemplateId}
+            />
+          ) : null}
+          <PdfPreview title="Aperçu" className="lg:max-h-[calc(100svh-6.5rem)]" />
+        </aside>
       </div>
     </div>
   );

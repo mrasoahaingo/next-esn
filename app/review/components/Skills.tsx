@@ -1,13 +1,13 @@
-
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Sparkles, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { memo, useState } from 'react';
 import type { ExtractedCV, Skill } from '@/lib/schema';
+import { FIELD_LABEL_CLASS, SectionHeading } from './SectionHeading';
 
 type SkillsData = Partial<ExtractedCV['skills']>;
 
@@ -21,11 +21,16 @@ interface SkillsProps {
 
 const CATEGORIES: { key: keyof NonNullable<SkillsData>; label: string }[] = [
   { key: 'technologies', label: 'Technologies' },
-  { key: 'softSkills', label: 'Soft-skills' },
+  { key: 'softSkills', label: 'Savoir-être' },
   { key: 'expertises', label: 'Expertises' },
   { key: 'methodologies', label: 'Méthodologies' },
 ];
 
+/**
+ * Une compétence : incluse dans le PDF (filet plein, texte normal) ou mise de côté
+ * (filet pointillé, gris, « + » pour l'ajouter). Une étoile = compétence clé ;
+ * une étincelle = déduite par l'IA (info-bulle).
+ */
 function SkillBadge({ skill }: { skill: Skill }) {
   const isInferred = skill.source === 'inferred';
   const isAdded = skill.added;
@@ -33,33 +38,25 @@ function SkillBadge({ skill }: { skill: Skill }) {
   const badge = (
     <Badge
       variant="outline"
-      className={`gap-1 cursor-pointer transition-all ${
+      className={
         isAdded
-          ? isInferred
-            ? 'border-accent/40 bg-muted text-accent dark:border-accent/30 dark:bg-accent/15 dark:text-accent-foreground'
-            : 'border-accent/40 bg-muted text-foreground dark:border-accent/30 dark:bg-accent/15 dark:text-accent-foreground'
-          : 'border-overlay/10 bg-overlay/[0.06] text-muted-foreground opacity-60'
-      }`}
+          ? 'gap-1 border-border bg-background text-foreground'
+          : 'gap-1 border-dashed border-border bg-transparent text-muted-foreground'
+      }
     >
-      {skill.starred && (
-        <Star className="w-3 h-3 shrink-0 fill-amber-600 text-amber-600 dark:fill-amber-400 dark:text-amber-400" />
-      )}
-      {isInferred && <Sparkles className="w-3 h-3 shrink-0" />}
+      {skill.starred && <Star className="shrink-0 fill-current" aria-label="Compétence clé" />}
+      {isInferred && <Sparkles className="shrink-0" />}
       {skill.name}
-      {!isAdded && <Plus className="w-3 h-3 shrink-0" />}
+      {!isAdded && <Plus className="shrink-0" />}
     </Badge>
   );
 
   if (isInferred) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger>{badge}</TooltipTrigger>
-          <TooltipContent>
-            <p>Déduite par l&apos;IA</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex" />}>{badge}</TooltipTrigger>
+        <TooltipContent>Déduite par l&apos;IA</TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -98,7 +95,7 @@ function CategorySection({
     }
   };
 
-  // Sort: added first, then starred first, then extracted before inferred
+  // Tri : incluses d'abord, puis clés, puis extraites avant déduites
   const sorted = [...items].sort((a, b) => {
     if (a.added !== b.added) return a.added ? -1 : 1;
     if (a.starred !== b.starred) return a.starred ? -1 : 1;
@@ -111,78 +108,70 @@ function CategorySection({
 
   if (added.length === 0 && notAdded.length === 0) return null;
 
+  const toggleButton = (skill: Skill) => {
+    const originalIndex = items.indexOf(skill);
+    return (
+      <Button
+        key={`${skill.name}-${originalIndex}`}
+        type="button"
+        variant="ghost"
+        className="h-auto rounded-full p-0 font-normal hover:bg-transparent"
+        onClick={() => !readOnly && onToggleAdded(originalIndex)}
+        disabled={readOnly}
+        aria-pressed={skill.added}
+        aria-label={skill.added ? `Retirer ${skill.name} du CV` : `Ajouter ${skill.name} au CV`}
+      >
+        <SkillBadge skill={skill} />
+      </Button>
+    );
+  };
+
   return (
     <FieldGroup className="gap-2">
-      <FieldLabel className="text-xs uppercase tracking-wider text-muted-foreground">{label}</FieldLabel>
+      <p className={FIELD_LABEL_CLASS}>{label}</p>
       {!readOnly && (
         <Field orientation="horizontal" className="flex-row items-end gap-2">
           <div className="min-w-0 flex-1">
             <FieldLabel htmlFor={`skill-add-${categoryKey}`} className="sr-only">
-              Ajouter une compétence — {label}
+              Ajouter une compétence : {label}
             </FieldLabel>
             <Input
               id={`skill-add-${categoryKey}`}
               type="text"
-              placeholder="Ajouter..."
+              placeholder="Nouvelle compétence"
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
               onKeyDown={handleKeyDown}
             />
           </div>
-          <Button type="button" size="default" onClick={handleAdd} aria-label={`Ajouter ${label}`}>
-            <Plus data-icon="inline-start" />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={handleAdd}
+            aria-label={`Ajouter à ${label}`}
+          >
+            <Plus />
           </Button>
         </Field>
       )}
-      {/* Added skills — included in PDF */}
-      <div className="flex flex-wrap gap-1.5">
-        {added.map((skill) => {
-          const originalIndex = items.indexOf(skill);
-          return (
-            <Button
-              key={`${skill.name}-${originalIndex}`}
-              type="button"
-              variant="ghost"
-              className="h-auto p-0 font-normal hover:bg-transparent"
-              onClick={() => !readOnly && onToggleAdded(originalIndex)}
-              disabled={readOnly}
-            >
-              <SkillBadge skill={skill} />
-            </Button>
-          );
-        })}
-      </div>
-      {/* Not added — click to add to PDF */}
+      {/* Incluses dans le PDF */}
+      <div className="flex flex-wrap gap-1.5">{added.map(toggleButton)}</div>
+      {/* Mises de côté : un clic les inclut */}
       {notAdded.length > 0 && (
         <>
           <Button
             type="button"
             variant="ghost"
-            className="h-auto justify-start gap-1.5 p-0 text-xs text-muted-foreground hover:text-foreground"
+            size="xs"
+            className="w-fit px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
             onClick={() => setShowOthers(!showOthers)}
+            aria-expanded={showOthers}
           >
-            {showOthers ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+            {showOthers ? <ChevronUp /> : <ChevronDown />}
             {notAdded.length} autre{notAdded.length > 1 ? 's' : ''}
           </Button>
-          {showOthers && (
-            <div className="flex flex-wrap gap-1.5">
-              {notAdded.map((skill) => {
-                const originalIndex = items.indexOf(skill);
-                return (
-                  <Button
-                    key={`${skill.name}-${originalIndex}`}
-                    type="button"
-                    variant="ghost"
-                    className="h-auto p-0 font-normal hover:bg-transparent"
-                    onClick={() => !readOnly && onToggleAdded(originalIndex)}
-                    disabled={readOnly}
-                  >
-                    <SkillBadge skill={skill} />
-                  </Button>
-                );
-              })}
-            </div>
-          )}
+          {showOthers && <div className="flex flex-wrap gap-1.5">{notAdded.map(toggleButton)}</div>}
         </>
       )}
     </FieldGroup>
@@ -211,11 +200,9 @@ export const Skills = memo(function Skills({ data, onChange, readOnly, spacingAf
   };
 
   return (
-    <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
-        Compétences
-      </h2>
-      <FieldGroup className="gap-4">
+    <section aria-labelledby="cv-section-skills">
+      <SectionHeading id="cv-section-skills" title="Compétences" />
+      <FieldGroup className="gap-5">
         {CATEGORIES.map((cat) => (
           <CategorySection
             key={cat.key}
@@ -229,9 +216,9 @@ export const Skills = memo(function Skills({ data, onChange, readOnly, spacingAf
         ))}
       </FieldGroup>
       {!readOnly && onSpacingChange && (
-        <Field className="mt-4">
-          <FieldLabel htmlFor="skills-spacing" className="text-xs text-muted-foreground">
-            Marge en dessous : {spacingAfter ?? 0} pt
+        <Field className="mt-5">
+          <FieldLabel htmlFor="skills-spacing" className={FIELD_LABEL_CLASS}>
+            Marge en dessous : <span className="font-mono tabular-nums">{spacingAfter ?? 0}&nbsp;pt</span>
           </FieldLabel>
           <Slider
             id="skills-spacing"

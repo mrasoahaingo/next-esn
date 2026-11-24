@@ -1,12 +1,8 @@
-
 import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field';
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { FIELD_LABEL_CLASS, SectionHeading } from './SectionHeading';
 
 interface PersonalInfoProps {
   data: Partial<ExtractedCV['personalInfo']> | undefined;
@@ -20,15 +16,13 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
   };
 
   return (
-    <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
-        Personal Info
-      </h2>
+    <section aria-labelledby="cv-section-identity">
+      <SectionHeading id="cv-section-identity" title="Identité" />
       <FieldGroup className="gap-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor="pi-firstName" className="text-xs uppercase tracking-wider text-muted-foreground">
-              First Name
+            <FieldLabel htmlFor="pi-firstName" className={FIELD_LABEL_CLASS}>
+              Prénom
             </FieldLabel>
             <Input
               id="pi-firstName"
@@ -38,8 +32,8 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="pi-lastName" className="text-xs uppercase tracking-wider text-muted-foreground">
-              Last Name
+            <FieldLabel htmlFor="pi-lastName" className={FIELD_LABEL_CLASS}>
+              Nom
             </FieldLabel>
             <Input
               id="pi-lastName"
@@ -50,8 +44,8 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
           </Field>
         </div>
         <Field>
-          <FieldLabel htmlFor="pi-title" className="text-xs uppercase tracking-wider text-muted-foreground">
-            Title
+          <FieldLabel htmlFor="pi-title" className={FIELD_LABEL_CLASS}>
+            Titre
           </FieldLabel>
           <Input
             id="pi-title"
@@ -60,32 +54,34 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
             disabled={readOnly}
           />
         </Field>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="pi-email" className={FIELD_LABEL_CLASS}>
+              E-mail
+            </FieldLabel>
+            <Input
+              id="pi-email"
+              type="email"
+              value={data?.email ?? ''}
+              onChange={(e) => handleChange('email', e.target.value)}
+              disabled={readOnly}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="pi-phone" className={FIELD_LABEL_CLASS}>
+              Téléphone
+            </FieldLabel>
+            <Input
+              id="pi-phone"
+              value={data?.phone ?? ''}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              disabled={readOnly}
+            />
+          </Field>
+        </div>
         <Field>
-          <FieldLabel htmlFor="pi-email" className="text-xs uppercase tracking-wider text-muted-foreground">
-            Email
-          </FieldLabel>
-          <Input
-            id="pi-email"
-            type="email"
-            value={data?.email ?? ''}
-            onChange={(e) => handleChange('email', e.target.value)}
-            disabled={readOnly}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="pi-phone" className="text-xs uppercase tracking-wider text-muted-foreground">
-            Phone
-          </FieldLabel>
-          <Input
-            id="pi-phone"
-            value={data?.phone ?? ''}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            disabled={readOnly}
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="pi-location" className="text-xs uppercase tracking-wider text-muted-foreground">
-            Location
+          <FieldLabel htmlFor="pi-location" className={FIELD_LABEL_CLASS}>
+            Localisation
           </FieldLabel>
           <Input
             id="pi-location"
@@ -96,7 +92,7 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
         </Field>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor="pi-yoe" className="text-xs uppercase tracking-wider text-muted-foreground">
+            <FieldLabel htmlFor="pi-yoe" className={FIELD_LABEL_CLASS}>
               Années d&apos;expérience
             </FieldLabel>
             <Input
@@ -104,11 +100,11 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
               value={data?.yearsOfExperience ?? ''}
               onChange={(e) => handleChange('yearsOfExperience', e.target.value)}
               disabled={readOnly}
-              placeholder="Ex: 8 ans"
+              placeholder="8 ans"
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="pi-avail" className="text-xs uppercase tracking-wider text-muted-foreground">
+            <FieldLabel htmlFor="pi-avail" className={FIELD_LABEL_CLASS}>
               Disponibilité
             </FieldLabel>
             <Input
@@ -116,7 +112,7 @@ export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnl
               value={data?.availability ?? ''}
               onChange={(e) => handleChange('availability', e.target.value)}
               disabled={readOnly}
-              placeholder="Ex: Immédiate"
+              placeholder="Immédiate"
             />
           </Field>
         </div>

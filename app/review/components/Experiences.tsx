@@ -1,13 +1,13 @@
-
 import { ExtractedCV, Skill } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Slider } from '@/components/ui/slider';
 import { Trash2, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { memo, useState, useRef, useEffect } from 'react';
+import { FIELD_LABEL_CLASS, SectionHeading } from './SectionHeading';
 
 type ExperienceItem = ExtractedCV['experiences'][number];
 type SkillsData = ExtractedCV['skills'];
@@ -76,7 +76,7 @@ function ExperienceSkills({
     }
   };
 
-  // Close suggestions on outside click
+  // Fermer les suggestions au clic à l'extérieur
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -88,35 +88,35 @@ function ExperienceSkills({
   }, []);
 
   return (
-    <div className="mt-3 border-t border-border/40 pt-3">
-      <FieldLabel className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
-        Compétences
-      </FieldLabel>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {expSkills.map((name) => (
-          <Badge key={name} variant="outline" className="gap-1 border-accent/40 bg-muted text-foreground dark:border-accent/30 dark:bg-accent/15">
-            {name}
-            <button
-              type="button"
-              onClick={() => onRemove(name)}
-              aria-label={`Supprimer ${name}`}
-              className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </Badge>
-        ))}
-      </div>
+    <div className="space-y-2">
+      <p className={FIELD_LABEL_CLASS}>Compétences mobilisées</p>
+      {expSkills.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {expSkills.map((name) => (
+            <Badge key={name} variant="outline" className="gap-1 border-border bg-background pr-1 text-foreground">
+              {name}
+              <button
+                type="button"
+                onClick={() => onRemove(name)}
+                aria-label={`Retirer ${name}`}
+                className="rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <X className="size-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
       <div ref={containerRef} className="relative">
         <Field orientation="horizontal" className="flex-row items-end gap-2">
           <div className="min-w-0 flex-1">
             <FieldLabel htmlFor={`exp-skill-add-${expIndex}`} className="sr-only">
-              Ajouter une compétence
+              Ajouter une compétence à cette expérience
             </FieldLabel>
             <Input
               id={`exp-skill-add-${expIndex}`}
               type="text"
-              placeholder="Ajouter une compétence..."
+              placeholder="Compétence mobilisée"
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
@@ -127,17 +127,23 @@ function ExperienceSkills({
               autoComplete="off"
             />
           </div>
-          <Button type="button" size="default" onClick={() => handleAdd(input)} aria-label="Ajouter">
-            <Plus data-icon="inline-start" />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => handleAdd(input)}
+            aria-label="Ajouter cette compétence"
+          >
+            <Plus />
           </Button>
         </Field>
         {showSuggestions && suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-border bg-popover shadow-md">
+          <ul className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-md border border-border bg-popover py-1 shadow-md">
             {suggestions.map((name) => (
               <li key={name}>
                 <button
                   type="button"
-                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent/20 transition-colors"
+                  className="w-full px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     handleAdd(name);
@@ -172,9 +178,9 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
   const handleAdd = () => {
     onChange([
       {
-        role: 'New Role',
-        company: 'Company',
-        startDate: 'Present',
+        role: '',
+        company: '',
+        startDate: '',
         isCurrent: true,
         description: [],
       },
@@ -193,7 +199,7 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
 
   const handleAddDescription = (expIndex: number) => {
     const newData = [...(data || [])];
-    const newDesc = [...(newData[expIndex].description || []), 'New task'];
+    const newDesc = [...(newData[expIndex].description || []), ''];
     newData[expIndex].description = newDesc;
     onChange(newData);
   };
@@ -207,13 +213,12 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
   };
 
   const handleAddSkill = (expIndex: number, name: string) => {
-    // Update exp.skills
     const newData = [...(data || [])];
     const current = newData[expIndex].skills ?? [];
     newData[expIndex] = { ...newData[expIndex], skills: [...current, name] };
     onChange(newData);
 
-    // Add to global pool if not already present
+    // Ajout au référentiel global s'il n'y est pas déjà
     if (onSkillsChange && skills) {
       const allNames = getAllSkillNames(skills);
       if (!allNames.includes(name)) {
@@ -231,196 +236,229 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
     onChange(newData);
   };
 
-  return (
-    <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <div className="flex justify-between items-center mb-4 border-b border-overlay/10 pb-2">
-        <h2 className="text-lg font-semibold text-foreground">
-          Experiences
-        </h2>
-        {!readOnly && (
-          <Button variant="ghost" size="sm" onClick={handleAdd} className="text-primary">
-            <Plus data-icon="inline-start" />
-            Add Experience
-          </Button>
-        )}
-      </div>
+  const items = Array.isArray(data) ? data : [];
 
-      <FieldGroup className="gap-6">
-        {Array.isArray(data) && data.map((exp, i) => exp ? (
-          <div key={i} className="relative pl-4 border-l-2 border-border hover:border-accent transition-colors group">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex-1">
-                {readOnly ? (
-                  <>
-                    <h3 className="font-bold text-foreground text-lg">{exp.role}</h3>
-                    <div className="text-accent font-medium">{exp.company} {exp.location && `• ${exp.location}`}</div>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+  return (
+    <section aria-labelledby="cv-section-experiences">
+      <SectionHeading
+        id="cv-section-experiences"
+        title="Expériences"
+        action={
+          !readOnly ? (
+            <Button type="button" variant="ghost" size="sm" onClick={handleAdd}>
+              <Plus data-icon="inline-start" />
+              Ajouter une expérience
+            </Button>
+          ) : null
+        }
+      />
+
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Aucune expérience.</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {items.map((exp, i) => {
+            if (!exp) return null;
+            const expanded = expandedIndex === i;
+            const period = `${exp.startDate ?? ''} – ${exp.endDate || 'Aujourd’hui'}`;
+            return (
+              <li key={i} className="py-5 first:pt-0 last:pb-0">
+                {/* En-tête de l'expérience */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    {readOnly ? (
+                      <>
+                        <h3 className="text-sm font-medium text-foreground">{exp.role}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {exp.company}
+                          {exp.location ? ` · ${exp.location}` : ''}
+                        </p>
+                      </>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Field>
+                          <FieldLabel htmlFor={`exp-role-${i}`} className={FIELD_LABEL_CLASS}>
+                            Poste
+                          </FieldLabel>
+                          <Input
+                            id={`exp-role-${i}`}
+                            value={exp.role ?? ''}
+                            onChange={(e) => handleUpdate(i, 'role', e.target.value)}
+                            placeholder="Tech lead Java"
+                            className="font-medium"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={`exp-company-${i}`} className={FIELD_LABEL_CLASS}>
+                            Entreprise
+                          </FieldLabel>
+                          <Input
+                            id={`exp-company-${i}`}
+                            value={exp.company ?? ''}
+                            onChange={(e) => handleUpdate(i, 'company', e.target.value)}
+                            placeholder="Nom du client"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={`exp-start-${i}`} className={FIELD_LABEL_CLASS}>
+                            Début
+                          </FieldLabel>
+                          <Input
+                            id={`exp-start-${i}`}
+                            value={exp.startDate ?? ''}
+                            onChange={(e) => handleUpdate(i, 'startDate', e.target.value)}
+                            placeholder="01/2022"
+                            className="font-mono tabular-nums"
+                          />
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor={`exp-end-${i}`} className={FIELD_LABEL_CLASS}>
+                            Fin
+                          </FieldLabel>
+                          <Input
+                            id={`exp-end-${i}`}
+                            value={exp.endDate ?? ''}
+                            onChange={(e) => handleUpdate(i, 'endDate', e.target.value)}
+                            placeholder="Aujourd’hui"
+                            className="font-mono tabular-nums"
+                          />
+                        </Field>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    {readOnly && (
+                      <span className="mr-2 whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+                        {period}
+                      </span>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setExpandedIndex(expanded ? null : i)}
+                      aria-expanded={expanded}
+                      aria-controls={`exp-details-${i}`}
+                      aria-label={expanded ? 'Replier l’expérience' : 'Déplier l’expérience'}
+                    >
+                      {expanded ? <ChevronUp /> : <ChevronDown />}
+                    </Button>
+                    {!readOnly && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => handleRemove(i)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label="Supprimer cette expérience"
+                      >
+                        <Trash2 />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Détail : missions, compétences */}
+                <div id={`exp-details-${i}`} className={`mt-4 space-y-4 ${!expanded && !readOnly ? 'hidden' : ''}`}>
+                  {!readOnly && (
                     <Field>
-                      <FieldLabel htmlFor={`exp-role-${i}`} className="sr-only">Role</FieldLabel>
-                      <Input
-                        id={`exp-role-${i}`}
-                        value={exp.role ?? ''}
-                        onChange={(e) => handleUpdate(i, 'role', e.target.value)}
-                        placeholder="Role"
-                        className="font-bold"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor={`exp-company-${i}`} className="sr-only">Company</FieldLabel>
-                      <Input
-                        id={`exp-company-${i}`}
-                        value={exp.company ?? ''}
-                        onChange={(e) => handleUpdate(i, 'company', e.target.value)}
-                        placeholder="Company"
-                      />
-                    </Field>
-                    <Field className="md:col-span-2">
-                      <FieldLabel htmlFor={`exp-domain-${i}`} className="sr-only">Company domain</FieldLabel>
+                      <FieldLabel htmlFor={`exp-domain-${i}`} className={FIELD_LABEL_CLASS}>
+                        Domaine de l&apos;entreprise
+                      </FieldLabel>
                       <Input
                         id={`exp-domain-${i}`}
                         value={exp.companyDomain ?? ''}
                         onChange={(e) => handleUpdate(i, 'companyDomain', e.target.value)}
-                        placeholder="Domaine entreprise (ex: google.com)"
-                        className="text-xs"
+                        placeholder="client.fr"
+                        className="font-mono"
                       />
                     </Field>
-                  </div>
-                )}
-              </div>
+                  )}
 
-              <div className="flex items-center gap-2 ml-4">
-                {!readOnly ? (
-                  <div className="flex flex-col items-end gap-1">
-                    <Field>
-                      <FieldLabel htmlFor={`exp-start-${i}`} className="sr-only">Start date</FieldLabel>
-                      <Input
-                        id={`exp-start-${i}`}
-                        value={exp.startDate ?? ''}
-                        onChange={(e) => handleUpdate(i, 'startDate', e.target.value)}
-                        placeholder="Start"
-                        className="w-24 text-xs py-1"
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor={`exp-end-${i}`} className="sr-only">End date</FieldLabel>
-                      <Input
-                        id={`exp-end-${i}`}
-                        value={exp.endDate ?? ''}
-                        onChange={(e) => handleUpdate(i, 'endDate', e.target.value)}
-                        placeholder="End"
-                        className="w-24 text-xs py-1"
-                      />
-                    </Field>
-                  </div>
-                ) : (
-                  <span className="text-sm font-medium text-muted-foreground bg-overlay/10 px-2 py-1 rounded whitespace-nowrap">
-                    {exp.startDate} - {exp.endDate || 'Present'}
-                  </span>
-                )}
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  onClick={() => setExpandedIndex(expandedIndex === i ? null : i)}
-                  aria-expanded={expandedIndex === i}
-                  aria-label={expandedIndex === i ? 'Collapse experience' : 'Expand experience'}
-                >
-                  {expandedIndex === i ? <ChevronUp /> : <ChevronDown />}
-                </Button>
-
-                {!readOnly && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={() => handleRemove(i)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Remove experience"
-                  >
-                    <Trash2 />
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className={`mt-2 ${expandedIndex !== i && !readOnly ? 'hidden' : 'block'}`}>
-              <ul className="flex flex-col gap-2">
-                {Array.isArray(exp.description) && exp.description.map((desc, j) => desc ? (
-                  <li key={j} className="text-foreground text-sm flex items-start group/item">
-                    <span className="mr-2 text-primary mt-1">•</span>
-                    {readOnly ? (
-                      <span>{desc}</span>
-                    ) : (
-                      <div className="flex-1 flex items-start gap-2">
-                        <Field className="flex-1">
-                          <FieldLabel htmlFor={`exp-desc-${i}-${j}`} className="sr-only">Task description</FieldLabel>
-                          <Textarea
-                            id={`exp-desc-${i}-${j}`}
-                            value={desc}
-                            onChange={(e) => handleDescriptionChange(i, j, e.target.value)}
-                            className="min-h-[60px] text-sm"
-                          />
-                        </Field>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-xs"
-                          onClick={() => handleRemoveDescription(i, j)}
-                          className="text-muted-foreground hover:text-destructive opacity-0 group-hover/item:opacity-100 transition-opacity mt-2"
-                          aria-label="Remove task"
-                        >
-                          <X />
-                        </Button>
-                      </div>
+                  <div className="space-y-2">
+                    {!readOnly && <p className={FIELD_LABEL_CLASS}>Missions</p>}
+                    <ul className="space-y-2">
+                      {Array.isArray(exp.description) &&
+                        exp.description.map((desc, j) =>
+                          desc != null ? (
+                            <li key={j} className="flex items-start gap-2 text-sm text-foreground">
+                              {readOnly ? (
+                                <>
+                                  <span className="mt-px select-none text-muted-foreground" aria-hidden="true">
+                                    •
+                                  </span>
+                                  <span>{desc}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Field className="flex-1">
+                                    <FieldLabel htmlFor={`exp-desc-${i}-${j}`} className="sr-only">
+                                      Mission {j + 1}
+                                    </FieldLabel>
+                                    <Textarea
+                                      id={`exp-desc-${i}-${j}`}
+                                      value={desc}
+                                      onChange={(e) => handleDescriptionChange(i, j, e.target.value)}
+                                      className="min-h-16 text-sm"
+                                    />
+                                  </Field>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    onClick={() => handleRemoveDescription(i, j)}
+                                    className="mt-0.5 text-muted-foreground hover:text-destructive"
+                                    aria-label={`Supprimer la mission ${j + 1}`}
+                                  >
+                                    <X />
+                                  </Button>
+                                </>
+                              )}
+                            </li>
+                          ) : null,
+                        )}
+                    </ul>
+                    {!readOnly && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleAddDescription(i)}>
+                        <Plus data-icon="inline-start" />
+                        Ajouter une mission
+                      </Button>
                     )}
-                  </li>
-                ) : null)}
-              </ul>
-              {!readOnly && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => handleAddDescription(i)}
-                  className="mt-2 text-accent"
-                >
-                  <Plus data-icon="inline-start" />
-                  Add Task
-                </Button>
-              )}
+                  </div>
 
-              {!readOnly && (
-                <ExperienceSkills
-                  expIndex={i}
-                  expSkills={exp.skills ?? []}
-                  globalSkills={skills}
-                  onAdd={(name) => handleAddSkill(i, name)}
-                  onRemove={(name) => handleRemoveSkill(i, name)}
-                />
-              )}
-            </div>
+                  {!readOnly && (
+                    <ExperienceSkills
+                      expIndex={i}
+                      expSkills={exp.skills ?? []}
+                      globalSkills={skills}
+                      onAdd={(name) => handleAddSkill(i, name)}
+                      onRemove={(name) => handleRemoveSkill(i, name)}
+                    />
+                  )}
 
-            {!readOnly && (
-              <Field className="mt-3">
-                <FieldLabel htmlFor={`exp-spacing-${i}`} className="text-xs text-muted-foreground">
-                  Marge en dessous : {exp.spacingAfter ?? 0} pt
-                </FieldLabel>
-                <Slider
-                  id={`exp-spacing-${i}`}
-                  min={0}
-                  max={100}
-                  step={2}
-                  value={[exp.spacingAfter ?? 0]}
-                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', Array.isArray(v) ? v[0] : v)}
-                />
-              </Field>
-            )}
-          </div>
-        ) : null)}
-      </FieldGroup>
+                  {!readOnly && (
+                    <Field>
+                      <FieldLabel htmlFor={`exp-spacing-${i}`} className={FIELD_LABEL_CLASS}>
+                        Marge en dessous :{' '}
+                        <span className="font-mono tabular-nums">{exp.spacingAfter ?? 0}&nbsp;pt</span>
+                      </FieldLabel>
+                      <Slider
+                        id={`exp-spacing-${i}`}
+                        min={0}
+                        max={100}
+                        step={2}
+                        value={[exp.spacingAfter ?? 0]}
+                        onValueChange={(v) => handleUpdate(i, 'spacingAfter', Array.isArray(v) ? v[0] : v)}
+                      />
+                    </Field>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </section>
   );
 });
