@@ -55,3 +55,18 @@ describe('buildGenerateUserContent — règles de sortie', () => {
     expect(generate(cv)).not.toContain('"phone"');
   });
 });
+
+describe('buildGenerateUserContent — années d’expérience', () => {
+  it('impose la durée calculée dans le CV injecté et dans les règles de sortie', () => {
+    const cv = baseCv({
+      personalInfo: { firstName: 'Jean', lastName: 'Dupont', title: 'Dev', yearsOfExperience: '10 ans' },
+      experiences: [{ role: 'Dev', company: 'Acme', startDate: '09/2019', isCurrent: true, description: [] }],
+    });
+    const content = generate(cv);
+    expect(content).toContain('"yearsOfExperience": "7 ans"');
+    expect(content).not.toContain('10 ans');
+    const rules = content.slice(content.indexOf('## Règles de sortie'));
+    expect(rules).toContain('**7 ans**');
+    expect(rules).toContain('"7 ans"');
+  });
+});
