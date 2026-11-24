@@ -19,7 +19,8 @@ export const modelName = 'openai/gpt-6-luna';
  * Réduit la variance entre exécutions et limite les inventions par rapport au prompt / aux pièces jointes.
  *
  * Pour les modèles OpenAI de raisonnement (dont `openai/gpt-6-luna`), le garde-fou retire
- * automatiquement `temperature` et `topP` (refusés par l'API) ; ils restent utiles si un admin
+ * automatiquement `temperature` et `topP` (refusés par l'API) et injecte `reasoningEffort: 'low'`
+ * par défaut (voir `DEFAULT_OPENAI_REASONING_EFFORT`) ; ils restent utiles si un admin
  * choisit un modèle non-raisonnement. `maxTokens` n'est pas un paramètre d'ai 6 (seul
  * `maxOutputTokens` existe) : il est ignoré, et volontairement non renommé — sur un modèle de
  * raisonnement, `maxOutputTokens` inclut les tokens de raisonnement et tronquerait les JSON longs.
@@ -107,34 +108,66 @@ export function isOpenAiReasoningGatewayModel(gatewayModelId: string): boolean {
   return /^openai\/(o\d|gpt-[5-9])/.test(gatewayModelId) && !gatewayModelId.includes('-chat');
 }
 
-/** Middleware garde-fou : ZDR + UE sur chaque appel, retrait temperature/topP pour les modèles de raisonnement. */
+/**
+ * Effort de raisonnement par défaut des modèles OpenAI de raisonnement, injecté par le garde-fou.
+ *
+ * - `'low'` est la valeur déjà vérifiée en production sur l'extraction (`llmExtractionSettings`).
+ * - `minimal` n'est pas listé par le catalogue du Gateway pour gpt-6-luna : une valeur refusée ferait
+ *   échouer l'appel.
+ * - Durées mesurées avec l'effort par défaut (medium) : branche skills de l'analyse ≈ 305 s,
+ *   CV adapté ≈ 188 s — au ras de la limite d'exécution de 300 s.
+ * - Surchargeable : un appelant qui passe `providerOptions.openai.reasoningEffort` garde sa valeur.
+ */
+export const DEFAULT_OPENAI_REASONING_EFFORT = 'low';
+
+/**
+ * Middleware garde-fou : ZDR + UE sur chaque appel ; pour OpenAI, mode strict JSON désactivé par
+ * défaut ; pour les modèles OpenAI de raisonnement, `reasoningEffort: 'low'` par défaut et retrait
+ * de temperature/topP.
+ */
 export function createGatewayGuardMiddleware(gatewayModelId: string): LanguageModelMiddleware {
-  const stripSampling = isOpenAiReasoningGatewayModel(gatewayModelId);
+  const reasoning = isOpenAiReasoningGatewayModel(gatewayModelId);
   const isOpenAi = gatewayModelId.startsWith('openai/');
   return {
     specificationVersion: 'v3',
     transformParams: async ({ params }) => {
       let compliant = applyGatewayCompliance(params);
-      if (isOpenAi) compliant = relaxOpenAiStrictJsonSchema(compliant);
-      return stripSampling ? { ...compliant, temperature: undefined, topP: undefined } : compliant;
+      if (isOpenAi) compliant = applyOpenAiDefaults(compliant, { reasoning });
+      return reasoning ? { ...compliant, temperature: undefined, topP: undefined } : compliant;
     },
   };
 }
 
 /**
- * Le mode strict des sorties structurées OpenAI exige que chaque propriété figure dans `required` :
- * nos schémas Zod ont des champs optionnels (`keyPointId`, `answer`…) et l'appel est alors refusé
- * (« Invalid schema for response_format … Missing 'keyPointId' »). On désactive le mode strict par
- * défaut ; la sortie reste validée par Zod côté SDK. Un appelant peut le réactiver explicitement.
+ * Défauts des options OpenAI, appliqués AVANT celles de l'appelant (qui gagnent toujours) :
+ *
+ * - `strictJsonSchema: false` : le mode strict des sorties structurées OpenAI exige que chaque
+ *   propriété figure dans `required` ; nos schémas Zod ont des champs optionnels (`keyPointId`,
+ *   `answer`…) et l'appel est alors refusé (« Invalid schema for response_format … Missing
+ *   'keyPointId' »). La sortie reste validée par Zod côté SDK.
+ * - `reasoningEffort: 'low'` (modèles de raisonnement uniquement) : voir
+ *   `DEFAULT_OPENAI_REASONING_EFFORT`.
  */
-export function relaxOpenAiStrictJsonSchema(params: GatewayCallParams): GatewayCallParams {
+export function applyOpenAiDefaults(
+  params: GatewayCallParams,
+  options: { reasoning: boolean },
+): GatewayCallParams {
   return {
     ...params,
     providerOptions: {
       ...params.providerOptions,
-      openai: { strictJsonSchema: false, ...(params.providerOptions?.openai ?? {}) },
+      openai: {
+        strictJsonSchema: false,
+        ...(options.reasoning ? { reasoningEffort: DEFAULT_OPENAI_REASONING_EFFORT } : {}),
+        ...(params.providerOptions?.openai ?? {}),
+      },
     },
   };
+}
+
+/** Désactive le mode strict JSON d'OpenAI par défaut (voir `applyOpenAiDefaults`), sans toucher au raisonnement. */
+export function relaxOpenAiStrictJsonSchema(params: GatewayCallParams): GatewayCallParams {
+  return applyOpenAiDefaults(params, { reasoning: false });
 }
 
 type WrappableModel = Parameters<typeof wrapLanguageModel>[0]['model'];

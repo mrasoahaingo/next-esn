@@ -9,11 +9,10 @@ export async function generateCvPdf(
   data: Partial<ExtractedCV>,
   templateConfig?: Partial<TemplateConfig>,
 ): Promise<Uint8Array> {
-  let resolved: TemplateConfig | undefined;
-  if (templateConfig !== undefined) {
-    const merged = mergeTemplateWithDefaults(templateConfig);
-    resolved = await prepareTemplateConfigForPdf(merged);
-  }
+  // Toujours préparer, même sans gabarit : le logo par défaut est rastérisé à cette étape.
+  const resolved: TemplateConfig = await prepareTemplateConfigForPdf(
+    mergeTemplateWithDefaults(templateConfig),
+  );
   const spec = buildCvSpec(data, resolved);
   return renderToBuffer(spec, { registry: fixedComponents });
 }

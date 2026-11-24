@@ -1,6 +1,3 @@
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-
 import type { Spec } from '@json-render/core';
 import type {
   ExtractedCV,
@@ -10,10 +7,6 @@ import type {
 } from '@/lib/schema';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
 import { mergeTemplateWithDefaults, resolvePdfLogoSrc } from '@/lib/utils/template';
-
-const WORDMARK_FALLBACK_LOGO_SRC = pathToFileURL(
-  path.join(process.cwd(), 'public', 'esneo-full.svg'),
-).href;
 
 /**
  * Labels de section du CV localisés par langue.
@@ -776,6 +769,10 @@ export function buildCvDossierLayoutSpec(
     };
   }
 
+  // Le logo par défaut est rastérisé en PNG en amont (`prepareTemplateConfigForPdf`) : sans url,
+  // pas d'image (react-pdf n'accepte ni SVG ni chemin `file:`).
+  const logoSrc = resolvePdfLogoSrc(config.logo, '');
+
   const headerRightChildren = ['header-brand-top'];
   if (config.header.tagLine.trim()) headerRightChildren.push('header-brand-tagline');
   if (config.header.metaLine.trim()) headerRightChildren.push('header-brand-meta');
@@ -796,7 +793,7 @@ export function buildCvDossierLayoutSpec(
       justifyContent: 'flex-end',
       gap: 8,
     },
-    children: ['header-brand-name', 'header-logo'],
+    children: logoSrc ? ['header-brand-name', 'header-logo'] : ['header-brand-name'],
   };
   elements['header-brand-name'] = {
     type: 'Text',
@@ -810,17 +807,18 @@ export function buildCvDossierLayoutSpec(
     children: [],
   };
 
-  const logoSrc = resolvePdfLogoSrc(config.logo, WORDMARK_FALLBACK_LOGO_SRC);
-  elements['header-logo'] = {
-    type: 'FixedImage',
-    props: {
-      src: logoSrc,
-      width: config.logo.width,
-      height: config.logo.height,
-      objectFit: 'contain',
-    },
-    children: [],
-  };
+  if (logoSrc) {
+    elements['header-logo'] = {
+      type: 'FixedImage',
+      props: {
+        src: logoSrc,
+        width: config.logo.width,
+        height: config.logo.height,
+        objectFit: 'contain',
+      },
+      children: [],
+    };
+  }
 
   if (config.header.tagLine.trim()) {
     elements['header-brand-tagline'] = {
