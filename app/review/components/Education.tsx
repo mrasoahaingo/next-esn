@@ -2,10 +2,11 @@ import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import { Field, FieldLabel } from '@/components/ui/field';
-import { Trash2, Plus } from 'lucide-react';
-import { FIELD_LABEL_CLASS, SectionHeading } from './SectionHeading';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Trash2, Plus, GraduationCap } from 'lucide-react';
+import { CvSectionPanel, FIELD_LABEL_CLASS, type CvSectionStatus } from './CvSectionPanel';
+import { SpacingSlider } from './SpacingSlider';
 
 type EducationItem = ExtractedCV['education'][number];
 
@@ -13,9 +14,10 @@ interface EducationProps {
   data: Partial<EducationItem>[] | undefined;
   onChange: (data: Partial<EducationItem>[]) => void;
   readOnly?: boolean;
+  status?: CvSectionStatus;
 }
 
-export const Education = memo(function Education({ data, onChange, readOnly }: EducationProps) {
+export const Education = memo(function Education({ data, onChange, readOnly, status }: EducationProps) {
   const handleUpdate = (index: number, field: keyof EducationItem, value: string | number) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
@@ -33,34 +35,53 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
   };
 
   const items = Array.isArray(data) ? data : [];
+  const addButton = (
+    <Button type="button" variant="ghost" size="sm" onClick={handleAdd}>
+      <Plus data-icon="inline-start" />
+      Ajouter
+    </Button>
+  );
 
   return (
-    <section aria-labelledby="cv-section-education">
-      <SectionHeading
-        id="cv-section-education"
-        title="Formations"
-        action={
-          !readOnly ? (
-            <Button type="button" variant="ghost" size="sm" onClick={handleAdd}>
-              <Plus data-icon="inline-start" />
-              Ajouter une formation
-            </Button>
-          ) : null
-        }
-      />
-
+    <CvSectionPanel
+      id="cv-section-education"
+      title="Formations"
+      icon={GraduationCap}
+      count={items.length > 0 ? items.length : undefined}
+      status={status}
+      flush
+      actions={!readOnly && items.length > 0 ? addButton : undefined}
+    >
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucune formation.</p>
+        readOnly ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">Les formations apparaîtront ici.</p>
+        ) : (
+          <Empty className="py-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="rounded-full">
+                <GraduationCap className="size-5" />
+              </EmptyMedia>
+              <EmptyTitle>Aucune formation</EmptyTitle>
+              <EmptyDescription>Le CV n’en mentionne pas. Vous pouvez en saisir une.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+                <Plus data-icon="inline-start" />
+                Ajouter une formation
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )
       ) : (
         <ul className="divide-y divide-border">
           {items.map((edu, i) =>
             edu ? (
-              <li key={i} className="py-4 first:pt-0 last:pb-0">
+              <li key={i} className="px-4 py-3">
                 {readOnly ? (
                   <div className="flex items-baseline justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">{edu.degree}</p>
-                      <p className="text-sm text-muted-foreground">{edu.school}</p>
+                      <p className="truncate text-sm font-medium text-foreground">{edu.degree}</p>
+                      <p className="truncate text-sm text-muted-foreground">{edu.school}</p>
                     </div>
                     <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{edu.year}</span>
                   </div>
@@ -114,20 +135,11 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
                         </Button>
                       </div>
                     </div>
-                    <Field>
-                      <FieldLabel htmlFor={`edu-spacing-${i}`} className={FIELD_LABEL_CLASS}>
-                        Marge en dessous :{' '}
-                        <span className="font-mono tabular-nums">{edu.spacingAfter ?? 0}&nbsp;pt</span>
-                      </FieldLabel>
-                      <Slider
-                        id={`edu-spacing-${i}`}
-                        min={0}
-                        max={100}
-                        step={2}
-                        value={[edu.spacingAfter ?? 0]}
-                        onValueChange={(v) => handleUpdate(i, 'spacingAfter', Array.isArray(v) ? v[0] : v)}
-                      />
-                    </Field>
+                    <SpacingSlider
+                      id={`edu-spacing-${i}`}
+                      value={edu.spacingAfter}
+                      onChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                    />
                   </div>
                 )}
               </li>
@@ -135,6 +147,6 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
           )}
         </ul>
       )}
-    </section>
+    </CvSectionPanel>
   );
 });

@@ -4,10 +4,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Field, FieldLabel } from '@/components/ui/field';
-import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Trash2, Plus, ChevronDown, ChevronUp, X, Briefcase } from 'lucide-react';
 import { memo, useState, useRef, useEffect } from 'react';
-import { FIELD_LABEL_CLASS, SectionHeading } from './SectionHeading';
+import { cn } from '@/lib/utils';
+import { CvSectionPanel, FIELD_LABEL_CLASS, type CvSectionStatus } from './CvSectionPanel';
+import { SpacingSlider } from './SpacingSlider';
 
 type ExperienceItem = ExtractedCV['experiences'][number];
 type SkillsData = ExtractedCV['skills'];
@@ -18,6 +20,7 @@ interface ExperiencesProps {
   skills?: Partial<SkillsData>;
   onSkillsChange?: (skills: Partial<SkillsData>) => void;
   readOnly?: boolean;
+  status?: CvSectionStatus;
 }
 
 function getAllSkillNames(skills: Partial<SkillsData> | undefined): string[] {
@@ -160,7 +163,22 @@ function ExperienceSkills({
   );
 }
 
-export const Experiences = memo(function Experiences({ data, onChange, skills, onSkillsChange, readOnly }: ExperiencesProps) {
+/** Période d'une expérience, en mono : « 01/2022 – Aujourd’hui ». */
+function formatPeriod(exp: Partial<ExperienceItem>): string {
+  const start = exp.startDate?.trim();
+  const end = exp.endDate?.trim() || 'Aujourd’hui';
+  if (!start) return '';
+  return `${start} – ${end}`;
+}
+
+export const Experiences = memo(function Experiences({
+  data,
+  onChange,
+  skills,
+  onSkillsChange,
+  readOnly,
+  status,
+}: ExperiencesProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const handleUpdate = (index: number, field: keyof ExperienceItem, value: string | string[] | number | number[]) => {
@@ -237,143 +255,174 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
   };
 
   const items = Array.isArray(data) ? data : [];
+  const addButton = (
+    <Button type="button" variant="ghost" size="sm" onClick={handleAdd}>
+      <Plus data-icon="inline-start" />
+      Ajouter
+    </Button>
+  );
 
   return (
-    <section aria-labelledby="cv-section-experiences">
-      <SectionHeading
-        id="cv-section-experiences"
-        title="Expériences"
-        action={
-          !readOnly ? (
-            <Button type="button" variant="ghost" size="sm" onClick={handleAdd}>
-              <Plus data-icon="inline-start" />
-              Ajouter une expérience
-            </Button>
-          ) : null
-        }
-      />
-
+    <CvSectionPanel
+      id="cv-section-experiences"
+      title="Expériences"
+      icon={Briefcase}
+      count={items.length > 0 ? items.length : undefined}
+      status={status}
+      flush
+      actions={!readOnly && items.length > 0 ? addButton : undefined}
+    >
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Aucune expérience.</p>
+        readOnly ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">Les expériences apparaîtront ici.</p>
+        ) : (
+          <Empty className="py-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="rounded-full">
+                <Briefcase className="size-5" />
+              </EmptyMedia>
+              <EmptyTitle>Aucune expérience</EmptyTitle>
+              <EmptyDescription>Le CV n’en mentionne pas. Vous pouvez en saisir une.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+                <Plus data-icon="inline-start" />
+                Ajouter une expérience
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )
       ) : (
         <ul className="divide-y divide-border">
           {items.map((exp, i) => {
             if (!exp) return null;
-            const expanded = expandedIndex === i;
-            const period = `${exp.startDate ?? ''} – ${exp.endDate || 'Aujourd’hui'}`;
+            const expanded = readOnly || expandedIndex === i;
+            const period = formatPeriod(exp);
+            const role = exp.role?.trim();
+            const company = exp.company?.trim();
+            const missionCount = Array.isArray(exp.description)
+              ? exp.description.filter((d) => d != null).length
+              : 0;
             return (
-              <li key={i} className="py-5 first:pt-0 last:pb-0">
-                {/* En-tête de l'expérience */}
+              <li key={i} className="px-4 py-3">
+                {/* En-tête de ligne : poste, entreprise · lieu, dates en mono ; chevron et corbeille à droite */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    {readOnly ? (
-                      <>
-                        <h3 className="text-sm font-medium text-foreground">{exp.role}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {exp.company}
-                          {exp.location ? ` · ${exp.location}` : ''}
-                        </p>
-                      </>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Field>
-                          <FieldLabel htmlFor={`exp-role-${i}`} className={FIELD_LABEL_CLASS}>
-                            Poste
-                          </FieldLabel>
-                          <Input
-                            id={`exp-role-${i}`}
-                            value={exp.role ?? ''}
-                            onChange={(e) => handleUpdate(i, 'role', e.target.value)}
-                            placeholder="Tech lead Java"
-                            className="font-medium"
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor={`exp-company-${i}`} className={FIELD_LABEL_CLASS}>
-                            Entreprise
-                          </FieldLabel>
-                          <Input
-                            id={`exp-company-${i}`}
-                            value={exp.company ?? ''}
-                            onChange={(e) => handleUpdate(i, 'company', e.target.value)}
-                            placeholder="Nom du client"
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor={`exp-start-${i}`} className={FIELD_LABEL_CLASS}>
-                            Début
-                          </FieldLabel>
-                          <Input
-                            id={`exp-start-${i}`}
-                            value={exp.startDate ?? ''}
-                            onChange={(e) => handleUpdate(i, 'startDate', e.target.value)}
-                            placeholder="01/2022"
-                            className="font-mono tabular-nums"
-                          />
-                        </Field>
-                        <Field>
-                          <FieldLabel htmlFor={`exp-end-${i}`} className={FIELD_LABEL_CLASS}>
-                            Fin
-                          </FieldLabel>
-                          <Input
-                            id={`exp-end-${i}`}
-                            value={exp.endDate ?? ''}
-                            onChange={(e) => handleUpdate(i, 'endDate', e.target.value)}
-                            placeholder="Aujourd’hui"
-                            className="font-mono tabular-nums"
-                          />
-                        </Field>
-                      </div>
-                    )}
+                    <h3 className={cn('truncate text-sm font-medium', role ? 'text-foreground' : 'text-muted-foreground')}>
+                      {role || (readOnly ? '—' : 'Nouvelle expérience')}
+                    </h3>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {company || (readOnly ? '' : 'Entreprise à renseigner')}
+                      {company && exp.location ? ` · ${exp.location}` : ''}
+                    </p>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1">
-                    {readOnly && (
-                      <span className="mr-2 whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground">
+                    {period ? (
+                      <span className="mr-2 hidden whitespace-nowrap font-mono text-xs tabular-nums text-muted-foreground sm:inline">
                         {period}
                       </span>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setExpandedIndex(expanded ? null : i)}
-                      aria-expanded={expanded}
-                      aria-controls={`exp-details-${i}`}
-                      aria-label={expanded ? 'Replier l’expérience' : 'Déplier l’expérience'}
-                    >
-                      {expanded ? <ChevronUp /> : <ChevronDown />}
-                    </Button>
+                    ) : null}
                     {!readOnly && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleRemove(i)}
-                        className="text-muted-foreground hover:text-destructive"
-                        aria-label="Supprimer cette expérience"
-                      >
-                        <Trash2 />
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setExpandedIndex(expanded ? null : i)}
+                          aria-expanded={expanded}
+                          aria-controls={`exp-details-${i}`}
+                          aria-label={expanded ? 'Replier l’expérience' : 'Déplier l’expérience'}
+                        >
+                          {expanded ? <ChevronUp /> : <ChevronDown />}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleRemove(i)}
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="Supprimer cette expérience"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
+                {period ? (
+                  <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground sm:hidden">{period}</p>
+                ) : null}
+                {!readOnly && !expanded && missionCount > 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {missionCount} mission{missionCount > 1 ? 's' : ''}
+                    {exp.skills?.length ? ` · ${exp.skills.length} compétence${exp.skills.length > 1 ? 's' : ''}` : ''}
+                  </p>
+                ) : null}
 
-                {/* Détail : missions, compétences */}
-                <div id={`exp-details-${i}`} className={`mt-4 space-y-4 ${!expanded && !readOnly ? 'hidden' : ''}`}>
+                {/* Dépliant : tous les champs ; en lecture, les missions seulement */}
+                <div id={`exp-details-${i}`} className={cn('mt-3 space-y-4', !expanded && 'hidden')}>
                   {!readOnly && (
-                    <Field>
-                      <FieldLabel htmlFor={`exp-domain-${i}`} className={FIELD_LABEL_CLASS}>
-                        Domaine de l&apos;entreprise
-                      </FieldLabel>
-                      <Input
-                        id={`exp-domain-${i}`}
-                        value={exp.companyDomain ?? ''}
-                        onChange={(e) => handleUpdate(i, 'companyDomain', e.target.value)}
-                        placeholder="client.fr"
-                        className="font-mono"
-                      />
-                    </Field>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <Field>
+                        <FieldLabel htmlFor={`exp-role-${i}`} className={FIELD_LABEL_CLASS}>
+                          Poste
+                        </FieldLabel>
+                        <Input
+                          id={`exp-role-${i}`}
+                          value={exp.role ?? ''}
+                          onChange={(e) => handleUpdate(i, 'role', e.target.value)}
+                          placeholder="Tech lead Java"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`exp-company-${i}`} className={FIELD_LABEL_CLASS}>
+                          Entreprise
+                        </FieldLabel>
+                        <Input
+                          id={`exp-company-${i}`}
+                          value={exp.company ?? ''}
+                          onChange={(e) => handleUpdate(i, 'company', e.target.value)}
+                          placeholder="Nom du client"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`exp-start-${i}`} className={FIELD_LABEL_CLASS}>
+                          Début
+                        </FieldLabel>
+                        <Input
+                          id={`exp-start-${i}`}
+                          value={exp.startDate ?? ''}
+                          onChange={(e) => handleUpdate(i, 'startDate', e.target.value)}
+                          placeholder="01/2022"
+                          className="font-mono tabular-nums"
+                        />
+                      </Field>
+                      <Field>
+                        <FieldLabel htmlFor={`exp-end-${i}`} className={FIELD_LABEL_CLASS}>
+                          Fin
+                        </FieldLabel>
+                        <Input
+                          id={`exp-end-${i}`}
+                          value={exp.endDate ?? ''}
+                          onChange={(e) => handleUpdate(i, 'endDate', e.target.value)}
+                          placeholder="Aujourd’hui"
+                          className="font-mono tabular-nums"
+                        />
+                      </Field>
+                      <Field className="sm:col-span-2">
+                        <FieldLabel htmlFor={`exp-domain-${i}`} className={FIELD_LABEL_CLASS}>
+                          Domaine de l&apos;entreprise
+                        </FieldLabel>
+                        <Input
+                          id={`exp-domain-${i}`}
+                          value={exp.companyDomain ?? ''}
+                          onChange={(e) => handleUpdate(i, 'companyDomain', e.target.value)}
+                          placeholder="client.fr"
+                          className="font-mono"
+                        />
+                      </Field>
+                    </div>
                   )}
 
                   <div className="space-y-2">
@@ -438,20 +487,11 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
                   )}
 
                   {!readOnly && (
-                    <Field>
-                      <FieldLabel htmlFor={`exp-spacing-${i}`} className={FIELD_LABEL_CLASS}>
-                        Marge en dessous :{' '}
-                        <span className="font-mono tabular-nums">{exp.spacingAfter ?? 0}&nbsp;pt</span>
-                      </FieldLabel>
-                      <Slider
-                        id={`exp-spacing-${i}`}
-                        min={0}
-                        max={100}
-                        step={2}
-                        value={[exp.spacingAfter ?? 0]}
-                        onValueChange={(v) => handleUpdate(i, 'spacingAfter', Array.isArray(v) ? v[0] : v)}
-                      />
-                    </Field>
+                    <SpacingSlider
+                      id={`exp-spacing-${i}`}
+                      value={exp.spacingAfter}
+                      onChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                    />
                   )}
                 </div>
               </li>
@@ -459,6 +499,6 @@ export const Experiences = memo(function Experiences({ data, onChange, skills, o
           })}
         </ul>
       )}
-    </section>
+    </CvSectionPanel>
   );
 });
