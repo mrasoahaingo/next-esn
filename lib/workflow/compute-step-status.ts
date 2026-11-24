@@ -17,6 +17,10 @@ import {
   type WorkflowKind,
   type WorkflowStepDef,
 } from '@/lib/workflow/workflow-step-labels';
+import {
+  resolveWorkflowErrorStepKey,
+  toUserFacingWorkflowErrorMessage,
+} from '@/lib/workflow/workflow-error-message';
 
 export type StepStatus = 'pending' | 'running' | 'done' | 'error' | 'reconnecting';
 
@@ -68,7 +72,13 @@ function resolveErrorKeys(
   workflowFailed: boolean,
 ): { key: string | null; message: string | undefined } {
   if (errorStepKey) return { key: errorStepKey, message: undefined };
-  if (workflowFailed && persisted) return { key: persisted.stepKey, message: persisted.message };
+  if (workflowFailed && persisted) {
+    return {
+      // `unknown` quand la clé a été perdue au passage step → workflow : relire le marqueur du message.
+      key: resolveWorkflowErrorStepKey(persisted.stepKey, persisted.message) ?? persisted.stepKey,
+      message: toUserFacingWorkflowErrorMessage(persisted.message),
+    };
+  }
   return { key: null, message: undefined };
 }
 
@@ -336,7 +346,10 @@ export function computePositioningAnalysisStepStates(input: {
 
   const meta = input.streamMeta;
   const phase = meta?.phase;
-  const active = meta?.activeBranches ?? [];
+  // Run en échec et flux terminé : les branches encore listées actives dans le dernier méta ne
+  // tournent plus — ne pas les afficher « En cours ».
+  const runStopped = input.workflowFailed && !input.isStreaming;
+  const active = runStopped ? [] : (meta?.activeBranches ?? []);
 
   return defs.map((def) => {
     const { stepKey, shortLabel } = def;
@@ -445,6 +458,13 @@ export function formatStepSummaryLine(
 ): string | null {
   const defs = getWorkflowStepDefs(kind, generateMode);
   if (!defs.length) return null;
+
+  // Un échec prime : ne pas annoncer « Étape 2/5 » (première étape en attente) alors que le run a échoué.
+  const errorIdx = rows.findIndex((r) => r.status === 'error');
+  if (errorIdx >= 0) {
+    const label = rows[errorIdx]?.label ?? defs[errorIdx]?.shortLabel ?? '';
+    return `Échec à l’étape ${errorIdx + 1}/${defs.length} — ${label}`;
+  }
 
   const runningIdx = rows.findIndex((r) => r.status === 'running' || r.status === 'reconnecting');
   if (runningIdx >= 0) {

@@ -1,4 +1,5 @@
 import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
+import { toUserFacingWorkflowErrorMessage } from '@/lib/workflow/workflow-error-message';
 
 /**
  * Décision de notification adossée à l'état RÉELLEMENT persisté en base.
@@ -42,7 +43,10 @@ export function resolveWorkflowOutcome(input: {
 
   if (status === 'error') {
     const message = lastError?.message?.trim();
-    return { kind: 'error', message: message || WORKFLOW_GENERIC_FAILURE_MESSAGE };
+    return {
+      kind: 'error',
+      message: message ? toUserFacingWorkflowErrorMessage(message) : WORKFLOW_GENERIC_FAILURE_MESSAGE,
+    };
   }
 
   // Statut encore actif, ou statut inconnu : on ne conclut rien, donc aucun toast.

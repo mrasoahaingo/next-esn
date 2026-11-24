@@ -35,6 +35,7 @@ import {
   POSITIONING_GENERATE_SUCCESS_STATUSES,
   resolveWorkflowOutcome,
 } from '@/lib/workflow/workflow-outcome';
+import { resolvePositioningAnalysisFailure } from '@/lib/workflow/positioning-failure-state';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import {
@@ -86,6 +87,7 @@ import {
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { EmailsGenerationStep } from './components/EmailsGenerationStep';
 import { CvGenerationStep } from './components/CvGenerationStep';
+import { WorkflowFailureAlert } from '@/components/workflow/WorkflowFailureAlert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 /** Sous-ensemble relu après invalidation pour décider du toast. */
@@ -879,6 +881,14 @@ export default function PositioningWizardPage() {
   const isStreaming = analysisBusy || genBusy;
   const analysisComplete = !!analysis?.matchScore && !analysisBusy;
 
+  /** Relance échouée : analyse vidée + statut `error` — sans cet état, retour muet au formulaire. */
+  const analysisFailure = resolvePositioningAnalysisFailure({
+    status: positioningData?.status,
+    busy: analysisBusy,
+    hasCompleteAnalysis: analysisComplete,
+    lastError: persistedPositioningWorkflowError,
+  });
+
   const canGoToStep = (step: 1 | 2 | 3) => {
     if (isStreaming) return false;
     if (step === 1) return true;
@@ -1194,6 +1204,18 @@ export default function PositioningWizardPage() {
                     onAnalyze={handleReAnalyze}
                     isAnalyzing={analysisBusy}
                     positioningStatus={positioningData?.status}
+                  />
+                )}
+
+                {analysisFailure && (
+                  <WorkflowFailureAlert
+                    title="L’analyse n’a pas abouti"
+                    message={analysisFailure.message}
+                    rows={analysisWorkflowRows}
+                    summaryLine={analysisWorkflowSummary}
+                    onRetry={handleReAnalyze}
+                    retryLabel="Relancer l’analyse"
+                    retryDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
                   />
                 )}
 
