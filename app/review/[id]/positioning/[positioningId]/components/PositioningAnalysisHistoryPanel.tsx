@@ -12,6 +12,7 @@ import { usePositioningAnalysisHistory } from '@/lib/queries/positionings';
 import { AnalysisView } from './AnalysisView';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -20,8 +21,6 @@ import {
 } from '@/components/ui/dialog';
 import { formatHistoryModelsDisplayLabel, parsePositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import type { PositioningAnalysisSnapshotReason } from '@/lib/types/positioning-analysis-snapshot-payload';
-import { Loader2, History } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 const HISTORY_MODELS_MISSING = 'Non renseigné';
 
@@ -86,18 +85,18 @@ function HistoryDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[min(90vh,900px)] flex flex-col overflow-hidden p-0">
-        <DialogHeader className="shrink-0 px-6 pt-6 pb-2 border-b border-border/60">
-          <DialogTitle className="text-base pr-8">
+      <DialogContent className="flex max-h-[min(90vh,900px)] max-w-3xl flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b border-border px-6 pb-3 pt-6">
+          <DialogTitle className="pr-8 text-base">
             Analyse archivée
             {entry ? (
-              <span className="block text-xs font-normal text-muted-foreground mt-1">
+              <span className="mt-1 block font-mono text-xs font-normal tabular-nums text-muted-foreground">
                 {formatHistoryDate(entry.created_at)}
               </span>
             ) : null}
           </DialogTitle>
         </DialogHeader>
-        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
           {analysis ? (
             <AnalysisView
               analysis={analysis}
@@ -118,7 +117,7 @@ function HistoryDetailDialog({
   );
 }
 
-function HistoryRowActions({
+function HistoryRow({
   row,
   candidateId,
   positioningId,
@@ -135,109 +134,37 @@ function HistoryRowActions({
   const rowModelsSnapshot = parsePositioningAnalysisModelsSnapshot(row.ai_analysis_models);
   const wizardHref = `/review/${candidateId}/positioning/${positioningId}`;
   const reasonLabel = snapshotReasonLabel(row.snapshot_reason);
+  const scoreLabel = typeof score === 'number' && !Number.isNaN(score) ? `${score} / 100` : '—';
 
   return (
-    <li className="flex flex-col gap-2 rounded-xl border border-border/60 bg-card/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p className="text-sm font-medium text-foreground">{formatHistoryDate(row.created_at)}</p>
-          {reasonLabel ? (
-            <Badge variant="secondary" className="text-[10px] font-normal">
-              {reasonLabel}
-            </Badge>
-          ) : null}
           <AiGenerationInfoIcon
             variant="positioning_analysis"
             modelsLabel={modelsLabel}
             modelsByTask={rowModelsSnapshot?.byTask}
             historyHref={wizardHref}
             historyLinkLabel="Historique du positionnement"
-            className="h-6 w-6"
+            className="h-7 w-7"
           />
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Score : {typeof score === 'number' && !Number.isNaN(score) ? `${score} %` : '—'}
+        <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+          Score {scoreLabel}
+          {reasonLabel ? ` · ${reasonLabel}` : ''}
         </p>
       </div>
       <Button
         type="button"
         size="sm"
-        variant="secondary"
-        className="w-full sm:w-auto shrink-0"
+        variant="outline"
+        className="w-full shrink-0 sm:w-auto"
         onClick={() => onOpenDetail(row)}
       >
         Voir le détail
       </Button>
     </li>
-  );
-}
-
-/** Bouton + dialogue liste (ex. pendant une analyse en cours). */
-export function PositioningAnalysisHistoryFloatingTrigger({
-  positioningId,
-  candidateId,
-}: {
-  positioningId: string;
-  candidateId: string;
-}) {
-  const { data: rows, isLoading } = usePositioningAnalysisHistory(positioningId);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [dialogEntry, setDialogEntry] = useState<PositioningAnalysisHistoryRow | null>(null);
-
-  const list = rows ?? [];
-  const count = list.length;
-
-  if (isLoading || count === 0) return null;
-
-  return (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="shrink-0 gap-1.5 text-xs"
-        onClick={() => setPickerOpen(true)}
-      >
-        <History className="h-3.5 w-3.5" />
-        Historique ({count})
-      </Button>
-
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Historique des analyses</DialogTitle>
-            <p className="text-xs text-muted-foreground text-left font-normal">
-              Chaque ligne provient du journal d’usage IA (snapshot dans le payload). L’icône ouvre le
-              détail des modèles (tooltip).
-            </p>
-          </DialogHeader>
-          <ul className="space-y-2 max-h-[min(60vh,420px)] overflow-y-auto">
-            {list.map((row) => (
-              <HistoryRowActions
-                key={row.id}
-                row={row}
-                candidateId={candidateId}
-                positioningId={positioningId}
-                onOpenDetail={(r) => {
-                  setPickerOpen(false);
-                  setDialogEntry(r);
-                }}
-              />
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
-
-      <HistoryDetailDialog
-        entry={dialogEntry}
-        open={dialogEntry != null}
-        onOpenChange={(open) => {
-          if (!open) setDialogEntry(null);
-        }}
-        candidateId={candidateId}
-        positioningId={positioningId}
-      />
-    </>
   );
 }
 
@@ -256,8 +183,10 @@ export function PositioningAnalysisHistoryTabContent({
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-violet" />
+      <div className="flex flex-col gap-4 py-3" aria-busy="true" aria-label="Chargement de l’historique">
+        <Skeleton className="h-4 w-1/2 animate-none" />
+        <Skeleton className="h-4 w-2/5 animate-none" />
+        <Skeleton className="h-4 w-1/2 animate-none" />
       </div>
     );
   }
@@ -268,24 +197,21 @@ export function PositioningAnalysisHistoryTabContent({
 
   if (list.length === 0) {
     return (
-      <div className="rounded-xl border border-border/60 bg-card/20 px-4 py-6 text-sm text-muted-foreground">
-        <p>
-          Aucun snapshot enregistré dans le journal IA pour ce positionnement. Les analyses terminées
-          et les relances y apparaissent automatiquement.
-        </p>
-      </div>
+      <p className="py-3 text-sm text-muted-foreground">
+        Aucune analyse archivée pour ce positionnement. Les analyses terminées et les relances
+        apparaissent ici automatiquement.
+      </p>
     );
   }
 
   return (
     <>
-      <p className="text-xs text-muted-foreground mb-4">
-        Journal des snapshots d’analyse (fin de workflow, relance, repositionnement). Le badge
-        indique l’origine ; l’icône résume les modèles IA.
+      <p className="text-xs text-muted-foreground">
+        Chaque ligne est une analyse archivée (fin de workflow ou relance) ; l’icône résume les modèles IA.
       </p>
-      <ul className="space-y-2">
+      <ul className="mt-2 divide-y divide-border">
         {list.map((row) => (
-          <HistoryRowActions
+          <HistoryRow
             key={row.id}
             row={row}
             candidateId={candidateId}

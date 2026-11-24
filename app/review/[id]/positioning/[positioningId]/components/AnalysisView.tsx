@@ -3,29 +3,25 @@
 import type { PositioningAnalysis } from '@/lib/schema';
 import type { PositioningAnalysisStreamMeta } from '@/lib/types/positioning-analysis-stream';
 import { SectionShell } from '@/app/review/components/SectionShell';
-import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Loader2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  matchScoreConfidenceBadgeClass,
-  matchScoreConfidenceShortLabel,
-} from '@/lib/utils/match-score-confidence';
-import { MessageCircle, Building2, Trash2 } from 'lucide-react';
+import { matchScoreConfidenceShortLabel } from '@/lib/utils/match-score-confidence';
+import { scoreToneText } from '@/lib/utils/score-tone';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
-import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
-import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
+import { normalizeRelevance } from './matching-readout';
 
 interface AnalysisViewProps {
   analysis: Partial<PositioningAnalysis> | null;
   isAnalyzing: boolean;
   streamMeta?: PositioningAnalysisStreamMeta | null;
   onReAnalyze?: () => void;
+  reAnalyzeDisabled?: boolean;
   /**
    * Contexte recruteur **tel qu’injecté pour le dernier calcul** (colonne `analysis_recruiter_answers`),
    * pas la saisie live de l’affinage.
@@ -36,8 +32,6 @@ interface AnalysisViewProps {
   onRemoveRecruiterAnswerEntry?: (key: string, entryId: string) => void;
   /** Affinage modifié par rapport au snapshot : relancer pour intégrer au score. */
   recruiterDraftsDifferFromSnapshot?: boolean;
-  workflowStepRows?: StepStateRow[];
-  workflowSummaryLine?: string | null;
   /** Identifiants gateway des modèles utilisés pour ce calcul (colonne `ai_analysis_models`). */
   modelsSummaryLabel?: string | null;
   /** Détail par tâche LLM pour l'affichage dans le tooltip. */
@@ -47,20 +41,19 @@ interface AnalysisViewProps {
   aiInfoHistoryLinkLabel?: string | null;
 }
 
-function getRelevanceBadge(relevance: string) {
-  switch (relevance) {
-    case 'strong':
-    case 'high':
-      return <Badge className="bg-neon/15 text-neon border-neon/25 shrink-0">Fort</Badge>;
-    case 'partial':
-    case 'medium':
-      return <Badge className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/25 shrink-0">Partiel</Badge>;
-    case 'missing':
-    case 'low':
-      return <Badge className="bg-destructive/15 text-destructive border-destructive/25 shrink-0">Manquant</Badge>;
-    default:
-      return null;
-  }
+const RELEVANCE_TEXT: Record<'strong' | 'partial' | 'missing', { label: string; className: string }> = {
+  strong: { label: 'Fort', className: 'text-success' },
+  partial: { label: 'Partiel', className: 'text-warning' },
+  missing: { label: 'Manquant', className: 'text-destructive' },
+};
+
+function RelevanceText({ relevance }: { relevance: string | undefined }) {
+  const level = normalizeRelevance(relevance);
+  if (!level) return null;
+  const { label, className } = RELEVANCE_TEXT[level];
+  return (
+    <span className={`shrink-0 font-mono text-xs ${className}`}>{label}</span>
+  );
 }
 
 function hasData(analysis: Partial<PositioningAnalysis> | null, key: string): boolean {
@@ -115,14 +108,6 @@ function getSectionStatus(
   return allPrevDone ? 'streaming' : 'pending';
 }
 
-const BRANCH_LABELS: Record<string, string> = {
-  skills: 'Compétences',
-  experiences: 'Expériences',
-  gaps: 'Lacunes',
-  questions: 'Questions',
-  synthesis: 'Synthèse',
-};
-
 function parseAnswerKey(key: string): { audience: 'candidat' | 'client' | 'autre'; question: string } {
   if (key.startsWith('candidat:')) return { audience: 'candidat', question: key.slice('candidat:'.length) };
   if (key.startsWith('client:')) return { audience: 'client', question: key.slice('client:'.length) };
@@ -137,6 +122,14 @@ function formatEntryDateShort(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground">
+      {children}
+    </h3>
+  );
 }
 
 function RecruiterContextSection({
@@ -156,46 +149,42 @@ function RecruiterContextSection({
     audience: parseAnswerKey(key).audience,
     items: recruiterAnswerEntries[key] ?? [],
   }));
+  const total = rows.reduce((n, r) => n + r.items.length, 0);
 
   return (
-    <section className="glass-panel p-6 rounded-2xl border border-violet/15">
-      <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
-        Contexte pris en compte pour ce calcul
-      </h3>
-      <p className="text-xs text-muted-foreground mb-4">
-        Ce bloc correspond aux notes et réponses qui ont servi au dernier calcul du score ci-dessus. Les
-        ajouts dans l’onglet Questions & affinage n’apparaissent ici qu’après une relance d’analyse.
-        Retirez une ligne si elle n’est plus pertinente pour les prochains échanges.
+    <details className="group border-b border-border pb-4">
+      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 py-2 text-[0.9375rem] font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+        <span>Contexte pris en compte</span>
+        <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
+          {total} note{total > 1 ? 's' : ''} · <span className="group-open:hidden">afficher</span>
+          <span className="hidden group-open:inline">masquer</span>
+        </span>
+      </summary>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Notes et réponses qui ont servi au dernier calcul du score. Les ajouts de l’onglet Questions
+        n’apparaissent ici qu’après une relance de l’analyse.
       </p>
-      <div className="space-y-6">
+      <div className="mt-4 space-y-6">
         {(['candidat', 'client'] as const).map((aud) => {
           const subset = rows.filter((r) => r.audience === aud);
           if (!subset.length) return null;
           return (
             <div key={aud}>
-              <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                {aud === 'candidat' ? (
-                  <MessageCircle className="h-3.5 w-3.5 text-neon" />
-                ) : (
-                  <Building2 className="h-3.5 w-3.5 text-violet" />
-                )}
+              <h4 className="mb-2 text-sm font-medium text-foreground">
                 {aud === 'candidat' ? 'Candidat' : 'Client'}
               </h4>
-              <ul className="space-y-4">
+              <ul className="divide-y divide-border">
                 {subset.map(({ key, question, items }) => (
-                  <li key={key} className="rounded-lg border border-border/60 bg-background/40 px-3 py-2.5 text-sm">
-                    <p className="font-medium text-foreground mb-2">{question}</p>
-                    <ul className="space-y-2">
+                  <li key={key} className="py-3 text-sm">
+                    <p className="font-medium text-foreground">{question}</p>
+                    <ul className="mt-2 space-y-2">
                       {items.map((e) => (
-                        <li
-                          key={e.id}
-                          className="flex gap-2 rounded-md border border-border/40 bg-background/50 p-2 text-xs"
-                        >
+                        <li key={e.id} className="flex gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                            <p className="font-mono text-xs tabular-nums text-muted-foreground">
                               {formatEntryDateShort(e.createdAt)}
                             </p>
-                            <p className="mt-1 text-sm text-foreground/95 whitespace-pre-wrap leading-relaxed">
+                            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                               {e.text}
                             </p>
                           </div>
@@ -203,12 +192,11 @@ function RecruiterContextSection({
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                              title="Retirer cette note"
+                              size="sm"
+                              className="shrink-0 text-muted-foreground hover:text-destructive"
                               onClick={() => onRemoveRecruiterAnswerEntry(key, e.id)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              Retirer
                             </Button>
                           )}
                         </li>
@@ -221,7 +209,7 @@ function RecruiterContextSection({
           );
         })}
       </div>
-    </section>
+    </details>
   );
 }
 
@@ -230,12 +218,11 @@ export function AnalysisView({
   isAnalyzing,
   streamMeta,
   onReAnalyze,
+  reAnalyzeDisabled,
   analysisSnapshotRecruiterEntries,
   hideRecruiterSnapshot,
   onRemoveRecruiterAnswerEntry,
   recruiterDraftsDifferFromSnapshot,
-  workflowStepRows,
-  workflowSummaryLine,
   modelsSummaryLabel,
   modelsByTask,
   aiInfoHistoryHref,
@@ -244,35 +231,12 @@ export function AnalysisView({
   if (!analysis && !isAnalyzing) return null;
 
   const score = analysis?.matchScore;
-  const scoreColor = score != null
-    ? score >= 70 ? 'text-neon' : score >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'
-    : 'text-muted-foreground';
-
-  const activeHint =
-    isAnalyzing && streamMeta?.activeBranches?.length
-      ? streamMeta.activeBranches.map((id) => BRANCH_LABELS[id] ?? id).join(' · ')
-      : null;
+  const scoreClass = score != null ? scoreToneText(score) : 'text-muted-foreground';
+  const confidence = analysis?.matchScoreConfidence;
+  const showConfidence = confidence != null || !!analysis?.matchScoreConfidenceNote;
 
   return (
-    <div className="space-y-4">
-      {workflowStepRows && workflowStepRows.length > 0 && (
-        <div className="rounded-xl border border-border/60 bg-card/30 px-3 py-3">
-          <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
-        </div>
-      )}
-      {activeHint && !(workflowStepRows && workflowStepRows.length > 0) && (
-        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-accent-foreground">
-          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-          <span>
-            {streamMeta?.phase === 'synthesizing'
-              ? 'Synthèse du score…'
-              : 'Analyse en cours'}
-            <span className="ml-1.5 text-violet dark:text-violet-200/90">({activeHint})</span>
-          </span>
-        </div>
-      )}
-
-
+    <div className="space-y-8">
       {/* Score — après le détail (synthèse streamée en dernier) */}
       <SectionShell
         status={getSectionStatus(
@@ -282,12 +246,14 @@ export function AnalysisView({
           ['skillMatches', 'experienceRelevance', 'gaps'],
           streamMeta,
         )}
-        label="Calcul du score..."
+        label="Calcul du score…"
       >
-        <section className="glass-panel p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-2 gap-2">
+        <section aria-labelledby="analysis-score-heading" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-2">
             <div className="flex min-w-0 items-center gap-1">
-              <h3 className="text-lg font-semibold text-foreground truncate">Score de matching</h3>
+              <h3 id="analysis-score-heading" className="text-[0.9375rem] font-semibold text-foreground">
+                Score
+              </h3>
               <AiGenerationInfoIcon
                 variant="positioning_analysis"
                 modelsLabel={modelsSummaryLabel}
@@ -296,46 +262,46 @@ export function AnalysisView({
                 historyLinkLabel={aiInfoHistoryLinkLabel ?? undefined}
               />
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-              {onReAnalyze && !isAnalyzing && analysis && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onReAnalyze}
-                  className="text-violet hover:text-violet hover:bg-violet/10 text-xs h-7 px-2"
-                >
-                  <RefreshCw className="mr-1.5 h-3 w-3" />
-                  Relancer
-                </Button>
-              )}
-              <span className={`text-3xl font-bold ${scoreColor}`}>
-                {score != null ? `${score}%` : '—'}
-              </span>
-              {(analysis?.matchScoreConfidence != null || analysis?.matchScoreConfidenceNote) && (
-                <Tooltip>
-                  <TooltipTrigger
-                    className={`cursor-help rounded-md border px-2 py-1 text-xs font-medium outline-none ${matchScoreConfidenceBadgeClass(analysis?.matchScoreConfidence)}`}
-                  >
-                    Fiabilité : {matchScoreConfidenceShortLabel(analysis?.matchScoreConfidence)}
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-sm text-xs">
-                    {analysis?.matchScoreConfidenceNote?.trim()
-                      ? analysis.matchScoreConfidenceNote
-                      : 'Contexte non détaillé pour cette analyse.'}
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </div>
+            {onReAnalyze && !isAnalyzing && analysis && (
+              <Button variant="outline" size="sm" onClick={onReAnalyze} disabled={reAnalyzeDisabled}>
+                Relancer l’analyse
+              </Button>
+            )}
           </div>
+
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className={`font-mono text-[1.75rem] font-semibold leading-none tabular-nums ${scoreClass}`}>
+              {score != null ? score : '—'}
+            </span>
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">/ 100</span>
+            {showConfidence ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={<span className="cursor-help text-xs text-muted-foreground underline decoration-dotted underline-offset-4" tabIndex={0} />}
+                >
+                  Fiabilité {matchScoreConfidenceShortLabel(confidence).toLowerCase()}
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-sm">
+                  {analysis?.matchScoreConfidenceNote?.trim()
+                    ? analysis.matchScoreConfidenceNote
+                    : 'Contexte non détaillé pour cette analyse.'}
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
+          </div>
+
           {analysis?.matchSummary && (
-            <p className="text-sm text-foreground/90 leading-relaxed">{analysis.matchSummary}</p>
+            <p className="max-w-prose text-sm leading-relaxed text-foreground">{analysis.matchSummary}</p>
           )}
+
           {recruiterDraftsDifferFromSnapshot && (
-            <p className="mt-3 text-xs text-amber-700 dark:text-amber-300/95 leading-relaxed rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2">
-              L’onglet Questions & affinage contient des réponses ou notes qui ne sont pas encore dans ce
-              calcul. Relancez l’analyse pour recalculer le score et mettre à jour le bloc « contexte »
-              ci-dessous.
-            </p>
+            <Alert className="border-warning/40 bg-warning/8 text-foreground">
+              <AlertTitle>Contexte modifié depuis ce calcul</AlertTitle>
+              <AlertDescription>
+                L’onglet Questions contient des réponses ou notes qui ne sont pas encore dans ce score.
+                Relancez l’analyse pour les prendre en compte.
+              </AlertDescription>
+            </Alert>
           )}
         </section>
       </SectionShell>
@@ -350,30 +316,28 @@ export function AnalysisView({
       {/* Skills */}
       <SectionShell
         status={getSectionStatus(analysis, isAnalyzing, 'skillMatches', [], streamMeta)}
-        label="Analyse des compétences..."
+        label="Analyse des compétences…"
       >
-        <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
-            Compétences
-          </h3>
-          <div className="space-y-3">
+        <section aria-label="Compétences">
+          <SectionHeading>Compétences</SectionHeading>
+          <ul className="divide-y divide-border">
             {(analysis?.skillMatches ?? []).map((sm, i) => (
-              <div key={i} className="py-2 border-b border-border/60 last:border-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-foreground">{sm.skill}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">{sm.comment}</p>
+              <li key={i} className="py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{sm.skill}</p>
+                    {sm.comment ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{sm.comment}</p>
+                    ) : null}
                   </div>
-                  {getRelevanceBadge(sm.relevance)}
+                  <RelevanceText relevance={sm.relevance} />
                 </div>
                 {sm.note && (
-                  <p className="mt-1.5 text-xs text-muted-foreground italic pl-3 border-l-2 border-overlay/10">
-                    {sm.note}
-                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{sm.note}</p>
                 )}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </SectionShell>
 
@@ -386,30 +350,28 @@ export function AnalysisView({
           ['skillMatches'],
           streamMeta,
         )}
-        label="Analyse des expériences..."
+        label="Analyse des expériences…"
       >
-        <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
-            Pertinence des expériences
-          </h3>
-          <div className="space-y-3">
+        <section aria-label="Expériences">
+          <SectionHeading>Expériences</SectionHeading>
+          <ul className="divide-y divide-border">
             {(analysis?.experienceRelevance ?? []).map((er, i) => (
-              <div key={i} className="py-2 border-b border-border/60 last:border-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-foreground">{er.experience}</span>
-                    <p className="text-xs text-muted-foreground mt-0.5">{er.comment}</p>
+              <li key={i} className="py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{er.experience}</p>
+                    {er.comment ? (
+                      <p className="mt-0.5 text-xs text-muted-foreground">{er.comment}</p>
+                    ) : null}
                   </div>
-                  {getRelevanceBadge(er.relevance)}
+                  <RelevanceText relevance={er.relevance} />
                 </div>
                 {er.note && (
-                  <p className="mt-1.5 text-xs text-muted-foreground italic pl-3 border-l-2 border-overlay/10">
-                    {er.note}
-                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{er.note}</p>
                 )}
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
       </SectionShell>
 
@@ -422,27 +384,24 @@ export function AnalysisView({
           ['skillMatches', 'experienceRelevance'],
           streamMeta,
         )}
-        label="Identification des lacunes..."
+        label="Identification des lacunes…"
       >
-        <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
-            Lacunes identifiées
-          </h3>
-          <div className="space-y-3">
-            {(analysis?.gaps ?? []).map((gapItem, i) => (
-              <div key={i} className="py-2 border-b border-border/60 last:border-0">
-                <div className="flex items-start text-sm text-foreground">
-                  <span className="mr-2 text-destructive mt-0.5 shrink-0">!</span>
+        <section aria-label="Lacunes">
+          <SectionHeading>Lacunes</SectionHeading>
+          {(analysis?.gaps ?? []).length === 0 && !isAnalyzing ? (
+            <p className="py-3 text-sm text-muted-foreground">Aucune lacune relevée.</p>
+          ) : (
+            <ul className="list-disc space-y-2 py-3 pl-5 marker:text-muted-foreground">
+              {(analysis?.gaps ?? []).map((gapItem, i) => (
+                <li key={i} className="text-sm text-foreground">
                   {typeof gapItem === 'string' ? gapItem : gapItem.gap}
-                </div>
-                {typeof gapItem !== 'string' && gapItem.note && (
-                  <p className="mt-1.5 text-xs text-muted-foreground italic pl-3 border-l-2 border-overlay/10 ml-4">
-                    {gapItem.note}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+                  {typeof gapItem !== 'string' && gapItem.note && (
+                    <p className="mt-1 text-xs text-muted-foreground">{gapItem.note}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </SectionShell>
     </div>
