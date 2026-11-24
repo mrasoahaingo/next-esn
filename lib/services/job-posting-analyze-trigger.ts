@@ -6,6 +6,7 @@ import { analyzeJobPostingWorkflow } from '@/workflows/analyze-job-posting';
 import { hashJobDescription } from '@/lib/utils/job-description-hash';
 import { logAiUsage } from '@/lib/services/ai-usage.service';
 import { TASK_KEY } from '@/lib/llm/task-keys';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 
 const NO_LLM_MODEL = 'workflow/no-llm';
 
@@ -59,16 +60,39 @@ async function emitMissionJobAnalysisWorkflowCancel(workflowRunId: string): Prom
   }
 }
 
+/**
+ * Coupe le run en cours et efface son `run_id` sur la mission.
+ *
+ * Retourne `false` si l'effacement du `run_id` a échoué. POURQUOI cette valeur de retour : le run
+ * a bien été coupé, mais la mission garde son `job_analysis_workflow_run_id`. Or
+ * `claimMissionJobAnalysisWorkflowRun` filtre sur `.is('job_analysis_workflow_run_id', null)` :
+ * il retournera donc `false` au prochain essai. Le système reste cohérent (aucune double
+ * analyse), mais la mission devient NON RELANÇABLE jusqu'à intervention. On ne lève pas — ce
+ * serait transformer une réconciliation dégradée en 500 — donc le log est le seul signal
+ * disponible : il doit exister.
+ */
 async function cancelMissionJobAnalysisWorkflow(
   supabase: SupabaseClient,
   missionId: string,
   workflowRunId: string,
-): Promise<void> {
+): Promise<boolean> {
   await emitMissionJobAnalysisWorkflowCancel(workflowRunId);
-  await supabase
+  const { error } = await supabase
     .from('missions')
     .update({ job_analysis_workflow_run_id: null })
     .eq('id', missionId);
+
+  if (error) {
+    logSupabaseWriteError({
+      table: 'missions',
+      recordId: missionId,
+      operation: 'missionJobAnalysis.cancel.clearRunId',
+      supabaseError: error,
+    });
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -129,7 +153,20 @@ export async function launchMissionJobPostingAnalysisAfterContentChange(
   }
 
   if (row.job_analysis_workflow_run_id) {
-    await cancelMissionJobAnalysisWorkflow(supabase, missionId, row.job_analysis_workflow_run_id);
+    const cleared = await cancelMissionJobAnalysisWorkflow(
+      supabase,
+      missionId,
+      row.job_analysis_workflow_run_id,
+    );
+    // On poursuit malgré tout : le `claim` ci-dessous échouera alors nécessairement (la colonne
+    // n'est pas `null`) et le chemin `!claimed` existant — déjà défini et testé — prendra le
+    // relais. Ce warn est le seul endroit où l'on peut dire que la mission restera non
+    // relançable tant que la colonne n'aura pas été nettoyée.
+    if (!cleared) {
+      console.warn('missionJobAnalysis.cancel: run_id non effacé, mission non relançable', {
+        missionId,
+      });
+    }
   }
 
   const run = await start(analyzeJobPostingWorkflow, [missionId]);
@@ -209,11 +246,24 @@ export async function respondMissionJobAnalyzePost(
         });
       }
     }
-    await supabase
+    // On ne lève pas ici : la relecture `missionAfterClear` juste en dessous détecte déjà le cas
+    // (`concurrentRunId` non nul) et suit un chemin défini — reprise du stream ou 503. Le log
+    // reste indispensable pour distinguer « un autre run a gagné la course » (nominal) d'un
+    // « l'effacement a échoué en base » (dégradé), les deux menant à la même relecture.
+    const { error: clearRunIdError } = await supabase
       .from('missions')
       .update({ job_analysis_workflow_run_id: null })
       .eq('id', missionId)
       .eq('job_analysis_workflow_run_id', seenRunId);
+
+    if (clearRunIdError) {
+      logSupabaseWriteError({
+        table: 'missions',
+        recordId: missionId,
+        operation: 'missionJobAnalysis.reconcile.clearRunId',
+        supabaseError: clearRunIdError,
+      });
+    }
   }
 
   const { data: missionAfterClear } = await supabase

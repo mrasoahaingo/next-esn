@@ -2,6 +2,7 @@ import { getWorld } from 'workflow/runtime';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/utils/supabase';
 import { requireOrgId } from '@/lib/utils/auth';
+import { logSupabaseWriteError } from '@/lib/utils/supabase-write-error';
 
 const ALLOWED_TABLES = ['candidates', 'positionings', 'missions'] as const;
 type AllowedTable = (typeof ALLOWED_TABLES)[number];
@@ -53,16 +54,46 @@ export async function POST(
     const supabase = getSupabase();
 
     // Analyse fiche de poste (mission) : pas de colonne status
+    // À ce stade le run workflow a déjà été annulé côté runtime. Une erreur levée ci-dessous
+    // signale donc que LA LIGNE n'a pas été réinitialisée — pas que l'annulation du run a
+    // échoué. Relancer l'annulation est idempotent : le bloc `isTerminal` / `alreadyTerminal`
+    // ci-dessus absorbe le second passage. Sans ce contrôle, supabase-js renverrait son
+    // `{ error }` dans le vide et le handler confirmerait `{ status: 'cancelled' }` au client
+    // alors que la ligne reste bloquée sur son ancien statut.
     if (table === 'missions' && recordId) {
-      await supabase
+      const { error } = await supabase
         .from('missions')
         .update({ job_analysis_workflow_run_id: null })
         .eq('id', recordId);
+
+      if (error) {
+        logSupabaseWriteError({
+          table: 'missions',
+          recordId,
+          operation: 'workflow.cancel.missions',
+          supabaseError: error,
+        });
+        throw new Error(
+          'Annulation effectuée mais la mission n’a pas pu être réinitialisée : ' + error.message,
+        );
+      }
     } else if (table && recordId && resetStatus) {
-      await supabase
+      const { error } = await supabase
         .from(table)
         .update({ status: resetStatus, workflow_run_id: null })
         .eq('id', recordId);
+
+      if (error) {
+        logSupabaseWriteError({
+          table,
+          recordId,
+          operation: 'workflow.cancel.reset-status',
+          supabaseError: error,
+        });
+        throw new Error(
+          'Annulation effectuée mais la ligne n’a pas pu être réinitialisée : ' + error.message,
+        );
+      }
     }
 
     return NextResponse.json({ status: 'cancelled' });
