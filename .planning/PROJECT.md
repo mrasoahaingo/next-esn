@@ -8,9 +8,15 @@ Un SaaS pour les ESN (Entreprises de Services Numériques) qui les aide dans leu
 
 L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille — il sait ce qui se passe, ne peut pas lancer de doublons, et voit les erreurs quand ça échoue.
 
-## Current Milestone: v1.3 Prospection
+## Current Milestone : aucun (v1.3 parké)
 
-**Goal:** Donner aux recruteurs ESN une liste d'entreprises « chaudes » — susceptibles de recruter avant même d'avoir publié une annonce — avec le bon contact à appeler, alimentée par des automations à critères.
+Périmètre produit actuel : gestion des CV de consultants + positionnement CV ↔ missions (analyse de missions, matching, CV adapté). La prospection et le radar ont été retirés du produit le 2026-11-24 (quick `261124-lfg`) et seront retravaillés plus tard.
+
+## Parked Milestone : v1.3 Prospection
+
+**État au parking (2026-11-24) :** Phase 9 arrêtée avant 09-04. Les plans 09-01 (fondation SQL du domaine prospection), 09-02 (réglage du seuil de chaleur) et 09-03 (audit Proxycurl) ont été faits, puis leur code a été retiré du produit ; 09-04 (application de la migration en prod) n'a jamais été exécuté, la migration `20261124150326_prospection_domain.sql` n'a donc jamais été appliquée et son fichier est supprimé (récupérable via git). Une migration `*_drop_radar.sql` qui supprime les objets `radar_*` morts existe dans le dépôt, en attente d'accord explicite avant application en prod. Archive : `.planning/milestones/v1.3-ROADMAP.md` et `.planning/milestones/v1.3-REQUIREMENTS.md` ; plans, SUMMARY et audit dans `.planning/phases/09-db-schema-foundation-proxycurl-audit/`.
+
+**Goal (au moment du parking):** Donner aux recruteurs ESN une liste d'entreprises « chaudes » — susceptibles de recruter avant même d'avoir publié une annonce — avec le bon contact à appeler, alimentée par des automations à critères.
 
 **Target features:**
 
@@ -62,9 +68,9 @@ Question ouverte build vs buy : des agrégateurs FR (Pharow) fusionnent déjà p
 - ✓ Synchro React Query + reset store positionnement sur changement de contexte — v1.0
 - ✓ Hub `/review/[id]/positioning` : pas de redirection `/positions` après création mission ; état d’analyse mission inline ; CTA matching selon vérité serveur (`FLOW-01`–`FLOW-03`) — Phase 3
 
-### Active (v1.3)
+### Parked (v1.3)
 
-Voir `.planning/REQUIREMENTS.md` — exigences prospection (en cours de définition).
+- Exigences AUTO-*, SIG-*, SCOR-*, CONT-*, LIST-* de la prospection — voir `.planning/milestones/v1.3-REQUIREMENTS.md`.
 
 ### Parked (v1.2)
 
@@ -72,6 +78,7 @@ Voir `.planning/REQUIREMENTS.md` — exigences prospection (en cours de définit
 
 ### Out of Scope
 
+- **Prospection / radar** — retirés du produit le 2026-11-24, à retravailler plus tard (v1.3 parké)
 - Pipeline CRM complet pour la prospection (contacté → RDV → gagné/perdu, relances) — v1.3 se limite à une liste actionnable (à appeler / appelé / écarté)
 - Autres features métier lourdes (matching avancé, notifications push) — hors milestone sauf décision explicite
 - Refonte UX globale / i18n de l’UI applicative — trop large, décision explicite requise
@@ -91,8 +98,7 @@ Voir `.planning/REQUIREMENTS.md` — exigences prospection (en cours de définit
 
 - **Tech stack** : Next.js 16 + Supabase + Clerk + Vercel AI SDK — pas de changement de stack imposé
 - **Workflow runtime** : `@workflow/next` beta — travailler avec ses limites
-- **Scope** : pas de nouvelles features fonctionnelles hors exigences v1.3 (prospection)
-- **Coûts API** : les APIs de signaux et d'enrichissement contacts sont payantes au crédit — l'enrichissement contact ne se déclenche qu'au-dessus du seuil de chaleur
+- **Scope** : pas de nouvelles features fonctionnelles sans décision explicite
 
 ## Key Decisions
 
@@ -111,6 +117,7 @@ Voir `.planning/REQUIREMENTS.md` — exigences prospection (en cours de définit
 | **Prospection from scratch sous `/prospection`** | Le Radar existant reste de côté — nouveau domaine propre | — Pending |
 | **Enrichissement contact gated par seuil de chaleur** | Maîtriser les coûts d'API contact (poste le plus cher) | — Pending |
 | **Réconciliation entreprises par SIREN** | Clé stable pour fusionner les signaux multi-sources | — Pending |
+| **Retrait prospection/radar ; v1.3 parké** | Recentrer le produit sur la gestion des CV et le matching CV ↔ missions ; la prospection sera refondue plus tard (pgvector conservé, `*_drop_radar.sql` non appliquée en prod sans accord) | ✓ quick 261124-lfg |
 
 ## Evolution
 
@@ -130,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 — Milestone v1.3 Prospection démarré (v1.2 parké)*
+*Last updated: 2026-11-24 — Milestone v1.3 Prospection parké, prospection/radar retirés du produit (quick 261124-lfg)*

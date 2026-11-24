@@ -31,8 +31,6 @@ export type {
 export { useCancelWorkflow } from './workflow';
 export { useTemplate, useUpdateTemplate, useTemplatesList, type TemplateListItem } from './templates';
 export { useOrgSettings } from './org-settings';
-export { useProspectionSettings, useUpdateProspectionSettings } from './prospection-settings';
-export type { ProspectionSettingsResponse } from './prospection-settings';
 export {
   useAdminStats,
   useSetOrgDefaultTemplate,

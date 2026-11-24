@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Prospection
-status: executing
-stopped_at: Phase 9 context gathered
-last_updated: "2026-11-24T14:01:35.841Z"
-last_activity: 2026-11-24 -- Phase 09 execution started
+status: parked
+stopped_at: Phase 9 arrêtée avant 09-04 — v1.3 parké (quick 261124-lfg)
+last_updated: "2026-11-24T14:34:58Z"
+last_activity: 2026-11-24 -- v1.3 Prospection parké, prospection/radar retirés du produit (quick 261124-lfg)
 progress:
   total_phases: 7
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
+  completed_plans: 3
   percent: 0
 ---
 
@@ -18,19 +18,17 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (milestone v1.3)
+See: `.planning/PROJECT.md` (aucun jalon actif — v1.3 parké)
 
 **Core value:** L'utilisateur a toujours un feedback clair et fiable quand l'IA travaille
-**Current focus:** Phase 09 — DB Schema Foundation & Proxycurl Audit
+**Current focus:** aucun jalon actif — produit recentré sur la gestion des CV et le positionnement CV ↔ missions
 
 ## Current Position
 
-Phase: 09 (DB Schema Foundation & Proxycurl Audit) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 09
-Last activity: 2026-11-24 -- Phase 09 execution started
-
-Progress: [░░░░░░░░░░] 0%
+Milestone: v1.3 Prospection — PARKED (2026-11-24)
+Phase: aucune phase active (Phase 09 arrêtée avant 09-04, 3/4 plans)
+Status: Parked
+Last activity: 2026-11-24 -- prospection/radar retirés du produit, migration drop_radar prête mais non appliquée (quick 261124-lfg)
 
 ## Performance Metrics
 
@@ -47,17 +45,16 @@ _To be updated after first plans complete._
 - **Score 0–100 déterministe** — jamais par LLM ; LLM reçoit uniquement la liste structurée des signaux pour la synthèse
 - **RGPD colonnes en DB dès la création** — `gdpr_retention_expires_at`, `contact_source`, `contact_sourced_at` non négociables ; CNIL active (900K€ amende 2025)
 - **v1.2 parké au profit de la prospection** — Phases 7–8 documentées dans `.planning/milestones/v1.2-ROADMAP.md`
+- **Retrait prospection/radar ; v1.3 parké** (2026-11-24, quick 261124-lfg) — code phase 9 retiré du produit, migration `20261124150326_prospection_domain.sql` (jamais appliquée) supprimée ; nouvelle migration `*_drop_radar.sql` idempotente (8 tables `radar_*`, 6 types, `match_consultants`) NON appliquée ; **pgvector conservé** (inerte, réutilisable par une future refonte). Phases 9–14 archivées dans `.planning/milestones/v1.3-ROADMAP.md`
 
 ### Pending todos
 
-None.
+- Appliquer `supabase/migrations/*_drop_radar.sql` en prod — UNIQUEMENT après accord explicite de l'utilisateur.
+- Crons radar encore présents dans `vercel.json` sur `main` (voir `09-PROXYCURL-AUDIT.md` §7).
 
 ### Blockers / concerns
 
-- **ScrapIn rate limits** non documentés publiquement — valider en staging avec une liste représentative avant d'activer le cron.
-- **Dropcontact async** (POST job + poll/webhook) — stratégie webhook vs polling à prototyper avant Phase 13.
-- **France Travail token refresh** — token OAuth2 expirant cause des échecs cron silencieux ; stratégie de refresh (étape séparée + retry sur 401) à prototyper Phase 10.
-- **`@workflow/next` advisory lock** — interaction `pg_try_advisory_lock` + runs concurrent à valider en staging Phase 10.
+- Les points ouverts propres à la prospection (rate limits ScrapIn, Dropcontact async, refresh du token France Travail, advisory lock `@workflow/next`) sont parkés avec v1.3 — voir `.planning/milestones/v1.3-ROADMAP.md`.
 
 ### Quick Tasks Completed
 
@@ -70,8 +67,8 @@ None.
 
 ## Session continuity
 
-**Last session:** 2026-07-03T22:19:14.662Z
-**Stopped at:** Phase 9 context gathered
-**Resume file:** .planning/phases/09-db-schema-foundation-proxycurl-audit/09-CONTEXT.md
+**Last session:** 2026-11-24T14:34:58Z
+**Stopped at:** Phase 9 arrêtée avant 09-04 — v1.3 parké (quick 261124-lfg)
+**Resume file:** None
 
-**Next step:** `/gsd:execute-phase 9` — le plan 09-04 attend le feu vert de l'utilisateur pour appliquer la migration en prod
+**Next step:** aucun jalon actif — définir le prochain jalon (`/gsd:new-milestone`) ou traiter des quick tasks sur le périmètre CV + positionnement. Ne plus lancer `/gsd:execute-phase 9`.
