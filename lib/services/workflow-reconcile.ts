@@ -14,6 +14,11 @@ export type WorkflowReconcileTable = 'positionings' | 'candidates';
 export type WorkflowRunSnapshot = {
   exists: boolean;
   status: string | null;
+  /**
+   * La lecture du run a échoué (réseau, 5xx du workflow-server) : on ne sait RIEN de son état.
+   * Ce n’est pas une preuve de mort — seul le timeout zombie peut alors trancher.
+   */
+  lookupFailed?: boolean;
 };
 
 export type WorkflowReconcileDecision =
@@ -78,16 +83,18 @@ export function decideWorkflowReconciliation(input: {
   // Statut non actif (déjà terminal) -> idempotence, on ne touche à rien.
   if (!successStatus) return { action: 'none' };
 
-  if (!run.exists) return failWith(DEAD_RUN_MESSAGE, runId);
+  if (!run.lookupFailed) {
+    if (!run.exists) return failWith(DEAD_RUN_MESSAGE, runId);
 
-  if (run.status === 'completed') {
-    return hasResultData
-      ? { action: 'settle', status: successStatus }
-      : failWith(DEAD_RUN_MESSAGE, runId);
-  }
+    if (run.status === 'completed') {
+      return hasResultData
+        ? { action: 'settle', status: successStatus }
+        : failWith(DEAD_RUN_MESSAGE, runId);
+    }
 
-  if (run.status === 'failed' || run.status === 'cancelled') {
-    return failWith(DEAD_RUN_MESSAGE, runId);
+    if (run.status === 'failed' || run.status === 'cancelled') {
+      return failWith(DEAD_RUN_MESSAGE, runId);
+    }
   }
 
   // Run non terminal : on ne peut conclure qu’avec une preuve d’ancienneté.
@@ -126,8 +133,10 @@ async function snapshotRun(runId: string): Promise<WorkflowRunSnapshot> {
     const status = await run.status;
     return { exists: true, status: status ?? null };
   } catch (error) {
+    // Erreur de lecture ≠ run mort : sinon un simple aléa réseau pendant le polling (toutes les
+    // 3 s) basculait en `error` une analyse/génération encore en cours.
     console.error('Workflow reconcile run lookup error:', error);
-    return { exists: false, status: null };
+    return { exists: true, status: null, lookupFailed: true };
   }
 }
 

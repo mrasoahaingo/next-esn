@@ -6,7 +6,10 @@ import {
 import type { ExtractedCV, JobPostingAnalysis, PositioningAnalysis } from '@/lib/schema';
 import type { MatchingWeightsConfig } from '@/lib/config/matching-weights';
 import { buildExperienceRecencyContextBlock } from '@/lib/utils/experience-recency';
-import { prepareCvForMatchingPrompt } from '@/lib/utils/cv-experience-time';
+import {
+  computeReferenceYearsOfExperience,
+  prepareCvForMatchingPrompt,
+} from '@/lib/utils/cv-experience-time';
 
 export { positioningAnalysisSchema, positioningOutputSchema };
 export type { MatchingWeightsConfig };
@@ -489,7 +492,31 @@ export function buildGenerateUserContent(
     ? `\n\nVoici les réponses du recruteur (phase analyse / affinage) :\n\n${analysisAnswerLines}`
     : '';
 
-  return `${preamble}${cvBlock}${jobTail}Voici l'analyse de matching :\n\n${JSON.stringify(analysis, null, 2)}${analysisAnswersSection}`;
+  const outputRules = buildGenerateOutputRulesBlock({
+    yearsOfExperience: computeReferenceYearsOfExperience(cv, referenceDate),
+  });
+
+  return `${preamble}${cvBlock}${jobTail}Voici l'analyse de matching :\n\n${JSON.stringify(analysis, null, 2)}${analysisAnswersSection}\n\n${outputRules}`;
+}
+
+/**
+ * Règles de sortie imposées côté code à toutes les branches de génération (CV adapté + emails),
+ * qui partagent ce message utilisateur : aucune migration de `llm_tasks.system_prompt_template`.
+ * Contrepartie de `strictJsonSchema: false` (le schéma JSON n'est plus imposé par OpenAI).
+ */
+export function buildGenerateOutputRulesBlock(params: { yearsOfExperience?: string } = {}): string {
+  const rules = [
+    '- Champ absent ou inconnu : omets la clé. N\'écris jamais la chaîne "null" ni "undefined" (ni `null`) comme valeur.',
+    '- Noms de compétences (`skills.*.name`, `experiences[].skills`) : texte brut, sans aucun markdown (pas de **, __, *, backticks). Le gras `**…**` n\'est autorisé que dans `summary`.',
+  ];
+  const years = params.yearsOfExperience?.trim();
+  if (years) {
+    // Source de vérité unique : valeur calculée sur les dates (`formatTotalExperienceYears`).
+    rules.push(
+      `- Durée d'expérience totale du candidat : **${years}** (calculée sur les dates des expériences). \`tailoredCv.personalInfo.yearsOfExperience\` vaut exactement "${years}". Si tu mentionnes la durée d'expérience totale (summary, emails), reprends exactement ce nombre ; ne la recalcule pas et n'utilise aucune autre valeur trouvée dans le CV source (ancien résumé, intitulé).`,
+    );
+  }
+  return `## Règles de sortie (CV adapté et emails)\n${rules.join('\n')}`;
 }
 
 export function buildAnalysisMessages(

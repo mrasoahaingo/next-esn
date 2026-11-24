@@ -104,8 +104,12 @@ export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
   exportFilePrefix: 'CV',
 };
 
+/** Sorties OpenAI non strictes (gpt-6-luna) : le modèle écrivait la chaîne "null" pour un champ absent. */
+const OMIT_IF_ABSENT_DESCRIPTION =
+  "Omettre le champ s'il est absent du CV ; ne jamais écrire la chaîne \"null\".";
+
 export const skillSchema = z.object({
-  name: z.string(),
+  name: z.string().describe('Nom brut de la compétence, en texte simple : jamais de markdown (pas de **, __, *, backticks).'),
   source: z.enum(['extracted', 'inferred']).describe("'extracted' = explicitly mentioned in the CV, 'inferred' = deduced by the AI from context, experience descriptions, or industry knowledge"),
   starred: z.boolean().describe("true = the skill is important, well-known, modern, in-demand. Max 20 starred for technologies. For other categories: star the most valuable ones."),
   added: z.boolean().describe("true = included in the PDF. Automatically set to true for starred skills, false for non-starred. User can manually toggle."),
@@ -130,11 +134,14 @@ export const extractionSchema = z.object({
      * — `z.preprocess` est évité : il crée un `ZodPipe` dont `io:"input"` met `email` dans `required`, ce qui
      *    confond le modèle (champ obligatoire mais absent du CV → pas de sortie → AI_NoOutputGeneratedError).
      */
-    email: z.string().email().optional().catch(undefined),
-    phone: z.string().optional(),
-    location: z.string().optional(),
+    email: z.string().email().describe(OMIT_IF_ABSENT_DESCRIPTION).optional().catch(undefined),
+    phone: z.string().optional().describe(OMIT_IF_ABSENT_DESCRIPTION),
+    location: z.string().optional().describe(OMIT_IF_ABSENT_DESCRIPTION),
     yearsOfExperience: z.string().optional().describe("Total years of professional experience (e.g. '8 ans')"),
-    availability: z.string().optional().describe("Availability (e.g. 'Immédiate', 'Préavis 3 mois')"),
+    availability: z
+      .string()
+      .optional()
+      .describe(`Availability (e.g. 'Immédiate', 'Préavis 3 mois'). ${OMIT_IF_ABSENT_DESCRIPTION}`),
     /** Estimation prudente pour le matching (titres, durées, descriptions) — pas un jugement définitif */
     inferredSeniorityBand: z
       .enum(['junior', 'confirmed', 'senior', 'expert_lead', 'unknown'])
@@ -159,7 +166,7 @@ export const extractionSchema = z.object({
     endDate: z.string().optional(),
     isCurrent: z.boolean(),
     description: z.array(z.string()).describe("List of missions/tasks"),
-    skills: z.array(z.string()).optional().describe("Key technologies/tools used in this experience (e.g. 'React', 'Node.js', 'AWS')"),
+    skills: z.array(z.string()).optional().describe("Key technologies/tools used in this experience (e.g. 'React', 'Node.js', 'AWS'), plain text, no markdown"),
     spacingAfter: z.number().min(0).max(100).optional().describe("Extra bottom margin in pt (PDF layout tweak)"),
   })),
   education: z.array(z.object({
