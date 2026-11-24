@@ -38,4 +38,8 @@ export const queryKeys = {
   org: {
     settings: (orgId: string) => ['org', 'settings', orgId] as const,
   },
+  prospection: {
+    all: (orgId: string) => ['prospection', orgId] as const,
+    settings: (orgId: string) => ['prospection', orgId, 'settings'] as const,
+  },
 };
