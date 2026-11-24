@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { ExtractedCV, PositioningAnalysis, PositioningEmail } from '@/lib/schema';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
+import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 
 interface PositioningState {
   positioningId: string | null;
@@ -71,7 +72,8 @@ export const usePositioningStore = create<PositioningState>((set, get) => ({
   setPositioningId: (id) => set({ positioningId: id }),
   setJobDescription: (text) => set({ jobDescription: text }),
   setAnalysis: (data) => set({ analysis: data }),
-  setTailoredCv: (data) => set({ tailoredCv: data }),
+  // Chargement / streaming : CV normalisé (l'autosave réécrit la version propre en base).
+  setTailoredCv: (data) => set({ tailoredCv: data ? sanitizeExtractedCv(data) : null }),
   setEmail: (data) => set({ email: data }),
   setEmailFirstContact: (data) => set({ emailFirstContact: data }),
   setEmailBulletPoints: (data) => set({ emailBulletPoints: data }),

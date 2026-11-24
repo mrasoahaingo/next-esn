@@ -8,6 +8,7 @@ import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import { logAiUsage, insertAiUsageStart, updateAiUsageEnd } from '@/lib/services/ai-usage.service';
 import { mergeExtractedPartial } from '@/lib/services/extraction-merge';
 import { prepareCvForMatchingPrompt } from '@/lib/utils/cv-experience-time';
+import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 import { detectCvLanguage } from '@/lib/utils/detect-cv-language';
 import {
   extractionSchema,
@@ -401,8 +402,12 @@ async function parallelExtractAndStream(
     if (acc.experiences === undefined) acc.experiences = [];
     if (acc.education === undefined) acc.education = [];
 
-    const parsed = extractionSchema.safeParse(acc);
-    let object: unknown = acc;
+    // Sorties non strictes (null / "null" sur les champs optionnels, markdown dans les compétences) :
+    // normalisées avant validation, sinon un seul `phone: null` fait échouer le parse et le CV brut
+    // est persisté sans `prepareCvForMatchingPrompt`.
+    const sanitizedAcc = sanitizeExtractedCv(acc);
+    const parsed = extractionSchema.safeParse(sanitizedAcc);
+    let object: unknown = sanitizedAcc;
     if (parsed.success) {
       const referenceDate = new Date();
       object = prepareCvForMatchingPrompt(parsed.data, referenceDate);

@@ -489,7 +489,22 @@ export function buildGenerateUserContent(
     ? `\n\nVoici les réponses du recruteur (phase analyse / affinage) :\n\n${analysisAnswerLines}`
     : '';
 
-  return `${preamble}${cvBlock}${jobTail}Voici l'analyse de matching :\n\n${JSON.stringify(analysis, null, 2)}${analysisAnswersSection}`;
+  const outputRules = buildGenerateOutputRulesBlock();
+
+  return `${preamble}${cvBlock}${jobTail}Voici l'analyse de matching :\n\n${JSON.stringify(analysis, null, 2)}${analysisAnswersSection}\n\n${outputRules}`;
+}
+
+/**
+ * Règles de sortie imposées côté code à toutes les branches de génération (CV adapté + emails),
+ * qui partagent ce message utilisateur : aucune migration de `llm_tasks.system_prompt_template`.
+ * Contrepartie de `strictJsonSchema: false` (le schéma JSON n'est plus imposé par OpenAI).
+ */
+export function buildGenerateOutputRulesBlock(): string {
+  const rules = [
+    '- Champ absent ou inconnu : omets la clé. N\'écris jamais la chaîne "null" ni "undefined" (ni `null`) comme valeur.',
+    '- Noms de compétences (`skills.*.name`, `experiences[].skills`) : texte brut, sans aucun markdown (pas de **, __, *, backticks). Le gras `**…**` n\'est autorisé que dans `summary`.',
+  ];
+  return `## Règles de sortie (CV adapté et emails)\n${rules.join('\n')}`;
 }
 
 export function buildAnalysisMessages(

@@ -7,6 +7,7 @@ import type {
 } from '@/lib/schema';
 import { DEFAULT_TEMPLATE_CONFIG } from '@/lib/schema';
 import { mergeTemplateWithDefaults, resolvePdfLogoSrc } from '@/lib/utils/template';
+import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 
 /**
  * Labels de section du CV localisés par langue.
@@ -696,9 +697,12 @@ function buildActiveBlocks(config: TemplateConfig): TemplateBlock[] {
 }
 
 export function buildCvDossierLayoutSpec(
-  data: Partial<ExtractedCV>,
+  rawData: Partial<ExtractedCV>,
   templateConfig?: Partial<TemplateConfig>,
 ): Spec {
+  // Données déjà en base ou envoyées par le navigateur : normalisées au rendu (« null », markdown
+  // des compétences) sans migration.
+  const data = sanitizeExtractedCv(rawData);
   const config = mergeTemplateWithDefaults(templateConfig);
   const colors = {
     ...DEFAULT_TEMPLATE_CONFIG.colors,

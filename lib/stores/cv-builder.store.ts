@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ExtractedCV } from '@/lib/schema';
+import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 
 interface CvBuilderState {
   cvData: Partial<ExtractedCV> | null;
@@ -21,7 +22,8 @@ export const useCvBuilderStore = create<CvBuilderState>((set, get) => ({
   pdfPageCount: 1,
   isPdfLoading: false,
   isDirty: false,
-  setCvData: (data) => set({ cvData: data }),
+  // Chargement / streaming : CV normalisé (l'autosave réécrit la version propre en base).
+  setCvData: (data) => set({ cvData: data ? sanitizeExtractedCv(data) : null }),
   updateField: (field, value) => {
     const current = get().cvData;
     if (!current) return;

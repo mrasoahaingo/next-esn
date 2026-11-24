@@ -40,6 +40,7 @@ import { attachWorkflowStepKey, readWorkflowStepKey } from '@/lib/utils/workflow
 import { resolveLlmTask } from '@/lib/llm/resolve-task';
 import { TASK_KEY, type TaskKey } from '@/lib/llm/task-keys';
 import { sanitizeForJsonb, type JsonbSanitizeMeta } from '@/lib/utils/pg-jsonb-safe';
+import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 
 async function fetchAndGenerate(
   positioningId: string,
@@ -363,6 +364,16 @@ async function fetchAndGenerate(
     }
 
     await Promise.all(branchTasks);
+
+    // Normalise le CV adapté (« null », markdown des compétences) puis émet un dernier frame : le
+    // client recopie le dernier frame dans son store et l'autosauvegarde, il doit donc recevoir la
+    // version corrigée (sinon il réécrirait la version brute en base).
+    async function finalizeTailoredCv(): Promise<void> {
+      if (!acc.tailoredCv) return;
+      acc.tailoredCv = sanitizeExtractedCv(acc.tailoredCv);
+      await emit();
+    }
+    await runLocked(finalizeTailoredCv);
 
     const parsed = positioningOutputSchema.safeParse(acc);
     const object = parsed.success ? parsed.data : acc;

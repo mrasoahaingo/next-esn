@@ -1,5 +1,6 @@
 import type { ExtractedCV } from '@/lib/schema';
 import { extractYearsFromDateString } from '@/lib/utils/cv-date-years';
+import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 
 type ExperienceItem = ExtractedCV['experiences'][number];
 
@@ -129,10 +130,11 @@ export function formatTotalExperienceYears(
 }
 
 /**
- * Normalise poste en cours + recalcule `personalInfo.yearsOfExperience` lorsque le calcul est fiable.
+ * Nettoie les sorties LLM non strictes (`sanitizeExtractedCv` : « null », markdown des compétences),
+ * normalise poste en cours + recalcule `personalInfo.yearsOfExperience` lorsque le calcul est fiable.
  */
 export function prepareCvForMatchingPrompt(cv: ExtractedCV, referenceDate: Date): ExtractedCV {
-  let out = normalizeExtractedCvExperienceTime(cv, referenceDate);
+  let out = normalizeExtractedCvExperienceTime(sanitizeExtractedCv(cv), referenceDate);
   const years = formatTotalExperienceYears(out, referenceDate, out.language ?? 'fr');
   if (years !== undefined) {
     out = {
