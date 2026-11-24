@@ -174,7 +174,9 @@ describe('decide', () => {
       model: MODEL,
       input: INPUT,
       questions: QUESTIONS,
-      providerOptions: { gateway: { zeroDataRetention: true } },
+      providerOptions: {
+        gateway: { zeroDataRetention: true, inferenceRegion: { scope: 'zone', geoRegion: 'eu' } },
+      },
     });
     expect(init?.signal).toBeInstanceOf(AbortSignal);
   });

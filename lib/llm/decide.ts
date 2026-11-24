@@ -247,7 +247,9 @@ export async function decide(params: {
         model: params.model,
         input: params.input,
         questions: params.questions,
-        providerOptions: { gateway: { zeroDataRetention: true } },
+        providerOptions: {
+          gateway: { zeroDataRetention: true, inferenceRegion: { scope: 'zone', geoRegion: 'eu' } },
+        },
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });
