@@ -383,7 +383,9 @@ refaite ne les utilise**.
 - **Grille** : 4 pt via Tailwind. Tableau de bord dans `max-w-6xl` ; écrans de travail pleine largeur,
   `px-4 md:px-6`, `py-5`. Entre panneaux `gap-6`, dans un panneau `gap-3` ; entre sections d'une colonne
   `space-y-8`. Les écrans de travail sont des **diptyques asymétriques** à partir de `lg` (document 7/12 ou 8/12,
-  aperçu 5/12 ou 4/12), une colonne en dessous ; l'aperçu PDF est `lg:sticky lg:top-16`.
+  aperçu 5/12 ou 4/12), une colonne en dessous ; l’aperçu PDF est `lg:sticky lg:top-5 lg:self-start`, hauteur
+  maximale `lg:max-h-[calc(100svh-6.5rem)]`. Le conteneur de défilement est le `main` de la coque, sous
+  l’en-tête : un élément collant se cale sur `top-5` (le `py-5` de la page), jamais sur `top-16`.
 - **Un seul niveau de carte.** Une liste vit sur le papier avec des filets (`divide-y divide-border`), pas en
   cartes empilées ; une section de formulaire est un `h2` sur un filet, pas une carte. La carte (`bg-card border
   rounded-xl`) est réservée à ce qui est vraiment un objet à part : l'aperçu PDF, un graphique, un panneau latéral.
