@@ -8,6 +8,7 @@
 // (repli partagé : components/route-loading.tsx).
 export const APP_ROUTE_PREFIXES = [
   '/dashboard',
+  '/cvs',
   '/positions',
   '/review',
   '/settings',

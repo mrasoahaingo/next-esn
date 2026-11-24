@@ -447,3 +447,63 @@ refaite ne les utilise**.
 - Tampon en tête de chaque page refaite (commentaire TSX, première ligne non vide) :
   `/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app */`
 - Briefs d'exécution par écran : `docs/refonte-app/`.
+
+
+## Révision v2 — de « vide » à app moderne (2026-11-24, soir)
+
+Première revue à l'écran par l'utilisateur, après la fusion des trois écrans v1 : « l'interface est vide, je veux
+que ça ressemble à une app moderne », et le menu de gauche n'avait pas été refait. Vu à 1440 px : des blocs sans
+contour posés sur un fond uni ; une liste à un seul élément dans une zone immense ; des titres de section qui
+flottent ; une barre latérale d'origine (liste de CV, onglets segmentés, badges tous identiques). La v1 avait
+poussé « sur le papier, sans cartes » jusqu'au document : une app n'est pas un document.
+
+Les règles ci-dessous **remplacent** celles de « Composition » et « Un seul niveau de carte » plus haut. Tout le
+reste (couleurs, typographie, état de l'IA, mouvement, interdits) tient toujours.
+
+### Toile et panneaux
+
+- Le `main` est une **toile** teintée : `bg-shell`. Plus aucun bloc de contenu n'est posé nu dessus.
+- Chaque bloc est un **panneau** : `components/app/panel.tsx` (`Panel`, `PanelHeader`, `PanelBody`,
+  `PanelFooter`) = `bg-panel border border-border rounded-xl shadow-sm` (sans ombre en sombre). L'en-tête tient
+  sur une ligne : icône lucide 16 px grise, titre 0.875 rem / 600, compteur en mono sur fond `muted`, action à
+  droite (`Button` `ghost` ou `outline` `sm`, ou un lien). Corps `p-4`. Un seul niveau : pas de panneau dans un
+  panneau. L'aperçu PDF et l'éditeur d'e-mail sont des panneaux comme les autres.
+- Les chiffres clés sont des **cartes KPI** (`components/app/kpi-card.tsx`), quatre par rangée, pas une ligne
+  de faits entre deux filets.
+- Les listes de trois colonnes et plus sont des **tableaux** (`Table` shadcn : en-tête, lignes de 44–48 px,
+  survol `bg-muted/50`, ligne entière cliquable) ; les listes courtes restent des listes `divide-y` **dans** un
+  panneau.
+- Les sections d'un formulaire (CV) sont des panneaux : en-tête (icône, titre, compteur « 24 compétences »),
+  champs dans le corps.
+
+### Densité et vide
+
+- Corps 0.8125–0.875 rem ; méta 0.75 rem ; `gap-4` entre panneaux ; page `px-6 py-6` ; tableau de bord
+  `max-w-7xl`.
+- **Jamais de vide.** Un panneau prend la hauteur de son contenu (`items-start`, `auto-rows-min`) ; une liste
+  d'un élément ne réserve pas d'espace ; les panneaux de la colonne voisine remontent. Un état vide est un `Empty`
+  (icône 20 px dans un disque `bg-muted`, titre, une phrase, **toujours une action**) et tient en 160 px.
+- **Signes de vie** : avatars à initiales (`components/app/initials-avatar.tsx`) devant chaque candidat ;
+  pastilles de statut à point coloré (`components/app/status-badge.tsx` : `ok` / `warn` / `err` / `info` /
+  `neutral`, `pulse` pour un travail en cours) ; compteurs à côté des titres et dans le menu ; dates relatives
+  courtes (« il y a 2 h », « hier », « 21 mars »).
+- Les icônes **guident** : en-têtes de panneau, entrées du menu, actions. Jamais en fond, jamais dans un carré
+  coloré lumineux (interdit v1 maintenu).
+
+### Menu de gauche (coque)
+
+La barre latérale devient une **navigation**, plus une liste de CV. Logo en haut, un bouton d'action principale
+(« Importer un CV », avec « Nouvelle mission » dans un menu `+`), une recherche qui ouvre une palette ⌘K (CV,
+missions, pages), puis les entrées avec icône et compteur : Tableau de bord · CVs · Missions · Modèles ; un groupe
+« Réglages » (Mes technos, Organisation, Équipe, Compétences équipe, Administration si super-admin) ; en bas,
+l'utilisateur (avatar Clerk, nom, organisation) et le bascule de thème. Entrée active : `bg-primary/10
+text-primary` sur `rounded-md`. Repliable en rail d'icônes (`collapsible="icon"`), hors-écran sur mobile. La
+liste des CV, avec ses positionnements, ses scores et ses annulations, vit désormais sur la page **`/cvs`**.
+
+### Pages
+
+- `/cvs` (nouvelle) : tableau des candidats (avatar, nom, titre, statut, positionnements et meilleur score, mis à
+  jour, actions), recherche, filtres par statut, import ; c'est l'ancienne liste de la barre latérale, à sa place.
+- Tableau de bord : cartes KPI, panneau « Derniers positionnements » en tableau, panneaux « Pipeline des CV »,
+  « À reprendre », « Distribution des scores », « Compétences demandées », sans zone creuse.
+- Édition du CV, positionnement : les mêmes compositions qu'en v1, chaque bloc devenu panneau.
