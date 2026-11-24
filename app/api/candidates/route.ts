@@ -9,7 +9,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('candidates')
-      .select('id, status, extracted_data, created_at, original_file_url')
+      .select('id, status, extracted_data, created_at, updated_at, original_file_url, workflow_run_id')
       .eq('org_id', orgId)
       .order('created_at', { ascending: false });
 
