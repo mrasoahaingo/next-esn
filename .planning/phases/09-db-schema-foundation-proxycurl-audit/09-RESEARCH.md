@@ -711,15 +711,20 @@ describe('fournisseurs morts (audit Phase 9)', () => {
 | A6 | Clé de Luhn applicable à tous les SIREN | Helpers | Faible : utilisé côté code uniquement (la DB ne vérifie que le format). |
 | A7 | Liste de `signal_type` / `contact_source` suffisante pour les Phases 10–13 | Migration | Faible : extension par migration CHECK idempotente. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`siren` nullable ou NOT NULL ?**
    - Ce qu'on sait : PITFALLS.md recommande `NOT NULL` ; le ROADMAP exige seulement `UNIQUE(org_id, siren)` ; la Phase 10 collecte France Travail avant l'arrivée du collecteur SIRENE (Phase 11).
    - Recommandation : **nullable** + CHECK + index partiel sur le nom normalisé (SQL ci-dessus) ; la Phase 11 ajoute la résolution SIRENE et le contrôle « `WHERE siren IS NULL` avant lancement » de PITFALLS reste une vérification de fin de milestone. À confirmer par l'utilisateur si un doute subsiste.
+   - RESOLVED: `siren` nullable + `CHECK (siren IS NULL OR siren ~ '^[0-9]{9}$')` + `UNIQUE (org_id, siren)` + index unique partiel sur `normalized_name WHERE siren IS NULL` (décision orchestrateur, plan 09-01).
 2. **Où et quand la migration s'applique-t-elle ?** `SUPABASE_MIGRATION_URL` n'est pas en local ; elle tourne au `postbuild` Vercel. Vérifier (humain, tableau de bord Vercel) que la variable n'est **pas** exposée aux builds Preview pointant la prod — sinon le push de la branche applique la migration. Migration additive → risque faible, mais l'exécutant doit le savoir.
+   - RESOLVED: `SUPABASE_MIGRATION_URL` est absente de l'env Vercel (seuls `SUPABASE_URL` / `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`, partagés par Development / Preview / Production) et de `.env.local` : aucun build, preview compris, n'applique la migration. Elle est appliquée au checkpoint humain bloquant du plan 09-04.
 3. **Statut courant de l'entreprise** : colonne `prospection_companies.status` (filtre LIST-03 simple) + historique `prospection_actions`. Alternative : statut dérivé de la dernière action (pas de dénormalisation, filtre plus coûteux). Recommandation : colonne + historique, écrits ensemble en Phase 14.
+   - RESOLVED: colonne `status` sur `prospection_companies` (CHECK `new|to_call|called|dismissed`) + historique dans `prospection_actions`, écrits ensemble en Phase 14.
 4. **Anti-double run** : index partiel `prospection_run_logs_one_running_key` posé dès maintenant ; il impose une réconciliation des runs zombies (précédent quick 260921-j3g, `started_at`) en Phase 10. Si la Phase 10 retient un autre mécanisme, l'index est sans effet nuisible.
+   - RESOLVED: index unique partiel `prospection_run_logs_one_running_key` posé dès la Phase 9 ; la gestion des runs bloqués (zombies) est traitée en Phase 10.
 5. **UI-SPEC** : `workflow.ui_phase = true` mais la Phase 9 n'a pas de « UI hint » au ROADMAP ; la carte seuil est minime. Le planner décide si un `/gsd:ui-phase` est requis ou si la description ci-dessus suffit.
+   - RESOLVED: pas d'UI-SPEC ; une seule carte shadcn « Prospection » dans `/settings/organization` (plan 09-02).
 
 ## Environment Availability
 
