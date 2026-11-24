@@ -7,7 +7,7 @@ import { fr } from '@/components/site/fr';
 /**
  * Questions validées de la landing actuelle, élargies aux cabinets (candidats
  * et consultants). Les réponses sur les données ne disent que ce que le code
- * fait : stockage privé par organisation, envoi à Gemini via la passerelle de Vercel,
+ * fait : stockage privé par organisation, envoi à GPT-6 Luna via la passerelle de Vercel (inférence UE, sans conservation : lib/ai.ts),
  * suppression de la fiche, de ses positionnements et du PDF d'origine. Disclosure accessible.
  */
 const FAQ: ReadonlyArray<{ q: string; a: string }> = [
@@ -25,7 +25,7 @@ const FAQ: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: 'Où vont les CV de nos candidats et consultants ?',
-    a: 'Dans le stockage privé de votre organisation, lisible par votre seule équipe. Pour l’extraction, l’analyse et la rédaction, le CV est envoyé à Gemini 2.5 Flash (Google), via la passerelle de Vercel ; c’est le modèle par défaut, qu’Esneo règle tâche par tâche. Vous supprimez une fiche quand vous voulez, y compris le PDF d’origine.',
+    a: 'Dans le stockage privé de votre organisation, lisible par votre seule équipe. Pour l’extraction, l’analyse et la rédaction, le CV est envoyé à GPT-6 Luna (OpenAI), via la passerelle de Vercel, avec inférence en Europe et sans conservation des données par le fournisseur ; c’est le modèle par défaut, qu’Esneo règle tâche par tâche. Vous supprimez une fiche quand vous voulez, y compris le PDF d’origine.',
   },
   {
     q: 'Que se passe-t-il si une extraction échoue ?',

@@ -97,7 +97,7 @@ function ModelsPanel() {
               className="font-mono text-xs"
               value={form.gatewayModelId}
               onChange={(e) => setForm((f) => ({ ...f, gatewayModelId: e.target.value }))}
-              placeholder="google/gemini-2.5-flash"
+              placeholder="openai/gpt-6-luna"
             />
           </Field>
           <Field>

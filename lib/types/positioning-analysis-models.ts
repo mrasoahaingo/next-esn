@@ -1,6 +1,6 @@
 /** Snapshot persisté en `positionings.ai_analysis_models` et dans les snapshots `ai_usage_log.output_payload`. */
 export type PositioningAnalysisModelsSnapshot = {
-  /** Clé de tâche LLM → identifiant gateway du modèle (ex. google/gemini-2.5-flash). */
+  /** Clé de tâche LLM → identifiant gateway du modèle (ex. openai/gpt-6-luna). */
   byTask: Record<string, string>;
   /** Liste dédupliquée, triée pour affichage stable. */
   uniqueModels: string[];
