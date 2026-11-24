@@ -36,3 +36,28 @@ describe('buildCvDossierLayoutSpec — logo', () => {
     expect(spec.elements['header-brand-top']?.children).toContain('header-logo');
   });
 });
+
+function allTextValues(spec: ReturnType<typeof buildCvDossierLayoutSpec>): string[] {
+  return Object.values(spec.elements)
+    .map((el) => (el.props as Record<string, unknown> | undefined)?.text)
+    .filter((text): text is string => typeof text === 'string');
+}
+
+describe('buildCvDossierLayoutSpec — données LLM non strictes', () => {
+  it('n’affiche ni "null" ni markdown dans les compétences', () => {
+    const data = {
+      personalInfo: { firstName: 'Ada', lastName: 'Lovelace', title: 'Dev', phone: 'null', email: null, location: 'Paris' },
+      summary: 'Profil **senior**.',
+      skills: {
+        technologies: [{ name: '**TypeScript**', source: 'extracted', starred: true, added: true }],
+        softSkills: [],
+        expertises: [],
+        methodologies: [],
+      },
+    } as unknown as Partial<ExtractedCV>;
+    const texts = allTextValues(buildCvDossierLayoutSpec(data, mergeTemplateWithDefaults(undefined)));
+    expect(texts.some((t) => /\bnull\b/i.test(t))).toBe(false);
+    expect(texts.some((t) => t.includes('**TypeScript**'))).toBe(false);
+    expect(texts.some((t) => t.includes('TypeScript'))).toBe(true);
+  });
+});
