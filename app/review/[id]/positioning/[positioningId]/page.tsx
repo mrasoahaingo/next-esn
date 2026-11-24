@@ -1293,10 +1293,9 @@ export default function PositioningWizardPage() {
               )}
             </div>
 
-            <div className="min-w-0 lg:col-span-5">
-              <div className="lg:sticky lg:top-16">
-                <MatchingReadout analysis={analysis} isAnalyzing={analysisBusy} />
-              </div>
+            {/* Collant sous le py-5 de la page : le défilement est celui du main de la coque. */}
+            <div className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
+              <MatchingReadout analysis={analysis} isAnalyzing={analysisBusy} />
             </div>
           </div>
         )}
@@ -1324,17 +1323,15 @@ export default function PositioningWizardPage() {
                 generationModelsByTask={generationModelsSnapshot?.byTask}
               />
             </div>
-            <div className="min-w-0 lg:col-span-5">
-              <div className="lg:sticky lg:top-16">
-                <PdfPreview
-                  pdfBlobUrl={pdfBlobUrl}
-                  isPdfLoading={isPdfLoading}
-                  pdfPageCount={pdfPageCount}
-                  downloadFilename={downloadFilename}
-                  title="Aperçu du CV retravaillé"
-                  emptyLabel="Le CV retravaillé apparaîtra ici"
-                />
-              </div>
+            <div className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
+              <PdfPreview
+                pdfBlobUrl={pdfBlobUrl}
+                isPdfLoading={isPdfLoading}
+                pdfPageCount={pdfPageCount}
+                downloadFilename={downloadFilename}
+                title="Aperçu du CV retravaillé"
+                emptyLabel="Le CV retravaillé apparaîtra ici"
+              />
             </div>
           </div>
         )}
