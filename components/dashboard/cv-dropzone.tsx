@@ -74,7 +74,7 @@ export function CvDropzone({
       aria-busy={isUploading || undefined}
       className={cn(
         buttonVariants({ variant: 'default', size: 'lg' }),
-        'cursor-pointer transition-[background-color,box-shadow] duration-[120ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
+        'cursor-pointer hover:bg-primary/90 active:translate-y-px transition-[background-color,box-shadow] duration-[120ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
         'has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50',
         'max-md:h-11 max-md:px-4',
         isDragging && 'ring-3 ring-ring/50',
