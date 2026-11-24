@@ -172,11 +172,54 @@ describe('garde-fou Gateway ZDR + UE (lib/ai.ts)', () => {
       prompt: 'x',
       providerOptions: { openai: { strictJsonSchema: true } },
     });
-    expect(explicit.doGenerateCalls[0].providerOptions?.openai).toEqual({ strictJsonSchema: true });
+    expect(explicit.doGenerateCalls[0].providerOptions?.openai).toEqual({
+      strictJsonSchema: true,
+      reasoningEffort: 'low',
+    });
 
     const other = mockModel();
     await generateText({ model: guardLanguageModel(other, NON_REASONING_ID, false), prompt: 'x' });
     expect(other.doGenerateCalls[0].providerOptions?.openai).toBeUndefined();
+  });
+
+  it('injecte reasoningEffort low par défaut sur les modèles OpenAI de raisonnement', async () => {
+    const base = mockModel();
+    await generateText({ model: guardLanguageModel(base, 'openai/gpt-6-luna', false), prompt: 'x' });
+    expect(base.doGenerateCalls[0].providerOptions?.openai).toEqual({
+      strictJsonSchema: false,
+      reasoningEffort: 'low',
+    });
+    expect(base.doGenerateCalls[0].providerOptions?.gateway).toEqual(EXPECTED_GATEWAY);
+  });
+
+  it('laisse l’appelant surcharger reasoningEffort', async () => {
+    const base = mockModel();
+    await generateText({
+      model: guardLanguageModel(base, 'openai/gpt-6-luna', false),
+      prompt: 'x',
+      providerOptions: { openai: { reasoningEffort: 'medium' } },
+    });
+    expect(base.doGenerateCalls[0].providerOptions?.openai).toEqual({
+      strictJsonSchema: false,
+      reasoningEffort: 'medium',
+    });
+  });
+
+  it('n’ajoute pas reasoningEffort aux modèles OpenAI non-raisonnement', async () => {
+    const base = mockModel();
+    await generateText({ model: guardLanguageModel(base, 'openai/gpt-4o', false), prompt: 'x' });
+    expect(base.doGenerateCalls[0].providerOptions?.openai).toEqual({ strictJsonSchema: false });
+  });
+
+  it('injecte reasoningEffort low aussi en streaming (doStream)', async () => {
+    const base = mockModel();
+    const result = streamText({ model: guardLanguageModel(base, 'openai/gpt-6-luna', false), prompt: 'x' });
+    expect(await result.text).toBe('OK');
+    expect(base.doStreamCalls[0].providerOptions?.openai).toEqual({
+      strictJsonSchema: false,
+      reasoningEffort: 'low',
+    });
+    expect(base.doStreamCalls[0].providerOptions?.gateway).toEqual(EXPECTED_GATEWAY);
   });
 
   it('GATEWAY_COMPLIANCE_OPTIONS est gelé et n’est pas partagé par référence', () => {
