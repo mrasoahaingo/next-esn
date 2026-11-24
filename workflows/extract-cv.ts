@@ -1,4 +1,5 @@
 import { getWritable } from 'workflow';
+import { createCoalescingEmitter } from '@/lib/workflow/throttled-emitter';
 import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { triggerMissionAnalysesAfterExtract } from '@/lib/services/positioning-analyze-trigger';
@@ -134,20 +135,23 @@ async function prepareCvText(candidateId: string): Promise<PrepareCvTextResult> 
       });
 
       let accumulated = '';
-      let lastEmitAt = Date.now();
-      let charsSinceEmit = 0;
-
-      for await (const delta of result.textStream) {
-        accumulated += delta;
-        charsSinceEmit += delta.length;
-        const now = Date.now();
-        if (charsSinceEmit >= 96 || now - lastEmitAt > 320) {
-          charsSinceEmit = 0;
-          lastEmitAt = now;
-          await writeLine({
+      // Progression de la transcription : une écriture par fenêtre de 300 ms au plus (le seuil
+      // en caractères écrivait à chaque delta sur un flux rapide), compteur final garanti.
+      const transcriptionEmitter = createCoalescingEmitter({
+        emit: () =>
+          writeLine({
             meta: { phase: 'transcription', transcriptionChars: accumulated.length },
-          });
+          }),
+      });
+
+      try {
+        for await (const delta of result.textStream) {
+          accumulated += delta;
+          await transcriptionEmitter.request();
         }
+        await transcriptionEmitter.flush();
+      } finally {
+        transcriptionEmitter.close();
       }
 
       transcriptionUsage = await result.totalUsage;
@@ -262,6 +266,10 @@ async function parallelExtractAndStream(
     );
   };
 
+  // Une écriture par partiel saturerait le flux persistant (certains modèles livrent des
+  // centaines de partiels) : écritures espacées, état complet garanti par flush().
+  const emitter = createCoalescingEmitter({ emit });
+
   async function consumeBranch<T>(
     languageModel: LanguageModel,
     system: string,
@@ -302,14 +310,14 @@ async function parallelExtractAndStream(
 
       await runLocked(async () => {
         activeBranches.add(branch);
-        await emit();
+        await emitter.request();
       });
 
       try {
         for await (const partial of result.partialOutputStream) {
           await runLocked(async () => {
             mergeExtractedPartial(acc, partial as Partial<ExtractedCV>);
-            await emit();
+            await emitter.request();
           });
         }
         const usage = await result.usage;
@@ -338,7 +346,7 @@ async function parallelExtractAndStream(
       await runLocked(async () => {
         activeBranches.delete(branch);
         completedBranches.add(branch);
-        await emit();
+        await emitter.flush();
       });
     } finally {
       clearTimeout(branchTimeout);
@@ -503,6 +511,7 @@ async function parallelExtractAndStream(
 
     return { candidateId, durationMs, persisted };
   } finally {
+    emitter.close();
     writer.releaseLock();
   }
 }

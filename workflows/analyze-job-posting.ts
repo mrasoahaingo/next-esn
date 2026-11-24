@@ -1,4 +1,5 @@
 import { getWritable } from 'workflow';
+import { createCoalescingEmitter } from '@/lib/workflow/throttled-emitter';
 import { streamText, Output, type FlexibleSchema, type LanguageModel, type LanguageModelUsage } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
@@ -89,6 +90,10 @@ async function fetchAndAnalyze(missionId: string) {
     );
   };
 
+  // Une écriture par partiel saturerait le flux persistant (certains modèles livrent des
+  // centaines de partiels) : écritures espacées, état complet garanti par flush().
+  const emitter = createCoalescingEmitter({ emit });
+
   async function consumeBranch<T>(
     languageModel: LanguageModel,
     system: string,
@@ -121,13 +126,13 @@ async function fetchAndAnalyze(missionId: string) {
             activeBranches.add(branch);
           }
           mergeJobPostingPartial(acc, partial as Partial<JobPostingAnalysis>, branch);
-          await emit();
+          await emitter.request();
         });
       }
 
       await runLocked(async () => {
         activeBranches.delete(branch);
-        await emit();
+        await emitter.flush();
       });
 
       const usage = await result.usage;
@@ -208,6 +213,9 @@ async function fetchAndAnalyze(missionId: string) {
 
     const finalized = withMandatoryJobPostingLists({ ...acc });
 
+    // Chaque branche s'est terminée par un flush() : plus rien en attente. close() garantit
+    // qu'aucune émission ne s'intercale après la ligne terminale ci-dessous.
+    emitter.close();
     await runLocked(async () => {
       const meta: JobPostingAnalysisStreamMeta = { phase: 'finalizing', activeBranches: [] };
       await writer.write(
@@ -273,6 +281,7 @@ async function fetchAndAnalyze(missionId: string) {
 
     return { missionId, durationMs, persisted };
   } finally {
+    emitter.close();
     writer.releaseLock();
   }
 }
