@@ -1,78 +1,71 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, RefreshCw, Mail, UserCheck, List, Building2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
-import type { StepStateRow } from '@/lib/workflow/compute-step-status';
+
+function EmailSkeleton({ label }: { label: string }) {
+  return (
+    <div
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
+      aria-busy="true"
+      aria-label={label}
+    >
+      <Skeleton className="h-4 w-1/3 animate-none" />
+      <Skeleton className="h-8 w-full animate-none" />
+      <Skeleton className="h-3 w-5/6 animate-none" />
+      <Skeleton className="h-3 w-2/3 animate-none" />
+      <Skeleton className="h-3 w-3/4 animate-none" />
+    </div>
+  );
+}
 
 const EmailEditor = dynamic(
   () => import('./EmailEditor').then((m) => m.EmailEditor),
-  { loading: () => <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-violet" /></div> },
+  { loading: () => <EmailSkeleton label="Chargement de l’éditeur" /> },
 );
 
 type EmailVariant = 'full' | 'firstContact' | 'bulletPoints';
 
-const EMAIL_BRANCHES = ['email', 'emailFirstContact', 'emailBulletPoints', 'candidateEmail'] as const;
-
-const EMAIL_BRANCH_LABELS: Record<(typeof EMAIL_BRANCHES)[number], string> = {
-  email: 'Email client (complet)',
-  emailFirstContact: 'Premier contact',
-  emailBulletPoints: 'Bullet points',
-  candidateEmail: 'Email candidat',
-};
-
-function RegenButton({
-  onClick,
-  disabled,
-  hasContent,
-  positioningStatus,
-}: {
-  onClick: () => void;
-  disabled: boolean;
-  hasContent: boolean;
-  positioningStatus?: string | null;
-}) {
-  const relaunchLabel =
-    positioningStatus === 'error' ? 'Relancer la génération' : hasContent ? 'Relancer' : 'Générer';
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
-      disabled={disabled}
-      className="shrink-0 text-violet hover:text-violet hover:bg-violet/10 h-7 px-2.5 text-xs"
-    >
-      <RefreshCw className="mr-1.5 h-3 w-3" />
-      {relaunchLabel}
-    </Button>
-  );
-}
+type EmailBranch = 'email' | 'emailFirstContact' | 'emailBulletPoints' | 'candidateEmail';
 
 interface EmailsGenerationStepProps {
   isStreaming: boolean;
   streamMeta?: PositioningGenerateStreamMeta | null;
   onGenerateEmails: () => void;
   positioningStatus?: string | null;
-  workflowStepRows?: StepStateRow[];
-  workflowSummaryLine?: string | null;
   /** Détail par tâche LLM des modèles utilisés lors de la dernière génération. */
   generationModelsByTask?: Record<string, string> | null;
 }
 
+function ColumnHeading({ id, children, hint }: { id: string; children: React.ReactNode; hint?: string | null }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
+      <h3 id={id} className="text-[0.9375rem] font-semibold text-foreground">
+        {children}
+      </h3>
+      {hint ? (
+        <span className="border-l-2 border-primary pl-2 text-xs text-muted-foreground">{hint}</span>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Étape 2 : les e-mails client (trois variantes en liens-onglets) et candidat, en deux
+ * colonnes sur le papier. Pendant la génération, des squelettes à la forme des colonnes ;
+ * l'état du flux est dans la zone `status` de l'en-tête, pas ici.
+ */
 export function EmailsGenerationStep({
   isStreaming,
   streamMeta,
   onGenerateEmails,
   positioningStatus,
-  workflowStepRows,
-  workflowSummaryLine,
   generationModelsByTask,
 }: EmailsGenerationStepProps) {
   const {
@@ -92,218 +85,111 @@ export function EmailsGenerationStep({
     !!email || !!emailFirstContact || !!emailBulletPoints || !!candidateEmail;
   const activeBranches = streamMeta?.activeBranches ?? [];
   const generateMode = streamMeta?.generateMode;
+  const emailsRun =
+    isStreaming && (generateMode === 'emails' || generateMode === 'all' || generateMode === undefined);
+  const cvOnlyRun = isStreaming && generateMode === 'cv';
 
-  const branchesForLoadingList = useMemo(() => {
-    if (generateMode === 'cv') {
-      return [];
-    }
-    return [...EMAIL_BRANCHES];
-  }, [generateMode]);
+  const busy = (branch: EmailBranch) => emailsRun && activeBranches.includes(branch);
+  /** Un e-mail attendu par l'exécution en cours et pas encore arrivé : squelette. */
+  const awaiting = (value: unknown) => emailsRun && !value;
 
-  const streamingSummaryLine = useMemo(() => {
-    if (generateMode === 'emails') {
-      return 'Génération des propositions (client et candidat) en cours.';
-    }
-    return 'Génération en cours — les zones concernées affichent un indicateur.';
-  }, [generateMode]);
+  const regenLabel =
+    positioningStatus === 'error' ? 'Relancer la génération' : hasEmails ? 'Régénérer' : 'Générer';
 
-  const busy = (branch: (typeof EMAIL_BRANCHES)[number]) => activeBranches.includes(branch);
-
-  const showEmailsBlockProgressList =
-    isStreaming &&
-    !email &&
-    !emailFirstContact &&
-    !emailBulletPoints &&
-    !candidateEmail &&
-    (generateMode === 'emails' || generateMode === 'all' || generateMode === undefined);
-
-  const showEmailsHeaderBusy =
-    isStreaming &&
-    (generateMode === 'emails' || generateMode === 'all' || generateMode === undefined);
+  const variantContent: Record<EmailVariant, { branch: EmailBranch; value: typeof email; set: typeof setEmail; title: string }> = {
+    full: { branch: 'email', value: email, set: setEmail, title: 'E-mail complet de positionnement' },
+    firstContact: {
+      branch: 'emailFirstContact',
+      value: emailFirstContact,
+      set: setEmailFirstContact,
+      title: 'E-mail de première prise de contact',
+    },
+    bulletPoints: {
+      branch: 'emailBulletPoints',
+      value: emailBulletPoints,
+      set: setEmailBulletPoints,
+      title: 'E-mail en points clés',
+    },
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-        <section className="rounded-xl border border-overlay/10 bg-overlay/[0.06] overflow-hidden">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-border/60">
-          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1">
-              <h3 className="text-sm font-semibold text-foreground">Propositions</h3>
-              <AiGenerationInfoIcon
-                variant="positioning_generate"
-                modelsByTask={generationModelsByTask}
-                className="h-6 w-6"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Propositions client (variantes) à gauche, proposition candidat à droite.
-            </p>
-          </div>
-          {!isStreaming && (
-            <RegenButton
-              onClick={onGenerateEmails}
-              disabled={isStreaming}
-              hasContent={hasEmails}
-              positioningStatus={positioningStatus}
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-2">
+        <div className="flex min-w-0 items-center gap-1">
+          <h2 className="text-[0.9375rem] font-semibold text-foreground">E-mails</h2>
+          <AiGenerationInfoIcon
+            variant="positioning_generate"
+            modelsByTask={generationModelsByTask}
+            className="h-7 w-7"
+          />
+        </div>
+        {!isStreaming ? (
+          <Button type="button" variant="outline" size="sm" onClick={onGenerateEmails}>
+            {regenLabel}
+          </Button>
+        ) : null}
+      </div>
+
+      {cvOnlyRun && !hasEmails ? (
+        <p className="text-sm text-muted-foreground">
+          Cette exécution ne régénère que le CV : ouvrez l’étape « CV retravaillé ».
+        </p>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-6">
+        {/* Colonne Client */}
+        <section aria-labelledby="emails-client-heading" className="flex min-w-0 flex-col gap-4">
+          <ColumnHeading id="emails-client-heading" hint={busy(variantContent[activeEmailVariant].branch) ? 'En cours' : null}>
+            Client
+          </ColumnHeading>
+          <Tabs
+            value={activeEmailVariant}
+            onValueChange={(v) => setActiveEmailVariant(v as EmailVariant)}
+            className="gap-4"
+          >
+            <TabsList variant="line" aria-label="Variante de l’e-mail client">
+              <TabsTrigger value="full" className="flex-none px-1">
+                Complet
+              </TabsTrigger>
+              <TabsTrigger value="firstContact" className="flex-none px-1">
+                Premier contact
+              </TabsTrigger>
+              <TabsTrigger value="bulletPoints" className="flex-none px-1">
+                Points clés
+              </TabsTrigger>
+            </TabsList>
+            {(Object.keys(variantContent) as EmailVariant[]).map((variant) => {
+              const { value, set, title } = variantContent[variant];
+              return (
+                <TabsContent key={variant} value={variant} className="mt-0 focus-visible:outline-none">
+                  {awaiting(value) ? (
+                    <EmailSkeleton label={`Génération : ${title}`} />
+                  ) : (
+                    <EmailEditor email={value} onChange={set} readOnly={isStreaming} title={title} />
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        </section>
+
+        {/* Colonne Candidat */}
+        <section aria-labelledby="emails-candidate-heading" className="flex min-w-0 flex-col gap-4">
+          <ColumnHeading id="emails-candidate-heading" hint={busy('candidateEmail') ? 'En cours' : null}>
+            Candidat
+          </ColumnHeading>
+          {awaiting(candidateEmail) ? (
+            <EmailSkeleton label="Génération : e-mail candidat" />
+          ) : (
+            <EmailEditor
+              email={candidateEmail}
+              onChange={setCandidateEmail}
+              readOnly={isStreaming}
+              title="E-mail de proposition au candidat"
             />
           )}
-          {showEmailsHeaderBusy && (
-            <div className="ml-2 flex items-center gap-1.5 text-xs text-violet shrink-0">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              En cours…
-            </div>
-          )}
-        </div>
-
-        <div className="p-4">
-          {workflowStepRows && workflowStepRows.length > 0 ? (
-            <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
-          ) : isStreaming && generateMode === 'cv' ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              Cette exécution ne régénère que le CV — ouvrez l&apos;étape « CV retravaillé ».
-            </p>
-          ) : showEmailsBlockProgressList ? (
-            <div className="flex flex-col items-center gap-3 py-4 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-violet" />
-              <p className="text-sm font-medium text-foreground">Génération des propositions...</p>
-              <p className="text-xs text-muted-foreground max-w-md">{streamingSummaryLine}</p>
-              <ul className="mt-2 flex w-full max-w-md flex-col gap-2 text-left">
-                {branchesForLoadingList.map((branch) => {
-                  const isBusy = busy(branch);
-                  return (
-                    <li
-                      key={branch}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
-                        isBusy
-                          ? 'border-violet/40 bg-violet/10 text-violet'
-                          : 'border-overlay/10 bg-overlay/[0.02] text-muted-foreground'
-                      }`}
-                    >
-                      {isBusy ? (
-                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                      ) : (
-                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-border" />
-                      )}
-                      <span className={isBusy ? 'font-medium' : ''}>{EMAIL_BRANCH_LABELS[branch]}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : (
-            <>
-              {isStreaming && (email || emailFirstContact || emailBulletPoints || candidateEmail) && (
-                <div className="flex flex-col gap-2 px-3 py-2 rounded-lg bg-violet/10 border border-violet/20 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet opacity-75" />
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-violet" />
-                    </span>
-                    <span className="text-xs font-medium text-violet">Génération en cours...</span>
-                  </div>
-                  {activeBranches.filter((b) => b !== 'tailoredCv').length > 0 && (
-                    <p className="text-[11px] text-muted-foreground pl-4">
-                      En cours :{' '}
-                      {activeBranches
-                        .filter((b): b is (typeof EMAIL_BRANCHES)[number] =>
-                          (EMAIL_BRANCHES as readonly string[]).includes(b),
-                        )
-                        .map((b) => EMAIL_BRANCH_LABELS[b])
-                        .join(' · ')}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-4">
-                {/* Colonne Client */}
-                <div className="flex flex-col gap-3 min-w-0 rounded-lg border border-border/50 bg-background/20 p-3">
-                  <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-                    <Building2 className="h-4 w-4 text-violet shrink-0" />
-                    <span className="text-sm font-semibold text-foreground">Client</span>
-                  </div>
-                  <Tabs
-                    value={activeEmailVariant}
-                    onValueChange={(v) => setActiveEmailVariant(v as EmailVariant)}
-                    className="flex flex-col gap-3"
-                  >
-                    <TabsList variant="segmented" className="grid w-full grid-cols-3 h-auto py-1">
-                      <TabsTrigger value="full" className="gap-1 text-[10px] px-1">
-                        {busy('email') ? (
-                          <Loader2 className="h-3 w-3 shrink-0 animate-spin text-violet" />
-                        ) : (
-                          <Mail className="h-3 w-3 opacity-70" />
-                        )}
-                        Complet
-                      </TabsTrigger>
-                      <TabsTrigger value="firstContact" className="gap-1 text-[10px] px-1">
-                        {busy('emailFirstContact') ? (
-                          <Loader2 className="h-3 w-3 shrink-0 animate-spin text-violet" />
-                        ) : (
-                          <UserCheck className="h-3 w-3 opacity-70" />
-                        )}
-                        1er contact
-                      </TabsTrigger>
-                      <TabsTrigger value="bulletPoints" className="gap-1 text-[10px] px-1">
-                        {busy('emailBulletPoints') ? (
-                          <Loader2 className="h-3 w-3 shrink-0 animate-spin text-violet" />
-                        ) : (
-                          <List className="h-3 w-3 opacity-70" />
-                        )}
-                        Bullets
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="full" className="mt-0 focus-visible:outline-none">
-                      <EmailEditor
-                        email={email}
-                        onChange={setEmail}
-                        readOnly={isStreaming}
-                        title="Email complet de positionnement"
-                      />
-                    </TabsContent>
-                    <TabsContent value="firstContact" className="mt-0 focus-visible:outline-none">
-                      <EmailEditor
-                        email={emailFirstContact}
-                        onChange={setEmailFirstContact}
-                        readOnly={isStreaming}
-                        title="Email de première prise de contact"
-                      />
-                    </TabsContent>
-                    <TabsContent value="bulletPoints" className="mt-0 focus-visible:outline-none">
-                      <EmailEditor
-                        email={emailBulletPoints}
-                        onChange={setEmailBulletPoints}
-                        readOnly={isStreaming}
-                        title="Email en bullet points"
-                      />
-                    </TabsContent>
-                  </Tabs>
-                </div>
-
-                {/* Colonne Candidat */}
-                <div className="flex flex-col gap-3 min-w-0 rounded-lg border border-border/50 bg-background/20 p-3">
-                  <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-                    <UserCheck className="h-4 w-4 text-neon shrink-0" />
-                    <span className="text-sm font-semibold text-foreground">Candidat</span>
-                  </div>
-                  {busy('candidateEmail') && (
-                    <div className="flex items-center gap-2 text-xs text-violet">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-                      Génération…
-                    </div>
-                  )}
-                  <EmailEditor
-                    email={candidateEmail}
-                    onChange={setCandidateEmail}
-                    readOnly={isStreaming}
-                    title="Email de proposition au candidat"
-                  />
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

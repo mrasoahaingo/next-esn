@@ -1,3 +1,4 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P5 H4 E4 S5 R4 V4 */
 'use client';
 
 import { useLayoutEffect, useCallback, useState, useRef, useMemo, useEffect } from 'react';
@@ -38,10 +39,7 @@ import {
 import { resolvePositioningAnalysisFailure } from '@/lib/workflow/positioning-failure-state';
 import { queryKeys } from '@/lib/queries/keys';
 import { formatDuration, formatSeconds } from '@/lib/utils/format';
-import {
-  matchScoreConfidenceBadgeClass,
-  matchScoreConfidenceShortLabel,
-} from '@/lib/utils/match-score-confidence';
+import { matchScoreConfidenceShortLabel } from '@/lib/utils/match-score-confidence';
 import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
 import { buildCvPdfFilename } from '@/lib/utils/cv-pdf-filename';
 import {
@@ -75,30 +73,37 @@ import {
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Loader2, Target, FileText, TrendingUp, AlertTriangle, CheckCircle2, Maximize2, FileInput, Clock, Cpu, Pencil, Square, GitCompare, Trash2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Trash2 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import dynamic from 'next/dynamic';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PageHeader } from '@/components/app/page-header';
+import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
+import { WorkflowFailureAlert } from '@/components/workflow/WorkflowFailureAlert';
+import { PdfPreview } from '@/app/review/components/PdfPreview';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
-import {
-  PositioningAnalysisHistoryFloatingTrigger,
-  PositioningAnalysisHistoryTabContent,
-} from './components/PositioningAnalysisHistoryPanel';
+import { PositioningAnalysisHistoryTabContent } from './components/PositioningAnalysisHistoryPanel';
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { EmailsGenerationStep } from './components/EmailsGenerationStep';
 import { CvGenerationStep } from './components/CvGenerationStep';
-import { WorkflowFailureAlert } from '@/components/workflow/WorkflowFailureAlert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MatchingReadout } from './components/MatchingReadout';
+import { PositioningStepper, type PositioningStep } from './components/PositioningStepper';
+import { countStrongSkills } from './components/matching-readout';
 
 /** Sous-ensemble relu après invalidation pour décider du toast. */
 type PersistedPositioningState = PositioningWorkflowDiagnostics & {
   status?: string | null;
 };
-const AnalysisCharts = dynamic(
-  () => import('./components/AnalysisCharts').then((m) => m.AnalysisCharts),
-  { loading: () => <div className="flex h-full items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-violet" /></div> },
-);
 
+type ResultsView = 'results' | 'questions' | 'history';
+
+const STEP_DESCRIPTION: Record<PositioningStep, string> = {
+  1: 'Analyse du matching',
+  2: 'E-mails à relire',
+  3: 'CV retravaillé à exporter',
+};
 export default function PositioningWizardPage() {
   const params = useParams();
   const router = useRouter();
@@ -419,9 +424,6 @@ export default function PositioningWizardPage() {
     [generateWorkflowRows, generateStreamMeta?.generateMode],
   );
 
-  const showAnalysisWorkflowUi = analysisBusy || positioningData?.status === 'error';
-  const showGenerateWorkflowUi = genBusy || positioningData?.status === 'error';
-
   const prevPositioningIdRef = useRef(positioningIdParam);
   useEffect(() => {
     if (prevPositioningIdRef.current !== positioningIdParam) {
@@ -447,19 +449,6 @@ export default function PositioningWizardPage() {
     setPdfPageCount,
     templateId: pdfTemplateId,
   });
-
-  const previewPanelRef = useRef<HTMLDivElement>(null);
-  const [iframeHeight, setIframeHeight] = useState(0);
-
-  useEffect(() => {
-    const el = previewPanelRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      setIframeHeight(entry.contentRect.width * Math.SQRT2 * pdfPageCount);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [pdfPageCount]);
 
   useSessionTimer({
     endpoint: `/api/positioning/${positioningIdParam}/time`,
@@ -797,6 +786,13 @@ export default function PositioningWizardPage() {
     positioningData?.status,
   ]);
 
+  const candidateDisplayName = useMemo(() => {
+    const pi = (candidateData?.extracted_data as ExtractedCV | null | undefined)?.personalInfo;
+    if (!pi) return null;
+    const name = [pi.firstName, pi.lastName].filter(Boolean).join(' ').trim();
+    return name || null;
+  }, [candidateData?.extracted_data]);
+
   const handleExport = useCallback(() => {
     if (!positioningIdParam || !tailoredCv) return;
     exportPositioning.mutate({ id: positioningIdParam, tailoredCv, email, candidateEmail }, {
@@ -810,7 +806,7 @@ export default function PositioningWizardPage() {
         }
       },
     });
-  }, [positioningIdParam, tailoredCv, email, candidateEmail, exportPositioning]);
+  }, [positioningIdParam, tailoredCv, email, candidateEmail, exportPositioning, candidateDisplayName]);
 
   const positioningCancelRunId =
     positioningData?.workflow_run_id ??
@@ -889,152 +885,272 @@ export default function PositioningWizardPage() {
     lastError: persistedPositioningWorkflowError,
   });
 
-  const canGoToStep = (step: 1 | 2 | 3) => {
-    if (isStreaming) return false;
-    if (step === 1) return true;
-    if (step === 2 || step === 3) return analysisComplete;
-    return false;
-  };
 
-  const candidateDisplayName = useMemo(() => {
-    const pi = (candidateData?.extracted_data as ExtractedCV | null | undefined)?.personalInfo;
-    if (!pi) return null;
-    const name = [pi.firstName, pi.lastName].filter(Boolean).join(' ').trim();
-    return name || null;
-  }, [candidateData?.extracted_data]);
+  const [resultsView, setResultsView] = useState<ResultsView>('results');
+  const [isImportingFile, setIsImportingFile] = useState(false);
 
-  /** Ligne sous le nom : intitulé CV, ou extrait du résumé. */
-  const candidateDescriptionLine = useMemo(() => {
-    const ex = candidateData?.extracted_data as ExtractedCV | null | undefined;
-    const title = ex?.personalInfo?.title?.trim();
-    if (title) return title;
-    const summary = ex?.summary?.trim();
-    if (!summary) return null;
-    const oneLine = summary.replace(/\s+/g, ' ');
-    return oneLine.length > 140 ? `${oneLine.slice(0, 137)}…` : oneLine;
-  }, [candidateData?.extracted_data]);
+  const hasEmails = !!email || !!emailFirstContact || !!emailBulletPoints || !!candidateEmail;
+  const generationFailed =
+    positioningData?.status === 'error' && !analysisFailure && !!persistedPositioningWorkflowError;
+
+  const stepDisabledReason = useCallback(
+    (step: PositioningStep): string | null => {
+      if (isStreaming) {
+        return analysisBusy ? 'Une analyse est en cours.' : 'Une génération est en cours.';
+      }
+      if (step === 1) return null;
+      return analysisComplete ? null : 'Terminez d’abord l’analyse du matching.';
+    },
+    [isStreaming, analysisBusy, analysisComplete],
+  );
+
+  const goToStep = useCallback(
+    (step: PositioningStep) => {
+      if (stepDisabledReason(step)) return;
+      setCurrentStep(step);
+    },
+    [stepDisabledReason, setCurrentStep],
+  );
+
+  /** La primaire de l'en-tête : une seule, qui change avec l'étape et l'avancement. */
+  const primaryAction = useMemo((): {
+    label: string;
+    onClick: () => void;
+    disabledReason: string | null;
+    pending?: boolean;
+  } => {
+    if (analysisBusy) {
+      return { label: 'Analyser le matching', onClick: () => {}, disabledReason: 'Une analyse est déjà en cours.' };
+    }
+    if (genBusy) {
+      return { label: 'Générer', onClick: () => {}, disabledReason: 'Une génération est déjà en cours.' };
+    }
+    if (currentStep === 1) {
+      if (analysisComplete) {
+        return { label: 'Rédiger les e-mails', onClick: () => setCurrentStep(2), disabledReason: null };
+      }
+      return {
+        label: positioningData?.status === 'error' ? 'Relancer l’analyse' : 'Analyser le matching',
+        onClick: handleReAnalyze,
+        disabledReason: !canRunPositioningAnalysis
+          ? 'Saisissez ou importez une fiche de poste.'
+          : isImportingFile
+            ? 'Import du fichier en cours.'
+            : updatePositioning.isPending
+              ? 'Enregistrement en cours.'
+              : null,
+        pending: updatePositioning.isPending,
+      };
+    }
+    if (currentStep === 2) {
+      if (hasEmails) {
+        return { label: 'Retravailler le CV', onClick: () => setCurrentStep(3), disabledReason: null };
+      }
+      return {
+        label: 'Générer les e-mails',
+        onClick: handleGenerateEmails,
+        disabledReason: updatePositioning.isPending ? 'Enregistrement en cours.' : null,
+        pending: updatePositioning.isPending,
+      };
+    }
+    if (tailoredCv) {
+      return {
+        label: 'Exporter le PDF',
+        onClick: handleExport,
+        disabledReason: exportPositioning.isPending ? 'Export en cours.' : null,
+        pending: exportPositioning.isPending,
+      };
+    }
+    return {
+      label: 'Générer le CV',
+      onClick: handleGenerateCv,
+      disabledReason: updatePositioning.isPending ? 'Enregistrement en cours.' : null,
+      pending: updatePositioning.isPending,
+    };
+  }, [
+    analysisBusy,
+    genBusy,
+    currentStep,
+    analysisComplete,
+    positioningData?.status,
+    handleReAnalyze,
+    canRunPositioningAnalysis,
+    isImportingFile,
+    updatePositioning.isPending,
+    hasEmails,
+    handleGenerateEmails,
+    tailoredCv,
+    handleExport,
+    exportPositioning.isPending,
+    handleGenerateCv,
+    setCurrentStep,
+  ]);
+
+  const scoreMeta = useMemo(() => {
+    if (!analysisComplete || analysis?.matchScore == null) return null;
+    const parts = [`${analysis.matchScore} / 100`];
+    if (analysis.matchScoreConfidence) {
+      parts.push(`fiabilité ${matchScoreConfidenceShortLabel(analysis.matchScoreConfidence).toLowerCase()}`);
+    }
+    const { strong, total } = countStrongSkills(analysis.skillMatches ?? []);
+    if (total > 0) {
+      parts.push(`${strong} compétence${strong > 1 ? 's' : ''} forte${strong > 1 ? 's' : ''} sur ${total}`);
+    }
+    return parts.join(' · ');
+  }, [analysisComplete, analysis]);
+
+  const totalDurationMs =
+    (aiAnalysisDurationMs ?? 0) + (aiGenerationDurationMs ?? 0) + (userTimeSeconds ?? 0) * 1000;
+
+  const pageTitle = candidateDisplayName
+    ? missionHeadlineForUi
+      ? `${candidateDisplayName} × ${missionHeadlineForUi}`
+      : candidateDisplayName
+    : missionHeadlineForUi ?? 'Positionnement';
+
+  const downloadFilename = buildCvPdfFilename(candidateDisplayName ?? undefined);
+
+  const handleDownloadTailoredPdf = useCallback(() => {
+    if (!pdfBlobUrl) return;
+    const a = document.createElement('a');
+    a.href = pdfBlobUrl;
+    a.download = downloadFilename;
+    a.click();
+  }, [pdfBlobUrl, downloadFilename]);
 
   if (!isLoaded) {
     return (
-      <div className="flex justify-center items-center h-full bg-background text-foreground">
-        <Loader2 className="animate-spin mr-2" /> Chargement...
+      <div className="flex min-h-full flex-col gap-6 bg-background px-4 py-5 text-foreground md:px-6" aria-busy="true">
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-6 w-1/3 animate-none" />
+          <Skeleton className="h-4 w-1/4 animate-none" />
+        </div>
+        <Skeleton className="h-10 w-full max-w-md animate-none" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="flex flex-col gap-3 lg:col-span-7">
+            <Skeleton className="h-4 w-1/4 animate-none" />
+            <Skeleton className="h-3 w-full animate-none" />
+            <Skeleton className="h-3 w-5/6 animate-none" />
+          </div>
+          <Skeleton className="h-40 w-full animate-none rounded-xl lg:col-span-5" />
+        </div>
       </div>
     );
   }
 
+  const primaryDisabled = !!primaryAction.disabledReason;
+  const primaryButton = (
+    <Button type="button" onClick={primaryAction.onClick} disabled={primaryDisabled}>
+      {primaryAction.pending ? <Spinner data-icon="inline-start" /> : null}
+      {primaryAction.label}
+    </Button>
+  );
+
+  const headerStatus = analysisBusy ? (
+    <div className="border-l-2 border-primary pl-4">
+      <WorkflowStepList rows={analysisWorkflowRows} summaryLine={analysisWorkflowSummary} />
+    </div>
+  ) : analysisFailure ? (
+    <WorkflowFailureAlert
+      title="L’analyse n’a pas abouti"
+      message={analysisFailure.message}
+      rows={analysisWorkflowRows}
+      summaryLine={analysisWorkflowSummary}
+      onRetry={handleReAnalyze}
+      retryLabel="Relancer l’analyse"
+      retryDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
+    />
+  ) : genBusy ? (
+    <div className="border-l-2 border-primary pl-4">
+      <WorkflowStepList rows={generateWorkflowRows} summaryLine={generateWorkflowSummary} />
+    </div>
+  ) : generationFailed ? (
+    <WorkflowFailureAlert
+      title="La génération n’a pas abouti"
+      message={persistedPositioningWorkflowError?.message ?? 'La génération a échoué.'}
+      rows={generateWorkflowRows}
+      summaryLine={generateWorkflowSummary}
+      onRetry={generateStreamMeta?.generateMode === 'cv' ? handleGenerateCv : handleGenerateEmails}
+      retryLabel="Relancer la génération"
+      retryDisabled={updatePositioning.isPending}
+    />
+  ) : null;
+
   return (
     <div className="flex min-h-full flex-col bg-background text-foreground">
-      <div className="flex flex-col px-4 py-4 md:px-6">
-        {/* Top bar */}
-        <div className="rounded-2xl glass-panel p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 shrink items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet/20 text-violet neon-ring">
-                <Target className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs text-muted-foreground">
-                  <Target className="h-3 w-3 text-violet" />
-                  Positionnement
-                </div>
-                <div className="mt-0.5 flex items-center gap-2">
-                  <h1 className="truncate text-lg font-semibold title-gradient">
-                    Positionnement sur offre
-                  </h1>
-                  {(aiAnalysisDurationMs || aiGenerationDurationMs || userTimeSeconds) ? (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-overlay/6 px-2 py-0.5">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                            {formatDuration(
-                              (aiAnalysisDurationMs ?? 0) +
-                              (aiGenerationDurationMs ?? 0) +
-                              (userTimeSeconds ?? 0) * 1000
-                            )}
-                          </span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">
-                        <div className="space-y-1">
-                          {aiAnalysisDurationMs != null && aiAnalysisDurationMs > 0 && (
-                            <p className="flex items-center gap-1.5">
-                              <Cpu className="h-3 w-3 text-violet" />
-                              Analyse IA : <span className="font-semibold">{formatDuration(aiAnalysisDurationMs)}</span>
-                            </p>
-                          )}
-                          {aiGenerationDurationMs != null && aiGenerationDurationMs > 0 && (
-                            <p className="flex items-center gap-1.5">
-                              <Cpu className="h-3 w-3 text-accent" />
-                              Génération IA : <span className="font-semibold">{formatDuration(aiGenerationDurationMs)}</span>
-                            </p>
-                          )}
-                          {userTimeSeconds != null && userTimeSeconds > 0 && (
-                            <p className="flex items-center gap-1.5">
-                              <Pencil className="h-3 w-3 text-amber-400" />
-                              Edition : <span className="font-semibold">{formatSeconds(userTimeSeconds)}</span>
-                            </p>
-                          )}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-3">
-              {/* Score */}
-              {analysis?.matchScore != null && !analysisBusy && (
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-overlay/6 px-3 py-1.5">
-                  <TrendingUp
-                    className={`h-4 w-4 shrink-0 ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
-                  />
-                  <span
-                    className={`text-lg font-bold tabular-nums ${analysis.matchScore >= 70 ? 'text-neon' : analysis.matchScore >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}
-                  >
-                    {analysis.matchScore}%
-                  </span>
-                  <span className="h-4 w-px bg-border" aria-hidden />
-                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-neon" />
-                  <span className="text-xs font-semibold tabular-nums text-foreground">
-                    {analysis.skillMatches?.filter((s) => s.relevance === 'strong').length ?? 0}/{analysis.skillMatches?.length ?? 0}
-                  </span>
-                  <span className="h-4 w-px bg-border" aria-hidden />
-                  <AlertTriangle
-                    className={`h-3.5 w-3.5 shrink-0 ${(analysis.gaps?.length ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground'}`}
-                  />
-                  <span className="text-xs font-semibold tabular-nums text-foreground">
-                    {analysis.gaps?.length ?? 0}
-                  </span>
-                </div>
-              )}
-              {/* Streaming indicator + cancel */}
-              {isStreaming && (
+      <div className="flex flex-col gap-6 px-4 py-5 md:px-6">
+        <PageHeader
+          title={pageTitle}
+          description={STEP_DESCRIPTION[currentStep]}
+          meta={
+            <>
+              {scoreMeta ? <span>{scoreMeta}</span> : null}
+              {totalDurationMs > 0 ? (
                 <>
-                  <div className="flex items-center gap-2 rounded-lg border border-violet/20 bg-violet/10 px-3 py-1.5">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-violet" />
-                    <span className="text-xs font-medium text-violet">
-                      {analysisBusy ? 'Analyse en cours...' : 'Génération en cours...'}
-                    </span>
-                  </div>
-                  {positioningCancelRunId && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCancelWorkflow}
-                      disabled={cancelWorkflow.isPending}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  {scoreMeta ? <span aria-hidden> · </span> : null}
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<span className="cursor-help underline decoration-dotted underline-offset-4" tabIndex={0} />}
                     >
-                      {cancelWorkflow.isPending ? (
-                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Square className="mr-1.5 h-3.5 w-3.5" />
-                      )}
-                      Annuler
-                    </Button>
-                  )}
+                      {formatDuration(totalDurationMs)}
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <span className="flex flex-col gap-0.5 font-mono tabular-nums">
+                        {aiAnalysisDurationMs != null && aiAnalysisDurationMs > 0 ? (
+                          <span>Analyse IA {formatDuration(aiAnalysisDurationMs)}</span>
+                        ) : null}
+                        {aiGenerationDurationMs != null && aiGenerationDurationMs > 0 ? (
+                          <span>Génération IA {formatDuration(aiGenerationDurationMs)}</span>
+                        ) : null}
+                        {userTimeSeconds != null && userTimeSeconds > 0 ? (
+                          <span>Édition {formatSeconds(userTimeSeconds)}</span>
+                        ) : null}
+                      </span>
+                    </TooltipContent>
+                  </Tooltip>
                 </>
+              ) : null}
+              {scoreMeta || totalDurationMs > 0 ? <span aria-hidden> · </span> : null}
+              <Link href={`/review/${candidateId}`} className="underline-offset-4 hover:text-foreground hover:underline">
+                Ouvrir le CV
+              </Link>
+              {positioningData?.mission_id ? (
+                <>
+                  <span aria-hidden> · </span>
+                  <Link
+                    href={`/positions/${positioningData.mission_id}`}
+                    className="underline-offset-4 hover:text-foreground hover:underline"
+                  >
+                    Fiche mission
+                  </Link>
+                </>
+              ) : null}
+              <span aria-hidden> · </span>
+              <span>Enregistrement automatique</span>
+            </>
+          }
+          actions={
+            <>
+              {isStreaming && positioningCancelRunId ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleCancelWorkflow}
+                  disabled={cancelWorkflow.isPending}
+                >
+                  {cancelWorkflow.isPending ? <Spinner data-icon="inline-start" /> : null}
+                  Annuler
+                </Button>
+              ) : null}
+              {primaryDisabled ? (
+                <Tooltip>
+                  <TooltipTrigger render={<span className="inline-flex" tabIndex={0} />}>
+                    {primaryButton}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{primaryAction.disabledReason}</TooltipContent>
+                </Tooltip>
+              ) : (
+                primaryButton
               )}
               <AlertDialog>
                 <Tooltip>
@@ -1045,26 +1161,20 @@ export default function PositioningWizardPage() {
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
                             disabled={deletePositioningMutation.isPending}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            aria-label="Supprimer ce positionnement"
+                            className="text-muted-foreground hover:text-destructive"
                           >
-                            {deletePositioningMutation.isPending ? (
-                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                            )}
-                            Supprimer
+                            {deletePositioningMutation.isPending ? <Spinner /> : <Trash2 />}
                           </Button>
                         }
                       />
                     }
                   />
-                  <TooltipContent side="bottom" className="text-xs">
-                    Supprimer ce positionnement
-                  </TooltipContent>
+                  <TooltipContent side="bottom">Supprimer ce positionnement</TooltipContent>
                 </Tooltip>
-                <AlertDialogContent className="bg-panel border-overlay/10">
+                <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Supprimer ce positionnement ?</AlertDialogTitle>
                     <AlertDialogDescription>
@@ -1083,211 +1193,94 @@ export default function PositioningWizardPage() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-            </div>
-          </div>
+            </>
+          }
+          status={headerStatus}
+        />
 
-          {/* CV | matching | fiche — cartes cliquables */}
-          <div
-            className="mt-4 flex items-stretch gap-3"
-          >
-            <Link
-              href={`/review/${candidateId}`}
-              className="group flex min-h-22 min-w-0 flex-1 flex-col justify-between rounded-xl border border-neon/35 bg-neon/5 p-4 shadow-sm outline-none transition-colors hover:border-neon/55 hover:bg-neon/10 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Ouvrir le CV de ${candidateDisplayName ?? 'ce candidat'}`}
-            >
-              <p className="text-lg font-semibold leading-snug text-foreground group-hover:text-neon/95">
-                {candidateDisplayName ?? 'Candidat'}
-              </p>
-              {candidateDescriptionLine ? (
-                <p className="truncate mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                  {candidateDescriptionLine}
-                </p>
-              ) : (
-                <p className="truncate mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                  Profil extrait du CV — cliquez pour ouvrir la fiche.
-                </p>
+        <PositioningStepper current={currentStep} onSelect={goToStep} disabledReason={stepDisabledReason} />
+
+        {currentStep === 1 && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="min-w-0 space-y-8 lg:col-span-7">
+              <JobInput
+                jobDescription={jobDescription}
+                onJobDescriptionChange={setJobDescription}
+                isAnalyzing={analysisBusy}
+                readOnly={analysisBusy || analysisComplete}
+                missionHeadline={missionHeadlineForUi}
+                usesStructuredMissionAnalysis={usesStructuredMissionAnalysis}
+                onImportingChange={setIsImportingFile}
+              />
+
+              {/* Analysis results during streaming — no sub-views yet */}
+              {analysisBusy && (
+                <section aria-labelledby="results-heading" className="space-y-6">
+                  <h2 id="results-heading" className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground">
+                    Résultats
+                  </h2>
+                  <AnalysisView
+                    analysis={analysis}
+                    isAnalyzing={analysisBusy}
+                    streamMeta={analysisStreamMeta}
+                    analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
+                    hideRecruiterSnapshot
+                    recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
+                    modelsSummaryLabel={analysisModelsSummaryLabel}
+                    modelsByTask={analysisModelsSnapshot?.byTask}
+                    aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
+                    aiInfoHistoryLinkLabel="Positionnement et historique"
+                  />
+                </section>
               )}
-            </Link>
 
-            {positioningData?.mission_id && missionHeadlineForUi ? (
-              <>
-                <div className="flex shrink-0 items-center justify-center">
-                  <Tooltip>
-                    <TooltipTrigger
-                      type="button"
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-violet/30 bg-violet/15 text-violet shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="Analyse de matching"
-                    >
-                      <GitCompare className="h-5 w-5" />
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-xs text-xs">
-                      Analyse de matching : comparaison entre la fiche de poste et le profil candidat.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                <Link
-                  href={`/positions/${positioningData.mission_id}`}
-                  className="group flex min-h-0 min-w-0 flex-1 flex-col justify-between rounded-xl border border-violet/25 bg-violet/5 p-4 shadow-sm outline-none transition-colors hover:border-violet/45 hover:bg-violet/10 focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`Ouvrir la fiche de la position : ${missionHeadlineForUi}`}
-                >
-                  <p className="text-lg font-semibold leading-snug text-foreground group-hover:text-violet">
-                    {missionHeadlineForUi}
-                  </p>
-                  <p className="truncate mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                    {usesStructuredMissionAnalysis
-                      ? 'Matching basé sur l’analyse structurée de la fiche (barème « Comprendre la fiche »).'
-                      : 'Enrichissez la fiche sur la page mission pour affiner le barème ; le texte du positionnement peut servir de secours.'}
-                  </p>
-                </Link>
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="mb-4 mt-3 flex w-full justify-center">
-          <Tabs
-            value={String(currentStep)}
-            onValueChange={(v) => {
-              const n = Number(v);
-              if (n !== 1 && n !== 2 && n !== 3) return;
-              if (canGoToStep(n)) setCurrentStep(n);
-            }}
-            className="w-full max-w-2xl"
-          >
-            <TabsList variant="segmented" className="grid w-full grid-cols-3 gap-1">
-              <TabsTrigger value="1" disabled={!canGoToStep(1)} className="flex-col gap-0.5 py-2 sm:flex-row sm:gap-1">
-                <span className="tabular-nums">1</span>
-                <span className="text-center leading-tight sm:inline">Analyse & affinage</span>
-              </TabsTrigger>
-              <TabsTrigger value="2" disabled={!canGoToStep(2)} className="flex-col gap-0.5 py-2 sm:flex-row sm:gap-1">
-                <span className="tabular-nums">2</span>
-                <span className="text-center leading-tight">
-                  <span className="sm:hidden">Emails</span>
-                  <span className="hidden sm:inline">Emails (client & candidat)</span>
-                </span>
-              </TabsTrigger>
-              <TabsTrigger value="3" disabled={!canGoToStep(3)} className="flex-col gap-0.5 py-2 sm:flex-row sm:gap-1">
-                <span className="tabular-nums">3</span>
-                <span className="text-center leading-tight sm:inline">CV retravaillé</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* Split layout — étape 2 : emails client + candidat sur toute la largeur (pas de graphiques d’analyse à droite) */}
-        <div
-          className={`grid grid-cols-1 gap-4 ${currentStep === 2 ? '' : 'lg:grid-cols-2'}`}
-        >
-          {/* Left / principal */}
-          <div
-            className="flex flex-col"
-          >
-            {currentStep === 1 && (
-              <div className="flex flex-col gap-3">
-                {/* Job description — editable before analysis, read-only after */}
-                {(analysisBusy || analysisComplete) ? (
-                  <JobInput
-                    jobDescription={jobDescription}
-                    onJobDescriptionChange={setJobDescription}
-                    onAnalyze={handleReAnalyze}
-                    onReAnalyze={analysisComplete ? handleReAnalyze : undefined}
-                    isAnalyzing={analysisBusy}
-                    positioningStatus={positioningData?.status}
-                    readOnly
-                    missionHeadline={missionHeadlineForUi}
-                  />
-                ) : (
-                  <JobInput
-                    jobDescription={jobDescription}
-                    onJobDescriptionChange={setJobDescription}
-                    onAnalyze={handleReAnalyze}
-                    isAnalyzing={analysisBusy}
-                    positioningStatus={positioningData?.status}
-                  />
-                )}
-
-                {analysisFailure && (
-                  <WorkflowFailureAlert
-                    title="L’analyse n’a pas abouti"
-                    message={analysisFailure.message}
-                    rows={analysisWorkflowRows}
-                    summaryLine={analysisWorkflowSummary}
-                    onRetry={handleReAnalyze}
-                    retryLabel="Relancer l’analyse"
-                    retryDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
-                  />
-                )}
-
-                {/* Analysis results during streaming — no tabs yet */}
-                {analysisBusy && (
-                  <div>
-                    <AnalysisView
-                      analysis={analysis}
-                      isAnalyzing={analysisBusy}
-                      streamMeta={analysisStreamMeta}
-                      analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
-                      hideRecruiterSnapshot
-                      recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
-                      workflowStepRows={showAnalysisWorkflowUi ? analysisWorkflowRows : undefined}
-                      workflowSummaryLine={showAnalysisWorkflowUi ? analysisWorkflowSummary : undefined}
-                      modelsSummaryLabel={analysisModelsSummaryLabel}
-                      modelsByTask={analysisModelsSnapshot?.byTask}
-                      aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
-                      aiInfoHistoryLinkLabel="Positionnement et historique"
-                    />
-                  </div>
-                )}
-
-                {/* Tabs: Résultats | Questions — once analysis complete */}
-                {analysisComplete && (
-                  <Tabs defaultValue="results" className="flex flex-col">
-                    <TabsList variant="segmented" className="w-full shrink-0 grid grid-cols-3">
-                      <TabsTrigger value="results" className="text-xs px-1 sm:px-2">
+              {/* Résultats · Questions · Historique — once analysis complete */}
+              {analysisComplete && (
+                <section aria-labelledby="results-heading" className="space-y-6">
+                  <h2 id="results-heading" className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground">
+                    Résultats
+                  </h2>
+                  <Tabs
+                    value={resultsView}
+                    onValueChange={(v) => setResultsView(v as ResultsView)}
+                    className="gap-6"
+                  >
+                    <TabsList variant="line" aria-label="Vue des résultats">
+                      <TabsTrigger value="results" className="flex-none px-1">
                         Résultats
                       </TabsTrigger>
-                      <TabsTrigger value="questions" className="text-xs px-1 sm:px-2">
-                        <span className="hidden sm:inline">Questions & Affinage</span>
-                        <span className="sm:hidden">Questions</span>
+                      <TabsTrigger value="questions" className="flex-none px-1">
+                        Questions
                       </TabsTrigger>
-                      <TabsTrigger value="history" className="text-xs px-1 sm:px-2">
+                      <TabsTrigger value="history" className="flex-none px-1">
                         Historique
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="results" className="mt-3 space-y-4 data-[state=inactive]:hidden">
+                    <TabsContent value="results" className="mt-0 data-[state=inactive]:hidden">
                       <AnalysisView
                         analysis={analysis}
                         isAnalyzing={false}
                         onReAnalyze={handleReAnalyze}
+                        reAnalyzeDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
                         analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
                         onRemoveRecruiterAnswerEntry={handleRemoveRecruiterAnswerEntry}
                         recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
-                        workflowStepRows={
-                          positioningData?.status === 'error' ? analysisWorkflowRows : undefined
-                        }
-                        workflowSummaryLine={
-                          positioningData?.status === 'error' ? analysisWorkflowSummary : undefined
-                        }
                         modelsSummaryLabel={analysisModelsSummaryLabel}
                         modelsByTask={analysisModelsSnapshot?.byTask}
                         aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
                         aiInfoHistoryLinkLabel="Positionnement et historique"
                       />
                     </TabsContent>
-                    <TabsContent value="questions" className="mt-3 data-[state=inactive]:hidden">
+                    <TabsContent value="questions" className="mt-0 data-[state=inactive]:hidden">
                       <QuestionsPanel
                         analysis={analysis}
-                        onNext={() => setCurrentStep(2)}
                         onReAnalyze={handleReAnalyze}
                         isAnalyzing={false}
                         recruiterAnswerEntries={recruiterAnswerEntries}
                         appendRecruiterAnswer={appendRecruiterAnswer}
                       />
                     </TabsContent>
-                    <TabsContent
-                      value="history"
-                      className="mt-3 data-[state=inactive]:hidden"
-                    >
+                    <TabsContent value="history" className="mt-0 data-[state=inactive]:hidden">
                       {positioningIdParam ? (
                         <PositioningAnalysisHistoryTabContent
                           positioningId={positioningIdParam}
@@ -1296,205 +1289,120 @@ export default function PositioningWizardPage() {
                       ) : null}
                     </TabsContent>
                   </Tabs>
-                )}
-              </div>
-            )}
-
-            {currentStep === 2 && (
-              <div>
-                <EmailsGenerationStep
-                  isStreaming={genBusy}
-                  streamMeta={generateStreamMeta}
-                  onGenerateEmails={handleGenerateEmails}
-                  positioningStatus={positioningData?.status}
-                  workflowStepRows={showGenerateWorkflowUi ? generateWorkflowRows : undefined}
-                  workflowSummaryLine={showGenerateWorkflowUi ? generateWorkflowSummary : undefined}
-                  generationModelsByTask={generationModelsSnapshot?.byTask}
-                />
-              </div>
-            )}
-
-            {currentStep === 3 && (
-              <div className="space-y-3">
-                <CvGenerationStep
-                  isStreaming={genBusy}
-                  streamMeta={generateStreamMeta}
-                  onGenerateCv={handleGenerateCv}
-                  onExport={handleExport}
-                  exportPending={exportPositioning.isPending}
-                  positioningStatus={positioningData?.status}
-                  workflowStepRows={showGenerateWorkflowUi ? generateWorkflowRows : undefined}
-                  workflowSummaryLine={showGenerateWorkflowUi ? generateWorkflowSummary : undefined}
-                  generationModelsByTask={generationModelsSnapshot?.byTask}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Right panel — masqué à l’étape 2 (l’analyse est déjà à l’étape 1) */}
-          {currentStep !== 2 && (
-            <div ref={previewPanelRef} className="flex flex-col rounded-2xl glass-panel overflow-hidden">
-              {currentStep === 3 ? (
-                <>
-                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                    <h2 className="flex items-center text-sm font-semibold text-foreground">
-                      <FileText className="mr-2 h-4 w-4 text-accent" />
-                      Aperçu CV retravaillé
-                    </h2>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => setFullscreen(true)}
-                        disabled={!pdfBlobUrl}
-                        className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
-                      >
-                        <Maximize2 className="h-3.5 w-3.5" />
-                      </Button>
-                      {pdfBlobUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (!pdfBlobUrl) return;
-                            const a = document.createElement('a');
-                            a.href = pdfBlobUrl;
-                            a.download = buildCvPdfFilename(candidateDisplayName ?? undefined);
-                            a.click();
-                          }}
-                          className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
-                        >
-                          <Download className="mr-1.5 h-3.5 w-3.5" />
-                          Télécharger
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="relative bg-background dark:bg-shell">
-                    {isPdfLoading && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      </div>
-                    )}
-                    {pdfBlobUrl ? (
-                      <iframe
-                        src={pdfEmbedSrc(pdfBlobUrl)}
-                        style={{ height: iframeHeight || undefined }}
-                        className="w-full bg-background dark:bg-shell"
-                        title="CV Preview"
-                      />
-                    ) : (
-                      <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
-                        <FileText className="mb-2 h-10 w-10" />
-                        <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                    <h2 className="flex items-center text-sm font-semibold text-foreground">
-                      <Target className="mr-2 h-4 w-4 text-violet" />
-                      Visualisation de l&apos;analyse
-                    </h2>
-                  </div>
-                  <div className="bg-shell">
-                    <AnalysisCharts
-                      analysis={analysis}
-                      isAnalyzing={analysisBusy}
-                    />
-                  </div>
-                </>
+                </section>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Collant sous le py-5 de la page : le défilement est celui du main de la coque. */}
+            <div className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
+              <MatchingReadout analysis={analysis} isAnalyzing={analysisBusy} />
+            </div>
+          </div>
+        )}
+
+        {currentStep === 2 && (
+          <EmailsGenerationStep
+            isStreaming={genBusy}
+            streamMeta={generateStreamMeta}
+            onGenerateEmails={handleGenerateEmails}
+            positioningStatus={positioningData?.status}
+            generationModelsByTask={generationModelsSnapshot?.byTask}
+          />
+        )}
+
+        {currentStep === 3 && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-7">
+              <CvGenerationStep
+                isStreaming={genBusy}
+                streamMeta={generateStreamMeta}
+                onGenerateCv={handleGenerateCv}
+                onCompare={() => setFullscreen(true)}
+                compareDisabled={!pdfBlobUrl}
+                positioningStatus={positioningData?.status}
+                generationModelsByTask={generationModelsSnapshot?.byTask}
+              />
+            </div>
+            <div className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
+              <PdfPreview
+                pdfBlobUrl={pdfBlobUrl}
+                isPdfLoading={isPdfLoading}
+                pdfPageCount={pdfPageCount}
+                downloadFilename={downloadFilename}
+                title="Aperçu du CV retravaillé"
+                emptyLabel="Le CV retravaillé apparaîtra ici"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Fullscreen comparison dialog */}
+      {/* Comparaison CV extrait / CV retravaillé */}
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
         <DialogContent
-          className="sm:max-w-[95vw] h-[92vh] flex flex-col gap-0 p-0 bg-background dark:bg-shell border border-border"
+          className="flex h-[92vh] flex-col gap-0 border border-border bg-background p-0 sm:max-w-[95vw]"
           showCloseButton={false}
         >
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <DialogTitle className="flex items-center text-sm font-semibold text-foreground">
-              <FileText className="mr-2 h-4 w-4 text-accent" />
+            <DialogTitle className="text-sm font-semibold text-foreground">
               Comparaison des CV
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  if (!pdfBlobUrl) return;
-                  const a = document.createElement('a');
-                  a.href = pdfBlobUrl;
-                  a.download = buildCvPdfFilename(candidateDisplayName ?? undefined);
-                  a.click();
-                }}
+                onClick={handleDownloadTailoredPdf}
                 disabled={!pdfBlobUrl}
-                className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
               >
-                <Download className="mr-1.5 h-3.5 w-3.5" />
                 Télécharger
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFullscreen(false)}
-                className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setFullscreen(false)}>
                 Fermer
               </Button>
             </div>
           </div>
 
-          <div className="flex flex-1 min-h-0 gap-px bg-border">
+          <div className="flex min-h-0 flex-1 gap-px bg-border">
             {/* Original CV */}
-            <div className="flex flex-1 flex-col min-w-0">
-              <div className="flex items-center gap-2 border-b border-border bg-overlay/[0.06] px-4 py-2">
-                <FileInput className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground">CV extrait</span>
-              </div>
-              <div className="relative flex-1 bg-background dark:bg-shell">
+            <div className="flex min-w-0 flex-1 flex-col bg-background">
+              <p className="border-b border-border px-4 py-2 text-xs font-medium text-muted-foreground">
+                CV extrait
+              </p>
+              <div className="relative flex-1">
                 {originalPdfBlobUrl ? (
                   <iframe
                     src={pdfEmbedSrc(originalPdfBlobUrl)}
-                    className="h-full w-full bg-background dark:bg-shell"
-                    title="CV Original"
+                    className="h-full w-full bg-background"
+                    title="CV extrait"
                   />
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                    <Loader2 className="mb-2 h-8 w-8 animate-spin" />
-                    <p className="text-sm">Génération du CV extrait...</p>
+                  <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground" aria-busy="true">
+                    <Spinner className="size-6" />
+                    <p className="text-sm">Préparation du CV extrait…</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Tailored CV */}
-            <div className="flex flex-1 flex-col min-w-0">
-              <div className="flex items-center gap-2 border-b border-border bg-overlay/[0.06] px-4 py-2">
-                <FileText className="h-3.5 w-3.5 text-accent" />
-                <span className="text-xs font-medium text-accent">CV retravaillé</span>
-              </div>
-              <div className="relative flex-1 bg-background dark:bg-shell">
+            <div className="flex min-w-0 flex-1 flex-col bg-background">
+              <p className="border-b border-border px-4 py-2 text-xs font-medium text-foreground">
+                CV retravaillé
+              </p>
+              <div className="relative flex-1">
                 {isPdfLoading && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70" aria-busy="true">
+                    <Spinner className="size-6 text-primary" />
                   </div>
                 )}
                 {pdfBlobUrl ? (
                   <iframe
                     src={pdfEmbedSrc(pdfBlobUrl)}
-                    className="h-full w-full bg-background dark:bg-shell"
-                    title="CV Retravaillé"
+                    className="h-full w-full bg-background"
+                    title="CV retravaillé"
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                    <FileText className="mb-2 h-10 w-10" />
                     <p className="text-sm">Le CV retravaillé apparaîtra ici</p>
                   </div>
                 )}
