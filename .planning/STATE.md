@@ -64,6 +64,8 @@ _To be updated after first plans complete._
 | 260921-jz1 | Payloads volumineux retirés des frontières de steps workflow + visibilité des échecs | 2026-09-21 | 2c96649 | [260921-jz1-ne-plus-faire-transiter-les-payloads-vol](./quick/260921-jz1-ne-plus-faire-transiter-les-payloads-vol/) |
 | 260921-ksd | Assainissement des caractères interdits par Postgres avant tout écrit JSONB + plafond de retry | 2026-09-21 | 116fb14 | [260921-ksd-assainir-les-caracteres-interdits-par-po](./quick/260921-ksd-assainir-les-caracteres-interdits-par-po/) |
 | 260921-seo | Écritures Supabase non contrôlées traitées (17 sites) + règle ESLint de prévention | 2026-09-21 | 2a1b793 | [260921-seo-traiter-les-11-ecritures-supabase-non-co](./quick/260921-seo-traiter-les-11-ecritures-supabase-non-co/) |
+| 261111-q9p | Refonte visuelle des pages publiques (landing, auth, 404) : photos GPT Image 2.6, jury de 3 juges LLM — notes ramenées dans main, commits sur la branche refonte-landing-verre | 2026-11-12 | ea6fb48 | [261111-q9p-refonte-visuelle-des-pages-publiques-esn](./quick/261111-q9p-refonte-visuelle-des-pages-publiques-esn/) |
+| 261112-27s | Agent designer + jury LLM, puis landing « Verre de nuit » (Hallmark), auth/404 alignées — notes ramenées dans main, commits sur la branche refonte-landing-verre | 2026-11-12 | 7a6a2cd | [261112-27s-agent-designer-propositions-maquettes-gp](./quick/261112-27s-agent-designer-propositions-maquettes-gp/) |
 | 261124-lfg | Retrait prospection/radar (code phase 9 + migration drop_radar non appliquée), v1.3 parké | 2026-11-24 | c50f2bd | [261124-lfg-retrait-prospection-radar](./quick/261124-lfg-retrait-prospection-radar/) |
 
 ## Session continuity
