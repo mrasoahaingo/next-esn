@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   candidateDisplayName,
   formatDurationMs,
+  formatRelativeDate,
   formatShortDate,
   formatTimeSaved,
   jobTitleFromDescription,
@@ -62,5 +63,26 @@ describe('plural', () => {
     expect(plural(1, 'CV extrait')).toBe('CV extrait');
     expect(plural(3, 'CV extrait')).toBe('CV extraits');
     expect(plural(2, 'analyse')).toBe('analyses');
+  });
+});
+
+describe('formatRelativeDate', () => {
+  const now = new Date('2026-11-24T15:30:00');
+
+  it('parle en minutes puis en heures le jour même', () => {
+    expect(formatRelativeDate('2026-11-24T15:29:50', now)).toBe('à l’instant');
+    expect(formatRelativeDate('2026-11-24T15:25:00', now)).toBe('il y a 5 min');
+    expect(formatRelativeDate('2026-11-24T13:10:00', now)).toBe('il y a 2 h');
+  });
+
+  it('dit « hier » puis donne la date courte', () => {
+    expect(formatRelativeDate('2026-11-23T23:00:00', now)).toBe('hier');
+    expect(formatRelativeDate('2026-11-23T01:00:00', now)).toBe('hier');
+    expect(formatRelativeDate('2026-03-21T10:00:00', now)).toBe('21 mars');
+    expect(formatRelativeDate('2025-12-02T10:00:00', now)).toBe('2 déc. 2025');
+  });
+
+  it('affiche « — » pour une date invalide', () => {
+    expect(formatRelativeDate('pas une date', now)).toBe('—');
   });
 });

@@ -69,3 +69,30 @@ export function jobTitleFromDescription(description: string, max = 50): string {
 export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
   return count > 1 ? pluralForm : singular;
 }
+
+/**
+ * Date relative courte (DESIGN.md § Révision v2) : « à l'instant », « il y a 5 min »,
+ * « il y a 2 h », « hier », puis la date courte « 21 mars » (avec l'année si elle diffère).
+ */
+export function formatRelativeDate(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  const diffMs = now.getTime() - date.getTime();
+  const minutes = Math.round(diffMs / 60_000);
+  if (minutes < 1) return 'à l’instant';
+  if (minutes < 60) return `il y a ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24 && isSameDay(date, now)) return `il y a ${hours} h`;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(date, yesterday)) return 'hier';
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short',
+    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
+  });
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
