@@ -5,9 +5,11 @@
 - ✅ **v1.0 AI Workflow Reliability** — Phases 1–2 (shipped 2026-03-26)
 - ⏸ **v1.1 Réactivité, flux & résilience** — Phases 3–5 (partial — Phase 3 complete, Phases 4–5 not started)
 - ⏸ **v1.2 Multi-langue** — Phases 6–8 (parked 2026-07-03 — Phase 6 shipped, Phases 7–8 documented in `.planning/milestones/v1.2-ROADMAP.md`)
-- 🚧 **v1.3 Prospection** — Phases 9–14 (in progress)
+- ⏸ **v1.3 Prospection** — Phases 9–14 (parked 2026-11-24 — Phase 9 arrêtée avant 09-04 (3/4 plans), code retiré du produit ; détails dans `.planning/milestones/v1.3-ROADMAP.md`)
 
 > **Note:** v1.2 is parked — Phase 6 (DB + Schema Foundation) was shipped; the bulk of language detection and label wiring was covered by quick tasks (see STATE.md). Phases 7–8 remain documented in `.planning/milestones/v1.2-ROADMAP.md` for future resumption.
+
+> **Note :** v1.3 est parké — la prospection et le radar sont retirés du produit (quick `261124-lfg`) et seront retravaillés plus tard ; le produit se recentre sur la gestion des CV et le positionnement CV ↔ missions. Une migration `*_drop_radar.sql` existe dans le dépôt mais n'est **PAS** appliquée en prod (en attente d'accord explicite de l'utilisateur). Phases 9–14 documentées dans `.planning/milestones/v1.3-ROADMAP.md`.
 
 ## Phases
 
@@ -41,16 +43,19 @@ Archive: `.planning/milestones/v1.2-ROADMAP.md`
 
 </details>
 
-### 🚧 v1.3 Prospection
+<details>
+<summary>⏸ v1.3 Prospection (Phases 9–14) — PARKED 2026-11-24</summary>
 
-**Milestone Goal:** Donner aux recruteurs ESN une liste d'entreprises « chaudes » — susceptibles de recruter avant même d'avoir publié une annonce — avec le bon contact à appeler, alimentée par des automations à critères.
+- [ ] **Phase 9: DB + Schema Foundation + Proxycurl Audit** — SIG-04, CONT-04, CONT-05 — 3/4 plans — arrêtée avant 09-04 (migration prospection jamais appliquée ; code retiré du produit)
+- [ ] **Phase 10: First Collector + Deterministic Scoring + Cron Infrastructure** — SIG-02, SCOR-01, SCOR-02, AUTO-05, AUTO-06 — parked
+- [ ] **Phase 11: Additional Collectors + SIREN Reconciliation** — SIG-01, SIG-03, SIG-06 — parked
+- [ ] **Phase 12: LLM Score Synthesis** — SCOR-03, SCOR-04, SIG-05 — parked
+- [ ] **Phase 13: Contact Enrichment (Heat-Gated)** — CONT-01, CONT-02, CONT-03 — parked
+- [ ] **Phase 14: Automation UI + Company List + Actions** — AUTO-01, AUTO-02, AUTO-03, AUTO-04, LIST-01, LIST-02, LIST-03 — parked
 
-- [ ] **Phase 9: DB + Schema Foundation + Proxycurl Audit** — SIG-04, CONT-04, CONT-05
-- [ ] **Phase 10: First Collector + Deterministic Scoring + Cron Infrastructure** — SIG-02, SCOR-01, SCOR-02, AUTO-05, AUTO-06
-- [ ] **Phase 11: Additional Collectors + SIREN Reconciliation** — SIG-01, SIG-03, SIG-06
-- [ ] **Phase 12: LLM Score Synthesis** — SCOR-03, SCOR-04, SIG-05
-- [ ] **Phase 13: Contact Enrichment (Heat-Gated)** — CONT-01, CONT-02, CONT-03
-- [ ] **Phase 14: Automation UI + Company List + Actions** — AUTO-01, AUTO-02, AUTO-03, AUTO-04, LIST-01, LIST-02, LIST-03
+Archive: `.planning/milestones/v1.3-ROADMAP.md`
+
+</details>
 
 ## Phase Details
 
@@ -79,133 +84,6 @@ Plans:
 
 ---
 
-### Phase 9: DB + Schema Foundation + Proxycurl Audit
-
-**Goal**: Les 7 tables du domaine prospection existent avec les contraintes SIREN, TTL et RGPD correctes dès le départ — et le code `lib/radar/` mort (Proxycurl) est audité et ne peut plus être copié par erreur dans les phases suivantes.
-
-**Depends on**: Nothing (new domain, no existing prospection tables)
-
-**Requirements**: SIG-04, CONT-04, CONT-05
-
-**Success Criteria** (what must be TRUE):
-
-1. Les 7 tables prospection (`prospection_automations`, `prospection_companies`, `prospection_signals`, `prospection_scores`, `prospection_contacts`, `prospection_run_logs`, `prospection_actions`) existent dans Supabase avec RLS org-scoped.
-2. La contrainte `UNIQUE(org_id, siren)` sur `prospection_companies` empêche les doublons — deux inserts avec le même SIREN dans la même org en rejettent un.
-3. Les colonnes RGPD (`gdpr_retention_expires_at`, `contact_source`, `contact_sourced_at`) sont présentes sur `prospection_contacts` avec `NOT NULL`.
-4. Les colonnes TTL (`signal_last_fetched_at`) et `enrichment_gated_at` existent pour contrôler les coûts API dès le schéma.
-5. Un audit des références Proxycurl dans `lib/radar/` est documenté — aucun nouveau code ne peut s'appuyer sur ces références mortes ; ScrapIn + Dropcontact sont confirmés comme remplaçants.
-
-**Plans**: 4 plans
-
-Plans:
-
-- [ ] `09-01-PLAN.md` — SIG-04 + CONT-05 (+ table CONT-04) : migration unique `*_prospection_domain.sql` (8 tables, RLS org-scopée, FK composites, `UNIQUE(org_id, siren)`, colonnes RGPD/TTL), constantes, types, helpers SIREN, test de contrat + recette Postgres jetable
-- [ ] `09-02-PLAN.md` — CONT-04 : route `/api/prospection/settings` (GET membre / PUT admin), Zod 0–100, hooks React Query, carte « Prospection » dans `/settings/organization`
-- [ ] `09-03-PLAN.md` — Critère 5 : audit `09-PROXYCURL-AUDIT.md` (historique 7ecd35e, env à retirer, tables radar restantes) + garde-fou vitest `no-dead-providers`
-- [ ] `09-04-PLAN.md` — [BLOCKING] application de la migration sur Supabase (feu vert utilisateur) + vérification en base réelle et dans l’UI
-
----
-
-### Phase 10: First Collector + Deterministic Scoring + Cron Infrastructure
-
-**Goal**: Un pipeline complet fonctionne de bout en bout — déclenchement cron ou manuel → collecte des offres d'emploi France Travail → score déterministe calculé → résultats persistés en DB — sans risque de doublon de run.
-
-**Depends on**: Phase 9
-
-**Requirements**: SIG-02, SCOR-01, SCOR-02, AUTO-05, AUTO-06
-
-**Success Criteria** (what must be TRUE):
-
-1. Un run manuel ou cron collecte les offres France Travail pour les entreprises correspondant aux critères de l'automation et persiste les signaux dans `prospection_signals`.
-2. Chaque entreprise reçoit un score numérique 0–100 calculé uniquement par la fonction de règles déterministes (`computeProspectScore`) — jamais par un LLM.
-3. Le score décroît en fonction de l'ancienneté des signaux (decay) — une entreprise avec uniquement des signaux vieux de 60 jours a un score inférieur à la même entreprise avec des signaux de la semaine.
-4. Deux déclenchements cron simultanés n'entraînent pas deux runs parallèles pour la même automation (advisory lock Supabase ou équivalent actif).
-5. La page d'administration affiche l'état du dernier run (en cours / terminé / erreur) et sa date pour chaque automation.
-
-**Plans**: TBD
-
----
-
-### Phase 11: Additional Collectors + SIREN Reconciliation
-
-**Goal**: Le pipeline ingère des signaux de trois sources complémentaires (SIRENE/INSEE, Pappers, ScrapIn) et fusionne correctement les entreprises remontées par plusieurs sources ou automations via le SIREN comme clé stable.
-
-**Depends on**: Phase 10
-
-**Requirements**: SIG-01, SIG-03, SIG-06
-
-**Success Criteria** (what must be TRUE):
-
-1. Le collecteur Pappers ramène des signaux financiers (croissance, actes BODACC) pour les entreprises matchant les critères et les persiste dans `prospection_signals`.
-2. Le collecteur ScrapIn ramène des signaux LinkedIn (croissance d'effectifs, arrivées de décideurs) uniquement pour les entreprises au-dessus du seuil de chaleur (heat-gated).
-3. Une entreprise remontée par deux collecteurs différents ou deux automations différentes n'apparaît qu'une fois dans `prospection_companies` — les signaux des deux sources sont fusionnés sur la même ligne (SIREN unique par org).
-4. Si un collecteur échoue pendant un run, les signaux déjà collectés par les autres sources sont conservés — le run se termine avec résultats partiels, et l'erreur est attribuée au collecteur en faute.
-
-**Plans**: TBD
-
----
-
-### Phase 12: LLM Score Synthesis
-
-**Goal**: Chaque entreprise chaude dispose d'une justification lisible en 2-3 phrases et d'un pitch d'appel contextualisé ESN, générés par LLM à partir des signaux réels — jamais à partir de texte libre.
-
-**Depends on**: Phase 11
-
-**Requirements**: SCOR-03, SCOR-04, SIG-05
-
-**Success Criteria** (what must be TRUE):
-
-1. Chaque entreprise affiche ses signaux sources sous forme de badges (type + date) lisibles sans lire le texte du LLM — le score est explicable visuellement.
-2. Chaque entreprise affiche une justification en 2-3 phrases fondée sur ses signaux réels (pas d'hallucination — le LLM ne reçoit que la liste structurée des signaux).
-3. Chaque entreprise affiche un pitch d'appel qui intègre les « profils à placer » de l'automation source.
-4. Le `signal_snapshot` utilisé pour générer la synthèse est persisté avec le score — la synthèse est reproductible et auditable.
-
-**Plans**: TBD
-
----
-
-### Phase 13: Contact Enrichment (Heat-Gated)
-
-**Goal**: Pour les entreprises au-dessus du seuil, un décideur est identifié et son email enrichi via Dropcontact — avec toutes les gates coûts et RGPD actives et validées en staging avant activation cron.
-
-**Depends on**: Phase 12
-
-**Requirements**: CONT-01, CONT-02, CONT-03
-
-**Success Criteria** (what must be TRUE):
-
-1. Pour une entreprise avec score ≥ seuil, un décideur est visible dans le détail (nom, poste, profil LinkedIn).
-2. L'email du décideur est enrichi via Dropcontact et persisté dans `prospection_contacts`.
-3. Pour une entreprise avec score < seuil, le CTA « Voir le contact » est désactivé avec une explication visible (seuil non atteint).
-4. Le cache 7 jours sur l'enrichissement fonctionne — un deuxième run ne rappelle pas Dropcontact pour un contact déjà enrichi récemment.
-5. Les colonnes RGPD (`gdpr_retention_expires_at`, `contact_source`) sont correctement remplies à chaque enrichissement — conformité vérifiée en staging.
-
-**Plans**: TBD
-
----
-
-### Phase 14: Automation UI + Company List + Actions
-
-**Goal**: Les recruteurs peuvent créer et gérer leurs automations, consulter la liste des entreprises chaudes triée par score, voir les détails d'une entreprise avec signaux et pitch, et mettre à jour le statut d'action — tout le pipeline back-end est exposé dans une UI actionnable.
-
-**Depends on**: Phase 13
-
-**Requirements**: AUTO-01, AUTO-02, AUTO-03, AUTO-04, LIST-01, LIST-02, LIST-03
-
-**Success Criteria** (what must be TRUE):
-
-1. Le recruteur peut créer, modifier et supprimer une automation avec critères (secteur, taille, géo, profils à placer) depuis `/prospection/settings`.
-2. Le recruteur peut déclencher un run manuel « Lancer maintenant » depuis l'UI — même pipeline que le cron.
-3. `/prospection` affiche la liste des entreprises triée par score décroissant avec timestamp « dernière mise à jour ».
-4. Le recruteur peut filtrer la liste par statut (à appeler / appelé / écarté) et par automation source.
-5. Le recruteur peut changer le statut d'une entreprise (à appeler → appelé → écarté) et la modification persiste par org.
-
-**Plans**: TBD
-
-**UI hint**: yes
-
----
-
 ## Progress
 
 | Phase | Milestone | Plans complete | Status | Completed |
@@ -217,9 +95,9 @@ Plans:
 | 6 | v1.2 | 3/3 | Complete | 2026-06-04 |
 | 7 | v1.2 | 0/TBD | Parked | — |
 | 8 | v1.2 | 0/TBD | Parked | — |
-| 9 | v1.3 | 3/4 | In Progress|  |
-| 10 | v1.3 | 0/TBD | Not started | — |
-| 11 | v1.3 | 0/TBD | Not started | — |
-| 12 | v1.3 | 0/TBD | Not started | — |
-| 13 | v1.3 | 0/TBD | Not started | — |
-| 14 | v1.3 | 0/TBD | Not started | — |
+| 9 | v1.3 | 3/4 | Parked | — |
+| 10 | v1.3 | 0/TBD | Parked | — |
+| 11 | v1.3 | 0/TBD | Parked | — |
+| 12 | v1.3 | 0/TBD | Parked | — |
+| 13 | v1.3 | 0/TBD | Parked | — |
+| 14 | v1.3 | 0/TBD | Parked | — |
