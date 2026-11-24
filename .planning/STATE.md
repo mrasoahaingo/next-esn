@@ -26,9 +26,9 @@ See: `.planning/PROJECT.md` (milestone v1.3)
 ## Current Position
 
 Phase: 9 of 14 (DB + Schema Foundation + Proxycurl Audit)
-Plan: — of —
-Status: Ready to plan
-Last activity: 2026-09-21 — Completed quick task 260921-seo: Écritures Supabase non contrôlées traitées + règle ESLint de prévention
+Plan: 0 of 4
+Status: Ready to execute
+Last activity: 2026-11-24 — Phase 9 planifiée (4 plans, 3 vagues, vérifiés) ; landing sur main (5bcc4bb) ; PR #4 (écritures Supabase, effacement des fichiers, retrait du radar)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -75,4 +75,4 @@ None.
 **Stopped at:** Phase 9 context gathered
 **Resume file:** .planning/phases/09-db-schema-foundation-proxycurl-audit/09-CONTEXT.md
 
-**Next step:** `/gsd:plan-phase 9` — DB + Schema Foundation + Proxycurl Audit
+**Next step:** `/gsd:execute-phase 9` — le plan 09-04 attend le feu vert de l'utilisateur pour appliquer la migration en prod
