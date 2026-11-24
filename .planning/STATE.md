@@ -68,6 +68,7 @@ _To be updated after first plans complete._
 | 261112-27s | Agent designer + jury LLM, puis landing « Verre de nuit » (Hallmark), auth/404 alignées — notes ramenées dans main, commits sur la branche refonte-landing-verre | 2026-11-12 | 7a6a2cd | [261112-27s-agent-designer-propositions-maquettes-gp](./quick/261112-27s-agent-designer-propositions-maquettes-gp/) |
 | 261124-lfg | Retrait prospection/radar (code phase 9 + migration drop_radar non appliquée), v1.3 parké | 2026-11-24 | c50f2bd | [261124-lfg-retrait-prospection-radar](./quick/261124-lfg-retrait-prospection-radar/) |
 | 261124-mk0 | ZDR + inférence UE forcés sur tous les appels LLM (garde-fou lib/ai.ts + ESLint), passage à openai/gpt-6-luna (code, tarifs, migration llm) | 2026-11-24 | 68a65a9 | [261124-mk0-zdr-ue-luna](./quick/261124-mk0-zdr-ue-luna/) |
+| 261124-nhq | Raisonnement low par défaut sur gpt-6-luna, CV adapté sans « null » ni markdown dans les compétences, années d’expérience au mois près (source unique), logo PDF rastérisé ; + débogage du flux d’analyse figé et des échecs silencieux (.planning/debug/flux-analyse-fige.md) | 2026-11-24 | e1abc6c | [261124-nhq-luna-low-et-defauts-cv-adapte](./quick/261124-nhq-luna-low-et-defauts-cv-adapte/) |
 
 ## Session continuity
 
