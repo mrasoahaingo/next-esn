@@ -24,12 +24,12 @@ export function SectionShell({ status, label, children }: SectionShellProps): Re
     return (
       <section aria-label={label} aria-busy="true" className="space-y-4">
         <div className="border-b border-border pb-2">
-          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-4 w-36 motion-reduce:animate-none" />
         </div>
         <div className="space-y-2.5">
-          <Skeleton className="h-3.5 w-3/4" />
-          <Skeleton className="h-3.5 w-1/2" />
-          <Skeleton className="h-3.5 w-2/3" />
+          <Skeleton className="h-3.5 w-3/4 motion-reduce:animate-none" />
+          <Skeleton className="h-3.5 w-1/2 motion-reduce:animate-none" />
+          <Skeleton className="h-3.5 w-2/3 motion-reduce:animate-none" />
         </div>
       </section>
     );

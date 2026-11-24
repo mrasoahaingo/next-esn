@@ -136,7 +136,7 @@ export default function ReviewPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.detail(oid, candidateId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.candidates.list(oid) });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all(oid) });
-      toast.success('Extraction terminée');
+      // Succès silencieux (DESIGN.md § Mouvement) : la zone d'état passe à « Extraction terminée ».
       setDirty(false);
     },
   });
