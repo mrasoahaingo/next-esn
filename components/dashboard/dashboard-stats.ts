@@ -5,7 +5,7 @@
  * n'a pas de donnée, la valeur est `null` et l'écran affiche « — ».
  */
 
-import type { PersonalInfoLike } from './dashboard-format';
+import { candidateDisplayName, type PersonalInfoLike } from './dashboard-format';
 
 // ─── Types de données ───────────────────────────────────────────────
 
@@ -270,6 +270,7 @@ export function buildToReview(data: DashboardData, limit = 5): ToReviewItem[] {
       reason: 'Analyse en échec',
       tone: 'error',
       created_at: p.created_at,
+      candidateName: p.candidates ? candidateDisplayName(p.candidates.extracted_data) : undefined,
     });
   }
   return items
