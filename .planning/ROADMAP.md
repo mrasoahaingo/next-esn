@@ -95,7 +95,14 @@ Plans:
 4. Les colonnes TTL (`signal_last_fetched_at`) et `enrichment_gated_at` existent pour contrôler les coûts API dès le schéma.
 5. Un audit des références Proxycurl dans `lib/radar/` est documenté — aucun nouveau code ne peut s'appuyer sur ces références mortes ; ScrapIn + Dropcontact sont confirmés comme remplaçants.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+
+- [ ] `09-01-PLAN.md` — SIG-04 + CONT-05 (+ table CONT-04) : migration unique `*_prospection_domain.sql` (8 tables, RLS org-scopée, FK composites, `UNIQUE(org_id, siren)`, colonnes RGPD/TTL), constantes, types, helpers SIREN, test de contrat + recette Postgres jetable
+- [ ] `09-02-PLAN.md` — CONT-04 : route `/api/prospection/settings` (GET membre / PUT admin), Zod 0–100, hooks React Query, carte « Prospection » dans `/settings/organization`
+- [ ] `09-03-PLAN.md` — Critère 5 : audit `09-PROXYCURL-AUDIT.md` (historique 7ecd35e, env à retirer, tables radar restantes) + garde-fou vitest `no-dead-providers`
+- [ ] `09-04-PLAN.md` — [BLOCKING] application de la migration sur Supabase (feu vert utilisateur) + vérification en base réelle et dans l’UI
 
 ---
 
