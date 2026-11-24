@@ -1,5 +1,5 @@
 import type { ExtractedCV } from '@/lib/schema';
-import { extractYearsFromDateString } from '@/lib/utils/cv-date-years';
+import { extractYearMonthsFromDateString, extractYearsFromDateString } from '@/lib/utils/cv-date-years';
 import { sanitizeExtractedCv } from '@/lib/utils/cv-sanitize';
 
 type ExperienceItem = ExtractedCV['experiences'][number];
@@ -47,34 +47,31 @@ function yearMonthToIndex(y: number, m: number): number {
   return y * 12 + m;
 }
 
+/**
+ * Période d'une expérience en mois inclusifs. Début : date la plus ancienne de `startDate`, au mois
+ * près s'il est connu (sinon janvier). Fin : mois de référence si poste en cours, sinon date la plus
+ * récente de `endDate` au mois près (sinon décembre) ; sans `endDate`, décembre de l'année de début.
+ */
 function experienceToInclusiveMonthInterval(
   exp: ExperienceItem,
   referenceDate: Date,
 ): [number, number] | null {
-  const startYears = extractYearsFromDateString(exp.startDate);
-  if (startYears.length === 0) return null;
+  const starts = extractYearMonthsFromDateString(exp.startDate);
+  if (starts.length === 0) return null;
 
-  const startY = Math.min(...startYears);
-  const startIdx = yearMonthToIndex(startY, 0);
+  const startIdx = Math.min(...starts.map((d) => yearMonthToIndex(d.year, d.month ?? 0)));
 
-  let endY: number;
-  let endM: number;
+  let endIdx: number;
   if (exp.isCurrent) {
-    endY = referenceDate.getUTCFullYear();
-    endM = referenceDate.getUTCMonth();
+    endIdx = yearMonthToIndex(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth());
   } else {
-    const endYears = extractYearsFromDateString(exp.endDate ?? '');
-    if (endYears.length > 0) {
-      endY = Math.max(...endYears);
-      endM = 11;
-    } else {
-      const sy = Math.max(...startYears);
-      endY = sy;
-      endM = 11;
-    }
+    const ends = extractYearMonthsFromDateString(exp.endDate);
+    endIdx =
+      ends.length > 0
+        ? Math.max(...ends.map((d) => yearMonthToIndex(d.year, d.month ?? 11)))
+        : yearMonthToIndex(Math.max(...starts.map((d) => d.year)), 11);
   }
 
-  const endIdx = yearMonthToIndex(endY, endM);
   if (startIdx > endIdx) {
     return [endIdx, startIdx];
   }
@@ -101,8 +98,16 @@ function mergeInclusiveMonthIntervals(intervals: [number, number][]): [number, n
 }
 
 /**
- * Estime la durée totale d’expérience professionnelle (union des périodes, granularité mois/année).
- * Retourne undefined si aucune expérience n’a de date de début exploitable.
+ * Durée totale d’expérience professionnelle : union des périodes, au mois près quand le mois est
+ * connu (sinon début = janvier, fin = décembre), arrondie à l’année INFÉRIEURE (cohérent avec la
+ * formulation « plus de N ans »), minimum 1 an. Retourne undefined si aucune expérience n’a de date
+ * de début exploitable.
+ *
+ * Source de vérité unique des années d’expérience : cette valeur déterministe est écrite dans
+ * `personalInfo.yearsOfExperience` (extraction, prompts d’analyse et de génération, CV adapté
+ * persisté) et le prompt de génération impose au LLM de la reprendre telle quelle dans le résumé et
+ * les emails. Le texte du résumé n’est pas réécrit par regex (« 3 ans d’expérience en React » est
+ * légitime).
  */
 export function formatTotalExperienceYears(
   cv: ExtractedCV,
@@ -124,8 +129,8 @@ export function formatTotalExperienceYears(
   }
   if (totalMonths <= 0) return undefined;
 
-  const years = Math.max(1, Math.round(totalMonths / 12));
-  const unit = language === 'en' ? 'years' : 'ans';
+  const years = Math.max(1, Math.floor(totalMonths / 12));
+  const unit = language === 'en' ? (years === 1 ? 'year' : 'years') : years === 1 ? 'an' : 'ans';
   return `${years} ${unit}`;
 }
 
@@ -146,4 +151,17 @@ export function prepareCvForMatchingPrompt(cv: ExtractedCV, referenceDate: Date)
     };
   }
   return out;
+}
+
+/**
+ * Durée d’expérience calculée (voir `formatTotalExperienceYears`) pour le CV source, avec la même
+ * normalisation que `prepareCvForMatchingPrompt`. `undefined` si aucune date exploitable : on ne
+ * renvoie jamais la valeur écrite par le LLM.
+ */
+export function computeReferenceYearsOfExperience(
+  cv: ExtractedCV,
+  referenceDate: Date,
+): string | undefined {
+  const normalized = normalizeExtractedCvExperienceTime(sanitizeExtractedCv(cv), referenceDate);
+  return formatTotalExperienceYears(normalized, referenceDate, normalized.language ?? 'fr');
 }
