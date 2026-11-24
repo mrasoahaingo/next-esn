@@ -7,7 +7,6 @@ import { useOrgRole } from '@/lib/hooks/useOrgRole';
 import { useSuperAdmin } from '@/lib/hooks/useSuperAdmin';
 import { useOrgBranding } from '@/components/org-branding-provider';
 import { useOrgSettings } from '@/lib/queries';
-import { ProspectionSettingsCard } from '@/components/settings/prospection-settings-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -475,9 +474,6 @@ export default function OrganizationSettingsPage() {
             </Button>
           </form>
         )}
-
-        {/* Formulaire distinct : jamais imbriqué dans le <form onSubmit={handleSave}> ci-dessus. */}
-        {canManage ? <ProspectionSettingsCard /> : null}
       </div>
     </div>
   );

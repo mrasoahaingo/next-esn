@@ -54,18 +54,18 @@ describe('formatSupabaseWriteError', () => {
   it('remplace un supabaseError null/undefined par "unknown" sans lever', () => {
     expect(
       formatSupabaseWriteError({
-        table: 'radar_companies',
+        table: 'candidates',
         recordId: 'c1',
-        operation: 'radar.findOrCreateCompany.refreshName',
+        operation: 'candidates.extraction.refreshName',
         supabaseError: null,
       }).supabaseError,
     ).toBe('unknown');
 
     expect(
       formatSupabaseWriteError({
-        table: 'radar_companies',
+        table: 'candidates',
         recordId: 'c1',
-        operation: 'radar.findOrCreateCompany.refreshName',
+        operation: 'candidates.extraction.refreshName',
         supabaseError: undefined,
       }).supabaseError,
     ).toBe('unknown');
@@ -73,9 +73,9 @@ describe('formatSupabaseWriteError', () => {
 
   it('sérialise un supabaseError sans message sans jamais produire "[object Object]" ni lever', () => {
     const fromObject = formatSupabaseWriteError({
-      table: 'radar_actions',
+      table: 'positionings',
       recordId: 'a1',
-      operation: 'radar.brief.logAction',
+      operation: 'positioning.export.update',
       supabaseError: { status: 500, reason: 'gateway' },
     }).supabaseError;
     expect(fromObject).not.toContain('[object Object]');
@@ -83,9 +83,9 @@ describe('formatSupabaseWriteError', () => {
 
     expect(
       formatSupabaseWriteError({
-        table: 'radar_actions',
+        table: 'positionings',
         recordId: 'a1',
-        operation: 'radar.brief.logAction',
+        operation: 'positioning.export.update',
         supabaseError: 42,
       }).supabaseError,
     ).toBe('42');
@@ -95,9 +95,9 @@ describe('formatSupabaseWriteError', () => {
     circular.self = circular;
     expect(() =>
       formatSupabaseWriteError({
-        table: 'radar_actions',
+        table: 'positionings',
         recordId: 'a1',
-        operation: 'radar.brief.logAction',
+        operation: 'positioning.export.update',
         supabaseError: circular,
       }),
     ).not.toThrow();
