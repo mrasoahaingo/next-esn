@@ -1,13 +1,20 @@
 'use client';
 
-import { useState, useLayoutEffect, useRef, useCallback } from 'react';
+import { useState, useLayoutEffect, useEffect, useRef, useCallback } from 'react';
+import { followWorkflowRun, type FollowWorkflowRunOutcome } from '@/lib/workflow/follow-workflow-run';
+import { readNdjsonStream, type NdjsonChunk } from '@/lib/workflow/ndjson-stream';
 
 interface UseWorkflowStreamOptions {
   api: string;
   runId?: string | null;
   runStatus?: string | null;
   activeStatuses: string[];
-  onFinish?: () => void;
+  /**
+   * Appelé quand le run est terminé côté serveur (ou suivi abandonné), AVANT que `isLoading`
+   * repasse à false : s’il renvoie une promesse (relecture de l’état persisté), elle est attendue,
+   * pour que l’UI ne retombe jamais sur un cache périmé (« terminé » avec l’ancien contenu).
+   */
+  onFinish?: () => void | Promise<void>;
   /**
    * Après POST avec `submit({ startOnly: true })` : réponse JSON `{ runId }` sans NDJSON.
    * Rafraîchir le cache pour que la reconnexion GET soit le seul lecteur du flux.
@@ -38,91 +45,21 @@ interface UseWorkflowStreamReturn<T, M = unknown> {
   runTerminated: boolean;
 }
 
-async function consumeNdjsonStream<T, M>(
-  reader: ReadableStreamDefaultReader<Uint8Array>,
-  onChunk: (chunk: { data?: Partial<T>; meta?: M }) => void,
-  onError: (error: Error, stepKey?: string) => void,
-  chunkIndexRef: { current: number },
-  abortSignal: AbortSignal,
-) {
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  try {
-    while (!abortSignal.aborted) {
-      const { done, value } = await reader.read();
-      if (done) {
-        // Flush remaining buffer on stream close
-        if (buffer.trim()) {
-          try {
-            const chunk = JSON.parse(buffer.trim()) as {
-              index?: number;
-              data?: Partial<T>;
-              meta?: M;
-              error?: string;
-              stepKey?: string;
-            };
-            if (chunk.error) {
-              onError(new Error(chunk.error), chunk.stepKey);
-              return;
-            }
-            if (chunk.index !== undefined) {
-              chunkIndexRef.current = chunk.index;
-            }
-            onChunk({
-              ...(chunk.data !== undefined ? { data: chunk.data } : {}),
-              ...(chunk.meta !== undefined ? { meta: chunk.meta } : {}),
-            });
-          } catch {
-            // Skip malformed trailing data
-          }
-        }
-        break;
-      }
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const chunk = JSON.parse(trimmed) as {
-            index?: number;
-            data?: Partial<T>;
-            meta?: M;
-            error?: string;
-            stepKey?: string;
-          };
-          if (chunk.error) {
-            onError(new Error(chunk.error), chunk.stepKey);
-            return;
-          }
-          if (chunk.index !== undefined) {
-            chunkIndexRef.current = chunk.index;
-          }
-          onChunk({
-            ...(chunk.data !== undefined ? { data: chunk.data } : {}),
-            ...(chunk.meta !== undefined ? { meta: chunk.meta } : {}),
-          });
-        } catch {
-          // Skip malformed lines
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
+/**
+ * Délai laissé au flux pour livrer ses dernières lignes après que le statut persisté est devenu
+ * terminal, avant de régler l’UI sur l’état persisté.
+ */
+const PERSISTED_TERMINAL_GRACE_MS = 10_000;
 
 export function useWorkflowStream<T, M = unknown>(
   options: UseWorkflowStreamOptions,
 ): UseWorkflowStreamReturn<T, M> {
-  const { api, runId, runStatus, activeStatuses, onFinish } = options;
+  const { api, runId, runStatus, activeStatuses } = options;
 
   const onStartOnlyRef = useRef(options.onStartOnly);
   onStartOnlyRef.current = options.onStartOnly;
+  const onFinishRef = useRef(options.onFinish);
+  onFinishRef.current = options.onFinish;
 
   const [object, setObject] = useState<Partial<T> | null>(null);
   const [streamMeta, setStreamMeta] = useState<M | null>(null);
@@ -134,12 +71,15 @@ export function useWorkflowStream<T, M = unknown>(
   /** Run déjà terminé côté serveur au moment de la reconnexion */
   const [runTerminated, setRunTerminated] = useState(false);
 
-  const chunkIndexRef = useRef(0);
+  /** Suiveur propriétaire de l’état : un suiveur remplacé ou arrêté ne touche plus à rien. */
   const abortControllerRef = useRef<AbortController | null>(null);
-  const onFinishRef = useRef(onFinish);
-  onFinishRef.current = onFinish;
+  /** Run suivi par le suiveur courant (POST ou reconnexion). */
+  const followedRunIdRef = useRef<string | null>(null);
+  /** Interrompt la lecture courante pour revérifier l’état du run (voir effet « nudge »). */
+  const nudgeRef = useRef<(() => void) | null>(null);
+  /** Termine le suivi courant sur l’état persisté (run zombie : flux jamais terminal). */
+  const forceSettleRef = useRef<(() => void) | null>(null);
 
-  // Track whether we already attempted reconnection for this runId
   const reconnectedRunIdRef = useRef<string | null>(null);
   /** Incrémenté après POST { startOnly: true } pour relancer la reconnexion même si runId inchangé (reprise du même run). */
   const [reconnectNonce, setReconnectNonce] = useState(0);
@@ -147,38 +87,104 @@ export function useWorkflowStream<T, M = unknown>(
   /** En priorité le run issu du POST en cours : le cache React Query peut encore avoir un ancien `workflow_run_id`. */
   const activeRunId = pendingRunId ?? runId ?? null;
 
-  const startConsuming = useCallback(async (
-    response: Response,
-    signal: AbortSignal,
-  ) => {
-    const body = response.body;
-    if (!body) return;
+  const activeKey = activeStatuses.join('|');
 
-    const reader = body.getReader();
-    await consumeNdjsonStream<T, M>(
-      reader,
-      (chunk) => {
-        if (chunk.data !== undefined) {
-          setObject(chunk.data as Partial<T>);
-        }
-        if (chunk.meta !== undefined) {
-          setStreamMeta(chunk.meta);
-        }
-      },
-      (err, stepKey) => {
-        setError(err);
-        setErrorStepKey(stepKey ?? null);
-      },
-      chunkIndexRef,
-      signal,
-    );
-  }, []);
+  /**
+   * Suit un run jusqu’à son état terminal confirmé par le serveur (reprise automatique si le flux
+   * est coupé ou muet), puis relit l’état persisté (`onFinish`) avant de quitter le chargement.
+   */
+  const followAndSettle = useCallback(
+    async (params: {
+      controller: AbortController;
+      runId: string | null;
+      initialBody: ReadableStream<Uint8Array> | null;
+    }) => {
+      const { controller, initialBody } = params;
+      const isCurrent = () => abortControllerRef.current === controller;
+      /** Lecture interrompue par l’arrêt du suiveur OU par un règlement forcé. */
+      const reading = new AbortController();
+      const onControllerAbort = () => reading.abort();
+      controller.signal.addEventListener('abort', onControllerAbort, { once: true });
 
-  // Submit: start a new workflow
+      let settled = false;
+      const settle = async (outcome: FollowWorkflowRunOutcome | { kind: 'persisted-terminal' }) => {
+        if (settled || !isCurrent()) return;
+        settled = true;
+        if (forceSettleRef.current === forceSettle) forceSettleRef.current = null;
+
+        if (outcome.kind === 'failed') {
+          setError(new Error(outcome.message));
+          setErrorStepKey(outcome.stepKey ?? null);
+        } else if (outcome.kind === 'lost') {
+          // Pas un échec du run : le statut persisté (polling React Query) prend le relais.
+          console.warn('Suivi du flux workflow abandonné', {
+            runId: params.runId,
+            message: outcome.error.message,
+          });
+        } else if (outcome.kind === 'finished' && outcome.linesConsumed === 0 && !initialBody) {
+          setRunTerminated(true);
+        }
+
+        try {
+          await onFinishRef.current?.();
+        } catch (finishError) {
+          console.error('Workflow stream onFinish error:', finishError);
+        }
+
+        if (!isCurrent()) return;
+        followedRunIdRef.current = null;
+        setIsLoading(false);
+        setPendingRunId(null);
+      };
+      const forceSettle = () => {
+        reading.abort();
+        void settle({ kind: 'persisted-terminal' });
+      };
+      forceSettleRef.current = forceSettle;
+
+      const onChunk = (chunk: NdjsonChunk<T, M>) => {
+        if (!isCurrent() || reading.signal.aborted) return;
+        if (chunk.data !== undefined) setObject(chunk.data as Partial<T>);
+        if (chunk.meta !== undefined) setStreamMeta(chunk.meta);
+      };
+
+      followedRunIdRef.current = params.runId;
+      let outcome: FollowWorkflowRunOutcome;
+      if (params.runId) {
+        outcome = await followWorkflowRun<T, M>({
+          runId: params.runId,
+          initialBody,
+          signal: reading.signal,
+          onChunk,
+          nudge: nudgeRef,
+        });
+      } else if (initialBody) {
+        // Sans id de run (en-tête absent) : pas de reprise possible, lecture simple.
+        const { end, lines } = await readNdjsonStream<T, M>(initialBody, {
+          onChunk,
+          signal: reading.signal,
+        });
+        outcome =
+          end.kind === 'error-line'
+            ? { kind: 'failed', message: end.message, stepKey: end.stepKey, linesConsumed: lines }
+            : end.kind === 'aborted'
+              ? { kind: 'aborted', linesConsumed: lines }
+              : { kind: 'finished', linesConsumed: lines, confirmedByServer: true };
+      } else {
+        outcome = { kind: 'finished', linesConsumed: 0, confirmedByServer: true };
+      }
+      controller.signal.removeEventListener('abort', onControllerAbort);
+
+      // Arrêt (stop, démontage, nouveau suiveur) : rien à régler. Règlement forcé : déjà en cours.
+      if (outcome.kind === 'aborted') return;
+      await settle(outcome);
+    },
+    [],
+  );
+
   const submit = useCallback(async (payload: Record<string, unknown>) => {
     const startOnly = payload.startOnly === true;
 
-    // Abort any previous stream
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -189,9 +195,6 @@ export function useWorkflowStream<T, M = unknown>(
     setObject(null);
     setStreamMeta(null);
     setRunTerminated(false);
-    chunkIndexRef.current = 0;
-
-    let delegatedToReconnect = false;
 
     try {
       const response = await fetch(api, {
@@ -210,39 +213,40 @@ export function useWorkflowStream<T, M = unknown>(
       if (startOnly && contentType.includes('application/json')) {
         reconnectedRunIdRef.current = null;
         await onStartOnlyRef.current?.();
-        // Ne pas forcer une reconnexion si l'effet s'est déjà reconnecté au même run pendant le refetch
         if (reconnectedRunIdRef.current !== runId) {
           setReconnectNonce((n) => n + 1);
         }
-        delegatedToReconnect = true;
+        // La reconnexion (effet ci-dessous) devient le seul lecteur et gère la fin du chargement.
         return;
       }
 
-      const headerRunId = response.headers.get('x-workflow-run-id')?.trim();
+      const headerRunId = response.headers.get('x-workflow-run-id')?.trim() || null;
       if (headerRunId) {
         setPendingRunId(headerRunId);
+        // Ce run est déjà suivi ici : l’effet de reconnexion ne doit pas ouvrir un second lecteur.
+        reconnectedRunIdRef.current = headerRunId;
       }
 
-      await startConsuming(response, controller.signal);
+      await followAndSettle({ controller, runId: headerRunId, initialBody: response.body });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
+      if (abortControllerRef.current !== controller || controller.signal.aborted) return;
       setError(err instanceof Error ? err : new Error(String(err)));
       setErrorStepKey(null);
-    } finally {
-      if (delegatedToReconnect) {
-        return;
+      try {
+        await onFinishRef.current?.();
+      } catch (finishError) {
+        console.error('Workflow stream onFinish error:', finishError);
       }
+      if (abortControllerRef.current !== controller) return;
       setIsLoading(false);
       setPendingRunId(null);
-      if (!controller.signal.aborted) {
-        onFinishRef.current?.();
-      }
     }
-  }, [api, startConsuming, runId]);
+  }, [api, followAndSettle, runId]);
 
-  // Reconnect to an existing workflow run on mount (ex. rechargement de page).
-  // Ne pas ouvrir un second flux si submit() consomme déjà le POST pour le même runId :
-  // deux lecteurs entrelacent les setObject (UI qui saute, clés / textes dupliqués).
+  // Reconnexion à un run actif (rechargement de page, démarrage côté serveur, startOnly).
+  // Pas de cleanup qui abandonne le suivi sur un changement de statut : la fin est décidée par le
+  // serveur (réponse terminale), le changement de statut ne fait que « pousser » une revérification.
   useLayoutEffect(() => {
     if (!runId) {
       reconnectedRunIdRef.current = null;
@@ -257,6 +261,7 @@ export function useWorkflowStream<T, M = unknown>(
 
     reconnectedRunIdRef.current = runId;
 
+    abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -266,57 +271,47 @@ export function useWorkflowStream<T, M = unknown>(
     setStreamMeta(null);
     setRunTerminated(false);
 
-    (async () => {
-      try {
-        const response = await fetch(
-          `/api/workflow/${runId}/stream?startIndex=0`,
-          { signal: controller.signal },
-        );
+    void followAndSettle({ controller, runId, initialBody: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- activeStatuses suivi via activeKey
+  }, [runId, runStatus, pendingRunId, reconnectNonce, activeKey, followAndSettle]);
 
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          // Workflow already finished
-          if (data.status === 'completed' || data.status === 'failed') {
-            return;
-          }
-          throw new Error(data.error ?? `HTTP ${response.status}`);
-        }
+  // « Nudge » : le statut persisté (polling) vient de passer d’actif à terminal pour le run suivi.
+  // Si le flux est muet ou mort sans fermeture, on revérifie tout de suite au lieu d’attendre
+  // le délai d’inactivité.
+  // Si le serveur continue malgré tout d’annoncer le run « en cours » (run zombie réglé en `error`
+  // par la réconciliation), on règle sur l’état persisté après un délai de grâce.
+  const prevRunStateRef = useRef<{ runId: string | null; active: boolean } | null>(null);
+  useEffect(() => {
+    const active = !!runStatus && activeKey.split('|').includes(runStatus);
+    const prev = prevRunStateRef.current;
+    prevRunStateRef.current = { runId: runId ?? null, active };
+    if (!prev || !prev.active || active) return;
+    const followed = followedRunIdRef.current;
+    if (!followed || prev.runId !== followed) return;
+    nudgeRef.current?.();
+    const forceSettle = forceSettleRef.current;
+    const timer = setTimeout(() => {
+      if (forceSettleRef.current === forceSettle) forceSettle?.();
+    }, PERSISTED_TERMINAL_GRACE_MS);
+    return () => clearTimeout(timer);
+  }, [runId, runStatus, activeKey]);
 
-        // Check if it's a JSON status response (workflow finished)
-        const contentType = response.headers.get('Content-Type') ?? '';
-        if (contentType.includes('application/json')) {
-          return;
-        }
-
-        await startConsuming(response, controller.signal);
-      } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setErrorStepKey(null);
-      } finally {
-        setIsLoading(false);
-        if (!controller.signal.aborted) {
-          onFinishRef.current?.();
-        }
-      }
-    })();
-
-    return () => controller.abort();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId, runStatus, pendingRunId, reconnectNonce]);
-
-  // Stop: abort the client-side stream (used before calling cancel API)
   const stop = useCallback(() => {
     abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    followedRunIdRef.current = null;
+    forceSettleRef.current = null;
     setIsLoading(false);
     setPendingRunId(null);
     setErrorStepKey(null);
   }, []);
 
-  // Cleanup on unmount
   useLayoutEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
+      // StrictMode (dev) rejoue montage → démontage → montage : sans ceci, la reconnexion
+      // considérerait le run déjà suivi alors que son suiveur vient d’être interrompu.
+      reconnectedRunIdRef.current = null;
     };
   }, []);
 
