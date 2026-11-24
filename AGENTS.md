@@ -22,13 +22,13 @@ pnpm lint           # ESLint
 Required in `.env`:
 - `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
-- `AI_GATEWAY_API_KEY` (Vercel AI Gateway key — uses `google/gemini-2.5-flash` for OCR + structured extraction)
+- `AI_GATEWAY_API_KEY` (Vercel AI Gateway key — uses `openai/gpt-6-luna` for OCR + structured extraction ; ZDR et inférence UE imposés par lib/ai.ts)
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 
 ## Architecture
 
-**Stack**: Next.js 16 App Router, TypeScript, Tailwind CSS, Supabase (DB + Storage), Vercel AI SDK + AI Gateway (Gemini 2.5 Flash), @json-render/react-pdf for PDF generation, Zustand for state.
+**Stack**: Next.js 16 App Router, TypeScript, Tailwind CSS, Supabase (DB + Storage), Vercel AI SDK + AI Gateway (`openai/gpt-6-luna`, ZDR et inférence UE imposés par lib/ai.ts), @json-render/react-pdf for PDF generation, Zustand for state.
 
 ### Flow
 
@@ -40,7 +40,7 @@ Required in `.env`:
 
 ### Key Design Decisions
 
-- **AI model config** is centralized in `lib/ai.ts` — uses Vercel AI Gateway (`createGateway` from `ai`) with `AI_GATEWAY_API_KEY`. Single place to change the model provider/name
+- **AI model config** is centralized in `lib/ai.ts` — uses Vercel AI Gateway (`createGateway` from `ai`) with `AI_GATEWAY_API_KEY`. Single place to change the model provider/name. Every LLM call must go through `createGatewayLanguageModel`, whose innermost middleware forces `zeroDataRetention: true` and `inferenceRegion: { scope: 'zone', geoRegion: 'eu' }` (not overridable, no fallback: the call fails if the Gateway cannot honor them). ESLint (`no-restricted-imports`) and `lib/ai-guard.test.ts` block any other Gateway instantiation (`createGateway` / `gateway` / `@ai-sdk/*` outside `lib/ai.ts`)
 - **CV schema** (`lib/schema.ts`) is a single Zod schema (`extractionSchema`) shared across AI extraction, streaming validation, form editing, and PDF generation
 - **Streaming extraction** uses the workflow in `workflows/extract-cv.ts` (`streamText` + `Output.object` on the server, NDJSON stream to the client) so partial structured data updates the review UI as branches complete
 - **Démarrage des workflows LLM longs (extraction CV, analyse de positionnement)** : **toujours côté API** au moment de la création de l’entité (upload candidat, création de positionnement mission, upload CV sur mission, etc.), **pas** dans un `useEffect` / `useLayoutEffect` au montage d’une page. Côté client : **reconnexion** au flux existant (`useWorkflowStream` avec `runId` + statut actif) et **relance uniquement** sur action utilisateur (bouton « Regénérer » / « Relancer l’analyse » → `submit` / `submitAnalysis` ou équivalent). **Interdit** : appeler `submit(…)` ou `submitAnalysis(…)` depuis un effet du type « si pas encore fait ».

@@ -30,7 +30,8 @@ import '@/app/landing.css';
  *   app/api/upload/route.ts:37 (dossier = organisation), 20260401100900_enable_rls.sql:180 (lecture par l'organisation) ;
  * - requêtes filtrées par organisation : app/api/candidates/[id]/route.ts:74-101 ;
  * - rôles : lib/utils/auth.ts:4, membres et réglages réservés aux administrateurs (app/api/members/[id]/route.ts:12,41 ; app/api/org/settings/route.ts:50) ;
- * - IA : workflows/extract-cv.ts:74-129, lib/ai.ts:3 (passerelle de Vercel), lib/llm/constants.ts:2 (Gemini 2.5 Flash) ;
+ * - IA : workflows/extract-cv.ts:74-129, lib/ai.ts (passerelle de Vercel, garde-fou ZDR + inférence UE sur chaque appel),
+ *   lib/llm/constants.ts:2 (GPT-6 Luna) ;
  * - suppression : app/api/candidates/[id]/route.ts (positionnements, fiche et PDF d'origine — correctif du PDF
  *   apporté en parallèle par l'orchestrateur). */
 const FACTS: ReadonlyArray<{ lead: string; body: string }> = [
@@ -44,7 +45,7 @@ const FACTS: ReadonlyArray<{ lead: string; body: string }> = [
   },
   {
     lead: 'Le chemin vers l’IA.',
-    body: 'Pour l’extraction, l’analyse et la rédaction, le CV est envoyé à Gemini 2.5 Flash (Google), via la passerelle de Vercel. C’est le modèle par défaut ; Esneo le règle tâche par tâche.',
+    body: 'Pour l’extraction, l’analyse et la rédaction, le CV est envoyé à GPT-6 Luna (OpenAI), via la passerelle de Vercel, avec inférence en Europe et sans conservation des données par le fournisseur. C’est le modèle par défaut ; Esneo le règle tâche par tâche.',
   },
   {
     lead: 'Supprimer, vraiment.',

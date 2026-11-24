@@ -27,6 +27,30 @@ const supabaseWriteResultRule = {
   },
 };
 
+/**
+ * Tout appel LLM passe par `createGatewayLanguageModel` de `lib/ai.ts`, seul chemin qui impose
+ * ZDR (zero data retention) + inférence UE (quick 261124-mk0). On interdit donc d'instancier le
+ * Gateway ailleurs. Doublé par `lib/ai-guard.test.ts` (scan statique exécuté par vitest).
+ * Objet de config distinct : réutiliser `no-restricted-syntax` écraserait supabaseWriteResultRule.
+ */
+const gatewayGuardMessage =
+  "Passer par createGatewayLanguageModel de @/lib/ai : seul chemin qui impose ZDR + inférence UE";
+const gatewayGuardRule = {
+  files: ["**/*.{ts,tsx,mts,cts,js,mjs}"],
+  ignores: ["lib/ai.ts", "docs/**", ".claude/**", ".cursor/**", ".agents/**"],
+  rules: {
+    "no-restricted-imports": [
+      "error",
+      {
+        paths: [
+          { name: "ai", importNames: ["createGateway", "gateway"], message: gatewayGuardMessage },
+        ],
+        patterns: [{ group: ["@ai-sdk/*", "!@ai-sdk/react"], message: gatewayGuardMessage }],
+      },
+    ],
+  },
+};
+
 const eslintConfig = [
   // Kit stageshow copié tel quel (scènes animées de la landing, voir
   // components/landing/stage/REHEARSAL.md) : code tiers, hors des règles du projet.
@@ -34,6 +58,7 @@ const eslintConfig = [
   ...nextConfig,
   ...nextTypescript,
   supabaseWriteResultRule,
+  gatewayGuardRule,
 ];
 
 export default eslintConfig;

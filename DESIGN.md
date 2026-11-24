@@ -247,8 +247,8 @@ Le verre a été demandé par l'utilisateur (dérogation explicite à l'interdit
 - Les photos sont générées par IA ; chacune porte sa légende (« Photographie générée par IA, personne(s)
   fictive(s) »).
 - « Vos données » ne dit que ce que le code fait. Chaque fait est référencé en commentaire dans
-  `components/landing/landing.tsx` : stockage privé, filtrage par organisation, rôles, Gemini 2.5 Flash via la
-  passerelle de Vercel, suppression de la fiche avec son PDF d'origine.
+  `components/landing/landing.tsx` : stockage privé, filtrage par organisation, rôles, GPT-6 Luna via la
+  passerelle de Vercel (inférence UE, sans conservation), suppression de la fiche avec son PDF d'origine.
 - Les fonctions à venir sont marquées « Bientôt », sous un givre, sans bouton. « Claude » est écrit en texte, sans
   logo.
 - Une seule phrase sur les données, partout où l'on s'inscrit (sous le formulaire de connexion et d'inscription,

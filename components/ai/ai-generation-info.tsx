@@ -66,7 +66,7 @@ const TASK_LABELS: Record<string, string> = {
 
 export interface AiGenerationInfoIconProps {
   variant: AiGenerationVariant;
-  /** Identifiants gateway (ex. google/gemini-2.5-flash), séparés par des virgules si plusieurs. */
+  /** Identifiants gateway (ex. openai/gpt-6-luna), séparés par des virgules si plusieurs. */
   modelsLabel?: string | null;
   /** Détail par tâche LLM : clé de tâche → identifiant gateway. Prioritaire sur modelsLabel pour l’affichage. */
   modelsByTask?: Record<string, string> | null;
