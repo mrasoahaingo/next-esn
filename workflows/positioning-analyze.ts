@@ -1,4 +1,5 @@
 import { getWritable } from 'workflow';
+import { createCoalescingEmitter } from '@/lib/workflow/throttled-emitter';
 import { streamText, Output, type FlexibleSchema, type LanguageModel } from 'ai';
 import { getSupabase } from '@/lib/utils/supabase';
 import { createGatewayLanguageModel, llmFactualGenerationSettings } from '@/lib/ai';
@@ -122,6 +123,10 @@ async function fetchAndAnalyze(positioningId: string) {
     );
   };
 
+  // Une écriture par partiel saturerait le flux persistant (certains modèles livrent des
+  // centaines de partiels) : écritures espacées, état complet garanti par flush().
+  const emitter = createCoalescingEmitter({ emit });
+
   async function consumeBranch<T>(
     languageModel: LanguageModel,
     system: string,
@@ -150,13 +155,13 @@ async function fetchAndAnalyze(positioningId: string) {
             activeBranches.add(branch);
           }
           mergePositioningPartial(acc, partial as Partial<PositioningAnalysis>);
-          await emit();
+          await emitter.request();
         });
       }
 
       await runLocked(async () => {
         activeBranches.delete(branch);
-        await emit();
+        await emitter.flush();
       });
 
       const usage = await result.usage;
@@ -281,13 +286,13 @@ async function fetchAndAnalyze(positioningId: string) {
             activeBranches.add('synthesis');
           }
           mergePositioningPartial(acc, partial as Partial<PositioningAnalysis>);
-          await emit();
+          await emitter.request();
         });
       }
 
       await runLocked(async () => {
         activeBranches.delete('synthesis');
-        await emit();
+        await emitter.flush();
       });
 
       const synUsage = await synthesisResult.usage;
@@ -404,6 +409,7 @@ async function fetchAndAnalyze(positioningId: string) {
 
     return { positioningId, durationMs, persisted };
   } finally {
+    emitter.close();
     writer.releaseLock();
   }
 }

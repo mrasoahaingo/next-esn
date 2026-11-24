@@ -69,6 +69,7 @@ _To be updated after first plans complete._
 | 261124-lfg | Retrait prospection/radar (code phase 9 + migration drop_radar non appliquée), v1.3 parké | 2026-11-24 | c50f2bd | [261124-lfg-retrait-prospection-radar](./quick/261124-lfg-retrait-prospection-radar/) |
 | 261124-mk0 | ZDR + inférence UE forcés sur tous les appels LLM (garde-fou lib/ai.ts + ESLint), passage à openai/gpt-6-luna (code, tarifs, migration llm) | 2026-11-24 | 68a65a9 | [261124-mk0-zdr-ue-luna](./quick/261124-mk0-zdr-ue-luna/) |
 | 261124-nhq | Raisonnement low par défaut sur gpt-6-luna, CV adapté sans « null » ni markdown dans les compétences, années d’expérience au mois près (source unique), logo PDF rastérisé ; + débogage du flux d’analyse figé et des échecs silencieux (.planning/debug/flux-analyse-fige.md) | 2026-11-24 | e1abc6c | [261124-nhq-luna-low-et-defauts-cv-adapte](./quick/261124-nhq-luna-low-et-defauts-cv-adapte/) |
+| 261124-oc9 | Écritures de flux espacées (≤ 1 / 300 ms + flush final) dans les 4 workflows de streaming : gpt-6-luna livre ~1 partiel par token, chaque partiel réécrivait tout l’état dans le flux persistant | 2026-11-24 | 5e137ca | [261124-oc9-flux-ecritures-espacees](./quick/261124-oc9-flux-ecritures-espacees/) |
 
 ## Session continuity
 
