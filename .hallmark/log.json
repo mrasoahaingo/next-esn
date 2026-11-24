@@ -1,5 +1,17 @@
 [
   {
+    "date": "2026-11-24",
+    "scope": "app",
+    "genre": "modern-minimal",
+    "macrostructure": "Workbench",
+    "theme": "Graphite Pro (jetons shadcn, clair + sombre · azur unique · success/warning)",
+    "theme_axes": "light+dark / grotesk-sans (Geist) / cool (azur)",
+    "enrichment": "none",
+    "nav": "N3 side-rail (coque existante, inchangée)",
+    "footer": "none (app)",
+    "brief": "Esneo · refonte UI produit : tableau de bord, édition CV, positionnement — design-system DESIGN.md § L’établi"
+  },
+  {
     "date": "2026-06-30",
     "macrostructure": "Marquee Hero",
     "theme": "Graphite Pro (graphite dark · single azur accent)",

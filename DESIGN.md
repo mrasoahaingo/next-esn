@@ -48,8 +48,9 @@ rounded:
 
 # Design System: Esneo — pages publiques
 
-Deux systèmes coexistent et restent séparés. **L'UI produit** (tout ce qui est derrière la connexion) garde
-« Graphite Pro » (`app/globals.css`, jetons shadcn) : elle ne change pas. **Les pages publiques** (landing `/`,
+Deux systèmes coexistent et restent séparés. **L’UI produit** (tout ce qui est derrière la connexion) a son
+propre système, « L’établi », décrit en seconde partie de ce document : jetons shadcn « Graphite Pro » de
+`app/globals.css`, sans verre ni halo. **Les pages publiques** (landing `/`,
 `/sign-in`, `/sign-up`, 404) suivent la direction ci-dessous, entièrement sous la classe `.eg`
 (`app/landing.css`). Rien n'en sort, sauf deux règles conditionnées par `:has(.eg)` (débordement horizontal coupé,
 défilement doux sur la landing). Seul **le logo** est commun aux deux mondes (voir « Logo »).
@@ -301,3 +302,146 @@ L'ancien système des pages publiques (4ᵉ direction) a été supprimé : `comp
 composants de `components/site/` sauf `images.ts` et `fr.ts`, `app/esneo-site.css`, la police Hanken Grotesk et les
 photos qui ne servaient plus (`bureau-hd`, `esplanade-hd`, `consultant-hd`, `dossier-anonyme`, `fin-ecran`,
 `hero.webp`).
+
+
+---
+
+# Design System: Esneo — UI produit (« L'établi »)
+
+Tout ce qui est derrière la connexion : tableau de bord, édition du CV, positionnement, puis, à leur tour, les
+réglages, les modèles et l'administration. Ce système est **distinct** de « Verre de nuit » (pages publiques,
+ci-dessus) : même logo, même azur d'action, mais ni verre, ni halo, ni photo. Il s'appuie sur les jetons shadcn de
+`app/globals.css` (« Graphite Pro », thème clair et thème sombre, tous deux de premier rang).
+
+Construit avec Hallmark, verbe `redesign`, flux multi-pages (2026-11-24) : **genre modern-minimal**, famille de
+macrostructure **Workbench** pour les pages de l'app. Les trois premiers écrans refaits : `/dashboard`,
+`/review/[id]`, `/review/[id]/positioning` et `/review/[id]/positioning/[positioningId]`. La règle de diversification
+de Hallmark est **inversée** ici : les pages d'une même app partagent tout (thème, type, voix des boutons) et ne
+varient que par la composition de leur établi.
+
+## Thèse
+
+**L'écran est un établi.** Le document au centre (le CV, la fiche de mission, le positionnement), les outils autour,
+et l'état du travail de l'IA toujours au même endroit : sous le titre. Une seule action principale par écran.
+Rien ne brille, rien ne flotte : l'interface se tait pour que le dossier parle.
+
+La valeur du produit (« l'utilisateur a toujours un feedback clair et fiable quand l'IA travaille ») se lit dans la
+forme : la zone d'état est fixe, les étapes sont nommées, les doublons sont impossibles (bouton `disabled` avec
+l'explication en info-bulle), l'erreur est un bandeau avec « Réessayer », jamais un spinner muet.
+
+## Ce qui disparaît (la 3ᵉ direction des pages de l'app : « SaaS IA sombre »)
+
+L'UI produit portait les tics du genre que la landing a déjà quittés. Dans les pages refaites, **interdits** :
+
+- `title-gradient` (texte en dégradé), `glass-panel` (verre sur fond uni), `neon-ring` / `violet-ring` (halos),
+  `grid-noise` (fond quadrillé des états vides), `animate-shimmer` (balayage), `animate-ping` (point qui pulse),
+  `app-surface` (taches radiales du fond). Les utilitaires seront retirés de `globals.css` quand plus aucune page ne
+  les importe.
+- La pastille-surtitre (« CV Builder », « Positionnement ») au-dessus d'un titre qui répète le fil d'Ariane ;
+  l'icône carrée lumineuse à gauche du titre ; le double titre (coque + page) : le fil d'Ariane de la coque dit où
+  l'on est, le `h1` de la page dit quoi.
+- Les rangées de tuiles identiques « icône colorée + libellé + chiffre » ; les cartes toutes pareilles empilées sur
+  trois colonnes ; le pied de carte explicatif en 10 px ; les textes de 8 à 11 px.
+- Les onglets segmentés imbriqués ; le « ! » comme icône de lacune ; la phrase d'aide centrée en bas de page ;
+  l'anglais dans les titres de sections (« Personal Info », « Experiences ») ; le tutoiement.
+- Les palettes à huit couleurs dans les graphiques ; les radars en grille ; les cartes candidat / mission teintées
+  « neon » et « violet » reliées par une icône ronde.
+
+## Couleurs
+
+Les jetons shadcn de `app/globals.css`, et rien d'autre : `background`, `card`, `panel-soft`, `border`,
+`foreground`, `muted-foreground`, `primary` (azur), `ring`, `destructive`, et les deux nouveaux `success` et
+`warning` (clair et sombre). Jamais une couleur Tailwind nommée (`amber-400`, `emerald-500`) dans une page.
+
+| Rôle | Jeton | Règle |
+|---|---|---|
+| Papier, panneau, surface relevée | `bg-background`, `bg-card`, `bg-panel-soft` | l'élévation se dit par la clarté et un filet 1 px `border-border`, jamais par une ombre au repos (les `Dialog`, `Popover`, `Sheet` gardent l'ombre shadcn) |
+| Action, sélection, focus, lien | `primary`, `ring` | l'azur est la seule couleur chromatique décorative ; ≤ 5 % de l'écran |
+| Statut | `success` / `warning` / `destructive` / `muted-foreground` | Validé, À relire ou partiel, Échec, neutre ; un score passe par `scoreTone()` (`lib/utils/score-tone.ts`) : ≥ 70 solide, ≥ 40 partiel, sinon faible, mêmes seuils partout |
+| Graphiques | `primary` + gris, et les trois statuts quand ils signifient quelque chose | une teinte par graphique ; les séries d'un même graphique se distinguent par la clarté (`primary`, `primary/60`, `primary/30`) |
+
+`--neon` et `--violet` restent pour la coque (barre latérale, en-tête) jusqu'à leur propre refonte ; **aucune page
+refaite ne les utilise**.
+
+## Typographie
+
+- **Geist** partout dans l'app (`font-sans`), une seule famille. Albert Sans reste à la landing.
+- **Geist Mono** (`font-mono`, `tabular-nums`) pour les données seulement : scores, pourcentages, durées,
+  compteurs d'étapes, dates courtes, noms de fichiers.
+- Échelle : `h1` de page 1.25 rem / 600 / `tracking-[-0.01em]` (`PageHeader`) ; `h2` de section 0.9375 rem / 600 ;
+  corps 0.875 rem / 400 / interligne 1.5 ; mentions et méta 0.75 rem. **Rien sous 0.75 rem.** Un chiffre mis en
+  avant (score en tête de positionnement) : 1.75 rem / 600 en mono.
+- Casse de phrase partout. Pas d'italique, pas de capitales espacées, pas de dégradé.
+- Un seul `h1` par page, rendu par `components/app/page-header.tsx`.
+
+## Composition
+
+- **En-tête de page** (`PageHeader`) : titre = le nom de l'objet quand il existe (« Camille Durand »,
+  « Camille Durand × Tech lead Java, Acme ») ; une phrase de description ; une ligne de faits en mono ; les actions
+  à droite (une seule `Button` `default`, les autres `outline` ou `ghost`, le destructif en `ghost` derrière un
+  `AlertDialog`) ; la zone `status` dessous, pleine largeur, où vit l'état de l'IA.
+- **Grille** : 4 pt via Tailwind. Tableau de bord dans `max-w-6xl` ; écrans de travail pleine largeur,
+  `px-4 md:px-6`, `py-5`. Entre panneaux `gap-6`, dans un panneau `gap-3` ; entre sections d'une colonne
+  `space-y-8`. Les écrans de travail sont des **diptyques asymétriques** à partir de `lg` (document 7/12 ou 8/12,
+  aperçu 5/12 ou 4/12), une colonne en dessous ; l'aperçu PDF est `lg:sticky lg:top-16`.
+- **Un seul niveau de carte.** Une liste vit sur le papier avec des filets (`divide-y divide-border`), pas en
+  cartes empilées ; une section de formulaire est un `h2` sur un filet, pas une carte. La carte (`bg-card border
+  rounded-xl`) est réservée à ce qui est vraiment un objet à part : l'aperçu PDF, un graphique, un panneau latéral.
+- **Rayons** : `rounded-xl` pour les panneaux (`--radius` 0.625 rem), `rounded-md` pour les contrôles, `rounded-full`
+  pour les pastilles de statut.
+- **Asymétrie voulue** : les colonnes ne sont jamais égales, les rangées de chiffres ne sont jamais des tuiles ;
+  une ligne de faits (`dl` horizontale, séparée par des filets verticaux) remplace la rangée de cinq tuiles.
+- **États vides** : `components/ui/empty.tsx` (titre, une phrase, l'action), sur le papier, sans icône décorative
+  ni fond quadrillé. Un tableau de bord sans donnée est **un seul** panneau d'invitation, pas six cartes vides.
+- **Mobile** : 320 → 1440 px sans débordement horizontal ; les actions de l'en-tête passent à la ligne ;
+  cibles ≥ 36 px (44 px pour les actions principales sur téléphone).
+
+## L'état de l'IA (le cœur)
+
+- Un workflow = **un** `WorkflowStepList` (`components/workflow/`, inchangé ce tour), placé dans la zone `status`
+  de l'en-tête de page, ou en tête du panneau qu'il remplit. Jamais deux indicateurs pour le même travail.
+- Pendant le travail, ce qui attend est un **squelette calme** (`Skeleton`, sans balayage) ; la section en cours
+  porte un filet gauche `border-l-2 border-primary` et le mot « En cours » ; la section finie ne porte rien de
+  plus (le contenu est là, c'est la preuve). Une seule région `aria-live="polite"` par workflow.
+- Terminé : la zone d'état se replie en une ligne mono (« Extraction terminée en 42 s · 5 étapes ») avec le détail
+  dans un `<details>`.
+- Échec : `Alert` `destructive` avec le message d'étape et « Réessayer » ; l'action qui relancerait un doublon est
+  `disabled` avec `Tooltip` (« Une analyse est déjà en cours »).
+- Le spinner centré plein écran n'existe qu'au chargement initial d'une route (`components/route-loading.tsx`).
+- Pas de confirmation pour ce qui est réversible ; `AlertDialog` seulement pour supprimer.
+
+## Mouvement
+
+- Durées 120 / 220 ms, courbe `--ease-out` (`cubic-bezier(0.16, 1, 0.3, 1)`) ; `transform` et `opacity`
+  seulement. Pas de balayage, pas de pulsation, pas de fond animé, pas d'animation de largeur de barre au-delà de
+  220 ms.
+- `motion-reduce:` sur toute transition : fondu ≤ 150 ms, rien ne bouge.
+- Succès silencieux (le contenu change, un `Badge` passe à « Validé ») ; un toast (`sonner`) seulement pour ce qui
+  s'est passé hors de l'écran (export prêt, suppression).
+
+## Composants partagés de l'UI produit
+
+| Rôle | Fichier | Qui peut le modifier |
+|---|---|---|
+| En-tête de page | `components/app/page-header.tsx` | le tronc (`refonte-app-ui`) ; les écrans le consomment |
+| Ton d'un score | `lib/utils/score-tone.ts` | le tronc |
+| Étapes d'un workflow | `components/workflow/WorkflowStepList.tsx` | gelé ce tour ; propositions par message |
+| Mention IA | `components/ai/ai-generation-info.tsx` | gelé ce tour |
+| Coque | `components/unified-sidebar.tsx`, `components/app-header.tsx`, `components/authenticated-shell.tsx` | gelés ce tour (prochaine étape : retirer `app-surface` et les teintes neon/violet de la coque) |
+| Enveloppe de section (attente / en cours / fini) | `app/review/components/SectionShell.tsx` | l'écran CV ; le positionnement la consomme sans changer son API |
+| Aperçu PDF | `app/review/components/PdfPreview.tsx` | l'écran CV ; le positionnement **réutilise** ce composant au lieu de sa copie locale |
+| Primitives shadcn | `components/ui/*` | personne pendant la refonte |
+
+## Honnêteté et copie
+
+- Français partout, vouvoiement, phrases courtes, verbes d'action sur les boutons (« Valider le CV »,
+  « Analyser le matching », « Exporter le PDF »).
+- Aucun chiffre inventé : un indicateur sans donnée affiche « — » et sa raison, pas un zéro ni un exemple.
+- Les durées estimées (« temps gagné ») gardent leur formule visible dans l'info-bulle.
+
+## Journal
+
+- `.hallmark/log.json` : une entrée `scope: "app"` pour cette refonte.
+- Tampon en tête de chaque page refaite (commentaire TSX, première ligne non vide) :
+  `/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app */`
+- Briefs d'exécution par écran : `docs/refonte-app/`.
