@@ -12,11 +12,38 @@ import {
 import { Download, Loader2, FileText, Maximize2 } from 'lucide-react';
 import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
 
-export function PdfPreview() {
-  const pdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
-  const isPdfLoading = useCvBuilderStore((s) => s.isPdfLoading);
-  const pdfPageCount = useCvBuilderStore((s) => s.pdfPageCount);
+export type PdfPreviewProps = {
+  /** `undefined` = lecture dans le store ; `null` = aucun PDF, volontairement. */
+  pdfBlobUrl?: string | null;
+  isPdfLoading?: boolean;
+  pdfPageCount?: number;
+  /** Nom du fichier téléchargé (sinon construit depuis `cvData` du store). */
+  downloadFilename?: string;
+  /** Titre du panneau (défaut « Aperçu PDF »). */
+  title?: string;
+  /** Texte de l'état vide (défaut « Le PDF apparaîtra ici »). */
+  emptyLabel?: string;
+};
+
+/**
+ * Aperçu PDF de l'établi. Sans props, lit tout dans `useCvBuilderStore` (écran CV) ;
+ * le positionnement passe ses propres valeurs, chaque prop absente retombe sur le store.
+ */
+export function PdfPreview({
+  pdfBlobUrl: pdfBlobUrlProp,
+  isPdfLoading: isPdfLoadingProp,
+  pdfPageCount: pdfPageCountProp,
+  downloadFilename,
+  title = 'Aperçu PDF',
+  emptyLabel = 'Le PDF apparaîtra ici',
+}: PdfPreviewProps = {}) {
+  const storePdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
+  const storeIsPdfLoading = useCvBuilderStore((s) => s.isPdfLoading);
+  const storePdfPageCount = useCvBuilderStore((s) => s.pdfPageCount);
   const cvData = useCvBuilderStore((s) => s.cvData);
+  const pdfBlobUrl = pdfBlobUrlProp === undefined ? storePdfBlobUrl : pdfBlobUrlProp;
+  const isPdfLoading = isPdfLoadingProp ?? storeIsPdfLoading;
+  const pdfPageCount = pdfPageCountProp ?? storePdfPageCount;
   const [fullscreen, setFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [iframeHeight, setIframeHeight] = useState(0);
@@ -38,7 +65,7 @@ export function PdfPreview() {
       .join(' ');
     const a = document.createElement('a');
     a.href = pdfBlobUrl;
-    a.download = buildCvPdfFilename(name);
+    a.download = downloadFilename ?? buildCvPdfFilename(name);
     a.click();
   };
 
@@ -48,7 +75,7 @@ export function PdfPreview() {
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="flex items-center text-sm font-semibold text-foreground">
             <FileText className="mr-2 h-4 w-4 text-accent" />
-            Aperçu PDF
+            {title}
           </h2>
           <div className="flex items-center gap-1.5">
             <Button
@@ -90,7 +117,7 @@ export function PdfPreview() {
           ) : (
             <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
               <FileText className="mb-2 h-10 w-10" />
-              <p className="text-sm">Le PDF apparaîtra ici</p>
+              <p className="text-sm">{emptyLabel}</p>
             </div>
           )}
         </div>
@@ -104,7 +131,7 @@ export function PdfPreview() {
           <div className="flex items-center justify-between border-b border-border px-5 py-3">
             <DialogTitle className="flex items-center text-sm font-semibold text-foreground">
               <FileText className="mr-2 h-4 w-4 text-accent" />
-              Aperçu PDF
+              {title}
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Button
@@ -144,7 +171,7 @@ export function PdfPreview() {
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
                 <FileText className="mb-2 h-10 w-10" />
-                <p className="text-sm">Le PDF apparaîtra ici</p>
+                <p className="text-sm">{emptyLabel}</p>
               </div>
             )}
           </div>

@@ -1,76 +1,50 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
-import { Bar, BarChart, XAxis, YAxis, Cell } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
+import { ChartEmpty } from './chart-empty';
+import { SectionHeading } from './section-heading';
 
 const scoreDistributionConfig: ChartConfig = {
-  count: { label: 'Positionnements' },
+  count: { label: 'Positionnements', color: 'var(--primary)' },
 };
-
-function getBarColor(range: string) {
-  if (range === '80-100') return 'var(--neon)';
-  if (range === '60-79') return 'var(--violet)';
-  if (range === '40-59') return '#d97706';
-  return 'var(--destructive)';
-}
-
-function EmptyChart({ label }: { label: string }) {
-  return (
-    <div className="flex h-[180px] flex-col items-center justify-center text-muted-foreground">
-      <div className="mb-2 h-16 w-16 rounded-xl bg-overlay/[0.03] grid-noise" />
-      <p className="text-[10px]">{label}</p>
-    </div>
-  );
-}
 
 interface ScoreDistributionChartProps {
   scoreDistribution: { range: string; count: number }[];
 }
 
-export function ScoreDistributionChart({ scoreDistribution }: ScoreDistributionChartProps) {
+/**
+ * Distribution des scores de matching en quatre tranches. Un graphique est un
+ * objet à part : il vit dans une carte. Une seule teinte, `primary`.
+ */
+export function ScoreDistributionChart({ scoreDistribution }: ScoreDistributionChartProps): React.JSX.Element {
+  const hasData = scoreDistribution.some((d) => d.count > 0);
+
   return (
-    <Card className="col-span-1 glass-panel border-0">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          Distribution des scores
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {scoreDistribution.some((d) => d.count > 0) ? (
-          <ChartContainer config={scoreDistributionConfig} className="h-[180px] w-full">
-            <BarChart data={scoreDistribution} layout="vertical" margin={{ left: 10, right: 10 }}>
-              <XAxis type="number" hide />
-              <YAxis
-                type="category"
-                dataKey="range"
-                width={50}
-                tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="count" radius={[0, 6, 6, 0]} barSize={20}>
-                {scoreDistribution.map((entry) => (
-                  <Cell key={entry.range} fill={getBarColor(entry.range)} fillOpacity={0.8} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ChartContainer>
-        ) : (
-          <EmptyChart label="Aucun positionnement analysé" />
-        )}
-      </CardContent>
-      <CardFooter>
-        <p className="text-[10px] text-muted-foreground/60">
-          Répartition des scores de matching candidat/poste sur l&apos;ensemble des positionnements analysés par l&apos;IA.
-        </p>
-      </CardFooter>
-    </Card>
+    <section
+      aria-labelledby="score-distribution-title"
+      className="rounded-xl border border-border bg-card p-4"
+    >
+      <SectionHeading id="score-distribution-title" title="Distribution des scores" />
+      {hasData ? (
+        <ChartContainer config={scoreDistributionConfig} className="mt-3 h-[160px] w-full">
+          <BarChart data={scoreDistribution} layout="vertical" margin={{ left: 0, right: 12, top: 4, bottom: 4 }}>
+            <XAxis type="number" hide allowDecimals={false} />
+            <YAxis
+              type="category"
+              dataKey="range"
+              width={52}
+              tick={{ fontSize: 12, fill: 'var(--muted-foreground)', fontFamily: 'var(--font-mono)' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent hideIndicator />} />
+            <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={16} isAnimationActive={false} />
+          </BarChart>
+        </ChartContainer>
+      ) : (
+        <ChartEmpty title="Aucun score à distribuer." description="Les tranches se remplissent avec les analyses." />
+      )}
+    </section>
   );
 }
