@@ -153,6 +153,32 @@ describe('garde-fou Gateway ZDR + UE (lib/ai.ts)', () => {
     expect(classic.doGenerateCalls[0].topP).toBe(0.95);
   });
 
+  it('désactive le mode strict JSON des modèles OpenAI (schémas à champs optionnels), sans toucher aux autres', async () => {
+    const openai = mockModel();
+    await generateText({
+      model: guardLanguageModel(openai, 'openai/gpt-6-luna', false),
+      prompt: 'x',
+      providerOptions: { openai: { reasoningEffort: 'low' } },
+    });
+    expect(openai.doGenerateCalls[0].providerOptions?.openai).toEqual({
+      strictJsonSchema: false,
+      reasoningEffort: 'low',
+    });
+    expect(openai.doGenerateCalls[0].providerOptions?.gateway).toEqual(EXPECTED_GATEWAY);
+
+    const explicit = mockModel();
+    await generateText({
+      model: guardLanguageModel(explicit, 'openai/gpt-6-luna', false),
+      prompt: 'x',
+      providerOptions: { openai: { strictJsonSchema: true } },
+    });
+    expect(explicit.doGenerateCalls[0].providerOptions?.openai).toEqual({ strictJsonSchema: true });
+
+    const other = mockModel();
+    await generateText({ model: guardLanguageModel(other, NON_REASONING_ID, false), prompt: 'x' });
+    expect(other.doGenerateCalls[0].providerOptions?.openai).toBeUndefined();
+  });
+
   it('GATEWAY_COMPLIANCE_OPTIONS est gelé et n’est pas partagé par référence', () => {
     expect(Object.isFrozen(GATEWAY_COMPLIANCE_OPTIONS)).toBe(true);
     expect(Object.isFrozen(GATEWAY_COMPLIANCE_OPTIONS.inferenceRegion)).toBe(true);
