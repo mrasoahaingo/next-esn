@@ -238,7 +238,7 @@ function SkillRow({ skill }: { skill: Partial<SkillMatch> }) {
       onClick={expandable ? () => setOpen((v) => !v) : undefined}
       aria-expanded={expandable ? open : undefined}
     >
-      <TableCell className="whitespace-normal pl-4 align-top text-sm font-medium text-foreground">
+      <TableCell className="w-[34%] min-w-48 whitespace-normal pl-4 align-top text-sm font-medium text-foreground">
         {skill.skill}
       </TableCell>
       <TableCell className="align-top">
@@ -433,7 +433,7 @@ export function AnalysisView({
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="pl-4 text-xs text-muted-foreground">Compétence</TableHead>
+                    <TableHead className="w-[34%] min-w-48 pl-4 text-xs text-muted-foreground">Compétence</TableHead>
                     <TableHead className="text-xs text-muted-foreground">Niveau</TableHead>
                     <TableHead className="w-full text-xs text-muted-foreground">Commentaire</TableHead>
                     <TableHead className="pr-3">
