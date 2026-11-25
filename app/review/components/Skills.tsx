@@ -19,6 +19,8 @@ interface SkillsProps {
   spacingAfter?: number;
   onSpacingChange?: (value: number) => void;
   status?: CvSectionStatus;
+  /** Dans le panneau « Dossier » à onglets : en-tête en simple ligne, sans contour. */
+  embedded?: boolean;
 }
 
 const CATEGORIES: { key: keyof NonNullable<SkillsData>; label: string }[] = [
@@ -191,6 +193,7 @@ export const Skills = memo(function Skills({
   spacingAfter,
   onSpacingChange,
   status,
+  embedded,
 }: SkillsProps) {
   const safeData = data ?? {};
 
@@ -224,6 +227,7 @@ export const Skills = memo(function Skills({
       icon={Wrench}
       count={includedCount > 0 ? includedCount : undefined}
       status={status}
+      embedded={embedded}
       flush
       footer={
         !readOnly && onSpacingChange ? (

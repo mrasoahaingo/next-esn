@@ -21,6 +21,8 @@ interface ExperiencesProps {
   onSkillsChange?: (skills: Partial<SkillsData>) => void;
   readOnly?: boolean;
   status?: CvSectionStatus;
+  /** Dans le panneau « Dossier » à onglets : en-tête en simple ligne, sans contour. */
+  embedded?: boolean;
 }
 
 function getAllSkillNames(skills: Partial<SkillsData> | undefined): string[] {
@@ -178,6 +180,7 @@ export const Experiences = memo(function Experiences({
   onSkillsChange,
   readOnly,
   status,
+  embedded,
 }: ExperiencesProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -269,6 +272,7 @@ export const Experiences = memo(function Experiences({
       icon={Briefcase}
       count={items.length > 0 ? items.length : undefined}
       status={status}
+      embedded={embedded}
       flush
       actions={!readOnly && items.length > 0 ? addButton : undefined}
     >

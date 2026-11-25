@@ -95,3 +95,25 @@ Inchangés : `PdfPreviewSync.tsx`, `loading.tsx`, `candidate-file-name.ts`, `for
   existante) ; si le coordinateur préfère une prop dédiée, je la consommerai.
 - Collant à `top-6` (page `py-6` v2) alors que `DESIGN.md` cite `top-5` (page `py-5` v1) : même règle, nouvelle
   valeur ; à aligner sur le tronc si la toile change de padding.
+
+## Onglets (retour utilisateur, 2026-11-25)
+
+Les cinq sections ne sont plus empilées : **un seul panneau « Dossier »** à gauche, l'aperçu PDF à droite, le
+panneau « Extraction » au-dessus, inchangés.
+
+- **En-tête du panneau** = une bande `border-b` avec `Tabs` `variant="line"` : Identité · Résumé · Compétences
+  (compteur) · Formations (compteur) · Expériences (compteur). Sous `md`, la liste défile horizontalement dans sa
+  bande (`overflow-x-auto`, pas de défilement de page). Clavier et `aria-selected` par la primitive.
+- **Contenu** = la section actuelle (`PersonalInfo`, `Summary`, …) rendue avec la nouvelle prop optionnelle
+  `embedded` de `CvSectionPanel` : en-tête de section en simple ligne (titre, compteur, pastille « En cours »,
+  action « Ajouter »), corps et pied sans bordure ni fond ; le panneau « Dossier » reste le seul contour. Sans
+  `embedded`, rendu panneau inchangé (`TailoredCvForm` du positionnement).
+- **État pendant l'extraction** : point `bg-primary animate-pulse motion-reduce:animate-none` (en cours) ou point
+  `bg-muted-foreground/40` (en attente) à côté du libellé de l'onglet ; l'onglet suit la section en cours tant
+  que l'utilisateur n'a pas choisi ; état local (`useState`), pas d'URL ; les points disparaissent à la fin.
+- **En attente** (section `pending`, ou avant toute donnée) : `SectionShell` `pending` (squelette calme) dans le
+  corps de l'onglet. `SectionShell` revient à son API v1 (`status`, `label`, `children`) : son mode panneau
+  n'a plus de consommateur.
+
+Fichiers : `page.tsx` (panneau Dossier, onglets, état), `CvSectionPanel.tsx` (`embedded`), `SectionShell.tsx`
+(retour v1).

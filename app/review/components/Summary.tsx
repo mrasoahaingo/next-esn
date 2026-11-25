@@ -13,6 +13,8 @@ interface SummaryProps {
   spacingAfter?: number;
   onSpacingChange?: (value: number) => void;
   status?: CvSectionStatus;
+  /** Dans le panneau « Dossier » à onglets : en-tête en simple ligne, sans contour. */
+  embedded?: boolean;
 }
 
 export const Summary = memo(function Summary({
@@ -22,6 +24,7 @@ export const Summary = memo(function Summary({
   spacingAfter,
   onSpacingChange,
   status,
+  embedded,
 }: SummaryProps) {
   return (
     <CvSectionPanel
@@ -29,6 +32,7 @@ export const Summary = memo(function Summary({
       title="Résumé"
       icon={AlignLeft}
       status={status}
+      embedded={embedded}
       footer={
         !readOnly && onSpacingChange ? (
           <SpacingSlider id="summary-spacing" value={spacingAfter} onChange={onSpacingChange} />
