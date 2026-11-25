@@ -13,6 +13,7 @@ export interface DashboardCandidate {
   id: string;
   status: string;
   created_at: string;
+  updated_at?: string | null;
   extracted_data?: PersonalInfoLike;
   ai_extraction_duration_ms?: number | null;
   user_review_time_seconds?: number | null;
@@ -63,6 +64,8 @@ export const MINUTES_SAVED_PER_CV = 40;
 export interface DashboardStats {
   totalCvs: number;
   extractedCvs: number;
+  /** CV en relecture (extraction finie, pas encore validés). */
+  reviewingCvs: number;
   readyCvs: number;
   totalPositionings: number;
   /** Positionnements qui portent un score. */
@@ -89,6 +92,7 @@ export function computeDashboardStats(data: DashboardData): DashboardStats {
   const extractedCvs = candidates.filter((c) =>
     (EXTRACTED_CV_STATUSES as readonly string[]).includes(c.status),
   ).length;
+  const reviewingCvs = candidates.filter((c) => c.status === 'reviewing').length;
   const readyCvs = candidates.filter((c) => c.status === 'ready' || c.status === 'generated').length;
   const analyzed = positionings.filter((p) => p.analysis?.matchScore != null);
   const avgScore =
@@ -108,6 +112,7 @@ export function computeDashboardStats(data: DashboardData): DashboardStats {
   return {
     totalCvs: candidates.length,
     extractedCvs,
+    reviewingCvs,
     readyCvs,
     totalPositionings: positionings.length,
     analyzed,
@@ -244,7 +249,7 @@ export interface ToReviewItem {
   /** Ton du statut : échec ou en cours. */
   tone: 'error' | 'pending';
   created_at: string;
-  /** Nom du candidat quand il est connu (positionnements seulement). */
+  /** Nom du candidat quand il est connu. */
   candidateName?: string;
 }
 
@@ -259,7 +264,14 @@ export function buildToReview(data: DashboardData, limit = 5): ToReviewItem[] {
   for (const c of data.candidates) {
     const entry = CV_REASONS[c.status];
     if (!entry) continue;
-    items.push({ id: c.id, href: `/review/${c.id}`, kind: 'cv', created_at: c.created_at, ...entry });
+    items.push({
+      id: c.id,
+      href: `/review/${c.id}`,
+      kind: 'cv',
+      created_at: c.created_at,
+      candidateName: knownCandidateName(c.extracted_data),
+      ...entry,
+    });
   }
   for (const p of data.positionings) {
     if (p.status !== 'error') continue;
@@ -270,7 +282,7 @@ export function buildToReview(data: DashboardData, limit = 5): ToReviewItem[] {
       reason: 'Analyse en échec',
       tone: 'error',
       created_at: p.created_at,
-      candidateName: p.candidates ? candidateDisplayName(p.candidates.extracted_data) : undefined,
+      candidateName: knownCandidateName(p.candidates?.extracted_data),
     });
   }
   return items
@@ -281,18 +293,14 @@ export function buildToReview(data: DashboardData, limit = 5): ToReviewItem[] {
     .slice(0, limit);
 }
 
+/** Nom du candidat seulement quand l'état civil est extrait ; sinon `undefined` (la ligne dira « CV »). */
+function knownCandidateName(extracted: PersonalInfoLike | undefined): string | undefined {
+  const pi = extracted?.personalInfo;
+  return pi?.firstName || pi?.lastName ? candidateDisplayName(extracted ?? null) : undefined;
+}
+
 // ─── Derniers positionnements ───────────────────────────────────────
 
 export function pickRecentPositionings(positionings: DashboardPositioning[], limit = 6): DashboardPositioning[] {
   return positionings.filter((p) => p.analysis?.matchScore != null).slice(0, limit);
 }
-
-export const POSITIONING_STATUS_LABEL: Record<string, string> = {
-  draft: 'Brouillon',
-  analyzing: 'Analyse en cours',
-  analyzed: 'Analysé',
-  generating: 'Génération en cours',
-  generated: 'Généré',
-  exported: 'Exporté',
-  error: 'En échec',
-};

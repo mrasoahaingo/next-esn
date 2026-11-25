@@ -1,4 +1,4 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R5 V4 */
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R4 V4 · v2 */
 'use client';
 
 import { useMemo } from 'react';
@@ -12,10 +12,11 @@ import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
 import { useDashboard, useUploadCv } from '@/lib/queries';
 import { useOrgBranding } from '@/components/org-branding-provider';
 import { CvDropzone } from '@/components/dashboard/cv-dropzone';
-import { DashboardFacts } from '@/components/dashboard/dashboard-facts';
+import { DashboardKpis } from '@/components/dashboard/dashboard-kpis';
 import { DashboardSkeleton } from '@/components/dashboard/dashboard-skeleton';
 import { RecentPositionings } from '@/components/dashboard/recent-positionings';
 import { CvPipeline } from '@/components/dashboard/cv-pipeline';
+import { ToReview } from '@/components/dashboard/to-review';
 import { SkillsDemand } from '@/components/dashboard/skills-demand';
 import { ScoreDistributionChart } from '@/components/dashboard/score-distribution-chart';
 import {
@@ -31,8 +32,9 @@ import {
 } from '@/components/dashboard/dashboard-stats';
 
 /**
- * Tableau de bord : la table du matin. Ce qu'il y a à reprendre, ce qui vient
- * de se passer, et les chiffres qui situent. Une seule action : importer un CV.
+ * Tableau de bord : la table du matin. Quatre chiffres clés, ce qui vient de se
+ * passer, ce qu'il y a à reprendre, chaque bloc dans son panneau. Une seule
+ * action : importer un CV.
  */
 export default function Dashboard(): React.JSX.Element {
   const router = useRouter();
@@ -72,7 +74,7 @@ export default function Dashboard(): React.JSX.Element {
   const dropzone = <CvDropzone onFile={handleFile} isUploading={isUploading} />;
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-5 md:px-6">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6">
       <PageHeader
         title="Tableau de bord"
         description={displayName ? `Activité de ${displayName}` : 'Activité de votre organisation'}
@@ -82,7 +84,7 @@ export default function Dashboard(): React.JSX.Element {
       {isLoading ? (
         <DashboardSkeleton />
       ) : isError ? (
-        <Alert variant="destructive" className="border-destructive/40 p-4">
+        <Alert variant="destructive" className="border-destructive/40 bg-panel p-4">
           <AlertTriangle />
           <AlertTitle>Le tableau de bord n&rsquo;a pas pu être chargé.</AlertTitle>
           <AlertDescription className="flex flex-col gap-3">
@@ -99,33 +101,40 @@ export default function Dashboard(): React.JSX.Element {
           </AlertDescription>
         </Alert>
       ) : isEmpty || !data || !stats ? (
-        <CvDropzone
-          variant="panel"
-          onFile={handleFile}
-          isUploading={isUploading}
-          note={isDemoMode ? 'Mode démo : les données de l’organisation sont masquées.' : undefined}
-        />
+        <div className="flex flex-col gap-4">
+          <DashboardKpis stats={null} />
+          <CvDropzone
+            variant="panel"
+            onFile={handleFile}
+            isUploading={isUploading}
+            note={isDemoMode ? 'Mode démo : les données de l’organisation sont masquées.' : undefined}
+          />
+        </div>
       ) : (
-        <>
-          <DashboardFacts stats={stats} />
+        <div className="flex flex-col gap-4">
+          <DashboardKpis stats={stats} />
 
-          <div className="grid gap-6 lg:grid-cols-12">
-            <div className="lg:col-span-8">
-              <RecentPositionings items={recentPositionings} analyzedCount={stats.analyzed.length} />
+          <div className="grid gap-4 lg:grid-cols-12 lg:items-start">
+            <div className="flex flex-col gap-4 lg:col-span-8">
+              <RecentPositionings
+                items={recentPositionings}
+                analyzedCount={stats.analyzed.length}
+                timeByOperation={stats.timeByOperation}
+              />
+              <SkillsDemand
+                skills={skillDemand}
+                coverage={skillCoverage}
+                analyzedCount={stats.analyzed.length}
+                recruiterSkills={data.recruiter_skills}
+              />
             </div>
-            <div className="space-y-8 lg:col-span-4">
-              <CvPipeline stages={pipeline} totalCvs={stats.totalCvs} toReview={toReview} />
-              <ScoreDistributionChart scoreDistribution={scoreDistribution} />
+            <div className="flex flex-col gap-4 lg:col-span-4">
+              <CvPipeline stages={pipeline} totalCvs={stats.totalCvs} emptyAction={dropzone} />
+              <ToReview items={toReview} />
+              <ScoreDistributionChart scoreDistribution={scoreDistribution} analyzedCount={stats.analyzed.length} />
             </div>
           </div>
-
-          <SkillsDemand
-            skills={skillDemand}
-            coverage={skillCoverage}
-            analyzedCount={stats.analyzed.length}
-            recruiterSkills={data.recruiter_skills}
-          />
-        </>
+        </div>
       )}
     </div>
   );

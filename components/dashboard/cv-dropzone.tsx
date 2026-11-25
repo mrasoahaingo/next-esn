@@ -98,7 +98,7 @@ export function CvDropzone({
   return (
     <Empty
       className={cn(
-        'items-start rounded-xl border border-dashed border-border bg-card p-6 text-left md:p-10',
+        'items-start rounded-xl border border-dashed border-border bg-panel p-6 text-left shadow-sm md:p-10 dark:shadow-none',
         'transition-[border-color,background-color] duration-[120ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none',
         isDragging && 'border-primary bg-primary/5',
         className,
