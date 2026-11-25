@@ -23,8 +23,9 @@ interface CvGenerationStepProps {
 }
 
 /**
- * Étape 3, colonne de gauche : le panneau « CV retravaillé », formulaire en sections
- * séparées par des filets. « Exporter le PDF » est la primaire de l'en-tête de page ;
+ * Étape 3, colonne de gauche : une ligne d’en-tête « CV retravaillé » puis les sections du
+ * dossier, chacune dans son propre panneau (les composants de l’écran CV rendent le leur :
+ * pas de panneau dans un panneau). « Exporter le PDF » est la primaire de l'en-tête de page ;
  * ici, « Comparer » et « Régénérer ».
  */
 export function CvGenerationStep({
@@ -48,8 +49,10 @@ export function CvGenerationStep({
     positioningStatus === 'error' ? 'Relancer la génération' : hasCv ? 'Régénérer' : 'Générer le CV';
 
   return (
-    <Panel aria-labelledby="tailored-cv-heading">
+    <section aria-labelledby="tailored-cv-heading" className="space-y-4">
+      <Panel>
       <PanelHeader
+        className={tailoredCv ? "border-b-0" : undefined}
         id="tailored-cv-heading"
         icon={FileText}
         title="CV retravaillé"
@@ -78,15 +81,7 @@ export function CvGenerationStep({
         }
       />
 
-      {tailoredCv ? (
-        <PanelBody padded={false}>
-          <TailoredCvForm
-            data={tailoredCv}
-            onUpdateField={updateTailoredCvField}
-            readOnly={isStreaming}
-          />
-        </PanelBody>
-      ) : cvRun ? (
+      {tailoredCv ? null : cvRun ? (
         <PanelBody className="flex flex-col gap-6" aria-busy="true" aria-label="Génération du CV retravaillé">
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex flex-col gap-3">
@@ -110,6 +105,15 @@ export function CvGenerationStep({
           </p>
         </PanelBody>
       )}
-    </Panel>
+      </Panel>
+
+      {tailoredCv ? (
+        <TailoredCvForm
+          data={tailoredCv}
+          onUpdateField={updateTailoredCvField}
+          readOnly={isStreaming}
+        />
+      ) : null}
+    </section>
   );
 }
