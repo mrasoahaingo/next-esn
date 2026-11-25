@@ -1,4 +1,4 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P5 H4 E4 S5 R4 V4 */
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P5 H5 E4 S5 R4 V4 · v2 */
 'use client';
 
 import { useLayoutEffect, useCallback, useState, useRef, useMemo, useEffect } from 'react';
@@ -77,14 +77,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Trash2 } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/app/page-header';
-import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
-import { WorkflowFailureAlert } from '@/components/workflow/WorkflowFailureAlert';
 import { PdfPreview } from '@/app/review/components/PdfPreview';
 import { JobInput } from './components/JobInput';
 import { AnalysisView } from './components/AnalysisView';
-import { PositioningAnalysisHistoryTabContent } from './components/PositioningAnalysisHistoryPanel';
+import { PositioningAnalysisHistoryPanel } from './components/PositioningAnalysisHistoryPanel';
+import { WorkflowStatusPanel } from './components/WorkflowStatusPanel';
 import { QuestionsPanel } from './components/QuestionsPanel';
 import { EmailsGenerationStep } from './components/EmailsGenerationStep';
 import { CvGenerationStep } from './components/CvGenerationStep';
@@ -96,8 +94,6 @@ import { countStrongSkills } from './components/matching-readout';
 type PersistedPositioningState = PositioningWorkflowDiagnostics & {
   status?: string | null;
 };
-
-type ResultsView = 'results' | 'questions' | 'history';
 
 const STEP_DESCRIPTION: Record<PositioningStep, string> = {
   1: 'Analyse du matching',
@@ -886,7 +882,6 @@ export default function PositioningWizardPage() {
   });
 
 
-  const [resultsView, setResultsView] = useState<ResultsView>('results');
   const [isImportingFile, setIsImportingFile] = useState(false);
 
   const hasEmails = !!email || !!emailFirstContact || !!emailBulletPoints || !!candidateEmail;
@@ -1020,19 +1015,18 @@ export default function PositioningWizardPage() {
 
   if (!isLoaded) {
     return (
-      <div className="flex min-h-full flex-col gap-6 bg-background px-4 py-5 text-foreground md:px-6" aria-busy="true">
+      <div className="flex min-h-full flex-col gap-4 bg-shell px-6 py-6 text-foreground" aria-busy="true">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-6 w-1/3 animate-none" />
           <Skeleton className="h-4 w-1/4 animate-none" />
         </div>
-        <Skeleton className="h-10 w-full max-w-md animate-none" />
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="flex flex-col gap-3 lg:col-span-7">
-            <Skeleton className="h-4 w-1/4 animate-none" />
-            <Skeleton className="h-3 w-full animate-none" />
-            <Skeleton className="h-3 w-5/6 animate-none" />
+        <Skeleton className="h-12 w-full animate-none rounded-xl" />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex flex-col gap-4 lg:col-span-7">
+            <Skeleton className="h-40 w-full animate-none rounded-xl" />
+            <Skeleton className="h-32 w-full animate-none rounded-xl" />
           </div>
-          <Skeleton className="h-40 w-full animate-none rounded-xl lg:col-span-5" />
+          <Skeleton className="h-48 w-full animate-none rounded-xl lg:col-span-5" />
         </div>
       </div>
     );
@@ -1046,39 +1040,70 @@ export default function PositioningWizardPage() {
     </Button>
   );
 
+  /** Un seul indicateur par travail : en cours, en échec, ou terminé et replié (durée persistée seulement). */
   const headerStatus = analysisBusy ? (
-    <div className="border-l-2 border-primary pl-4">
-      <WorkflowStepList rows={analysisWorkflowRows} summaryLine={analysisWorkflowSummary} />
-    </div>
-  ) : analysisFailure ? (
-    <WorkflowFailureAlert
-      title="L’analyse n’a pas abouti"
-      message={analysisFailure.message}
+    <WorkflowStatusPanel
+      kind="analysis"
+      state="running"
       rows={analysisWorkflowRows}
       summaryLine={analysisWorkflowSummary}
-      onRetry={handleReAnalyze}
-      retryLabel="Relancer l’analyse"
-      retryDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
+    />
+  ) : analysisFailure ? (
+    <WorkflowStatusPanel
+      kind="analysis"
+      state="failed"
+      rows={analysisWorkflowRows}
+      summaryLine={analysisWorkflowSummary}
+      failure={{
+        title: 'L’analyse n’a pas abouti',
+        message: analysisFailure.message,
+        onRetry: handleReAnalyze,
+        retryLabel: 'Relancer l’analyse',
+        retryDisabled: !canRunPositioningAnalysis || updatePositioning.isPending,
+      }}
     />
   ) : genBusy ? (
-    <div className="border-l-2 border-primary pl-4">
-      <WorkflowStepList rows={generateWorkflowRows} summaryLine={generateWorkflowSummary} />
-    </div>
-  ) : generationFailed ? (
-    <WorkflowFailureAlert
-      title="La génération n’a pas abouti"
-      message={persistedPositioningWorkflowError?.message ?? 'La génération a échoué.'}
+    <WorkflowStatusPanel
+      kind="generation"
+      state="running"
       rows={generateWorkflowRows}
       summaryLine={generateWorkflowSummary}
-      onRetry={generateStreamMeta?.generateMode === 'cv' ? handleGenerateCv : handleGenerateEmails}
-      retryLabel="Relancer la génération"
-      retryDisabled={updatePositioning.isPending}
+    />
+  ) : generationFailed ? (
+    <WorkflowStatusPanel
+      kind="generation"
+      state="failed"
+      rows={generateWorkflowRows}
+      summaryLine={generateWorkflowSummary}
+      failure={{
+        title: 'La génération n’a pas abouti',
+        message: persistedPositioningWorkflowError?.message ?? 'La génération a échoué.',
+        onRetry: generateStreamMeta?.generateMode === 'cv' ? handleGenerateCv : handleGenerateEmails,
+        retryLabel: 'Relancer la génération',
+        retryDisabled: updatePositioning.isPending,
+      }}
+    />
+  ) : currentStep === 1 && analysisComplete && aiAnalysisDurationMs ? (
+    <WorkflowStatusPanel
+      kind="analysis"
+      state="done"
+      rows={analysisWorkflowRows}
+      summaryLine={analysisWorkflowSummary}
+      durationMs={aiAnalysisDurationMs}
+    />
+  ) : currentStep !== 1 && (hasEmails || tailoredCv) && aiGenerationDurationMs ? (
+    <WorkflowStatusPanel
+      kind="generation"
+      state="done"
+      rows={generateWorkflowRows}
+      summaryLine={generateWorkflowSummary}
+      durationMs={aiGenerationDurationMs}
     />
   ) : null;
 
   return (
-    <div className="flex min-h-full flex-col bg-background text-foreground">
-      <div className="flex flex-col gap-6 px-4 py-5 md:px-6">
+    <div className="flex min-h-full flex-col bg-shell text-foreground">
+      <div className="flex flex-col gap-4 px-6 py-6">
         <PageHeader
           title={pageTitle}
           description={STEP_DESCRIPTION[currentStep]}
@@ -1201,8 +1226,8 @@ export default function PositioningWizardPage() {
         <PositioningStepper current={currentStep} onSelect={goToStep} disabledReason={stepDisabledReason} />
 
         {currentStep === 1 && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-            <div className="min-w-0 space-y-8 lg:col-span-7">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="min-w-0 space-y-4 lg:col-span-7">
               <JobInput
                 jobDescription={jobDescription}
                 onJobDescriptionChange={setJobDescription}
@@ -1213,88 +1238,57 @@ export default function PositioningWizardPage() {
                 onImportingChange={setIsImportingFile}
               />
 
-              {/* Analysis results during streaming — no sub-views yet */}
+              {/* Pendant l'analyse : les panneaux de résultats attendent ou disent « En cours ». */}
               {analysisBusy && (
-                <section aria-labelledby="results-heading" className="space-y-6">
-                  <h2 id="results-heading" className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground">
-                    Résultats
-                  </h2>
+                <AnalysisView
+                  analysis={analysis}
+                  isAnalyzing={analysisBusy}
+                  streamMeta={analysisStreamMeta}
+                  analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
+                  hideRecruiterSnapshot
+                  recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
+                  modelsSummaryLabel={analysisModelsSummaryLabel}
+                  modelsByTask={analysisModelsSnapshot?.byTask}
+                  aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
+                  aiInfoHistoryLinkLabel="Positionnement et historique"
+                />
+              )}
+
+              {/* Analyse terminée : Score, Compétences, Expériences, Lacunes, Questions, Historique replié. */}
+              {analysisComplete && (
+                <>
                   <AnalysisView
                     analysis={analysis}
-                    isAnalyzing={analysisBusy}
-                    streamMeta={analysisStreamMeta}
+                    isAnalyzing={false}
+                    onReAnalyze={handleReAnalyze}
+                    reAnalyzeDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
                     analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
-                    hideRecruiterSnapshot
+                    onRemoveRecruiterAnswerEntry={handleRemoveRecruiterAnswerEntry}
                     recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
                     modelsSummaryLabel={analysisModelsSummaryLabel}
                     modelsByTask={analysisModelsSnapshot?.byTask}
                     aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
                     aiInfoHistoryLinkLabel="Positionnement et historique"
                   />
-                </section>
-              )}
-
-              {/* Résultats · Questions · Historique — once analysis complete */}
-              {analysisComplete && (
-                <section aria-labelledby="results-heading" className="space-y-6">
-                  <h2 id="results-heading" className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground">
-                    Résultats
-                  </h2>
-                  <Tabs
-                    value={resultsView}
-                    onValueChange={(v) => setResultsView(v as ResultsView)}
-                    className="gap-6"
-                  >
-                    <TabsList variant="line" aria-label="Vue des résultats">
-                      <TabsTrigger value="results" className="flex-none px-1">
-                        Résultats
-                      </TabsTrigger>
-                      <TabsTrigger value="questions" className="flex-none px-1">
-                        Questions
-                      </TabsTrigger>
-                      <TabsTrigger value="history" className="flex-none px-1">
-                        Historique
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="results" className="mt-0 data-[state=inactive]:hidden">
-                      <AnalysisView
-                        analysis={analysis}
-                        isAnalyzing={false}
-                        onReAnalyze={handleReAnalyze}
-                        reAnalyzeDisabled={!canRunPositioningAnalysis || updatePositioning.isPending}
-                        analysisSnapshotRecruiterEntries={analysisSnapshotRecruiterEntries}
-                        onRemoveRecruiterAnswerEntry={handleRemoveRecruiterAnswerEntry}
-                        recruiterDraftsDifferFromSnapshot={recruiterDraftsDifferFromSnapshot}
-                        modelsSummaryLabel={analysisModelsSummaryLabel}
-                        modelsByTask={analysisModelsSnapshot?.byTask}
-                        aiInfoHistoryHref={`/review/${candidateId}/positioning/${positioningIdParam}`}
-                        aiInfoHistoryLinkLabel="Positionnement et historique"
-                      />
-                    </TabsContent>
-                    <TabsContent value="questions" className="mt-0 data-[state=inactive]:hidden">
-                      <QuestionsPanel
-                        analysis={analysis}
-                        onReAnalyze={handleReAnalyze}
-                        isAnalyzing={false}
-                        recruiterAnswerEntries={recruiterAnswerEntries}
-                        appendRecruiterAnswer={appendRecruiterAnswer}
-                      />
-                    </TabsContent>
-                    <TabsContent value="history" className="mt-0 data-[state=inactive]:hidden">
-                      {positioningIdParam ? (
-                        <PositioningAnalysisHistoryTabContent
-                          positioningId={positioningIdParam}
-                          candidateId={candidateId}
-                        />
-                      ) : null}
-                    </TabsContent>
-                  </Tabs>
-                </section>
+                  <QuestionsPanel
+                    analysis={analysis}
+                    onReAnalyze={handleReAnalyze}
+                    isAnalyzing={false}
+                    recruiterAnswerEntries={recruiterAnswerEntries}
+                    appendRecruiterAnswer={appendRecruiterAnswer}
+                  />
+                  {positioningIdParam ? (
+                    <PositioningAnalysisHistoryPanel
+                      positioningId={positioningIdParam}
+                      candidateId={candidateId}
+                    />
+                  ) : null}
+                </>
               )}
             </div>
 
-            {/* Collant sous le py-5 de la page : le défilement est celui du main de la coque. */}
-            <div className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
+            {/* Collant sous le py-6 de la page : le défilement est celui du main de la coque. */}
+            <div className="min-w-0 lg:sticky lg:top-6 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
               <MatchingReadout analysis={analysis} isAnalyzing={analysisBusy} />
             </div>
           </div>
@@ -1311,7 +1305,7 @@ export default function PositioningWizardPage() {
         )}
 
         {currentStep === 3 && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
             <div className="min-w-0 lg:col-span-7">
               <CvGenerationStep
                 isStreaming={genBusy}
@@ -1323,7 +1317,7 @@ export default function PositioningWizardPage() {
                 generationModelsByTask={generationModelsSnapshot?.byTask}
               />
             </div>
-            <div className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
+            <div className="min-w-0 lg:sticky lg:top-6 lg:col-span-5 lg:max-h-[calc(100svh-6.5rem)] lg:self-start lg:overflow-y-auto">
               <PdfPreview
                 pdfBlobUrl={pdfBlobUrl}
                 isPdfLoading={isPdfLoading}

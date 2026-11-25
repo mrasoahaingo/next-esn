@@ -1,8 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
+import { BarChart3 } from 'lucide-react';
 import type { PositioningAnalysis } from '@/lib/schema';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Panel, PanelBody, PanelFooter, PanelHeader } from '@/components/app/panel';
 import { computeCategoryCoverage, type CategoryCoverage } from './matching-readout';
 
 interface MatchingReadoutProps {
@@ -68,49 +70,48 @@ export function MatchingReadout({ analysis, isAnalyzing }: MatchingReadoutProps)
   );
 
   return (
-    <section
-      className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5"
-      aria-labelledby="matching-readout-heading"
-    >
-      <div className="flex flex-col gap-1">
-        <h2 id="matching-readout-heading" className="text-[0.9375rem] font-semibold text-foreground">
-          Lecture du matching
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          Couverture des compétences attendues, par catégorie.
-        </p>
-      </div>
+    <Panel aria-labelledby="matching-readout-heading">
+      <PanelHeader
+        id="matching-readout-heading"
+        icon={BarChart3}
+        title="Lecture du matching"
+        count={rows.length > 0 ? `${rows.length} catégorie${rows.length > 1 ? 's' : ''}` : undefined}
+        description="Couverture des compétences attendues, par catégorie."
+      />
+      <PanelBody>
+        {rows.length > 0 ? (
+          <ul className="flex flex-col gap-4">
+            {rows.map((row) => (
+              <CoverageBar key={row.category} row={row} />
+            ))}
+          </ul>
+        ) : isAnalyzing ? (
+          <ul className="flex flex-col gap-4" aria-busy="true" aria-label="Analyse des compétences en cours">
+            {[0, 1, 2].map((i) => (
+              <li key={i} className="flex flex-col gap-1.5">
+                <Skeleton className="h-3.5 w-1/3 animate-none" />
+                <Skeleton className="h-2 w-full animate-none rounded-full" />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">Les barres apparaîtront après l’analyse.</p>
+        )}
+      </PanelBody>
 
       {rows.length > 0 ? (
-        <ul className="flex flex-col gap-4">
-          {rows.map((row) => (
-            <CoverageBar key={row.category} row={row} />
-          ))}
-        </ul>
-      ) : isAnalyzing ? (
-        <ul className="flex flex-col gap-4" aria-busy="true" aria-label="Analyse des compétences en cours">
-          {[0, 1, 2].map((i) => (
-            <li key={i} className="flex flex-col gap-1.5">
-              <Skeleton className="h-3.5 w-1/3 animate-none" />
-              <Skeleton className="h-2 w-full animate-none rounded-full" />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-sm text-muted-foreground">Les barres apparaîtront après l’analyse.</p>
-      )}
-
-      {rows.length > 0 ? (
-        <dl className="flex flex-wrap gap-x-4 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
-          {SEGMENTS.map((seg) => (
-            <div key={seg.key} className="flex items-center gap-1.5">
-              <dt className="sr-only">{seg.label}</dt>
-              <span className={`inline-block h-2 w-4 rounded-full ${seg.className}`} aria-hidden />
-              <dd>{seg.label}</dd>
-            </div>
-          ))}
-        </dl>
+        <PanelFooter>
+          <dl className="flex flex-wrap gap-x-4 gap-y-1">
+            {SEGMENTS.map((seg) => (
+              <div key={seg.key} className="flex items-center gap-1.5">
+                <dt className="sr-only">{seg.label}</dt>
+                <span className={`inline-block h-2 w-4 rounded-full ${seg.className}`} aria-hidden />
+                <dd>{seg.label}</dd>
+              </div>
+            ))}
+          </dl>
+        </PanelFooter>
       ) : null}
-    </section>
+    </Panel>
   );
 }

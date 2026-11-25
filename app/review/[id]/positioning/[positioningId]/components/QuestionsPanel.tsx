@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { MessageSquare } from 'lucide-react';
 import type { PositioningAnalysis } from '@/lib/schema';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
 import {
@@ -9,6 +10,8 @@ import {
 } from '@/lib/services/positioning.service';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { formatCount } from './relevance-badge';
 
 interface QuestionsPanelProps {
   analysis: Partial<PositioningAnalysis> | null;
@@ -50,14 +53,14 @@ function QuestionHistoryBlock({
   const filled = entries.length > 0;
   const textareaId = `question-${questionKey.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
   return (
-    <li className="space-y-2 py-4">
+    <li className="space-y-2 px-4 py-4">
       <div className="flex items-start justify-between gap-3">
         <label htmlFor={textareaId} className="min-w-0 text-sm font-medium text-foreground">
           {questionLabel}
         </label>
         {filled && (
-          <span className="shrink-0 font-mono text-xs text-muted-foreground">
-            {entries.length} note{entries.length > 1 ? 's' : ''}
+          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+            {formatCount(entries.length, 'note', 'notes')}
           </span>
         )}
       </div>
@@ -121,7 +124,7 @@ function QuestionList({
   placeholder: string;
 }) {
   if (items.length === 0) {
-    return <li className="py-4 text-sm text-muted-foreground">Aucune question pour cette section.</li>;
+    return <li className="px-4 py-3 text-sm text-muted-foreground">Aucune question pour cette section.</li>;
   }
 
   return (
@@ -148,10 +151,21 @@ function QuestionList({
   );
 }
 
+function ColumnHeading({ id, children, count }: { id: string; children: React.ReactNode; count: number }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-border bg-panel-soft px-4 py-2">
+      <h3 id={id} className="text-xs font-semibold text-foreground">
+        {children}
+      </h3>
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
+    </div>
+  );
+}
+
 /**
- * Questions candidat et client issues de l'analyse, avec le contexte ajouté par le
- * recruteur. Deux sections sur le papier ; la relance de l'analyse est le seul bouton
- * secondaire (la primaire de l'en-tête fait avancer le positionnement).
+ * Panneau « Questions » : les questions candidat et client issues de l'analyse, en deux
+ * colonnes, avec le contexte ajouté par le recruteur. La phrase de nudge est la
+ * description de l'en-tête ; « Relancer l'analyse » est la seule action du panneau.
  */
 export function QuestionsPanel({
   analysis,
@@ -188,83 +202,82 @@ export function QuestionsPanel({
       : 'Ajoutez des réponses ou des notes, puis relancez l’analyse pour les intégrer au score.';
 
   const placeholder = 'Réponse ou note, prise en compte à la prochaine relance.';
+  const total = allCandidate.length + allClient.length;
 
   return (
-    <div className="space-y-8">
-      {onReAnalyze && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="max-w-prose text-sm text-muted-foreground">{nudgeText}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onReAnalyze}
-            disabled={isAnalyzing}
-            className="shrink-0"
-          >
-            Relancer l’analyse
-          </Button>
-        </div>
-      )}
+    <Panel aria-labelledby="questions-heading">
+      <PanelHeader
+        id="questions-heading"
+        icon={MessageSquare}
+        title="Questions"
+        count={total > 0 ? total : undefined}
+        description={nudgeText}
+        actions={
+          onReAnalyze ? (
+            <Button variant="outline" size="sm" onClick={onReAnalyze} disabled={isAnalyzing}>
+              Relancer l’analyse
+            </Button>
+          ) : undefined
+        }
+      />
+      <PanelBody padded={false} className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-border">
+        <section aria-labelledby="questions-candidate-heading" className="min-w-0">
+          <ColumnHeading id="questions-candidate-heading" count={allCandidate.length}>
+            Candidat
+          </ColumnHeading>
+          <ul className="divide-y divide-border">
+            <QuestionList
+              items={candidateIndexed}
+              type="candidate"
+              recruiterAnswerEntries={recruiterAnswerEntries}
+              drafts={drafts}
+              setDraft={setDraft}
+              appendRecruiterAnswer={appendRecruiterAnswer}
+              placeholder={placeholder}
+            />
+            <QuestionHistoryBlock
+              questionKey={POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY}
+              questionLabel="Contexte libre (candidat)"
+              context="Informations complémentaires côté candidat, cumulées avec l’existant."
+              entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY] ?? []}
+              draft={drafts['free-c'] ?? ''}
+              onDraftChange={(v) => setDraft('free-c', v)}
+              onAppend={appendRecruiterAnswer}
+              placeholder="Précisions sur le profil, contraintes…"
+            />
+          </ul>
+        </section>
 
-      <section aria-labelledby="questions-candidate-heading">
-        <h3
-          id="questions-candidate-heading"
-          className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground"
+        <section
+          aria-labelledby="questions-client-heading"
+          className="min-w-0 border-t border-border lg:border-t-0"
         >
-          Questions candidat
-        </h3>
-        <ul className="divide-y divide-border">
-          <QuestionList
-            items={candidateIndexed}
-            type="candidate"
-            recruiterAnswerEntries={recruiterAnswerEntries}
-            drafts={drafts}
-            setDraft={setDraft}
-            appendRecruiterAnswer={appendRecruiterAnswer}
-            placeholder={placeholder}
-          />
-          <QuestionHistoryBlock
-            questionKey={POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY}
-            questionLabel="Contexte libre (candidat)"
-            context="Informations complémentaires côté candidat, cumulées avec l’existant."
-            entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY] ?? []}
-            draft={drafts['free-c'] ?? ''}
-            onDraftChange={(v) => setDraft('free-c', v)}
-            onAppend={appendRecruiterAnswer}
-            placeholder="Précisions sur le profil, contraintes…"
-          />
-        </ul>
-      </section>
-
-      <section aria-labelledby="questions-client-heading">
-        <h3
-          id="questions-client-heading"
-          className="border-b border-border pb-2 text-[0.9375rem] font-semibold text-foreground"
-        >
-          Questions client
-        </h3>
-        <ul className="divide-y divide-border">
-          <QuestionList
-            items={clientIndexed}
-            type="client"
-            recruiterAnswerEntries={recruiterAnswerEntries}
-            drafts={drafts}
-            setDraft={setDraft}
-            appendRecruiterAnswer={appendRecruiterAnswer}
-            placeholder={placeholder}
-          />
-          <QuestionHistoryBlock
-            questionKey={POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY}
-            questionLabel="Contexte libre (demande client)"
-            context="Informations complémentaires côté client ou mission, cumulées avec l’existant."
-            entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY] ?? []}
-            draft={drafts['free-cl'] ?? ''}
-            onDraftChange={(v) => setDraft('free-cl', v)}
-            onAppend={appendRecruiterAnswer}
-            placeholder="Contraintes client, environnement, attentes…"
-          />
-        </ul>
-      </section>
-    </div>
+          <ColumnHeading id="questions-client-heading" count={allClient.length}>
+            Client
+          </ColumnHeading>
+          <ul className="divide-y divide-border">
+            <QuestionList
+              items={clientIndexed}
+              type="client"
+              recruiterAnswerEntries={recruiterAnswerEntries}
+              drafts={drafts}
+              setDraft={setDraft}
+              appendRecruiterAnswer={appendRecruiterAnswer}
+              placeholder={placeholder}
+            />
+            <QuestionHistoryBlock
+              questionKey={POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY}
+              questionLabel="Contexte libre (demande client)"
+              context="Informations complémentaires côté client ou mission, cumulées avec l’existant."
+              entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY] ?? []}
+              draft={drafts['free-cl'] ?? ''}
+              onDraftChange={(v) => setDraft('free-cl', v)}
+              onAppend={appendRecruiterAnswer}
+              placeholder="Contraintes client, environnement, attentes…"
+            />
+          </ul>
+        </section>
+      </PanelBody>
+    </Panel>
   );
 }

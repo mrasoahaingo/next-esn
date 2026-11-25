@@ -1,6 +1,7 @@
 'use client';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Panel } from '@/components/app/panel';
 import { cn } from '@/lib/utils';
 
 export type PositioningStep = 1 | 2 | 3;
@@ -19,13 +20,14 @@ interface PositioningStepperProps {
 }
 
 /**
- * Navigation des trois temps du positionnement : une liste ordonnée sur un filet,
+ * Navigation des trois temps du positionnement : une barre dans un panneau,
  * numéros en mono, l'étape courante marquée par un point `primary` sous son libellé.
  * Les étapes faites restent cliquables ; les étapes à venir disent pourquoi elles attendent.
  */
 export function PositioningStepper({ current, onSelect, disabledReason }: PositioningStepperProps) {
   return (
-    <nav aria-label="Étapes du positionnement" className="border-b border-border">
+    <Panel className="px-4">
+      <nav aria-label="Étapes du positionnement">
       <ol className="flex items-stretch gap-6 md:gap-8">
         {STEPS.map(({ step, label, shortLabel }) => {
           const isCurrent = step === current;
@@ -75,6 +77,7 @@ export function PositioningStepper({ current, onSelect, disabledReason }: Positi
           );
         })}
       </ol>
-    </nav>
+      </nav>
+    </Panel>
   );
 }
