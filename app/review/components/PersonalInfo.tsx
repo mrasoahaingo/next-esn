@@ -10,6 +10,8 @@ interface PersonalInfoProps {
   onChange: (data: Partial<ExtractedCV['personalInfo']>) => void;
   readOnly?: boolean;
   status?: CvSectionStatus;
+  /** Dans le panneau « Dossier » à onglets : en-tête en simple ligne, sans contour. */
+  embedded?: boolean;
 }
 
 type PersonalInfoKey = keyof ExtractedCV['personalInfo'];
@@ -25,13 +27,19 @@ const FIELDS: { key: PersonalInfoKey; label: string; type?: string; placeholder?
   { key: 'availability', label: 'Disponibilité', placeholder: 'Immédiate' },
 ];
 
-export const PersonalInfo = memo(function PersonalInfo({ data, onChange, readOnly, status }: PersonalInfoProps) {
+export const PersonalInfo = memo(function PersonalInfo({
+  data,
+  onChange,
+  readOnly,
+  status,
+  embedded,
+}: PersonalInfoProps) {
   const handleChange = (field: PersonalInfoKey, value: string) => {
     onChange({ ...data, [field]: value });
   };
 
   return (
-    <CvSectionPanel id="cv-section-identity" title="Identité" icon={User} status={status}>
+    <CvSectionPanel id="cv-section-identity" title="Identité" icon={User} status={status} embedded={embedded}>
       {/* Deux colonnes ; le titre et la localisation prennent toute la largeur */}
       <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
         {FIELDS.map((field) => (

@@ -21,6 +21,11 @@ export type CvSectionPanelProps = {
   flush?: boolean;
   /** Pied de panneau (curseur de marge). */
   footer?: ReactNode;
+  /**
+   * Dans un panneau parent (onglets du dossier) : en-tête en simple ligne (titre, compteur,
+   * pastille, action), corps et pied sans bordure ni fond, pour qu'il n'y ait qu'un contour.
+   */
+  embedded?: boolean;
   className?: string;
   children: ReactNode;
 };
@@ -40,10 +45,47 @@ export function CvSectionPanel({
   status = 'done',
   flush = false,
   footer,
+  embedded = false,
   className,
   children,
 }: CvSectionPanelProps): React.JSX.Element {
   const streaming = status === 'streaming';
+  const badge = streaming ? (
+    <StatusBadge tone="info" pulse>
+      En cours
+    </StatusBadge>
+  ) : null;
+  const body = streaming && !flush ? <div className="border-l-2 border-primary pl-4">{children}</div> : children;
+
+  if (embedded) {
+    return (
+      <section aria-labelledby={id} aria-busy={streaming || undefined} className={cn('flex min-w-0 flex-col', className)}>
+        <div className="flex items-center justify-between gap-4 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <h3 id={id} className="truncate text-sm font-semibold text-foreground">
+              {title}
+            </h3>
+            {count != null ? (
+              <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+                {count}
+              </span>
+            ) : null}
+          </div>
+          {badge || actions ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {badge}
+              {actions}
+            </div>
+          ) : null}
+        </div>
+        <div className={cn('min-w-0', flush ? 'border-t border-border' : 'px-4 pb-4', streaming && flush && 'border-l-2 border-primary')}>
+          {body}
+        </div>
+        {footer ? <PanelFooter>{footer}</PanelFooter> : null}
+      </section>
+    );
+  }
+
   return (
     <Panel aria-labelledby={id} aria-busy={streaming || undefined} className={className}>
       <PanelHeader
@@ -52,20 +94,16 @@ export function CvSectionPanel({
         icon={icon}
         count={count}
         actions={
-          streaming || actions ? (
+          badge || actions ? (
             <>
-              {streaming ? (
-                <StatusBadge tone="info" pulse>
-                  En cours
-                </StatusBadge>
-              ) : null}
+              {badge}
               {actions}
             </>
           ) : undefined
         }
       />
-      <PanelBody padded={!flush} className={cn(streaming && (flush ? 'border-l-2 border-primary' : undefined))}>
-        {streaming && !flush ? <div className="border-l-2 border-primary pl-4">{children}</div> : children}
+      <PanelBody padded={!flush} className={cn(streaming && flush && 'border-l-2 border-primary')}>
+        {body}
       </PanelBody>
       {footer ? <PanelFooter>{footer}</PanelFooter> : null}
     </Panel>

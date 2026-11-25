@@ -15,9 +15,17 @@ interface EducationProps {
   onChange: (data: Partial<EducationItem>[]) => void;
   readOnly?: boolean;
   status?: CvSectionStatus;
+  /** Dans le panneau « Dossier » à onglets : en-tête en simple ligne, sans contour. */
+  embedded?: boolean;
 }
 
-export const Education = memo(function Education({ data, onChange, readOnly, status }: EducationProps) {
+export const Education = memo(function Education({
+  data,
+  onChange,
+  readOnly,
+  status,
+  embedded,
+}: EducationProps) {
   const handleUpdate = (index: number, field: keyof EducationItem, value: string | number) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
@@ -49,6 +57,7 @@ export const Education = memo(function Education({ data, onChange, readOnly, sta
       icon={GraduationCap}
       count={items.length > 0 ? items.length : undefined}
       status={status}
+      embedded={embedded}
       flush
       actions={!readOnly && items.length > 0 ? addButton : undefined}
     >
