@@ -39,7 +39,7 @@ export type PositioningMissionAnalysisInlineProps = {
 /**
  * État de l'analyse de la fiche mission, sous la fiche sélectionnée : une ligne de
  * texte et, quand un flux tourne ou a échoué, le `WorkflowStepList` (une seule région
- * `aria-live`, portée par la liste). Pas de boîte : le papier suffit.
+ * `aria-live`, portée par la liste). Pas de boîte : il vit dans le corps déplié du panneau.
  */
 export function PositioningMissionAnalysisInline({
   missionId,
@@ -121,7 +121,7 @@ export function PositioningMissionAnalysisInline({
 
   if (isMissionDetailLoading && !mission) {
     return (
-      <div className="mt-6 flex flex-col gap-2" aria-busy="true">
+      <div className="mt-4 flex flex-col gap-2" aria-busy="true">
         <p className="text-xs text-muted-foreground">Chargement de la mission…</p>
         <Skeleton className="h-3 w-2/3 animate-none" />
         <Skeleton className="h-3 w-1/2 animate-none" />
@@ -136,7 +136,7 @@ export function PositioningMissionAnalysisInline({
       : null;
 
   return (
-    <div className="mt-6 flex flex-col gap-3" aria-busy={!!isMissionDetailLoading}>
+    <div className="mt-4 flex flex-col gap-3" aria-busy={!!isMissionDetailLoading}>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h3 className="text-sm font-semibold text-foreground">Analyse de la fiche mission</h3>
         <AiGenerationInfoIcon

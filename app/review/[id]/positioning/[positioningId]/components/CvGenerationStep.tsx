@@ -1,9 +1,12 @@
 'use client';
 
+import { FileText } from 'lucide-react';
 import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { StatusBadge } from '@/components/app/status-badge';
 import { TailoredCvForm } from './TailoredCvForm';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 
@@ -20,8 +23,9 @@ interface CvGenerationStepProps {
 }
 
 /**
- * Étape 3, colonne de gauche : le CV retravaillé en formulaire sur le papier.
- * « Exporter le PDF » est la primaire de l'en-tête ; ici, « Régénérer » et « Comparer ».
+ * Étape 3, colonne de gauche : le panneau « CV retravaillé », formulaire en sections
+ * séparées par des filets. « Exporter le PDF » est la primaire de l'en-tête de page ;
+ * ici, « Comparer » et « Régénérer ».
  */
 export function CvGenerationStep({
   isStreaming,
@@ -44,41 +48,46 @@ export function CvGenerationStep({
     positioningStatus === 'error' ? 'Relancer la génération' : hasCv ? 'Régénérer' : 'Générer le CV';
 
   return (
-    <section aria-labelledby="tailored-cv-heading" className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-2">
-        <div className="flex min-w-0 items-center gap-1">
-          <h2 id="tailored-cv-heading" className="text-[0.9375rem] font-semibold text-foreground">
-            CV retravaillé
-          </h2>
-          <AiGenerationInfoIcon
-            variant="positioning_generate"
-            modelsByTask={generationModelsByTask}
-            className="h-7 w-7"
-          />
-          {cvRun ? (
-            <span className="ml-2 border-l-2 border-primary pl-2 text-xs text-muted-foreground">En cours</span>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={onCompare} disabled={compareDisabled}>
-            Comparer
-          </Button>
-          {!isStreaming ? (
-            <Button type="button" variant="outline" size="sm" onClick={onGenerateCv}>
-              {regenLabel}
+    <Panel aria-labelledby="tailored-cv-heading">
+      <PanelHeader
+        id="tailored-cv-heading"
+        icon={FileText}
+        title="CV retravaillé"
+        description="Version alignée sur la fiche, modifiable avant export."
+        actions={
+          <>
+            {cvRun ? (
+              <StatusBadge tone="info" pulse>
+                En cours
+              </StatusBadge>
+            ) : null}
+            <AiGenerationInfoIcon
+              variant="positioning_generate"
+              modelsByTask={generationModelsByTask}
+              className="h-7 w-7"
+            />
+            <Button type="button" variant="ghost" size="sm" onClick={onCompare} disabled={compareDisabled}>
+              Comparer
             </Button>
-          ) : null}
-        </div>
-      </div>
+            {!isStreaming ? (
+              <Button type="button" variant="outline" size="sm" onClick={onGenerateCv}>
+                {regenLabel}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
       {tailoredCv ? (
-        <TailoredCvForm
-          data={tailoredCv}
-          onUpdateField={updateTailoredCvField}
-          readOnly={isStreaming}
-        />
+        <PanelBody padded={false}>
+          <TailoredCvForm
+            data={tailoredCv}
+            onUpdateField={updateTailoredCvField}
+            readOnly={isStreaming}
+          />
+        </PanelBody>
       ) : cvRun ? (
-        <div className="flex flex-col gap-6" aria-busy="true" aria-label="Génération du CV retravaillé">
+        <PanelBody className="flex flex-col gap-6" aria-busy="true" aria-label="Génération du CV retravaillé">
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex flex-col gap-3">
               <Skeleton className="h-4 w-1/4 animate-none" />
@@ -87,16 +96,20 @@ export function CvGenerationStep({
               <Skeleton className="h-3 w-2/3 animate-none" />
             </div>
           ))}
-        </div>
+        </PanelBody>
       ) : emailsOnlyRun ? (
-        <p className="text-sm text-muted-foreground">
-          Cette exécution ne régénère pas le CV : ouvrez l’étape « E-mails ».
-        </p>
+        <PanelBody>
+          <p className="text-sm text-muted-foreground">
+            Cette exécution ne régénère pas le CV : ouvrez l’étape « E-mails ».
+          </p>
+        </PanelBody>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          Aucun CV retravaillé pour l’instant. Lancez la génération pour obtenir une version alignée sur la fiche.
-        </p>
+        <PanelBody>
+          <p className="text-sm text-muted-foreground">
+            Aucun CV retravaillé pour l’instant. Lancez la génération pour obtenir une version alignée sur la fiche.
+          </p>
+        </PanelBody>
       )}
-    </section>
+    </Panel>
   );
 }

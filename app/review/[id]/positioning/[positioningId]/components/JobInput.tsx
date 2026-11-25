@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { JobDescriptionInput } from '@/components/job-description-input';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
 
 interface JobInputProps {
   jobDescription: string;
@@ -22,9 +24,9 @@ interface JobInputProps {
 }
 
 /**
- * La fiche de poste, à gauche de l'étape 1 : un `h2` sur un filet, le texte en lecture
- * (clampé, « Voir tout ») ou la saisie. Le bouton « Analyser le matching » vit dans
- * l'en-tête de page, pas ici.
+ * La fiche de poste, premier panneau de l'étape 1 : en-tête (icône, titre, mission
+ * liée en description, « Modifier » à droite), corps en lecture (clampé, « Voir tout »)
+ * ou en saisie. « Analyser le matching » reste la primaire de l'en-tête de page.
  */
 export function JobInput({
   jobDescription,
@@ -43,71 +45,68 @@ export function JobInput({
   const hasText = jobDescription.trim().length > 0;
   const showExpandToggle = jobDescription.trim().length > 400;
 
+  const description = missionHeadline
+    ? usesStructuredMissionAnalysis
+      ? `Matching basé sur l’analyse structurée de la mission « ${missionHeadline} ».`
+      : `Fiche de la mission « ${missionHeadline} ». Enrichissez-la sur la page mission pour affiner le barème.`
+    : undefined;
+
   return (
-    <section aria-labelledby="job-input-heading" className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-2">
-        <h2 id="job-input-heading" className="text-[0.9375rem] font-semibold text-foreground">
-          Fiche de poste
-        </h2>
-        {readOnly && !missionHeadline && !isAnalyzing ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setEditing((v) => !v)}
-          >
-            {editing ? 'Terminer' : 'Modifier'}
-          </Button>
-        ) : null}
-      </div>
-
-      {missionHeadline ? (
-        <p className="text-xs text-muted-foreground">
-          {usesStructuredMissionAnalysis
-            ? `Matching basé sur l’analyse structurée de la mission « ${missionHeadline} ».`
-            : `Fiche de la mission « ${missionHeadline} ». Enrichissez-la sur la page mission pour affiner le barème.`}
-        </p>
-      ) : null}
-
-      {isEditing && !missionHeadline ? (
-        <Field>
-          <FieldLabel htmlFor="job-description-input" className="sr-only">
-            Fiche de poste
-          </FieldLabel>
-          <JobDescriptionInput
-            id="job-description-input"
-            value={jobDescription}
-            onChange={onJobDescriptionChange}
-            placeholder="Saisissez ou collez la fiche de poste…"
-            disabled={isAnalyzing || disabled}
-            textareaClassName="min-h-[160px] max-h-[400px] text-sm"
-            onExtractingChange={onImportingChange}
-          />
-        </Field>
-      ) : hasText ? (
-        <div>
-          <JobDescriptionMarkdown
-            content={jobDescription}
-            clampClassName={expanded || !showExpandToggle ? undefined : 'line-clamp-6'}
-            className="text-muted-foreground"
-          />
-          {showExpandToggle ? (
-            <Button
-              type="button"
-              variant="link"
-              size="sm"
-              className="mt-1 h-auto p-0 text-xs text-muted-foreground"
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {expanded ? 'Réduire' : 'Voir tout'}
+    <Panel aria-labelledby="job-input-heading">
+      <PanelHeader
+        id="job-input-heading"
+        icon={FileText}
+        title="Fiche de poste"
+        description={description}
+        actions={
+          readOnly && !missionHeadline && !isAnalyzing ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
+              {editing ? 'Terminer' : 'Modifier'}
             </Button>
-          ) : null}
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          {missionHeadline ? 'Le texte de la fiche est consultable sur la page mission.' : 'Aucune fiche de poste.'}
-        </p>
-      )}
-    </section>
+          ) : undefined
+        }
+      />
+      <PanelBody>
+        {isEditing && !missionHeadline ? (
+          <Field>
+            <FieldLabel htmlFor="job-description-input" className="sr-only">
+              Fiche de poste
+            </FieldLabel>
+            <JobDescriptionInput
+              id="job-description-input"
+              value={jobDescription}
+              onChange={onJobDescriptionChange}
+              placeholder="Saisissez ou collez la fiche de poste…"
+              disabled={isAnalyzing || disabled}
+              textareaClassName="min-h-[160px] max-h-[400px] text-sm"
+              onExtractingChange={onImportingChange}
+            />
+          </Field>
+        ) : hasText ? (
+          <div>
+            <JobDescriptionMarkdown
+              content={jobDescription}
+              clampClassName={expanded || !showExpandToggle ? undefined : 'line-clamp-6'}
+              className="text-muted-foreground"
+            />
+            {showExpandToggle ? (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="mt-1 h-auto p-0 text-xs text-muted-foreground"
+                onClick={() => setExpanded((v) => !v)}
+              >
+                {expanded ? 'Réduire' : 'Voir tout'}
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {missionHeadline ? 'Le texte de la fiche est consultable sur la page mission.' : 'Aucune fiche de poste.'}
+          </p>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { History } from 'lucide-react';
 import type { PositioningAnalysis } from '@/lib/schema';
 import {
   analysisPhaseAnswersOnly,
@@ -10,6 +11,7 @@ import {
 import type { PositioningAnalysisHistoryRow } from '@/lib/queries/positionings';
 import { usePositioningAnalysisHistory } from '@/lib/queries/positionings';
 import { AnalysisView } from './AnalysisView';
+import { CollapsiblePanel } from './CollapsiblePanel';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { scoreToneText } from '@/lib/utils/score-tone';
 import { formatHistoryModelsDisplayLabel, parsePositioningAnalysisModelsSnapshot } from '@/lib/types/positioning-analysis-models';
 import type { PositioningAnalysisSnapshotReason } from '@/lib/types/positioning-analysis-snapshot-payload';
 
@@ -85,7 +88,7 @@ function HistoryDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(90vh,900px)] max-w-3xl flex-col overflow-hidden p-0">
+      <DialogContent className="flex max-h-[min(90vh,900px)] max-w-3xl flex-col overflow-hidden bg-shell p-0">
         <DialogHeader className="shrink-0 border-b border-border px-6 pb-3 pt-6">
           <DialogTitle className="pr-8 text-base">
             Analyse archivée
@@ -106,7 +109,7 @@ function HistoryDetailDialog({
               modelsSummaryLabel={modelsSummaryLabel}
               modelsByTask={modelsSnapshot?.byTask}
               aiInfoHistoryHref={wizardHref}
-              aiInfoHistoryLinkLabel="Positionnement et onglet Historique"
+              aiInfoHistoryLinkLabel="Positionnement et panneau Historique"
             />
           ) : (
             <p className="text-sm text-muted-foreground">Aucune donnée d’analyse.</p>
@@ -130,15 +133,23 @@ function HistoryRow({
 }) {
   const a = row.analysis as { matchScore?: number } | null;
   const score = a?.matchScore;
+  const hasScore = typeof score === 'number' && !Number.isNaN(score);
   const modelsLabel = formatHistoryModelsDisplayLabel(row.ai_analysis_models);
   const rowModelsSnapshot = parsePositioningAnalysisModelsSnapshot(row.ai_analysis_models);
   const wizardHref = `/review/${candidateId}/positioning/${positioningId}`;
   const reasonLabel = snapshotReasonLabel(row.snapshot_reason);
-  const scoreLabel = typeof score === 'number' && !Number.isNaN(score) ? `${score} / 100` : '—';
 
   return (
-    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
+    <li className="flex items-center gap-4 px-4 py-3">
+      <span
+        className={`w-10 shrink-0 font-mono text-lg font-semibold tabular-nums ${
+          hasScore ? scoreToneText(score) : 'text-muted-foreground'
+        }`}
+        aria-label={hasScore ? `Score ${score} sur 100` : 'Score absent'}
+      >
+        {hasScore ? score : '—'}
+      </span>
+      <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p className="text-sm font-medium text-foreground">{formatHistoryDate(row.created_at)}</p>
           <AiGenerationInfoIcon
@@ -150,16 +161,13 @@ function HistoryRow({
             className="h-7 w-7"
           />
         </div>
-        <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-          Score {scoreLabel}
-          {reasonLabel ? ` · ${reasonLabel}` : ''}
-        </p>
+        {reasonLabel ? <p className="mt-0.5 text-xs text-muted-foreground">{reasonLabel}</p> : null}
       </div>
       <Button
         type="button"
         size="sm"
         variant="outline"
-        className="w-full shrink-0 sm:w-auto"
+        className="shrink-0"
         onClick={() => onOpenDetail(row)}
       >
         Voir le détail
@@ -168,8 +176,8 @@ function HistoryRow({
   );
 }
 
-/** Contenu de l’onglet Historique (liste + détail). */
-export function PositioningAnalysisHistoryTabContent({
+/** Panneau « Historique », replié par défaut : liste des analyses archivées, détail en dialogue. */
+export function PositioningAnalysisHistoryPanel({
   positioningId,
   candidateId,
 }: {
@@ -181,45 +189,38 @@ export function PositioningAnalysisHistoryTabContent({
 
   const list = rows ?? [];
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-4 py-3" aria-busy="true" aria-label="Chargement de l’historique">
-        <Skeleton className="h-4 w-1/2 animate-none" />
-        <Skeleton className="h-4 w-2/5 animate-none" />
-        <Skeleton className="h-4 w-1/2 animate-none" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return <p className="text-sm text-destructive">Impossible de charger l’historique.</p>;
-  }
-
-  if (list.length === 0) {
-    return (
-      <p className="py-3 text-sm text-muted-foreground">
-        Aucune analyse archivée pour ce positionnement. Les analyses terminées et les relances
-        apparaissent ici automatiquement.
-      </p>
-    );
-  }
-
   return (
-    <>
-      <p className="text-xs text-muted-foreground">
-        Chaque ligne est une analyse archivée (fin de workflow ou relance) ; l’icône résume les modèles IA.
-      </p>
-      <ul className="mt-2 divide-y divide-border">
-        {list.map((row) => (
-          <HistoryRow
-            key={row.id}
-            row={row}
-            candidateId={candidateId}
-            positioningId={positioningId}
-            onOpenDetail={setDialogEntry}
-          />
-        ))}
-      </ul>
+    <CollapsiblePanel
+      icon={History}
+      title="Historique"
+      count={isLoading ? undefined : list.length}
+      description="Analyses archivées : fin de workflow et relances."
+    >
+      {isLoading ? (
+        <div className="flex flex-col gap-4 px-4 py-4" aria-busy="true" aria-label="Chargement de l’historique">
+          <Skeleton className="h-4 w-1/2 animate-none" />
+          <Skeleton className="h-4 w-2/5 animate-none" />
+        </div>
+      ) : isError ? (
+        <p className="px-4 py-3 text-sm text-destructive">Impossible de charger l’historique.</p>
+      ) : list.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-muted-foreground">
+          Aucune analyse archivée pour ce positionnement. Les analyses terminées et les relances
+          apparaissent ici automatiquement.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {list.map((row) => (
+            <HistoryRow
+              key={row.id}
+              row={row}
+              candidateId={candidateId}
+              positioningId={positioningId}
+              onOpenDetail={setDialogEntry}
+            />
+          ))}
+        </ul>
+      )}
 
       <HistoryDetailDialog
         entry={dialogEntry}
@@ -230,6 +231,6 @@ export function PositioningAnalysisHistoryTabContent({
         candidateId={candidateId}
         positioningId={positioningId}
       />
-    </>
+    </CollapsiblePanel>
   );
 }
