@@ -169,13 +169,13 @@ export function UnifiedSidebar(): React.JSX.Element | null {
     uploadCv.mutate(file, {
       onSuccess: (data) => {
         toast.success('CV uploadé', {
-          description: 'Extraction automatique en cours...',
+          description: 'Extraction automatique en cours…',
         });
         navigate(`/review/${data.id}`);
       },
       onError: () => {
         toast.error("Erreur lors de l'upload", {
-          description: 'Vérifie le fichier et réessaie.',
+          description: 'Vérifiez le fichier et réessayez.',
         });
       },
     });
