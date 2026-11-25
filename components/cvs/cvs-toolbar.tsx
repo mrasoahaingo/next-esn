@@ -45,14 +45,14 @@ export function CvsToolbar({
               aria-pressed={active}
               onClick={() => onFilterChange(f)}
               className={cn(
-                'inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-medium transition-colors duration-[120ms] ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
+                'inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-medium active:translate-y-px transition-colors duration-[120ms] ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none',
                 active
                   ? 'border-primary/30 bg-primary/10 text-primary'
                   : 'border-border bg-panel text-muted-foreground hover:bg-muted hover:text-foreground',
               )}
             >
               {cvFilterLabel(f)}
-              <span className={cn('font-mono tabular-nums', active ? 'text-primary/80' : 'text-muted-foreground/80')}>
+              <span className="font-mono tabular-nums">
                 {counts[f]}
               </span>
             </button>
