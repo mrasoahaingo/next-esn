@@ -73,6 +73,7 @@ describe('computeDashboardStats', () => {
     const stats = computeDashboardStats(data);
     expect(stats.totalCvs).toBe(5);
     expect(stats.extractedCvs).toBe(2);
+    expect(stats.reviewingCvs).toBe(1);
     expect(stats.readyCvs).toBe(1);
     expect(stats.totalPositionings).toBe(4);
     expect(stats.analyzed.map((p) => p.id)).toEqual(['p1', 'p2']);
@@ -153,6 +154,18 @@ describe('buildToReview', () => {
     ]);
     expect(items[1]).toMatchObject({ href: '/review/c4', reason: 'Extraction en échec', tone: 'error' });
     expect(items[0].href).toBe('/review/c1/positioning/p4');
+  });
+
+  it('nomme le candidat seulement quand son état civil est extrait', () => {
+    const items = buildToReview({
+      ...data,
+      candidates: [
+        { id: 'x1', status: 'error', created_at: '2026-11-24T09:00:00Z', extracted_data: { personalInfo: { firstName: 'Noé', lastName: 'Petit' } } },
+        { id: 'x2', status: 'error', created_at: '2026-11-24T08:00:00Z', extracted_data: { personalInfo: {} } },
+      ],
+      positionings: [],
+    });
+    expect(items.map((i) => i.candidateName)).toEqual(['Noé Petit', undefined]);
   });
 
   it('respecte la limite', () => {
