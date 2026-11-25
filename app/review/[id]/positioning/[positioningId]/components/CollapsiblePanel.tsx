@@ -50,10 +50,10 @@ export function CollapsiblePanel({
             '[&::-webkit-details-marker]:hidden',
           )}
         >
-          <span className="flex min-w-0 items-start gap-2.5">
+          <div className="flex min-w-0 items-start gap-2.5">
             {Icon ? <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden /> : null}
-            <span className="block min-w-0">
-              <span className="flex min-w-0 items-center gap-2">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
                 <Heading id={id} className="truncate text-sm font-semibold text-foreground">
                   {title}
                 </Heading>
@@ -62,19 +62,19 @@ export function CollapsiblePanel({
                     {count}
                   </span>
                 ) : null}
-              </span>
+              </div>
               {description ? (
-                <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span>
+                <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
               ) : null}
-            </span>
-          </span>
-          <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
             {aside}
             <ChevronDown
               className="size-4 transition-transform duration-[220ms] ease-out group-open/collapsible:rotate-180 motion-reduce:transition-none"
               aria-hidden
             />
-          </span>
+          </div>
         </summary>
         <div className="border-t border-border">{children}</div>
       </details>
