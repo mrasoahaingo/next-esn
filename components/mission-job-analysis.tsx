@@ -1,111 +1,64 @@
 'use client';
 
-import { useMemo, useState, useEffect, type ReactNode } from 'react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { Loader2, Sparkles, BookOpen, AlertTriangle, XCircle, CheckCircle2 } from 'lucide-react';
+import { Fragment, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@clerk/nextjs';
+import { BookOpen, CheckCircle2, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { StatusBadge } from '@/components/app/status-badge';
+import { PanelEmpty } from '@/components/dashboard/panel-empty';
+import type { JobPostingAnalysis, JobPostingKeyPointExplain, JobPostingKeyPointAspect } from '@/lib/schema';
+import { jobPostingAspectLabel } from '@/lib/services/job-posting-analysis.service';
+import { normalizeSkillKey } from '@/lib/utils/skill-key';
+import { queryKeys } from '@/lib/queries/keys';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
-import type { WorkflowLastError } from '@/lib/types/workflow-last-error';
-import type { JobPostingAnalysisStreamMeta } from '@/lib/types/job-posting-analysis-stream';
-import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
-import { computeJobPostingStepStates, formatStepSummaryLine } from '@/lib/workflow/compute-step-status';
-import { getFrenchStepShortLabel } from '@/lib/workflow/workflow-step-labels';
-import type {
-  JobPostingAnalysis,
-  JobPostingExpertiseBand,
-  JobPostingKeyPointExplain,
-  JobPostingKeyPointAspect,
-  JobPostingRequirementTier,
-} from '@/lib/schema';
+  EVIDENCE_TYPE_LABEL,
+  REQUIREMENT_TIER_LABEL,
+  REQUIREMENT_TIER_TONE,
+  formatWeight,
+} from '@/components/missions/mission-format';
 
 type JobKeyPoint = NonNullable<JobPostingAnalysis['keyPoints']>[number];
 
-const INTERPRETED_BAND_LABEL: Record<JobPostingExpertiseBand, string> = {
-  junior: 'Junior',
-  confirmed: 'Confirmé',
-  senior: 'Senior',
-  expert_lead: 'Expert / lead',
-  unclear: 'Indéterminé',
-};
-
-const REQUIREMENT_TIER_LABEL: Record<JobPostingRequirementTier, string> = {
-  hard_constraint: 'Bloquant',
-  must_have: 'Indispensable',
-  should_have: 'Important',
-  nice_to_have: 'Souhaitable',
-};
-import {
-  jobPostingAspectLabel,
-  withMandatoryJobPostingLists,
-} from '@/lib/services/job-posting-analysis.service';
-import { normalizeSkillKey } from '@/lib/utils/skill-key';
-import { useAuth } from '@clerk/nextjs';
-import { queryKeys } from '@/lib/queries/keys';
-import { useCancelWorkflow } from '@/lib/queries/workflow';
-import { cn } from '@/lib/utils';
-import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
-
-function formatJobPostingStreamHint(meta: JobPostingAnalysisStreamMeta | null): string | null {
-  if (!meta) return null;
-  if (!meta.activeBranches?.length && meta.phase === 'finalizing') {
-    return 'Finalisation…';
-  }
-  if (!meta.activeBranches?.length) return 'Analyse de la fiche…';
-  const labels: Record<string, string> = {
-    executive: 'Synthèse cadre',
-    keyPoints: 'Points clés',
-  };
-  return `Analyse : ${meta.activeBranches.map((b) => labels[b] ?? b).join(' · ')}`;
-}
-
-interface MissionJobAnalysisProps {
+export interface MissionJobAnalysisProps {
   missionId: string;
-  jobDescription: string;
-  job_analysis: JobPostingAnalysis | null;
-  job_analysis_workflow_run_id: string | null;
-  job_analysis_stale: boolean;
-  workflow_last_error?: WorkflowLastError | null;
-  /** Snapshot des modèles LLM utilisés pour la dernière analyse (colonne `ai_job_analysis_models`). */
-  ai_job_analysis_models?: unknown;
+  /** Analyse affichée (persistée ou en cours de flux), fournie par `useMissionJobAnalysis`. */
+  analysis: Partial<JobPostingAnalysis> | null;
+  isStreaming: boolean;
   /** Clés skills marquées « comprises » par le recruteur (toutes missions de l’org). */
   global_skill_keys_understood: string[];
-  /** Classes sur le conteneur (ex. grille 2 colonnes : retirer mb-6, overflow). */
-  className?: string;
+  /** La fiche est vide ou pas encore analysée : le panneau invite. */
+  onAnalyze?: () => void;
+  canAnalyze?: boolean;
 }
 
-function AnalysisScrollBody({ children }: { children: ReactNode }) {
-  return (
-    <div className="pr-1">
-      {children}
-    </div>
-  );
-}
+const SKELETON = 'motion-reduce:animate-none';
+const HEAD = 'h-9 text-xs text-muted-foreground';
 
+/**
+ * Panneau « Points clés et barème » : les critères tirés de la fiche, en tableau
+ * groupé par catégorie (point clé et son rôle, importance et niveau d'exigence,
+ * preuve attendue, « Compris », explication). Le flux d'analyse vit dans
+ * `useMissionJobAnalysis` ; ici restent la mutation « compris » et le dialogue
+ * d'explication, inchangés.
+ */
 export function MissionJobAnalysis({
   missionId,
-  jobDescription,
-  job_analysis,
-  job_analysis_workflow_run_id,
-  job_analysis_stale,
-  workflow_last_error = null,
-  ai_job_analysis_models,
+  analysis,
+  isStreaming,
   global_skill_keys_understood,
-  className,
-}: MissionJobAnalysisProps) {
+  onAnalyze,
+  canAnalyze = true,
+}: MissionJobAnalysisProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const { orgId } = useAuth();
-  const cancelWorkflow = useCancelWorkflow();
 
   const invalidate = () => {
     const oid = orgId ?? '';
@@ -116,48 +69,9 @@ export function MissionJobAnalysis({
     queryClient.invalidateQueries({ queryKey: queryKeys.orgRecruiterSkills.all(oid) });
   };
 
-  const jobAnalyzeActive = !!job_analysis_workflow_run_id;
-
-  const stream = useWorkflowStream<Partial<JobPostingAnalysis>, JobPostingAnalysisStreamMeta>({
-    api: `/api/missions/${missionId}/analyze-job`,
-    runId: jobAnalyzeActive ? job_analysis_workflow_run_id ?? undefined : undefined,
-    runStatus: jobAnalyzeActive ? 'extracting' : undefined,
-    activeStatuses: ['extracting'],
-    onFinish: () => {
-      invalidate();
-      toast.success('Analyse terminee avec succes');
-    },
-    onStartOnly: async () => {
-      await queryClient.refetchQueries({ queryKey: queryKeys.missions.detail(orgId ?? '', missionId) });
-    },
-  });
-
-  const cancelRunId = stream.activeRunId;
-
-  useEffect(() => {
-    if (!stream.error) return;
-    const key = stream.errorStepKey ?? workflow_last_error?.stepKey;
-    const label = key ? getFrenchStepShortLabel('jobPosting', key) : 'Analyse fiche';
-    toast.error(`${label} : échec. Réessayez ou contactez le support.`, { duration: 8000 });
-  }, [stream.error, stream.errorStepKey, workflow_last_error?.stepKey]);
-
-  const effectiveAnalysis = useMemo(() => {
-    const raw =
-      stream.isLoading && stream.object ? stream.object : job_analysis ?? stream.object ?? null;
-    if (!raw) return null;
-    const hasAnyContent =
-      !!raw.expectedExpertiseLevel ||
-      !!raw.executiveSummary?.trim() ||
-      (raw.keyPoints?.length ?? 0) > 0 ||
-      (raw.openQuestions?.length ?? 0) > 0 ||
-      (raw.redFlags?.length ?? 0) > 0;
-    if (!hasAnyContent) return raw;
-    return withMandatoryJobPostingLists(raw);
-  }, [stream.isLoading, stream.object, job_analysis]);
-
   /** Regroupe par `category` ; ordre des blocs = importance la plus forte (min rank) dans la catégorie. */
   const keyPointsByCategory = useMemo(() => {
-    const points = effectiveAnalysis?.keyPoints;
+    const points = analysis?.keyPoints;
     if (!points?.length) return [] as [string, JobKeyPoint[]][];
     const map = new Map<string, JobKeyPoint[]>();
     for (const kp of points) {
@@ -174,48 +88,9 @@ export function MissionJobAnalysis({
       const minB = Math.min(...b[1].map((p) => p.importanceRank));
       return minA - minB;
     });
-  }, [effectiveAnalysis?.keyPoints]);
+  }, [analysis?.keyPoints]);
 
-  /** Analyse déjà persistée en base : ne pas afficher le bandeau « en cours » si le run est obsolète. */
-  const hasPersistedJobAnalysis =
-    !!job_analysis &&
-    (!!job_analysis.expectedExpertiseLevel ||
-      !!job_analysis.executiveSummary?.trim() ||
-      (job_analysis.keyPoints?.length ?? 0) > 0);
-
-  const showAnalysisProgressHint =
-    stream.isLoading || (jobAnalyzeActive && !hasPersistedJobAnalysis);
-
-  const jobPostingRows = useMemo(
-    () =>
-      computeJobPostingStepStates({
-        streamMeta: stream.streamMeta,
-        partialData: stream.object ?? job_analysis ?? null,
-        isStreaming: stream.isLoading,
-        errorStepKey: stream.errorStepKey,
-        persistedError: workflow_last_error,
-        workflowFailed: !!(workflow_last_error ?? stream.error),
-        workflowRunActive: jobAnalyzeActive,
-      }),
-    [
-      stream.streamMeta,
-      stream.object,
-      stream.isLoading,
-      stream.errorStepKey,
-      stream.error,
-      job_analysis,
-      workflow_last_error,
-      jobAnalyzeActive,
-    ],
-  );
-
-  const jobPostingSummary = useMemo(
-    () => formatStepSummaryLine('jobPosting', jobPostingRows),
-    [jobPostingRows],
-  );
-
-  const showJobStepList =
-    stream.isLoading || (jobAnalyzeActive && !hasPersistedJobAnalysis) || !!workflow_last_error;
+  const totalPoints = analysis?.keyPoints?.length ?? 0;
 
   const toggleUnderstood = useMutation({
     mutationFn: async ({ pointId, understood }: { pointId: string; understood: boolean }) => {
@@ -237,10 +112,13 @@ export function MissionJobAnalysis({
   const [explainOpen, setExplainOpen] = useState(false);
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainData, setExplainData] = useState<JobPostingKeyPointExplain | null>(null);
+  const [explainLabel, setExplainLabel] = useState<string | null>(null);
   const [explainCache, setExplainCache] = useState<Record<string, JobPostingKeyPointExplain>>({});
 
-  const openExplain = async (pointId: string) => {
-    const cached = explainCache[pointId] ?? effectiveAnalysis?.keyPointExplanations?.[pointId];
+  const openExplain = async (kp: JobKeyPoint) => {
+    const pointId = kp.id;
+    setExplainLabel(kp.label);
+    const cached = explainCache[pointId] ?? analysis?.keyPointExplanations?.[pointId];
     if (cached) {
       setExplainData(cached);
       setExplainLoading(false);
@@ -270,337 +148,150 @@ export function MissionJobAnalysis({
     }
   };
 
-  const jobAnalysisModels = useMemo(() => {
-    if (!ai_job_analysis_models || typeof ai_job_analysis_models !== 'object') return null;
-    const o = ai_job_analysis_models as Record<string, unknown>;
-    if (typeof o.byTask !== 'object' || o.byTask === null) return null;
-    const byTask = o.byTask as Record<string, string>;
-    const uniqueModels = Array.isArray(o.uniqueModels)
-      ? (o.uniqueModels as string[]).join(', ')
-      : Object.values(byTask).join(', ');
-    return { byTask, label: uniqueModels || null };
-  }, [ai_job_analysis_models]);
-
-  const hasDescription = jobDescription.trim().length > 0;
-  const showAnalyzeCta = !job_analysis && !stream.isLoading && !jobAnalyzeActive;
-  const showRelaunch = !!job_analysis && !jobAnalyzeActive && !stream.isLoading;
+  const showTable = keyPointsByCategory.length > 0;
 
   return (
-    <div className={cn('glass-panel flex flex-col rounded-2xl p-6 mb-6', className)}>
-      <div className="shrink-0">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Sparkles className="h-4 w-4 shrink-0 text-neon" />
-          <h2 className="text-sm font-semibold text-foreground">Comprendre la fiche</h2>
-          <AiGenerationInfoIcon
-            variant="mission_job_analysis"
-            modelsLabel={jobAnalysisModels?.label}
-            modelsByTask={jobAnalysisModels?.byTask}
-            className="h-7 w-7"
-          />
-          {showAnalysisProgressHint && !showJobStepList && (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              {formatJobPostingStreamHint(stream.streamMeta) ?? 'Analyse de la fiche…'}
-            </span>
-          )}
-        </div>
-
-        {showJobStepList && (
-          <div className="mb-4 rounded-xl border border-border/60 bg-card/30 px-3 py-3">
-            <WorkflowStepList rows={jobPostingRows} summaryLine={jobPostingSummary} />
-          </div>
-        )}
-
-        {!hasDescription && (
-          <p className="text-xs text-muted-foreground">Ajoutez du texte à la fiche de poste pour lancer une analyse.</p>
-        )}
-
-        {hasDescription && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {showAnalyzeCta && (
-              <Button
-                size="sm"
-                className="bg-neon text-neutral-950 hover:bg-neon/90"
-                disabled={stream.isLoading}
-                onClick={() => stream.submit({ startOnly: true })}
-              >
-                Analyser la fiche
-              </Button>
-            )}
-            {showRelaunch && !showAnalyzeCta && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-neon/40 text-neon hover:bg-neon/10"
-                disabled={stream.isLoading}
-                onClick={() => stream.submit({ startOnly: true })}
-              >
-                {job_analysis_stale ? 'Relancer l’analyse' : 'Réanalyser la fiche'}
-              </Button>
-            )}
-            {cancelRunId && (stream.isLoading || jobAnalyzeActive) && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-muted-foreground"
-                onClick={() => {
-                  stream.stop();
-                  cancelWorkflow.mutate({
-                    runId: cancelRunId,
-                    table: 'missions',
-                    recordId: missionId,
-                    missionId,
-                  });
-                }}
-                disabled={cancelWorkflow.isPending}
-              >
-                <XCircle className="mr-1 h-3.5 w-3.5" />
-                Annuler l’analyse
-              </Button>
-            )}
-          </div>
-        )}
-
-        {job_analysis_stale && job_analysis && !stream.isLoading && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200/90">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>La fiche a changé depuis la dernière analyse. Relancez pour une lecture à jour.</span>
-          </div>
-        )}
-      </div>
-
-      {hasDescription && (
-      <AnalysisScrollBody>
-      {effectiveAnalysis?.expectedExpertiseLevel &&
-        effectiveAnalysis.expectedExpertiseLevel.summary?.trim() && (
-        <div className="rounded-xl border border-violet/35 bg-violet/10 p-4 mb-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-violet">
-              Niveau d&apos;expertise attendu
-            </p>
-            {effectiveAnalysis.expectedExpertiseLevel.interpretedBand && (
-              <Badge variant="secondary" className="text-[10px] font-normal">
-                {INTERPRETED_BAND_LABEL[effectiveAnalysis.expectedExpertiseLevel.interpretedBand]}
-              </Badge>
-            )}
-            {effectiveAnalysis.expectedExpertiseLevel.hardOnLevel && (
-              <Badge variant="outline" className="border-destructive/40 text-[10px] text-destructive">
-                Non négociable
-              </Badge>
-            )}
-          </div>
-          {effectiveAnalysis.expectedExpertiseLevel.statedLevel?.trim() && (
-            <p className="text-xs font-medium text-foreground/95 mb-1">
-              {effectiveAnalysis.expectedExpertiseLevel.statedLevel}
-            </p>
-          )}
-          <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed mb-3">
-            {effectiveAnalysis.expectedExpertiseLevel.summary}
-          </p>
-          {effectiveAnalysis.expectedExpertiseLevel.minYearsHint != null && (
-            <p className="text-xs text-muted-foreground mb-2">
-              Indication d&apos;ancienneté (fiche) :{' '}
-              <span className="font-medium text-foreground">
-                {effectiveAnalysis.expectedExpertiseLevel.minYearsHint} an(s) ou équivalent
-              </span>
-            </p>
-          )}
-          {(effectiveAnalysis.expectedExpertiseLevel.signalsFromPosting?.length ?? 0) > 0 && (
-            <>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                Signaux dans la fiche
-              </p>
-              <ul className="mb-3 list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
-                {(effectiveAnalysis.expectedExpertiseLevel.signalsFromPosting ?? []).map((s, i) => (
-                  <li key={i}>{s}</li>
-                ))}
-              </ul>
-            </>
-          )}
-          {(effectiveAnalysis.expectedExpertiseLevel.recruiterCalibrationQuestions?.length ?? 0) > 0 && (
-            <>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                Questions pour calibrer avec le client
-              </p>
-              <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
-                {(effectiveAnalysis.expectedExpertiseLevel.recruiterCalibrationQuestions ?? []).map((q, i) => (
-                  <li key={i}>{q}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      )}
-
-      {effectiveAnalysis?.executiveSummary && (
-        <div className="rounded-xl bg-overlay/20 border border-overlay/6 p-4 mb-4">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Synthèse
-          </p>
-          <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-            {effectiveAnalysis.executiveSummary}
-          </p>
-        </div>
-      )}
-
-      {effectiveAnalysis?.cvSearchKeywords && effectiveAnalysis.cvSearchKeywords.length > 0 && (
-        <div className="mb-4">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            Mots-clés matching (priorité CV)
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {effectiveAnalysis.cvSearchKeywords.map((kw, i) => (
-              <Badge
-                key={`${kw}-${i}`}
-                variant="secondary"
-                className="text-[10px] font-normal px-2 py-0.5 font-mono text-muted-foreground"
-              >
-                {kw}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {effectiveAnalysis?.openQuestions && effectiveAnalysis.openQuestions.length > 0 && (
-        <div className="mb-4">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-            À clarifier avec le client
-          </p>
-          <ul className="flex flex-col gap-1 list-disc pl-4 text-xs text-muted-foreground">
-            {effectiveAnalysis.openQuestions.map((q, i) => (
-              <li key={i}>{q}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {effectiveAnalysis?.redFlags && effectiveAnalysis.redFlags.length > 0 && (
-        <div className="mb-4">
-          <p className="text-[10px] font-medium text-destructive/80 uppercase tracking-wider mb-2">
-            Points de vigilance
-          </p>
-          <ul className="flex flex-col gap-1 list-disc pl-4 text-xs text-destructive/90">
-            {effectiveAnalysis.redFlags.map((q, i) => (
-              <li key={i}>{q}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {keyPointsByCategory.length > 0 && (
-        <div className="flex flex-col gap-5">
-          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Points clés par catégories
-          </p>
-          <div className="flex flex-col gap-5 rounded-xl border border-overlay/6 bg-overlay/10 p-3">
-            {keyPointsByCategory.map(([category, points]) => (
-            <div key={category} className="flex flex-col gap-2">
-              <h3 className="text-xs font-semibold text-foreground tracking-tight border-b border-overlay/10 pb-2">
-                {category}
-              </h3>
-              <div className="flex flex-col gap-2">
-                {points.map((kp) => {
-                  const aspect = (kp.aspect ?? 'other') as JobPostingKeyPointAspect;
-                  const skillKey = kp.canonicalSkillKey?.trim()
-                    ? normalizeSkillKey(kp.canonicalSkillKey)
-                    : kp.id;
-                  const understood = global_skill_keys_understood.includes(skillKey);
-
-                  return (
-                    <div
-                      key={kp.id}
-                      className="flex flex-col sm:flex-row sm:items-start gap-3 rounded-xl border border-overlay/6 bg-overlay/15 px-3 py-3"
-                    >
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-medium text-foreground">{kp.label}</span>
-                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-violet/30 text-violet/90">
-                            #{kp.importanceRank}
-                          </Badge>
-                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                            {jobPostingAspectLabel(aspect)}
-                          </Badge>
-                          {kp.requirementTier && (
-                            <Badge
-                              variant="outline"
-                              className={`text-[9px] px-1.5 py-0 ${
-                                kp.requirementTier === 'hard_constraint'
-                                  ? 'border-destructive/50 text-destructive/90'
-                                  : 'border-neon/40 text-neon/90'
-                              }`}
-                            >
-                              {REQUIREMENT_TIER_LABEL[kp.requirementTier]}
-                            </Badge>
-                          )}
-                          {kp.importanceWeight != null && kp.requirementTier !== 'hard_constraint' && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-white/20 text-white/60">
-                              poids {Math.round(kp.importanceWeight * 100)}%
-                            </Badge>
-                          )}
-                          {kp.evidenceTypeExpected && (
-                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-white/15 text-muted-foreground">
-                              preuve : {kp.evidenceTypeExpected.replace(/_/g, ' ')}
-                            </Badge>
-                          )}
-                          {understood && (
-                            <Badge
-                              variant="default"
-                              className="text-[9px] px-1.5 py-0 gap-0.5 bg-neon/20 text-neon border-0"
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              Assimilé
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-white/70 leading-relaxed">{kp.roleInMission}</p>
-                        {kp.valueSought?.trim() && (
-                          <p className="text-[10px] text-muted-foreground">
-                            <span className="text-white/50">Exigence : </span>
-                            {kp.valueSought}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                        <div className="flex items-center gap-1.5">
+    <Panel aria-labelledby="key-points-title">
+      <PanelHeader
+        id="key-points-title"
+        icon={ListChecks}
+        title="Points clés et barème"
+        count={totalPoints > 0 ? totalPoints : undefined}
+        description={showTable ? 'Cochez « Compris » pour les critères que vous maîtrisez : ils le restent sur toutes les missions.' : undefined}
+        actions={
+          isStreaming ? (
+            <StatusBadge tone="info" pulse>
+              En cours
+            </StatusBadge>
+          ) : undefined
+        }
+      />
+      <PanelBody padded={false}>
+        {showTable ? (
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className={`${HEAD} w-full pl-4`}>Point clé</TableHead>
+                <TableHead className={HEAD}>Importance</TableHead>
+                <TableHead className={`${HEAD} hidden lg:table-cell`}>Preuve attendue</TableHead>
+                <TableHead className={`${HEAD} text-center`}>Compris</TableHead>
+                <TableHead className={`${HEAD} pr-3 text-right`}>
+                  <span className="sr-only">Expliquer</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {keyPointsByCategory.map(([category, points]) => (
+                <Fragment key={category}>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40">
+                    <TableCell colSpan={5} className="py-1.5 pl-4">
+                      <span className="text-xs font-semibold text-foreground">{category}</span>
+                      <span className="ml-2 font-mono text-xs tabular-nums text-muted-foreground">{points.length}</span>
+                    </TableCell>
+                  </TableRow>
+                  {points.map((kp) => {
+                    const aspect = (kp.aspect ?? 'other') as JobPostingKeyPointAspect;
+                    const skillKey = kp.canonicalSkillKey?.trim() ? normalizeSkillKey(kp.canonicalSkillKey) : kp.id;
+                    const understood = global_skill_keys_understood.includes(skillKey);
+                    const weight = kp.requirementTier !== 'hard_constraint' ? formatWeight(kp.importanceWeight) : null;
+                    const checkboxId = `understood-${kp.id}`;
+                    return (
+                      <TableRow key={kp.id} className="align-top hover:bg-muted/50">
+                        <TableCell className="max-w-0 whitespace-normal py-2.5 pl-4">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="text-sm font-medium text-foreground">{kp.label}</span>
+                              <span className="text-xs text-muted-foreground">{jobPostingAspectLabel(aspect)}</span>
+                              {understood ? (
+                                <StatusBadge tone="ok" className="h-5">
+                                  <CheckCircle2 className="size-3" aria-hidden />
+                                  Assimilé
+                                </StatusBadge>
+                              ) : null}
+                            </div>
+                            {kp.roleInMission ? (
+                              <p className="text-xs leading-relaxed text-muted-foreground">{kp.roleInMission}</p>
+                            ) : null}
+                            {kp.valueSought?.trim() ? (
+                              <p className="text-xs text-foreground">
+                                <span className="text-muted-foreground">Exigence : </span>
+                                {kp.valueSought}
+                              </p>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2.5">
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs tabular-nums text-muted-foreground">#{kp.importanceRank}</span>
+                              {kp.requirementTier ? (
+                                <StatusBadge tone={REQUIREMENT_TIER_TONE[kp.requirementTier]}>
+                                  {REQUIREMENT_TIER_LABEL[kp.requirementTier]}
+                                </StatusBadge>
+                              ) : null}
+                            </span>
+                            {weight ? (
+                              <span className="font-mono text-xs tabular-nums text-muted-foreground">poids {weight}</span>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden py-2.5 text-xs text-muted-foreground lg:table-cell">
+                          {kp.evidenceTypeExpected ? EVIDENCE_TYPE_LABEL[kp.evidenceTypeExpected] : '—'}
+                        </TableCell>
+                        <TableCell className="py-2.5 text-center">
                           <Checkbox
-                            id={`understood-${kp.id}`}
+                            id={checkboxId}
+                            aria-label={`Compris : ${kp.label}`}
                             checked={understood}
-                            onCheckedChange={(v) =>
-                              toggleUnderstood.mutate({ pointId: kp.id, understood: v === true })
-                            }
+                            onCheckedChange={(v) => toggleUnderstood.mutate({ pointId: kp.id, understood: v === true })}
                             disabled={toggleUnderstood.isPending}
                           />
-                          <Label
-                            htmlFor={`understood-${kp.id}`}
-                            className="text-[10px] cursor-pointer text-white/70"
+                        </TableCell>
+                        <TableCell className="py-2 pr-3 text-right">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            title="Explication contextualisée à cette fiche de poste"
+                            aria-label={`Expliquer ${kp.label}`}
+                            onClick={() => openExplain(kp)}
                           >
-                            Compris
-                          </Label>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[10px] border-violet/30"
-                          title="Explication contextualisée à cette fiche de poste"
-                          onClick={() => openExplain(kp.id)}
-                        >
-                          <BookOpen className="h-3 w-3 mr-1" />
-                          Expliquer
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                            <BookOpen data-icon="inline-start" />
+                            Expliquer
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        ) : isStreaming ? (
+          <div className="flex flex-col gap-3 p-4" aria-hidden>
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Skeleton className={`h-4 w-48 ${SKELETON}`} />
+                  <Skeleton className={`h-3 w-72 ${SKELETON}`} />
+                </div>
+                <Skeleton className={`h-6 w-24 rounded-full ${SKELETON}`} />
               </div>
-            </div>
             ))}
           </div>
-        </div>
-      )}
-      </AnalysisScrollBody>
-      )}
+        ) : (
+          <PanelEmpty
+            icon={ListChecks}
+            title="Aucun point clé pour l’instant."
+            description="Les critères, leur importance et leur barème viennent de l’analyse de la fiche."
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={onAnalyze} disabled={!canAnalyze || !onAnalyze}>
+                Analyser la fiche
+              </Button>
+            }
+          />
+        )}
+      </PanelBody>
 
       <Dialog
         open={explainOpen}
@@ -609,66 +300,53 @@ export function MissionJobAnalysis({
           if (!o) setExplainData(null);
         }}
       >
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" showCloseButton>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" showCloseButton>
           <DialogHeader>
-            <DialogTitle>Détail du point clé</DialogTitle>
+            <DialogTitle>{explainLabel ?? 'Point clé'}</DialogTitle>
+            <DialogDescription>Explication contextualisée à cette fiche de poste.</DialogDescription>
           </DialogHeader>
-          {explainLoading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-              <Loader2 className="h-4 w-4 animate-spin" />
+          {explainLoading ? (
+            <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground" aria-live="polite">
+              <Spinner />
               Génération…
             </div>
-          )}
-          {!explainLoading && explainData && (
-            <div className="flex flex-col gap-4 text-sm">
-              <section>
-                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                  Définition
-                </h4>
-                <p className="text-foreground/90 whitespace-pre-wrap">{explainData.definition}</p>
+          ) : null}
+          {!explainLoading && explainData ? (
+            <div className="divide-y divide-border text-sm">
+              <section className="flex flex-col gap-1 pb-4">
+                <h4 className="text-xs font-semibold text-foreground">Définition</h4>
+                <p className="whitespace-pre-wrap text-foreground">{explainData.definition}</p>
               </section>
-              <Separator />
-              <section>
-                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                  Dans cette mission
-                </h4>
-                <p className="text-foreground/90 whitespace-pre-wrap">{explainData.usageInMission}</p>
+              <section className="flex flex-col gap-1 py-4">
+                <h4 className="text-xs font-semibold text-foreground">Dans cette mission</h4>
+                <p className="whitespace-pre-wrap text-foreground">{explainData.usageInMission}</p>
               </section>
-              <Separator />
-              <section>
-                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                  Questions au candidat
-                </h4>
-                <ul className="flex flex-col gap-1 list-disc pl-4 text-muted-foreground">
+              <section className="flex flex-col gap-1 py-4">
+                <h4 className="text-xs font-semibold text-foreground">Questions au candidat</h4>
+                <ul className="flex flex-col gap-1 text-muted-foreground">
                   {explainData.candidateQuestions.map((q, i) => (
-                    <li key={i}>{q}</li>
+                    <li key={i} className="flex gap-2">
+                      <span className="mt-[0.5rem] size-1 shrink-0 rounded-full bg-current opacity-60" aria-hidden />
+                      <span>{q}</span>
+                    </li>
                   ))}
                 </ul>
               </section>
-              <Separator />
-              <section>
-                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Réponses attendues
-                </h4>
-                <div className="flex flex-col gap-2 text-xs">
-                  <p>
-                    <span className="text-neon font-medium">Débutant — </span>
-                    {explainData.expectedAnswers.debutant}
-                  </p>
-                  <p>
-                    <span className="text-violet font-medium">Confirmé — </span>
-                    {explainData.expectedAnswers.confirme}
-                  </p>
-                  <p>
-                    <span className="text-foreground font-medium">Senior — </span>
-                    {explainData.expectedAnswers.senior}
-                  </p>
-                </div>
+              <section className="flex flex-col gap-2 pt-4">
+                <h4 className="text-xs font-semibold text-foreground">Réponses attendues</h4>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-xs">
+                  <dt className="font-medium text-foreground">Débutant</dt>
+                  <dd className="text-muted-foreground">{explainData.expectedAnswers.debutant}</dd>
+                  <dt className="font-medium text-foreground">Confirmé</dt>
+                  <dd className="text-muted-foreground">{explainData.expectedAnswers.confirme}</dd>
+                  <dt className="font-medium text-foreground">Senior</dt>
+                  <dd className="text-muted-foreground">{explainData.expectedAnswers.senior}</dd>
+                </dl>
               </section>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
-    </div>
+    </Panel>
   );
 }
