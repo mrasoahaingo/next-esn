@@ -565,10 +565,10 @@ export default function ReviewPage() {
 
       {/* Diptyque asymétrique : le dossier à gauche, ce qu'il devient à droite */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <Panel className="min-w-0 lg:col-span-7" aria-label="Dossier du candidat">
+        <Panel className="min-w-0 lg:col-span-7 lg:self-start" aria-label="Dossier du candidat">
           <Tabs value={activeTab} onValueChange={(v) => setChosenTab(String(v) as SectionKey)} className="gap-0">
             {/* Bande d'onglets : défile horizontalement sous md, sans faire défiler la page */}
-            <div className="overflow-x-auto border-b border-border px-4">
+            <div className="overflow-x-auto overflow-y-hidden border-b border-border px-4 [scrollbar-width:thin]">
               <TabsList variant="line" className="h-11 gap-5 p-0">
                 {SECTION_TABS.map((tab) => {
                   const tabStatus = isLoading ? status(tab.key) : 'done';
