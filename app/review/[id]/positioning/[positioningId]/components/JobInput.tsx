@@ -1,132 +1,112 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
 import { JobDescriptionInput } from '@/components/job-description-input';
 import { Field, FieldLabel } from '@/components/ui/field';
 import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
-import { Loader2, Search, RefreshCw, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
 
 interface JobInputProps {
   jobDescription: string;
   onJobDescriptionChange: (text: string) => void;
-  onAnalyze: () => void;
-  onReAnalyze?: () => void;
   isAnalyzing: boolean;
-  /** Statut positionnement côté serveur (retry label si `error`). */
-  positioningStatus?: string | null;
+  /** Après analyse : texte en lecture, bouton « Modifier » pour repasser en saisie. */
   readOnly?: boolean;
   disabled?: boolean;
-  /** Si défini en lecture seule, l’aperçu mission est dans le header de la page (composant ne rend rien). */
+  /** Mission liée : la fiche appartient à la mission, pas de saisie ici. */
   missionHeadline?: string | null;
+  /** Le matching s'appuie sur l'analyse structurée de la fiche mission. */
+  usesStructuredMissionAnalysis?: boolean;
+  /** Import de fichier en cours (le bouton « Analyser » de l'en-tête attend). */
+  onImportingChange?: (busy: boolean) => void;
 }
 
+/**
+ * La fiche de poste, premier panneau de l'étape 1 : en-tête (icône, titre, mission
+ * liée en description, « Modifier » à droite), corps en lecture (clampé, « Voir tout »)
+ * ou en saisie. « Analyser le matching » reste la primaire de l'en-tête de page.
+ */
 export function JobInput({
   jobDescription,
   onJobDescriptionChange,
-  onAnalyze,
-  onReAnalyze,
   isAnalyzing,
-  positioningStatus = null,
   readOnly = false,
   disabled,
   missionHeadline = null,
+  usesStructuredMissionAnalysis = false,
+  onImportingChange,
 }: JobInputProps) {
   const [expanded, setExpanded] = useState(false);
-  const [isImportingFile, setIsImportingFile] = useState(false);
-  const handleExtractingChange = useCallback((busy: boolean) => {
-    setIsImportingFile(busy);
-  }, []);
+  const [editing, setEditing] = useState(false);
 
-  if (readOnly) {
-    /** Aperçu mission : affiché dans le header de la page positionnement */
-    if (missionHeadline) {
-      return null;
-    }
+  const isEditing = !readOnly || editing;
+  const hasText = jobDescription.trim().length > 0;
+  const showExpandToggle = jobDescription.trim().length > 400;
 
-    const showExpandToggle = jobDescription.trim().length > 400;
-
-    return (
-      <div className="flex items-start gap-3 rounded-xl border border-overlay/10 bg-overlay/[0.06] px-4 py-3">
-        <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-        <div className="min-w-0 flex-1">
-          <JobDescriptionMarkdown
-            content={jobDescription}
-            clampClassName={expanded || !showExpandToggle ? undefined : 'line-clamp-6'}
-          />
-          {showExpandToggle ? (
-            <Button
-              type="button"
-              variant="link"
-              className="mt-1 h-auto p-0 text-[11px] text-muted-foreground"
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {expanded ? (
-                <><ChevronUp className="size-3" /> Réduire</>
-              ) : (
-                <><ChevronDown className="size-3" /> Voir tout</>
-              )}
-            </Button>
-          ) : null}
-        </div>
-        {onReAnalyze && !isAnalyzing && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onReAnalyze}
-            className="ml-2 shrink-0 text-violet hover:text-violet hover:bg-violet/10 h-7 px-2.5 text-xs"
-          >
-            <RefreshCw className="mr-1.5 h-3 w-3" />
-            Relancer
-          </Button>
-        )}
-        {isAnalyzing && (
-          <div className="ml-2 flex items-center gap-1.5 text-xs text-violet shrink-0">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            En cours…
-          </div>
-        )}
-      </div>
-    );
-  }
+  const description = missionHeadline
+    ? usesStructuredMissionAnalysis
+      ? `Matching basé sur l’analyse structurée de la mission « ${missionHeadline} ».`
+      : `Fiche de la mission « ${missionHeadline} ». Enrichissez-la sur la page mission pour affiner le barème.`
+    : undefined;
 
   return (
-    <section className="glass-panel p-6 rounded-2xl">
-      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
-        Fiche de poste
-      </h2>
-      <Field>
-        <FieldLabel htmlFor="job-description-input" className="sr-only">
-          Fiche de poste
-        </FieldLabel>
-        <JobDescriptionInput
-          id="job-description-input"
-          value={jobDescription}
-          onChange={onJobDescriptionChange}
-          placeholder="Saisissez ou collez la fiche de poste (onglet « Saisie manuelle »)…"
-          disabled={isAnalyzing || disabled}
-          textareaClassName="min-h-[160px] text-sm max-h-[400px]"
-          onExtractingChange={handleExtractingChange}
-        />
-      </Field>
-      <div className="mt-4 flex justify-end">
-        <Button
-          onClick={onAnalyze}
-          disabled={!jobDescription.trim() || isAnalyzing || disabled || isImportingFile}
-        >
-          {isAnalyzing ? (
-            <Spinner className="mr-2 h-4 w-4" data-icon="inline-start" />
-          ) : (
-            <Search className="mr-2 h-4 w-4" />
-          )}
-          {isAnalyzing
-            ? 'Analyse en cours...'
-            : positioningStatus === 'error'
-              ? "Relancer l'analyse"
-              : 'Analyser le matching'}
-        </Button>
-      </div>
-    </section>
+    <Panel aria-labelledby="job-input-heading">
+      <PanelHeader
+        id="job-input-heading"
+        icon={FileText}
+        title="Fiche de poste"
+        description={description}
+        actions={
+          readOnly && !missionHeadline && !isAnalyzing ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing((v) => !v)}>
+              {editing ? 'Terminer' : 'Modifier'}
+            </Button>
+          ) : undefined
+        }
+      />
+      <PanelBody>
+        {isEditing && !missionHeadline ? (
+          <Field>
+            <FieldLabel htmlFor="job-description-input" className="sr-only">
+              Fiche de poste
+            </FieldLabel>
+            <JobDescriptionInput
+              id="job-description-input"
+              value={jobDescription}
+              onChange={onJobDescriptionChange}
+              placeholder="Saisissez ou collez la fiche de poste…"
+              disabled={isAnalyzing || disabled}
+              textareaClassName="min-h-[160px] max-h-[400px] text-sm"
+              onExtractingChange={onImportingChange}
+            />
+          </Field>
+        ) : hasText ? (
+          <div>
+            <JobDescriptionMarkdown
+              content={jobDescription}
+              clampClassName={expanded || !showExpandToggle ? undefined : 'line-clamp-6'}
+              className="text-muted-foreground"
+            />
+            {showExpandToggle ? (
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="mt-1 h-auto p-0 text-xs text-muted-foreground"
+                onClick={() => setExpanded((v) => !v)}
+              >
+                {expanded ? 'Réduire' : 'Voir tout'}
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {missionHeadline ? 'Le texte de la fiche est consultable sur la page mission.' : 'Aucune fiche de poste.'}
+          </p>
+        )}
+      </PanelBody>
+    </Panel>
   );
 }

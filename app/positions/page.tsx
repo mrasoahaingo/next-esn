@@ -1,98 +1,141 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R4 V3 · v2 */
 'use client';
 
-import { useLayoutEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Briefcase, Loader2 } from 'lucide-react';
-import { useMissions } from '@/lib/queries';
-import { Card, CardContent } from '@/components/ui/card';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, Briefcase, Plus, RotateCcw } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/app/page-header';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { PanelEmpty } from '@/components/dashboard/panel-empty';
+import { NewMissionDialog } from '@/components/new-mission-dialog';
+import { useDemoModeStore } from '@/lib/stores/demo-mode.store';
+import { useMissions, usePositionings } from '@/lib/queries';
+import { MissionsSkeleton } from '@/components/missions/missions-skeleton';
+import { MissionsTable } from '@/components/missions/missions-table';
+import { MissionsToolbar } from '@/components/missions/missions-toolbar';
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from '@/components/ui/empty';
-import { Skeleton } from '@/components/ui/skeleton';
+  countMissionsByFilter,
+  filterMissions,
+  missionsCountLabel,
+  type MissionFilter,
+  type MissionListItem,
+  type MissionListPositioning,
+} from '@/components/missions/missions-list';
 
-export default function PositionsIndexPage() {
-  const router = useRouter();
-  const { data: missionsData, isLoading } = useMissions();
+/**
+ * Liste des fiches de mission : recherche, filtres par état de l'analyse,
+ * tableau, création d'une mission. La liste s'affiche toujours, même avec une
+ * seule mission : plus de redirection automatique vers le détail.
+ */
+export default function MissionsIndexPage(): React.JSX.Element {
+  const isDemoMode = useDemoModeStore((s) => s.isDemoMode);
+  const {
+    data: missionsData,
+    isLoading: isLoadingMissions,
+    isError: isMissionsError,
+    error: missionsError,
+    refetch: refetchMissions,
+  } = useMissions();
+  const { data: positioningsData, refetch: refetchPositionings } = usePositionings();
 
-  const missions = useMemo(
-    () => (Array.isArray(missionsData) ? missionsData : []),
-    [missionsData]
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<MissionFilter>('all');
+  const [showNewMission, setShowNewMission] = useState(false);
+
+  const missions: MissionListItem[] = useMemo(
+    () => (isDemoMode ? [] : Array.isArray(missionsData) ? (missionsData as MissionListItem[]) : []),
+    [isDemoMode, missionsData],
+  );
+  const positionings: MissionListPositioning[] = useMemo(
+    () => (isDemoMode ? [] : Array.isArray(positioningsData) ? (positioningsData as MissionListPositioning[]) : []),
+    [isDemoMode, positioningsData],
+  );
+  const visible = useMemo(() => filterMissions(missions, { query, filter }), [missions, query, filter]);
+  const counts = useMemo(() => countMissionsByFilter(missions, query), [missions, query]);
+
+  const isLoading = !isDemoMode && isLoadingMissions;
+  const total = missions.length;
+
+  const newMissionButton = (
+    <Button type="button" onClick={() => setShowNewMission(true)}>
+      <Plus data-icon="inline-start" />
+      Nouvelle mission
+    </Button>
   );
 
-  useLayoutEffect(() => {
-    if (isLoading) return;
-    if (missions.length === 1) {
-      router.replace(`/positions/${missions[0].id}`);
-    }
-  }, [isLoading, missions, router]);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6">
-        <Skeleton className="size-12 rounded-xl" />
-        <div className="flex w-full max-w-xs flex-col gap-2">
-          <Skeleton className="mx-auto h-4 w-40" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-4/5" />
-        </div>
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (missions.length === 0) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center p-6">
-        <Card className="w-full max-w-md border-dashed border-border/60 bg-card/40">
-          <CardContent className="pt-6">
-            <Empty className="min-h-0 border-0 p-0">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <Briefcase />
-                </EmptyMedia>
-                <EmptyTitle>Aucune position</EmptyTitle>
-                <EmptyDescription>
-                  Crée une position depuis l&apos;onglet Positions dans la barre latérale, puis ouvre-la ici
-                  ou dans la liste.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (missions.length === 1) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-[50vh] items-center justify-center p-6">
-      <Card className="w-full max-w-md border-dashed border-border/60 bg-card/40">
-        <CardContent className="pt-6">
-          <Empty className="min-h-0 border-0 p-0">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Briefcase />
-              </EmptyMedia>
-              <EmptyTitle>Sélectionne une position</EmptyTitle>
-              <EmptyDescription>
-                Plusieurs missions sont disponibles — choisis-en une dans la barre latérale (onglet
-                Positions).
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </CardContent>
-      </Card>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6">
+      <PageHeader
+        title="Missions"
+        description={isLoading ? 'Chargement des missions…' : missionsCountLabel(total)}
+        actions={isLoading || isMissionsError || total === 0 ? undefined : newMissionButton}
+      />
+
+      {isLoading ? (
+        <MissionsSkeleton />
+      ) : isMissionsError ? (
+        <Alert variant="destructive" className="border-destructive/40 bg-panel p-4">
+          <AlertTriangle />
+          <AlertTitle>La liste des missions n&rsquo;a pas pu être chargée.</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3">
+            <p>Vérifiez votre connexion, puis réessayez.</p>
+            {missionsError instanceof Error && missionsError.message ? (
+              <p className="font-mono text-xs text-muted-foreground">{missionsError.message}</p>
+            ) : null}
+            <div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void refetchMissions();
+                  void refetchPositionings();
+                }}
+              >
+                <RotateCcw />
+                Réessayer
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ) : total === 0 ? (
+        <Panel aria-labelledby="missions-empty-title">
+          <PanelHeader id="missions-empty-title" icon={Briefcase} title="Fiches de mission" count={0} />
+          <PanelBody padded={false}>
+            <PanelEmpty
+              icon={Briefcase}
+              title="Aucune fiche de mission."
+              description={
+                isDemoMode
+                  ? 'Mode démo : les données de l’organisation sont masquées.'
+                  : 'Une fiche de mission décrit le poste à pourvoir ; l’IA l’analyse, puis vous y positionnez des CV.'
+              }
+              action={
+                <Button type="button" size="sm" onClick={() => setShowNewMission(true)}>
+                  <Plus data-icon="inline-start" />
+                  Créer une mission
+                </Button>
+              }
+            />
+          </PanelBody>
+        </Panel>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <MissionsToolbar query={query} onQueryChange={setQuery} filter={filter} onFilterChange={setFilter} counts={counts} />
+          <MissionsTable
+            missions={visible}
+            positionings={positionings}
+            totalCount={total}
+            onClearFilters={() => {
+              setQuery('');
+              setFilter('all');
+            }}
+          />
+        </div>
+      )}
+
+      <NewMissionDialog open={showNewMission} onOpenChange={setShowNewMission} />
     </div>
   );
 }

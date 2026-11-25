@@ -1,17 +1,23 @@
 'use client';
 
-import { User, FileText, Briefcase, GraduationCap, Wrench, FileSearch, ScanText } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, Sparkles } from 'lucide-react';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import type { ExtractedCV } from '@/lib/schema';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
 import type { StepStateRow } from '@/lib/workflow/compute-step-status';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { StatusBadge } from '@/components/app/status-badge';
+import { formatExtractionSummary } from './format-extraction-summary';
 
 interface Step {
   key: string;
   label: string;
   streamingLabel: string;
-  icon: React.ElementType;
   check: (data: Partial<ExtractedCV> | null) => boolean;
 }
 
@@ -30,57 +36,34 @@ const steps: Step[] = [
   {
     key: 'personalInfo',
     label: 'Identité',
-    streamingLabel: 'Extraction de l\'identité...',
-    icon: User,
+    streamingLabel: 'Extraction de l’identité…',
     check: (d) => !!d?.personalInfo?.firstName || !!d?.personalInfo?.lastName,
   },
   {
     key: 'summary',
-    label: 'Synthèse',
-    streamingLabel: 'Rédaction de la synthèse...',
-    icon: FileText,
+    label: 'Résumé',
+    streamingLabel: 'Rédaction du résumé…',
     check: (d) => !!d?.summary,
   },
   {
     key: 'skills',
     label: 'Compétences',
-    streamingLabel: 'Analyse des compétences...',
-    icon: Wrench,
+    streamingLabel: 'Analyse des compétences…',
     check: hasSkills,
   },
   {
     key: 'education',
     label: 'Formations',
-    streamingLabel: 'Extraction des formations...',
-    icon: GraduationCap,
+    streamingLabel: 'Extraction des formations…',
     check: (d) => (d?.education?.length ?? 0) > 0,
   },
   {
     key: 'experiences',
     label: 'Expériences',
-    streamingLabel: 'Analyse des expériences...',
-    icon: Briefcase,
+    streamingLabel: 'Analyse des expériences…',
     check: (d) => (d?.experiences?.length ?? 0) > 0,
   },
 ];
-
-interface ExtractionProgressProps {
-  data: Partial<ExtractedCV> | null;
-  isStreaming: boolean;
-  streamMeta?: CvExtractionStreamMeta | null;
-  /** Si fourni, remplace la rangée de pilules par la liste d’étapes unifiée (phase 2 / SUB-01). */
-  workflowStepRows?: StepStateRow[];
-  workflowSummaryLine?: string | null;
-  /** Identifiants gateway des modèles (si enregistrés côté serveur). */
-  extractionModelsLabel?: string | null;
-  /** Détail par tâche LLM (clé → modèle gateway) pour l'affichage dans le tooltip. */
-  extractionModelsByTask?: Record<string, string> | null;
-  /**
-   * Masque la liste d’étapes (WorkflowStepList et pilules) — ex. extraction terminée avec succès,
-   * le parent peut afficher un récap replié à part.
-   */
-  hideStepsList?: boolean;
-}
 
 function branchPulsesStep(branchMeta: CvExtractionStreamMeta | null | undefined, stepKey: string): boolean {
   const branches = branchMeta?.activeBranches;
@@ -92,107 +75,180 @@ function branchPulsesStep(branchMeta: CvExtractionStreamMeta | null | undefined,
   return false;
 }
 
+/** Phrase de la ligne d'état pendant le flux : la phase en cours, en texte. */
+function phaseLabel(data: Partial<ExtractedCV> | null, streamMeta: CvExtractionStreamMeta | null | undefined): string {
+  if (streamMeta?.phase === 'transcription') {
+    const chars = streamMeta.transcriptionChars;
+    return chars != null && chars > 0
+      ? `Transcription du PDF… ${chars.toLocaleString('fr-FR')} caractères`
+      : 'Transcription du PDF…';
+  }
+  if (streamMeta?.phase === 'reading') return 'Lecture du document Word…';
+  const activeKeys =
+    streamMeta?.phase === 'extracting' && (streamMeta.activeBranches?.length ?? 0) > 0
+      ? steps.filter((s) => !s.check(data) && branchPulsesStep(streamMeta, s.key))
+      : [];
+  if (activeKeys.length > 0) {
+    if (activeKeys.length === 1) return activeKeys[0].streamingLabel;
+    return `Extraction en parallèle : ${activeKeys.map((s) => s.label.toLowerCase()).join(', ')}…`;
+  }
+  const next = steps.find((s) => !s.check(data));
+  return next ? next.streamingLabel : 'Finalisation…';
+}
+
+export interface ExtractionProgressProps {
+  data: Partial<ExtractedCV> | null;
+  isStreaming: boolean;
+  streamMeta?: CvExtractionStreamMeta | null;
+  /** Lignes d'étapes du workflow (`computeCvStepStates`), toujours fournies. */
+  rows: StepStateRow[];
+  /** Ligne de synthèse (`formatStepSummaryLine`), affichée en cas d'échec. */
+  summaryLine: string | null;
+  /** Liste d'étapes dépliée (extraction en cours, reprise du suivi ou échec). */
+  showSteps: boolean;
+  /** Extraction terminée : ligne mono et détail replié. */
+  completed: boolean;
+  /** Durée de l'extraction IA (ms), pour la ligne « terminée ». */
+  durationMs?: number | null;
+  /** Échec de l'extraction : message et relance. */
+  error?: { message: string; onRetry: () => void; retryPending: boolean } | null;
+  /** Identifiants gateway des modèles (si enregistrés côté serveur). */
+  extractionModelsLabel?: string | null;
+  /** Détail par tâche LLM (clé → modèle gateway) pour l'affichage dans le tooltip. */
+  extractionModelsByTask?: Record<string, string> | null;
+}
+
+const DETAILS_ID = 'cv-extraction-steps';
+
+/**
+ * Zone `status` de l'en-tête (DESIGN.md § L'état de l'IA, § Révision v2) : un panneau
+ * compact, un seul endroit, trois états.
+ * - en cours : en-tête (« Extraction », compteur mono, phase en cours, pastille qui respire),
+ *   corps = `WorkflowStepList` (unique région `aria-live`) ;
+ * - terminé : une ligne de 44 px (en-tête seul) avec la synthèse mono et « Voir le détail »
+ *   qui déplie les étapes ;
+ * - échec : pastille « Échec », `Alert` destructive avec « Réessayer », les étapes dessous.
+ */
 export function ExtractionProgress({
   data,
   isStreaming,
   streamMeta,
-  workflowStepRows,
-  workflowSummaryLine,
+  rows,
+  summaryLine,
+  showSteps,
+  completed,
+  durationMs,
+  error,
   extractionModelsLabel,
   extractionModelsByTask,
-  hideStepsList = false,
 }: ExtractionProgressProps) {
-  const completedCount = !isStreaming ? steps.length : steps.filter((s) => s.check(data)).length;
-  const progress = steps.length > 0 ? (completedCount / steps.length) * 100 : 0;
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const completedCount = steps.filter((s) => s.check(data)).length;
+  const infoIcon = (
+    <AiGenerationInfoIcon
+      variant="cv_extraction"
+      modelsLabel={extractionModelsLabel}
+      modelsByTask={extractionModelsByTask}
+      className="size-7 shrink-0"
+    />
+  );
 
-  const activeStep = isStreaming ? steps.find((s) => !s.check(data)) : null;
-  const parallelExtracting =
-    isStreaming && streamMeta?.phase === 'extracting' && (streamMeta.activeBranches?.length ?? 0) > 0;
+  if (!error && !isStreaming && !showSteps && !completed) return null;
 
-  const useUnifiedSteps = workflowStepRows && workflowStepRows.length > 0;
+  const count = `${completedCount}/${steps.length}`;
+  const hasRows = rows.length > 0;
 
-  return (
-    <div
-      className="flex flex-col gap-3"
-      aria-live={useUnifiedSteps ? undefined : 'polite'}
-      aria-atomic={useUnifiedSteps ? undefined : 'false'}
-    >
-      {isStreaming && streamMeta?.phase === 'transcription' && (
-        <div className="flex items-center gap-2 rounded-lg border border-violet/25 bg-violet/10 px-3 py-2 text-xs text-accent-foreground">
-          <ScanText className="h-3.5 w-3.5 shrink-0 animate-pulse" />
-          <span>
-            Transcription du PDF…
-            {streamMeta.transcriptionChars != null && streamMeta.transcriptionChars > 0 && (
-              <span className="ml-1.5 tabular-nums text-accent/80">
-                {streamMeta.transcriptionChars.toLocaleString('fr-FR')} caractères
+  // ─── Terminé : une ligne, le détail à la demande ─────────────────────────
+  if (completed && !error) {
+    const open = detailsOpen && hasRows;
+    return (
+      <Panel aria-label="État de l’extraction">
+        <PanelHeader
+          as="h2"
+          title="Extraction"
+          icon={Sparkles}
+          count={count}
+          className={open ? undefined : 'border-b-0'}
+          actions={
+            <>
+              <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
+                {formatExtractionSummary({ durationMs, stepCount: rows.length })}
               </span>
-            )}
-          </span>
-        </div>
-      )}
-
-      {isStreaming && streamMeta?.phase === 'reading' && (
-        <div className="flex items-center gap-2 rounded-lg border border-overlay/10 bg-overlay/[0.06] px-3 py-2 text-xs text-foreground/90">
-          <FileSearch className="h-3.5 w-3.5 shrink-0 animate-pulse" />
-          <span>Lecture du document Word…</span>
-        </div>
-      )}
-
-      {/* Progress bar */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className="flex-1 h-1.5 rounded-full bg-overlay/10 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-neon transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <AiGenerationInfoIcon
-          variant="cv_extraction"
-          modelsLabel={extractionModelsLabel}
-          modelsByTask={extractionModelsByTask}
-          className="h-7 w-7 shrink-0"
-        />
-        <span className="text-xs font-medium text-muted-foreground tabular-nums shrink-0">
-          {completedCount}/{steps.length}
-        </span>
-      </div>
-
-      {!hideStepsList &&
-        (useUnifiedSteps ? (
-          <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {steps.map((step) => {
-              const done = step.check(data);
-              const activeParallel = parallelExtracting && branchPulsesStep(streamMeta, step.key);
-              const activeSequential = isStreaming && !parallelExtracting && activeStep?.key === step.key;
-              const active = activeParallel || activeSequential;
-              const Icon = step.icon;
-
-              return (
-                <div
-                  key={step.key}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-all duration-300 ${
-                    done
-                      ? 'bg-neon/15 text-neon border border-neon/25'
-                      : active
-                        ? 'bg-violet/15 text-violet dark:text-violet-200 border border-violet/30 animate-pulse'
-                        : 'bg-overlay/[0.04] text-muted-foreground border border-border'
-                  }`}
+              {hasRows ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDetailsOpen((v) => !v)}
+                  aria-expanded={open}
+                  aria-controls={DETAILS_ID}
                 >
-                  <Icon className="h-3 w-3" />
-                  {active ? step.streamingLabel : step.label}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-    </div>
+                  {open ? 'Masquer le détail' : 'Voir le détail'}
+                </Button>
+              ) : null}
+              {infoIcon}
+            </>
+          }
+        />
+        {open ? (
+          <PanelBody id={DETAILS_ID} className="space-y-3">
+            <p className="font-mono text-xs tabular-nums text-muted-foreground sm:hidden">
+              {formatExtractionSummary({ durationMs, stepCount: rows.length })}
+            </p>
+            <WorkflowStepList rows={rows} summaryLine={null} />
+          </PanelBody>
+        ) : null}
+      </Panel>
+    );
+  }
+
+  // ─── En cours ou en échec ────────────────────────────────────────────────
+  const showBody = !!error || (showSteps && hasRows);
+  return (
+    <Panel aria-label="État de l’extraction" aria-busy={!error && isStreaming ? true : undefined}>
+      <PanelHeader
+        as="h2"
+        title="Extraction"
+        icon={Sparkles}
+        count={count}
+        description={!error && isStreaming ? phaseLabel(data, streamMeta) : undefined}
+        className={showBody ? undefined : 'border-b-0'}
+        actions={
+          <>
+            {error ? (
+              <StatusBadge tone="err">Échec</StatusBadge>
+            ) : (
+              <StatusBadge tone="info" pulse>
+                En cours
+              </StatusBadge>
+            )}
+            {infoIcon}
+          </>
+        }
+      />
+      {showBody ? (
+        <PanelBody className="space-y-3">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertTitle>L&apos;extraction a échoué</AlertTitle>
+              <AlertDescription>{error.message}</AlertDescription>
+              <AlertAction>
+                <Button variant="outline" size="sm" onClick={error.onRetry} disabled={error.retryPending}>
+                  {error.retryPending && <Spinner data-icon="inline-start" />}
+                  Réessayer
+                </Button>
+              </AlertAction>
+            </Alert>
+          ) : null}
+          {showSteps && hasRows ? <WorkflowStepList rows={rows} summaryLine={error ? summaryLine : null} /> : null}
+        </PanelBody>
+      ) : null}
+    </Panel>
   );
 }
 
 /**
- * Returns the section status for a given field during streaming.
+ * Statut d'une section du formulaire pendant le flux.
  */
 export function getSectionStatus(
   data: Partial<ExtractedCV> | null,

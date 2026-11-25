@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { MessageSquare } from 'lucide-react';
 import type { PositioningAnalysis } from '@/lib/schema';
 import type { PositioningRecruiterAnswerEntry } from '@/lib/services/positioning.service';
 import {
@@ -9,12 +10,11 @@ import {
 } from '@/lib/services/positioning.service';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Building2, ArrowRight, RefreshCw, Sparkles } from 'lucide-react';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { formatCount } from './relevance-badge';
 
 interface QuestionsPanelProps {
   analysis: Partial<PositioningAnalysis> | null;
-  onNext: () => void;
   onReAnalyze?: () => void;
   isAnalyzing?: boolean;
   recruiterAnswerEntries: Record<string, PositioningRecruiterAnswerEntry[]>;
@@ -51,41 +51,43 @@ function QuestionHistoryBlock({
   placeholder: string;
 }) {
   const filled = entries.length > 0;
+  const textareaId = `question-${questionKey.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
   return (
-    <div className="space-y-2 pb-4 border-b border-border/60 last:border-0">
+    <li className="space-y-2 px-4 py-4">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-foreground min-w-0">{questionLabel}</p>
+        <label htmlFor={textareaId} className="min-w-0 text-sm font-medium text-foreground">
+          {questionLabel}
+        </label>
         {filled && (
-          <Badge
-            variant="outline"
-            className="shrink-0 border-neon/30 bg-neon/10 text-[10px] font-medium text-neon uppercase tracking-wide"
-          >
-            Rempli
-          </Badge>
+          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+            {formatCount(entries.length, 'note', 'notes')}
+          </span>
         )}
       </div>
       <p className="text-xs text-muted-foreground">{context}</p>
-      {entries.map((e) => (
-        <div
-          key={e.id}
-          className="rounded-lg border border-border/50 bg-background/30 px-3 py-2 text-sm"
-        >
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-            {formatEntryDate(e.createdAt)}
-          </p>
-          <p className="text-sm text-foreground/95 whitespace-pre-wrap leading-relaxed">{e.text}</p>
-        </div>
-      ))}
+      {entries.length > 0 ? (
+        <ul className="space-y-2 border-l-2 border-border pl-3">
+          {entries.map((e) => (
+            <li key={e.id} className="text-sm">
+              <p className="font-mono text-xs tabular-nums text-muted-foreground">
+                {formatEntryDate(e.createdAt)}
+              </p>
+              <p className="mt-0.5 whitespace-pre-wrap leading-relaxed text-foreground">{e.text}</p>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Textarea
+          id={textareaId}
           value={draft}
           onChange={(ev) => onDraftChange(ev.target.value)}
           placeholder={placeholder}
-          className="min-h-[60px] text-sm flex-1"
+          className="min-h-[60px] flex-1 text-sm"
         />
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           size="sm"
           className="shrink-0"
           disabled={!draft.trim()}
@@ -95,12 +97,12 @@ function QuestionHistoryBlock({
             onAppend(questionKey, t);
             onDraftChange('');
           }}
-          title="Enregistré dans le contexte pour la prochaine relance d’analyse (pas dans l’onglet Résultats tant que vous n’avez pas relancé)."
+          title="Enregistré dans le contexte pour la prochaine relance d’analyse."
         >
           Ajouter au contexte
         </Button>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -122,11 +124,11 @@ function QuestionList({
   placeholder: string;
 }) {
   if (items.length === 0) {
-    return <p className="text-sm text-muted-foreground">Aucune question pour cette section.</p>;
+    return <li className="px-4 py-3 text-sm text-muted-foreground">Aucune question pour cette section.</li>;
   }
 
   return (
-    <div className="space-y-4">
+    <>
       {items.map(({ q, i }) => {
         const prefix = type === 'candidate' ? 'candidat' : 'client';
         const key = `${prefix}:${q.question}`;
@@ -145,13 +147,28 @@ function QuestionList({
           />
         );
       })}
+    </>
+  );
+}
+
+function ColumnHeading({ id, children, count }: { id: string; children: React.ReactNode; count: number }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-border bg-panel-soft px-4 py-2">
+      <h3 id={id} className="text-xs font-semibold text-foreground">
+        {children}
+      </h3>
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
     </div>
   );
 }
 
+/**
+ * Panneau « Questions » : les questions candidat et client issues de l'analyse, en deux
+ * colonnes, avec le contexte ajouté par le recruteur. La phrase de nudge est la
+ * description de l'en-tête ; « Relancer l'analyse » est la seule action du panneau.
+ */
 export function QuestionsPanel({
   analysis,
-  onNext,
   onReAnalyze,
   isAnalyzing = false,
   recruiterAnswerEntries,
@@ -178,104 +195,89 @@ export function QuestionsPanel({
 
   const nudgeText = !hasUnanswered
     ? hasAnyAnswer
-      ? 'Relancez l’analyse pour que le score et l’onglet Résultats intègrent ce contexte (les ajouts ci-dessus ne s’y appliquent qu’après relance).'
-      : 'Saisissez des réponses ou notes ici, puis relancez l’analyse : elles seront fusionnées avec l’existant et prises en compte pour le nouveau calcul.'
+      ? 'Relancez l’analyse pour que le score intègre ce contexte.'
+      : 'Vos réponses et notes sont prises en compte au prochain calcul du score.'
     : hasAnyAnswer
-      ? 'Complétez les questions restantes ou relancez l’analyse pour recalculer le score avec vos notes.'
-      : 'Ajoutez des réponses ou notes, puis utilisez « Relancer l’analyse » pour les intégrer au score et à l’onglet Résultats.';
+      ? 'Complétez les questions restantes, puis relancez l’analyse pour recalculer le score.'
+      : 'Ajoutez des réponses ou des notes, puis relancez l’analyse pour les intégrer au score.';
+
+  const placeholder = 'Réponse ou note, prise en compte à la prochaine relance.';
+  const total = allCandidate.length + allClient.length;
 
   return (
-    <div className="space-y-6">
-      {onReAnalyze && (
-        <div className="flex items-center justify-between rounded-xl border border-violet/20 bg-violet/5 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="h-4 w-4 shrink-0 text-violet" />
-            <p className="text-xs text-foreground/90">{nudgeText}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onReAnalyze}
-            disabled={isAnalyzing}
-            className="ml-3 shrink-0 text-violet hover:text-violet hover:bg-violet/10 text-xs h-7 px-2.5"
-          >
-            <RefreshCw className={`mr-1.5 h-3 w-3 ${isAnalyzing ? 'animate-spin' : ''}`} />
-            Relancer l&apos;analyse
-          </Button>
-        </div>
-      )}
-
-      <section className="glass-panel p-6 rounded-2xl">
-        <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2 flex items-center gap-2">
-          <MessageCircle className="h-4 w-4 text-neon" />
-          Questions candidat
-        </h3>
-        <QuestionList
-          items={candidateIndexed}
-          type="candidate"
-          recruiterAnswerEntries={recruiterAnswerEntries}
-          drafts={drafts}
-          setDraft={setDraft}
-          appendRecruiterAnswer={appendRecruiterAnswer}
-          placeholder="Texte ajouté au contexte pour la prochaine relance (l’onglet Résultats se met à jour après relance)."
-        />
-        <div className="pt-4 mt-4 border-t border-border/60">
-          <QuestionHistoryBlock
-            questionKey={POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY}
-            questionLabel="Contexte libre (candidat)"
-            context="Informations complémentaires côté candidat — cumulées avec l’existant ; prises en compte au score après relance d’analyse."
-            entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY] ?? []}
-            draft={drafts['free-c'] ?? ''}
-            onDraftChange={(v) => setDraft('free-c', v)}
-            onAppend={appendRecruiterAnswer}
-            placeholder="Précisions sur le profil, contraintes…"
-          />
-        </div>
-      </section>
-
-      <section className="glass-panel p-6 rounded-2xl">
-        <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2 flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-violet" />
-          Questions client
-        </h3>
-        <QuestionList
-          items={clientIndexed}
-          type="client"
-          recruiterAnswerEntries={recruiterAnswerEntries}
-          drafts={drafts}
-          setDraft={setDraft}
-          appendRecruiterAnswer={appendRecruiterAnswer}
-          placeholder="Texte ajouté au contexte pour la prochaine relance (l’onglet Résultats se met à jour après relance)."
-        />
-        <div className="pt-4 mt-4 border-t border-border/60">
-          <QuestionHistoryBlock
-            questionKey={POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY}
-            questionLabel="Contexte libre (demande client)"
-            context="Informations complémentaires côté client / mission — cumulées avec l’existant ; prises en compte au score après relance d’analyse."
-            entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY] ?? []}
-            draft={drafts['free-cl'] ?? ''}
-            onDraftChange={(v) => setDraft('free-cl', v)}
-            onAppend={appendRecruiterAnswer}
-            placeholder="Contraintes client, environnement, attentes…"
-          />
-        </div>
-      </section>
-
-      {analysis?.matchSummary && (
-        <section className="glass-panel p-6 rounded-2xl">
-          <h3 className="text-lg font-semibold text-foreground mb-4 border-b border-overlay/10 pb-2">
-            Synthèse du matching
-          </h3>
-          <p className="text-sm text-foreground/90 leading-relaxed">{analysis.matchSummary}</p>
+    <Panel aria-labelledby="questions-heading">
+      <PanelHeader
+        id="questions-heading"
+        icon={MessageSquare}
+        title="Questions"
+        count={total > 0 ? total : undefined}
+        description={nudgeText}
+        actions={
+          onReAnalyze ? (
+            <Button variant="outline" size="sm" onClick={onReAnalyze} disabled={isAnalyzing}>
+              Relancer l’analyse
+            </Button>
+          ) : undefined
+        }
+      />
+      <PanelBody padded={false} className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-border">
+        <section aria-labelledby="questions-candidate-heading" className="min-w-0">
+          <ColumnHeading id="questions-candidate-heading" count={allCandidate.length}>
+            Candidat
+          </ColumnHeading>
+          <ul className="divide-y divide-border">
+            <QuestionList
+              items={candidateIndexed}
+              type="candidate"
+              recruiterAnswerEntries={recruiterAnswerEntries}
+              drafts={drafts}
+              setDraft={setDraft}
+              appendRecruiterAnswer={appendRecruiterAnswer}
+              placeholder={placeholder}
+            />
+            <QuestionHistoryBlock
+              questionKey={POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY}
+              questionLabel="Contexte libre (candidat)"
+              context="Informations complémentaires côté candidat, cumulées avec l’existant."
+              entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CANDIDATE_KEY] ?? []}
+              draft={drafts['free-c'] ?? ''}
+              onDraftChange={(v) => setDraft('free-c', v)}
+              onAppend={appendRecruiterAnswer}
+              placeholder="Précisions sur le profil, contraintes…"
+            />
+          </ul>
         </section>
-      )}
 
-      <div className="flex justify-end">
-        <Button onClick={onNext}>
-          Générer
-          <ArrowRight className="ml-1.5 h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+        <section
+          aria-labelledby="questions-client-heading"
+          className="min-w-0 border-t border-border lg:border-t-0"
+        >
+          <ColumnHeading id="questions-client-heading" count={allClient.length}>
+            Client
+          </ColumnHeading>
+          <ul className="divide-y divide-border">
+            <QuestionList
+              items={clientIndexed}
+              type="client"
+              recruiterAnswerEntries={recruiterAnswerEntries}
+              drafts={drafts}
+              setDraft={setDraft}
+              appendRecruiterAnswer={appendRecruiterAnswer}
+              placeholder={placeholder}
+            />
+            <QuestionHistoryBlock
+              questionKey={POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY}
+              questionLabel="Contexte libre (demande client)"
+              context="Informations complémentaires côté client ou mission, cumulées avec l’existant."
+              entries={recruiterAnswerEntries[POSITIONING_ANALYSIS_FREEFORM_CLIENT_KEY] ?? []}
+              draft={drafts['free-cl'] ?? ''}
+              onDraftChange={(v) => setDraft('free-cl', v)}
+              onAppend={appendRecruiterAnswer}
+              placeholder="Contraintes client, environnement, attentes…"
+            />
+          </ul>
+        </section>
+      </PanelBody>
+    </Panel>
   );
 }

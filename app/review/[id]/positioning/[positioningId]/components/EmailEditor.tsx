@@ -1,6 +1,6 @@
 'use client';
 
-import { useLayoutEffect } from 'react';
+import { useId, useLayoutEffect } from 'react';
 import type { PositioningEmail } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -28,11 +28,13 @@ function ToolbarButton({
   active,
   disabled,
   onClick,
+  label,
   children,
 }: {
   active?: boolean;
   disabled?: boolean;
   onClick: () => void;
+  label: string;
   children: React.ReactNode;
 }) {
   return (
@@ -42,30 +44,36 @@ function ToolbarButton({
       size="icon-xs"
       onClick={onClick}
       disabled={disabled}
-      className={
-        active
-          ? 'bg-overlay/15 text-foreground'
-          : 'text-muted-foreground hover:bg-overlay/10 hover:text-foreground'
-      }
+      aria-label={label}
+      aria-pressed={active}
+      className={active ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}
     >
       {children}
     </Button>
   );
 }
 
+/**
+ * Un e-mail (objet + corps TipTap), sans carte propre : il vit dans le corps d'un
+ * panneau « E-mail client » ou « E-mail candidat », dont l'en-tête porte le titre visible.
+ */
 export function EmailEditor({
   email,
   onChange,
   readOnly,
-  title = 'Email de positionnement',
+  title = 'E-mail de positionnement',
 }: EmailEditorProps) {
+  const uid = useId();
+  const subjectId = `${uid}-subject`;
+  const bodyId = `${uid}-body`;
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
       Placeholder.configure({
-        placeholder: 'Corps de l\'email...',
+        placeholder: 'Corps de l’e-mail…',
       }),
     ],
     content: email?.body ?? '',
@@ -98,31 +106,33 @@ export function EmailEditor({
   }, [editor, email?.body]);
 
   return (
-    <section className="glass-panel p-6 rounded-2xl">
-      <h2 className="text-lg font-semibold mb-4 text-foreground border-b border-overlay/10 pb-2">
-        {title}
-      </h2>
+    <section aria-label={title}>
       <FieldGroup className="gap-4">
         <Field>
-          <FieldLabel htmlFor="email-subject" className="text-xs uppercase tracking-wider text-muted-foreground">
+          <FieldLabel htmlFor={subjectId} className="text-xs text-muted-foreground">
             Objet
           </FieldLabel>
           <Input
-            id="email-subject"
+            id={subjectId}
             value={email?.subject ?? ''}
             onChange={(e) => onChange({ ...email, subject: e.target.value })}
             disabled={readOnly}
-            placeholder="Objet de l'email..."
+            placeholder="Objet de l’e-mail"
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor="email-body-editor" className="text-xs uppercase tracking-wider text-muted-foreground">
+          <FieldLabel htmlFor={bodyId} className="text-xs text-muted-foreground">
             Corps
           </FieldLabel>
-          <div id="email-body-editor" className="rounded-md border border-input bg-background overflow-hidden">
+          <div id={bodyId} className="overflow-hidden rounded-md border border-input bg-background">
             {!readOnly && editor && (
-              <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-overlay/10 bg-overlay/[0.02]">
+              <div
+                role="toolbar"
+                aria-label="Mise en forme"
+                className="flex items-center gap-0.5 border-b border-border px-2 py-1.5"
+              >
                 <ToolbarButton
+                  label="Gras"
                   active={editor.isActive('bold')}
                   disabled={readOnly}
                   onClick={() => editor.chain().focus().toggleBold().run()}
@@ -130,6 +140,7 @@ export function EmailEditor({
                   <Bold className="h-4 w-4" />
                 </ToolbarButton>
                 <ToolbarButton
+                  label="Italique"
                   active={editor.isActive('italic')}
                   disabled={readOnly}
                   onClick={() => editor.chain().focus().toggleItalic().run()}
@@ -137,14 +148,16 @@ export function EmailEditor({
                   <Italic className="h-4 w-4" />
                 </ToolbarButton>
                 <ToolbarButton
+                  label="Souligné"
                   active={editor.isActive('underline')}
                   disabled={readOnly}
                   onClick={() => editor.chain().focus().toggleUnderline().run()}
                 >
                   <UnderlineIcon className="h-4 w-4" />
                 </ToolbarButton>
-                <div className="w-px h-4 bg-border mx-1" />
+                <div className="mx-1 h-4 w-px bg-border" aria-hidden />
                 <ToolbarButton
+                  label="Liste à puces"
                   active={editor.isActive('bulletList')}
                   disabled={readOnly}
                   onClick={() =>
@@ -154,6 +167,7 @@ export function EmailEditor({
                   <List className="h-4 w-4" />
                 </ToolbarButton>
                 <ToolbarButton
+                  label="Liste numérotée"
                   active={editor.isActive('orderedList')}
                   disabled={readOnly}
                   onClick={() =>

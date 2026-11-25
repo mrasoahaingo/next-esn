@@ -1,206 +1,119 @@
 'use client';
 
-import { useMemo } from 'react';
+import { FileText } from 'lucide-react';
 import type { PositioningGenerateStreamMeta } from '@/lib/types/positioning-generate-stream';
 import { usePositioningStore } from '@/lib/stores/positioning.store';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, FileText, Download } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { StatusBadge } from '@/components/app/status-badge';
 import { TailoredCvForm } from './TailoredCvForm';
-import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
-import type { StepStateRow } from '@/lib/workflow/compute-step-status';
-
-const CV_BRANCHES = ['tailoredCv'] as const;
-
-const CV_BRANCH_LABELS: Record<(typeof CV_BRANCHES)[number], string> = {
-  tailoredCv: 'CV retravaillé',
-};
-
-function RegenButton({
-  onClick,
-  disabled,
-  hasContent,
-  positioningStatus,
-}: {
-  onClick: () => void;
-  disabled: boolean;
-  hasContent: boolean;
-  positioningStatus?: string | null;
-}) {
-  const relaunchLabel =
-    positioningStatus === 'error' ? 'Relancer la génération' : hasContent ? 'Relancer' : 'Générer';
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      onClick={onClick}
-      disabled={disabled}
-      className="shrink-0 text-violet hover:text-violet hover:bg-violet/10 h-7 px-2.5 text-xs"
-    >
-      <RefreshCw className="mr-1.5 h-3 w-3" />
-      {relaunchLabel}
-    </Button>
-  );
-}
 
 interface CvGenerationStepProps {
   isStreaming: boolean;
   streamMeta?: PositioningGenerateStreamMeta | null;
   onGenerateCv: () => void;
-  onExport: () => void;
-  exportPending: boolean;
+  /** Ouvre la comparaison CV extrait / CV retravaillé. */
+  onCompare: () => void;
+  compareDisabled?: boolean;
   positioningStatus?: string | null;
-  workflowStepRows?: StepStateRow[];
-  workflowSummaryLine?: string | null;
   /** Détail par tâche LLM des modèles utilisés lors de la dernière génération. */
   generationModelsByTask?: Record<string, string> | null;
 }
 
+/**
+ * Étape 3, colonne de gauche : une ligne d’en-tête « CV retravaillé » puis les sections du
+ * dossier, chacune dans son propre panneau (les composants de l’écran CV rendent le leur :
+ * pas de panneau dans un panneau). « Exporter le PDF » est la primaire de l'en-tête de page ;
+ * ici, « Comparer » et « Régénérer ».
+ */
 export function CvGenerationStep({
   isStreaming,
   streamMeta,
   onGenerateCv,
-  onExport,
-  exportPending,
+  onCompare,
+  compareDisabled,
   positioningStatus,
-  workflowStepRows,
-  workflowSummaryLine,
   generationModelsByTask,
 }: CvGenerationStepProps) {
   const { tailoredCv, updateTailoredCvField } = usePositioningStore();
 
   const hasCv = !!tailoredCv;
-  const activeBranches = streamMeta?.activeBranches ?? [];
   const generateMode = streamMeta?.generateMode;
+  const cvRun =
+    isStreaming && (generateMode === 'cv' || generateMode === 'all' || generateMode === undefined);
+  const emailsOnlyRun = isStreaming && generateMode === 'emails';
 
-  const branchesForLoadingList = useMemo(() => {
-    if (generateMode === 'cv') {
-      return [...CV_BRANCHES];
-    }
-    if (generateMode === 'emails') {
-      return [];
-    }
-    return [...CV_BRANCHES];
-  }, [generateMode]);
-
-  const streamingSummaryLine = useMemo(() => {
-    if (generateMode === 'cv') {
-      return 'Génération du CV retravaillé en cours.';
-    }
-    return 'Génération en cours...';
-  }, [generateMode]);
-
-  const busy = (branch: (typeof CV_BRANCHES)[number]) => activeBranches.includes(branch);
-
-  const showCvBlockProgressList =
-    isStreaming &&
-    !tailoredCv &&
-    (generateMode === 'cv' || generateMode === 'all' || generateMode === undefined);
-
-  const showCvHeaderBusy =
-    isStreaming &&
-    (generateMode === 'cv' || generateMode === 'all' || generateMode === undefined);
+  const regenLabel =
+    positioningStatus === 'error' ? 'Relancer la génération' : hasCv ? 'Régénérer' : 'Générer le CV';
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="rounded-xl border border-overlay/10 bg-overlay/[0.06] overflow-hidden">
-        <div className="flex flex-wrap items-start gap-3 px-4 py-3 border-b border-border/60">
-          <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1">
-              <h3 className="text-sm font-semibold text-foreground">CV retravaillé</h3>
-              <AiGenerationInfoIcon
-                variant="positioning_generate"
-                modelsByTask={generationModelsByTask}
-                className="h-6 w-6"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Texte structuré aligné sur l&apos;offre ; l&apos;aperçu PDF est à droite.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0 ml-auto">
-            {!isStreaming && (
-              <RegenButton
-                onClick={onGenerateCv}
-                disabled={isStreaming}
-                hasContent={hasCv}
-                positioningStatus={positioningStatus}
-              />
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onExport}
-              disabled={exportPending || isStreaming || !tailoredCv}
-              className="h-7 shrink-0"
-            >
-              {exportPending ? (
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Download className="mr-1.5 h-3.5 w-3.5" />
-              )}
-              Exporter
-            </Button>
-            {showCvHeaderBusy && (
-              <div className="flex items-center gap-1.5 text-xs text-violet shrink-0">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                En cours…
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="p-4">
-          {workflowStepRows && workflowStepRows.length > 0 ? (
-            <WorkflowStepList rows={workflowStepRows} summaryLine={workflowSummaryLine ?? null} />
-          ) : isStreaming && !tailoredCv && generateMode === 'emails' ? (
-            <p className="text-sm text-muted-foreground text-center py-6">
-              Cette exécution ne régénère pas le CV — ouvrez l&apos;étape « Emails » pour les propositions.
-            </p>
-          ) : showCvBlockProgressList ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-violet" />
-              <p className="text-sm font-medium text-foreground">Génération en cours...</p>
-              <p className="text-xs text-muted-foreground max-w-md">{streamingSummaryLine}</p>
-              <ul className="mt-2 flex w-full max-w-md flex-col gap-2 text-left">
-                {branchesForLoadingList.map((branch) => {
-                  const b = branch as (typeof CV_BRANCHES)[number];
-                  const isBusy = busy(b);
-                  return (
-                    <li
-                      key={branch}
-                      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs transition-colors ${
-                        isBusy
-                          ? 'border-violet/40 bg-violet/10 text-violet'
-                          : 'border-overlay/10 bg-overlay/[0.02] text-muted-foreground'
-                      }`}
-                    >
-                      {isBusy ? (
-                        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                      ) : (
-                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-border" />
-                      )}
-                      <span className={isBusy ? 'font-medium' : ''}>{CV_BRANCH_LABELS[b]}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : tailoredCv ? (
-            <TailoredCvForm
-              data={tailoredCv}
-              onUpdateField={updateTailoredCvField}
-              readOnly={isStreaming}
+    <section aria-labelledby="tailored-cv-heading" className="space-y-4">
+      <Panel>
+      <PanelHeader
+        className={tailoredCv ? "border-b-0" : undefined}
+        id="tailored-cv-heading"
+        icon={FileText}
+        title="CV retravaillé"
+        description="Version alignée sur la fiche, modifiable avant export."
+        actions={
+          <>
+            {cvRun ? (
+              <StatusBadge tone="info" pulse>
+                En cours
+              </StatusBadge>
+            ) : null}
+            <AiGenerationInfoIcon
+              variant="positioning_generate"
+              modelsByTask={generationModelsByTask}
+              className="h-7 w-7"
             />
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-6 rounded-lg border border-dashed border-border bg-overlay/[0.02]">
-              Aucun contenu pour l&apos;instant — utilisez le bouton « Générer » ci-dessus.
-            </p>
-          )}
-        </div>
-      </section>
-    </div>
+            <Button type="button" variant="ghost" size="sm" onClick={onCompare} disabled={compareDisabled}>
+              Comparer
+            </Button>
+            {!isStreaming ? (
+              <Button type="button" variant="outline" size="sm" onClick={onGenerateCv}>
+                {regenLabel}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+
+      {tailoredCv ? null : cvRun ? (
+        <PanelBody className="flex flex-col gap-6" aria-busy="true" aria-label="Génération du CV retravaillé">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex flex-col gap-3">
+              <Skeleton className="h-4 w-1/4 animate-none" />
+              <Skeleton className="h-3 w-full animate-none" />
+              <Skeleton className="h-3 w-5/6 animate-none" />
+              <Skeleton className="h-3 w-2/3 animate-none" />
+            </div>
+          ))}
+        </PanelBody>
+      ) : emailsOnlyRun ? (
+        <PanelBody>
+          <p className="text-sm text-muted-foreground">
+            Cette exécution ne régénère pas le CV : ouvrez l’étape « E-mails ».
+          </p>
+        </PanelBody>
+      ) : (
+        <PanelBody>
+          <p className="text-sm text-muted-foreground">
+            Aucun CV retravaillé pour l’instant. Lancez la génération pour obtenir une version alignée sur la fiche.
+          </p>
+        </PanelBody>
+      )}
+      </Panel>
+
+      {tailoredCv ? (
+        <TailoredCvForm
+          data={tailoredCv}
+          onUpdateField={updateTailoredCvField}
+          readOnly={isStreaming}
+        />
+      ) : null}
+    </section>
   );
 }

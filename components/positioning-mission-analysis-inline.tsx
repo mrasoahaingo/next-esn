@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@clerk/nextjs';
-import { Loader2 } from 'lucide-react';
 import { useWorkflowStream } from '@/lib/hooks/useWorkflowStream';
 import type { JobPostingAnalysisStreamMeta } from '@/lib/types/job-posting-analysis-stream';
 import { WorkflowStepList } from '@/components/workflow/WorkflowStepList';
@@ -15,6 +14,7 @@ import { queryKeys } from '@/lib/queries/keys';
 import type { MissionDetail } from '@/lib/queries/missions';
 import { hasPersistedJobAnalysis } from '@/lib/utils/mission-positioning-gate';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { JobPostingAnalysis } from '@/lib/schema';
 
 function formatJobPostingStreamHint(meta: JobPostingAnalysisStreamMeta | null): string | null {
@@ -36,6 +36,11 @@ export type PositioningMissionAnalysisInlineProps = {
   isMissionDetailLoading?: boolean;
 };
 
+/**
+ * État de l'analyse de la fiche mission, sous la fiche sélectionnée : une ligne de
+ * texte et, quand un flux tourne ou a échoué, le `WorkflowStepList` (une seule région
+ * `aria-live`, portée par la liste). Pas de boîte : il vit dans le corps déplié du panneau.
+ */
 export function PositioningMissionAnalysisInline({
   missionId,
   mission,
@@ -116,40 +121,36 @@ export function PositioningMissionAnalysisInline({
 
   if (isMissionDetailLoading && !mission) {
     return (
-      <div
-        className="ml-8 mt-6 flex items-center gap-2 rounded-xl border border-border/60 bg-muted/20 p-4 text-[11px] text-muted-foreground"
-        aria-busy="true"
-      >
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-        Chargement de la mission…
+      <div className="mt-4 flex flex-col gap-2" aria-busy="true">
+        <p className="text-xs text-muted-foreground">Chargement de la mission…</p>
+        <Skeleton className="h-3 w-2/3 animate-none" />
+        <Skeleton className="h-3 w-1/2 animate-none" />
       </div>
     );
   }
 
+  // Au repos, l'aide du bouton « Analyser le matching » dit déjà l'état : rien de plus ici.
+  const stateLine =
+    !showJobStepList && showAnalysisProgressHint
+      ? (formatJobPostingStreamHint(stream.streamMeta) ?? 'Analyse de la fiche…')
+      : null;
+
   return (
-    <div
-      className="ml-8 mt-6 rounded-xl border border-border/60 bg-muted/20 p-4"
-      aria-busy={!!isMissionDetailLoading}
-    >
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          Analyse de la fiche mission
-        </span>
+    <div className="mt-4 flex flex-col gap-3" aria-busy={!!isMissionDetailLoading}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <h3 className="text-sm font-semibold text-foreground">Analyse de la fiche mission</h3>
         <AiGenerationInfoIcon
           variant="mission_job_analysis"
           modelsByTask={jobAnalysisModels}
-          className="h-6 w-6"
+          className="h-7 w-7"
         />
-        {showAnalysisProgressHint && !showJobStepList ? (
-          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            {formatJobPostingStreamHint(stream.streamMeta) ?? 'Analyse de la fiche…'}
-          </span>
+        {stateLine ? (
+          <span className="text-xs text-muted-foreground">{stateLine}</span>
         ) : null}
       </div>
 
       {showJobStepList ? (
-        <div className="rounded-lg border border-border/50 bg-card/30 px-3 py-3" aria-live="polite">
+        <div className="border-l-2 border-primary pl-4">
           <WorkflowStepList rows={jobPostingRows} summaryLine={jobPostingSummary} />
         </div>
       ) : null}

@@ -24,6 +24,17 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
+  /* Statuts de l’UI produit (DESIGN.md § UI produit) : succès et attention,
+     à côté de `destructive`. Un score, un état, une seule couleur. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  /* Polices : Geist pour l’interface, Geist Mono pour les données (`font-mono`). */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
   /* Custom Esneo brand colors — resolved via CSS vars for theme switching */
   --color-shell: var(--shell);
   --color-panel: var(--panel);
@@ -74,6 +85,10 @@
     --border: oklch(0.91 0.004 256);
     --input: oklch(0.91 0.004 256);
     --ring: oklch(0.52 0.16 256);
+    --success: oklch(0.52 0.14 158);
+    --success-foreground: oklch(0.99 0.002 158);
+    --warning: oklch(0.56 0.14 72);
+    --warning-foreground: oklch(0.99 0.002 72);
     --radius: 0.625rem;
 
     /* Brand surfaces — light */
@@ -135,6 +150,10 @@
     --border: oklch(0.80 0.01 256 / 12%);
     --input: oklch(0.80 0.01 256 / 15%);
     --ring: oklch(0.70 0.13 258);
+    --success: oklch(0.78 0.14 158);
+    --success-foreground: oklch(0.16 0.006 158);
+    --warning: oklch(0.84 0.13 82);
+    --warning-foreground: oklch(0.18 0.01 82);
 
     /* Brand surfaces — graphite dark */
     --shell: #0b0d10;

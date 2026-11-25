@@ -1,35 +1,47 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H5 E4 S4 R4 V4 · v2 */
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { Briefcase, ChevronDown, Plus } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { JobDescriptionInput } from '@/components/job-description-input';
 import { JobDescriptionMarkdown } from '@/components/job-description-markdown';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  ArrowLeft,
-  Search,
-  Loader2,
-  Target,
-  Plus,
-  Briefcase,
-  Building2,
-  FileText,
-  ChevronRight,
-  ExternalLink,
-  Users,
-} from 'lucide-react';
+import { PageHeader } from '@/components/app/page-header';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { StatusBadge, type StatusTone } from '@/components/app/status-badge';
 import { PositioningMissionAnalysisInline } from '@/components/positioning-mission-analysis-inline';
-import { useMissions, useMission, useCreateMission, useCreatePositioning } from '@/lib/queries';
-import { getPositioningMatchingCtaState } from '@/lib/utils/mission-positioning-gate';
+import {
+  useMissions,
+  useMission,
+  useCreateMission,
+  useCreatePositioning,
+  useCandidate,
+} from '@/lib/queries';
+import {
+  getPositioningMatchingCtaState,
+  hasPersistedJobAnalysis,
+} from '@/lib/utils/mission-positioning-gate';
+import type { ExtractedCV } from '@/lib/schema';
 import { cn } from '@/lib/utils';
 
 interface Mission {
@@ -39,6 +51,33 @@ interface Mission {
   job_description: string;
   positioning_count: number;
   created_at: string;
+  /** `GET /api/missions` renvoie toutes les colonnes : l'état de l'analyse de la fiche est dedans. */
+  job_analysis?: unknown;
+  job_analysis_workflow_run_id?: string | null;
+  workflow_last_error?: unknown;
+}
+
+const SHORT_DATE = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+function formatShortDate(iso: string): string {
+  try {
+    return SHORT_DATE.format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+function formatPositioningCount(count: number): string {
+  if (count <= 0) return 'Aucun positionnement';
+  return `${count} positionnement${count > 1 ? 's' : ''}`;
+}
+
+/** État de l'analyse de la fiche, dérivé des seuls champs serveur de la liste. */
+function missionAnalysisStatus(mission: Mission): { tone: StatusTone; label: string; pulse?: boolean } {
+  if (mission.workflow_last_error) return { tone: 'err', label: 'Analyse échouée' };
+  if (mission.job_analysis_workflow_run_id) return { tone: 'info', label: 'Analyse en cours', pulse: true };
+  if (hasPersistedJobAnalysis(mission.job_analysis ?? null)) return { tone: 'ok', label: 'Analysée' };
+  return { tone: 'neutral', label: 'À analyser' };
 }
 
 export default function PositioningNewPage() {
@@ -48,6 +87,14 @@ export default function PositioningNewPage() {
 
   const { data: missionsData, isLoading: isLoadingMissions } = useMissions();
   const missions: Mission[] = Array.isArray(missionsData) ? missionsData : [];
+
+  const { data: candidateData } = useCandidate(candidateId);
+  const candidateDisplayName = useMemo(() => {
+    const pi = (candidateData?.extracted_data as ExtractedCV | null | undefined)?.personalInfo;
+    if (!pi) return null;
+    const name = [pi.firstName, pi.lastName].filter(Boolean).join(' ').trim();
+    return name || null;
+  }, [candidateData?.extracted_data]);
 
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
 
@@ -101,233 +148,178 @@ export default function PositioningNewPage() {
   };
 
   return (
-    <div className="h-full bg-background text-foreground overflow-y-auto">
-      <div className="mx-auto max-w-4xl px-4 py-8 md:px-6">
-        {/* Back button */}
-        <div className="mb-6">
-          <Button variant="outline" onClick={() => router.push(`/review/${candidateId}`)}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Retour au CV
-          </Button>
-        </div>
+    <div className="min-h-full bg-shell text-foreground">
+      <div className="mx-auto max-w-4xl space-y-4 px-6 py-6">
+        <PageHeader
+          title="Nouveau positionnement"
+          description={candidateDisplayName ? `Pour ${candidateDisplayName}` : 'Pour ce candidat'}
+        />
 
-        {/* Header */}
-        <div className="glass-panel rounded-2xl p-8 mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet/20 text-violet neon-ring">
-              <Target className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold title-gradient">Nouveau positionnement</h1>
-              <p className="text-sm text-muted-foreground">
-                Sélectionnez une fiche de mission ou créez-en une nouvelle
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Mission selection */}
-        <div className="glass-panel rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-violet" />
-              Fiches de mission
-            </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowNewMission(true)}
-              className="border-violet/30 text-violet hover:bg-violet/10"
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              Nouvelle mission
-            </Button>
-          </div>
+        <Panel aria-labelledby="missions-heading">
+          <PanelHeader
+            id="missions-heading"
+            icon={Briefcase}
+            title="Fiches de mission"
+            count={isLoadingMissions ? undefined : missions.length}
+            description="Choisissez la fiche à laquelle comparer ce CV."
+            actions={
+              <Button variant="outline" size="sm" onClick={() => setShowNewMission(true)}>
+                <Plus data-icon="inline-start" />
+                Nouvelle mission
+              </Button>
+            }
+          />
 
           {isLoadingMissions ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span className="text-sm">Chargement des missions...</span>
-            </div>
+            <PanelBody
+              padded={false}
+              className="divide-y divide-border"
+              aria-busy="true"
+              aria-label="Chargement des missions"
+            >
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="flex min-h-12 items-center justify-between gap-4 px-4 py-3">
+                  <Skeleton className="h-4 w-1/3 animate-none" />
+                  <Skeleton className="h-4 w-24 animate-none" />
+                </div>
+              ))}
+            </PanelBody>
           ) : missions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card/50">
-                <Briefcase className="h-6 w-6" />
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1">Aucune fiche de mission</p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Créez votre première mission pour commencer le positionnement
-              </p>
-              <Button
-                onClick={() => setShowNewMission(true)}
-                className="bg-violet hover:bg-violet/90"
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                Créer une mission
-              </Button>
-            </div>
+            <PanelBody>
+              <Empty className="border-0 py-6">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon" className="size-10 rounded-full text-muted-foreground">
+                    <Briefcase className="size-5" />
+                  </EmptyMedia>
+                  <EmptyTitle>Aucune fiche de mission</EmptyTitle>
+                  <EmptyDescription>
+                    Une fiche de mission décrit le poste à pourvoir. Le matching compare le CV à cette fiche.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent>
+                  <Button onClick={() => setShowNewMission(true)}>Créer une mission</Button>
+                </EmptyContent>
+              </Empty>
+            </PanelBody>
           ) : (
-            <div className="space-y-2">
-              {missions.length > 1 && !selectedMissionId ? (
-                <p className="text-xs text-muted-foreground mb-1">
-                  Sélectionnez une fiche pour afficher le détail et lancer l&apos;analyse.
-                </p>
-              ) : null}
-              {missions.map((mission) => {
-                const isSelected = selectedMissionId === mission.id;
-                const cta = isSelected ? getPositioningMatchingCtaState(missionDetail) : null;
-                const previewLines = mission.job_description.split('\n').slice(1, 4).join(' ').trim();
-                const preview = previewLines.length > 140 ? previewLines.slice(0, 137) + '...' : previewLines;
+            <PanelBody padded={false}>
+              <ul className="divide-y divide-border">
+                {missions.map((mission) => {
+                  const isSelected = selectedMissionId === mission.id;
+                  const cta = isSelected ? getPositioningMatchingCtaState(missionDetail) : null;
+                  const ctaDisabled = !!cta?.disabled || isCreating;
+                  const status = missionAnalysisStatus(mission);
+                  const panelId = `mission-${mission.id}-details`;
 
-                return (
-                  <div
-                    key={mission.id}
-                    className={`group flex flex-col rounded-xl border transition-all duration-200 ${
-                      isSelected
-                        ? 'bg-violet/10 border-violet/30 violet-ring'
-                        : 'bg-overlay/[0.03] border-overlay/[0.06] hover:border-violet/20 hover:bg-overlay/[0.05]'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMissionId(isSelected ? null : mission.id)}
-                      className="flex w-full flex-col items-stretch gap-0 rounded-xl p-4 text-left font-normal whitespace-normal outline-none transition-colors hover:bg-transparent focus-visible:ring-2 focus-visible:ring-ring/50"
-                    >
-                      <div className="flex items-start gap-3">
-                        {/* Selection indicator */}
-                        <div
-                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
-                            isSelected
-                              ? 'border-violet bg-violet'
-                              : 'border-border group-hover:border-violet/40'
-                          }`}
-                        >
-                          {isSelected && (
-                            <div className="h-2 w-2 rounded-full bg-background" />
+                  return (
+                    <li key={mission.id}>
+                      <button
+                        type="button"
+                        aria-expanded={isSelected}
+                        aria-controls={panelId}
+                        onClick={() => setSelectedMissionId(isSelected ? null : mission.id)}
+                        className={cn(
+                          'flex min-h-12 w-full items-center gap-4 px-4 py-3 text-left outline-none',
+                          'transition-colors duration-[120ms] ease-out motion-reduce:transition-none',
+                          'hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50',
+                          isSelected && 'bg-muted/40',
+                        )}
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-foreground">{mission.title}</span>
+                          {mission.company ? (
+                            <span className="block truncate text-xs text-muted-foreground">{mission.company}</span>
+                          ) : null}
+                        </span>
+                        <span className="hidden shrink-0 items-center gap-4 font-mono text-xs tabular-nums text-muted-foreground sm:flex">
+                          <span>{formatPositioningCount(mission.positioning_count)}</span>
+                          <time dateTime={mission.created_at}>{formatShortDate(mission.created_at)}</time>
+                        </span>
+                        <StatusBadge tone={status.tone} pulse={status.pulse}>
+                          {status.label}
+                        </StatusBadge>
+                        <ChevronDown
+                          className={cn(
+                            'size-4 shrink-0 text-muted-foreground transition-transform duration-[220ms] ease-out motion-reduce:transition-none',
+                            isSelected && 'rotate-180',
                           )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-sm font-semibold ${isSelected ? 'text-foreground' : 'text-foreground/90'}`}>
-                              {mission.title}
-                            </span>
-                            {mission.company && (
-                              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                                <Building2 className="h-3 w-3" />
-                                {mission.company}
-                              </span>
-                            )}
-                          </div>
-
-                          {preview && (
-                            <p className="text-xs text-muted-foreground/70 line-clamp-2 mb-2">
-                              {preview}
-                            </p>
-                          )}
-
-                          <div className="flex items-center gap-3">
-                            {mission.positioning_count > 0 && (
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                <Users className="mr-1 h-2.5 w-2.5" />
-                                {mission.positioning_count} positionnement{mission.positioning_count > 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                            <span className="text-[10px] text-muted-foreground/50">
-                              {new Date(mission.created_at).toLocaleDateString('fr-FR', {
-                                day: 'numeric',
-                                month: 'short',
-                              })}
-                            </span>
-                          </div>
-                        </div>
-
-                        <ChevronRight
-                          className={`h-4 w-4 shrink-0 mt-1 transition-all ${
-                            isSelected
-                              ? 'text-violet rotate-90'
-                              : 'text-muted-foreground/30 group-hover:text-muted-foreground/60'
-                          }`}
+                          aria-hidden
                         />
-                      </div>
-                    </button>
+                      </button>
 
-                    {/* Expanded job description + CTA (hors du bouton de sélection) */}
-                    {isSelected && (
-                      <div className="border-t border-border/40 px-4 pb-4 pt-0">
-                        <div className="ml-8 mt-3 rounded-lg bg-foreground/[0.04] border border-border/60 p-3">
-                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <FileText className="h-3 w-3 text-violet/60" />
-                              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                                Fiche de poste
-                              </span>
-                            </div>
-                            <Link
-                              href={`/positions/${mission.id}`}
-                              className={cn(
-                                buttonVariants({ variant: 'outline', size: 'sm' }),
-                                'h-7 gap-1 text-[11px]',
-                              )}
-                            >
-                              Voir la fiche
-                              <ExternalLink className="h-3 w-3 opacity-70" aria-hidden />
-                            </Link>
+                      {isSelected ? (
+                        <div id={panelId} className="border-t border-border bg-panel-soft px-4 py-4">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2">
+                            <h3 className="text-sm font-semibold text-foreground">Fiche de poste</h3>
+                            <span className="flex items-center gap-3 font-mono text-xs tabular-nums text-muted-foreground">
+                              <span className="sm:hidden">{formatPositioningCount(mission.positioning_count)}</span>
+                              <Link
+                                href={`/positions/${mission.id}`}
+                                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'font-sans text-muted-foreground')}
+                              >
+                                Voir la fiche
+                              </Link>
+                            </span>
                           </div>
                           <JobDescriptionMarkdown
                             content={mission.job_description}
                             clampClassName="line-clamp-6"
-                            className="text-muted-foreground/80"
+                            className="mt-2 text-muted-foreground"
                           />
+
+                          <PositioningMissionAnalysisInline
+                            missionId={mission.id}
+                            mission={missionDetail}
+                            isMissionDetailLoading={isMissionDetailLoading}
+                          />
+
+                          <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                            <p
+                              id="positioning-matching-cta-help"
+                              className="text-xs text-muted-foreground"
+                            >
+                              {cta?.helpText ?? ''}
+                            </p>
+                            <Tooltip>
+                              <TooltipTrigger
+                                render={
+                                  <span className="inline-flex w-full sm:w-auto" tabIndex={ctaDisabled ? 0 : -1} />
+                                }
+                              >
+                                <Button
+                                  type="button"
+                                  size="lg"
+                                  className="w-full sm:w-auto"
+                                  onClick={handleStartPositioning}
+                                  disabled={ctaDisabled}
+                                  aria-describedby="positioning-matching-cta-help"
+                                >
+                                  {isCreating ? <Spinner data-icon="inline-start" /> : null}
+                                  Analyser le matching
+                                </Button>
+                              </TooltipTrigger>
+                              {ctaDisabled && cta?.helpText ? (
+                                <TooltipContent side="bottom">{cta.helpText}</TooltipContent>
+                              ) : null}
+                            </Tooltip>
+                          </div>
                         </div>
-                        <PositioningMissionAnalysisInline
-                          missionId={mission.id}
-                          mission={missionDetail}
-                          isMissionDetailLoading={isMissionDetailLoading}
-                        />
-                        <div className="ml-8 mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p
-                            id="positioning-matching-cta-help"
-                            className="text-[11px] text-muted-foreground"
-                          >
-                            {cta?.helpText ?? ''}
-                          </p>
-                          <Button
-                            type="button"
-                            className="w-full shrink-0 bg-violet hover:bg-violet/90 sm:w-auto"
-                            onClick={handleStartPositioning}
-                            disabled={!!cta?.disabled || isCreating}
-                            aria-describedby="positioning-matching-cta-help"
-                          >
-                            {isCreating ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                              <Search className="mr-2 h-4 w-4" />
-                            )}
-                            Analyser le matching
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </PanelBody>
           )}
-        </div>
+        </Panel>
       </div>
 
       {/* New mission dialog */}
       <Dialog open={showNewMission} onOpenChange={setShowNewMission}>
-        <DialogContent className="sm:max-w-2xl bg-panel border-overlay/10">
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet/20 text-violet">
-              <Plus className="h-4 w-4" />
-            </div>
-            Nouvelle fiche de mission
-          </DialogTitle>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogTitle>Nouvelle fiche de mission</DialogTitle>
 
-          <div className="space-y-4 mt-2">
+          <div className="mt-2 space-y-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="mission-title">Intitulé du poste *</Label>
@@ -335,16 +327,16 @@ export default function PositioningNewPage() {
                   id="mission-title"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ex: Développeur Full-Stack Senior"
+                  placeholder="Développeuse full-stack senior"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mission-company">Entreprise / Client</Label>
+                <Label htmlFor="mission-company">Entreprise ou client</Label>
                 <Input
                   id="mission-company"
                   value={newCompany}
                   onChange={(e) => setNewCompany(e.target.value)}
-                  placeholder="Ex: BNP Paribas"
+                  placeholder="Banque Rhône-Alpes"
                 />
               </div>
             </div>
@@ -371,13 +363,8 @@ export default function PositioningNewPage() {
               <Button
                 onClick={handleCreateMission}
                 disabled={!newTitle.trim() || !newJobDescription.trim() || isCreatingMission}
-                className="bg-violet hover:bg-violet/90"
               >
-                {isCreatingMission ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 h-4 w-4" />
-                )}
+                {isCreatingMission ? <Spinner data-icon="inline-start" /> : null}
                 Créer la mission
               </Button>
             </div>

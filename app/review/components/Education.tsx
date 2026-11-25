@@ -1,11 +1,12 @@
-
 import { memo } from 'react';
 import { ExtractedCV } from '@/lib/schema';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
-import { Trash2, Plus } from 'lucide-react';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Trash2, Plus, GraduationCap } from 'lucide-react';
+import { CvSectionPanel, FIELD_LABEL_CLASS, type CvSectionStatus } from './CvSectionPanel';
+import { SpacingSlider } from './SpacingSlider';
 
 type EducationItem = ExtractedCV['education'][number];
 
@@ -13,9 +14,18 @@ interface EducationProps {
   data: Partial<EducationItem>[] | undefined;
   onChange: (data: Partial<EducationItem>[]) => void;
   readOnly?: boolean;
+  status?: CvSectionStatus;
+  /** Dans le panneau « Dossier » à onglets : en-tête en simple ligne, sans contour. */
+  embedded?: boolean;
 }
 
-export const Education = memo(function Education({ data, onChange, readOnly }: EducationProps) {
+export const Education = memo(function Education({
+  data,
+  onChange,
+  readOnly,
+  status,
+  embedded,
+}: EducationProps) {
   const handleUpdate = (index: number, field: keyof EducationItem, value: string | number) => {
     const newData = [...(data || [])];
     newData[index] = { ...newData[index], [field]: value };
@@ -29,112 +39,123 @@ export const Education = memo(function Education({ data, onChange, readOnly }: E
   };
 
   const handleAdd = () => {
-    onChange([
-      ...(data || []),
-      {
-        degree: 'Degree',
-        school: 'School',
-        year: 'Year',
-      },
-    ]);
+    onChange([...(data || []), { degree: '', school: '', year: '' }]);
   };
 
-  return (
-    <section className="glass-panel p-6 rounded-2xl transition-colors">
-      <div className="flex justify-between items-center mb-4 border-b border-overlay/10 pb-2">
-        <h2 className="text-lg font-semibold text-foreground">
-          Formations
-        </h2>
-        {!readOnly && (
-          <Button variant="ghost" size="sm" onClick={handleAdd} className="text-primary">
-            <Plus data-icon="inline-start" />
-            Ajouter une formation
-          </Button>
-        )}
-      </div>
+  const items = Array.isArray(data) ? data : [];
+  const addButton = (
+    <Button type="button" variant="ghost" size="sm" onClick={handleAdd}>
+      <Plus data-icon="inline-start" />
+      Ajouter
+    </Button>
+  );
 
-      <FieldGroup className="gap-4">
-        {Array.isArray(data) && data.map((edu, i) => edu ? (
-          <div key={i} className="border-b border-overlay/10 pb-4 last:border-0 last:pb-0">
-            <div className="flex justify-between items-start group">
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+  return (
+    <CvSectionPanel
+      id="cv-section-education"
+      title="Formations"
+      icon={GraduationCap}
+      count={items.length > 0 ? items.length : undefined}
+      status={status}
+      embedded={embedded}
+      flush
+      actions={!readOnly && items.length > 0 ? addButton : undefined}
+    >
+      {items.length === 0 ? (
+        readOnly ? (
+          <p className="px-4 py-3 text-sm text-muted-foreground">Les formations apparaîtront ici.</p>
+        ) : (
+          <Empty className="py-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon" className="rounded-full">
+                <GraduationCap className="size-5" />
+              </EmptyMedia>
+              <EmptyTitle>Aucune formation</EmptyTitle>
+              <EmptyDescription>Le CV n’en mentionne pas. Vous pouvez en saisir une.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+                <Plus data-icon="inline-start" />
+                Ajouter une formation
+              </Button>
+            </EmptyContent>
+          </Empty>
+        )
+      ) : (
+        <ul className="divide-y divide-border">
+          {items.map((edu, i) =>
+            edu ? (
+              <li key={i} className="px-4 py-3">
                 {readOnly ? (
-                  <>
-                    <div className="col-span-2">
-                      <div className="font-bold text-foreground">{edu.degree}</div>
-                      <div className="text-muted-foreground">{edu.school}</div>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{edu.degree}</p>
+                      <p className="truncate text-sm text-muted-foreground">{edu.school}</p>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-muted-foreground bg-overlay/10 px-2 py-1 rounded inline-block">{edu.year}</div>
-                    </div>
-                  </>
+                    <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{edu.year}</span>
+                  </div>
                 ) : (
-                  <>
-                    <div className="col-span-2 flex flex-col gap-2">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_6rem_auto]">
                       <Field>
-                        <FieldLabel htmlFor={`edu-degree-${i}`} className="sr-only">Degree</FieldLabel>
+                        <FieldLabel htmlFor={`edu-degree-${i}`} className={FIELD_LABEL_CLASS}>
+                          Diplôme
+                        </FieldLabel>
                         <Input
                           id={`edu-degree-${i}`}
                           value={edu.degree ?? ''}
                           onChange={(e) => handleUpdate(i, 'degree', e.target.value)}
-                          placeholder="Degree"
-                          className="font-bold"
+                          placeholder="Master informatique"
                         />
                       </Field>
                       <Field>
-                        <FieldLabel htmlFor={`edu-school-${i}`} className="sr-only">School</FieldLabel>
+                        <FieldLabel htmlFor={`edu-school-${i}`} className={FIELD_LABEL_CLASS}>
+                          École
+                        </FieldLabel>
                         <Input
                           id={`edu-school-${i}`}
                           value={edu.school ?? ''}
                           onChange={(e) => handleUpdate(i, 'school', e.target.value)}
-                          placeholder="School"
+                          placeholder="Université de Lyon"
                         />
                       </Field>
-                    </div>
-                    <div className="flex items-start gap-2 justify-end">
                       <Field>
-                        <FieldLabel htmlFor={`edu-year-${i}`} className="sr-only">Year</FieldLabel>
+                        <FieldLabel htmlFor={`edu-year-${i}`} className={FIELD_LABEL_CLASS}>
+                          Année
+                        </FieldLabel>
                         <Input
                           id={`edu-year-${i}`}
                           value={edu.year ?? ''}
                           onChange={(e) => handleUpdate(i, 'year', e.target.value)}
-                          placeholder="Year"
-                          className="w-24 text-center"
+                          placeholder="2018"
+                          className="font-mono tabular-nums"
                         />
                       </Field>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        onClick={() => handleRemove(i)}
-                        className="text-muted-foreground hover:text-destructive mt-1"
-                        aria-label="Remove education entry"
-                      >
-                        <Trash2 />
-                      </Button>
+                      <div className="flex items-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => handleRemove(i)}
+                          className="text-muted-foreground hover:text-destructive"
+                          aria-label="Supprimer cette formation"
+                        >
+                          <Trash2 />
+                        </Button>
+                      </div>
                     </div>
-                  </>
+                    <SpacingSlider
+                      id={`edu-spacing-${i}`}
+                      value={edu.spacingAfter}
+                      onChange={(v) => handleUpdate(i, 'spacingAfter', v)}
+                    />
+                  </div>
                 )}
-              </div>
-            </div>
-            {!readOnly && (
-              <Field className="mt-3">
-                <FieldLabel htmlFor={`edu-spacing-${i}`} className="text-xs text-muted-foreground">
-                  Marge en dessous : {edu.spacingAfter ?? 0} pt
-                </FieldLabel>
-                <Slider
-                  id={`edu-spacing-${i}`}
-                  min={0}
-                  max={100}
-                  step={2}
-                  value={[edu.spacingAfter ?? 0]}
-                  onValueChange={(v) => handleUpdate(i, 'spacingAfter', Array.isArray(v) ? v[0] : v)}
-                />
-              </Field>
-            )}
-          </div>
-        ) : null)}
-      </FieldGroup>
-    </section>
+              </li>
+            ) : null,
+          )}
+        </ul>
+      )}
+    </CvSectionPanel>
   );
 });

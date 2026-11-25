@@ -1,26 +1,71 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { useCvBuilderStore } from '@/lib/stores/cv-builder.store';
 import { buildCvPdfFilename } from '@/lib/utils/cv-pdf-filename';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Download, Loader2, FileText, Maximize2 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { Download, FileText, Maximize2 } from 'lucide-react';
 import { pdfEmbedSrc } from '@/lib/utils/pdf-embed';
 
-export function PdfPreview() {
-  const pdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
-  const isPdfLoading = useCvBuilderStore((s) => s.isPdfLoading);
-  const pdfPageCount = useCvBuilderStore((s) => s.pdfPageCount);
+export type PdfPreviewProps = {
+  /** `undefined` = lecture dans le store ; `null` = aucun PDF, volontairement. */
+  pdfBlobUrl?: string | null;
+  isPdfLoading?: boolean;
+  pdfPageCount?: number;
+  /** Nom du fichier téléchargé (sinon construit depuis `cvData` du store). */
+  downloadFilename?: string;
+  /** Titre du panneau (défaut « Aperçu PDF »). */
+  title?: string;
+  /** Texte de l'état vide (défaut « Le PDF apparaîtra ici »). */
+  emptyLabel?: string;
+  /** Phrase sous le titre de l'état vide. */
+  emptyDescription?: string;
+  /** Icône de l'en-tête du panneau (défaut `FileText`). */
+  icon?: LucideIcon;
+  /** Classes du panneau (ex. une hauteur maximale quand il est collant). */
+  className?: string;
+};
+
+function formatPageCount(count: number): string {
+  return `${count} page${count > 1 ? 's' : ''}`;
+}
+
+/**
+ * Aperçu PDF de l'établi (DESIGN.md § Révision v2) : un panneau comme les autres,
+ * en-tête (icône, titre, pages en compteur, plein écran, « Télécharger »), le document
+ * dans le corps, et un `Empty` tant qu'il n'y a pas de PDF. Sans props, lit tout dans
+ * `useCvBuilderStore` (écran CV) ; le positionnement passe ses propres valeurs, chaque
+ * prop absente retombe sur le store.
+ */
+export function PdfPreview({
+  pdfBlobUrl: pdfBlobUrlProp,
+  isPdfLoading: isPdfLoadingProp,
+  pdfPageCount: pdfPageCountProp,
+  downloadFilename,
+  title = 'Aperçu PDF',
+  emptyLabel = 'Le PDF apparaîtra ici',
+  emptyDescription = 'La génération démarre d’elle-même, sans action de votre part.',
+  icon = FileText,
+  className,
+}: PdfPreviewProps = {}) {
+  const storePdfBlobUrl = useCvBuilderStore((s) => s.pdfBlobUrl);
+  const storeIsPdfLoading = useCvBuilderStore((s) => s.isPdfLoading);
+  const storePdfPageCount = useCvBuilderStore((s) => s.pdfPageCount);
   const cvData = useCvBuilderStore((s) => s.cvData);
+  const pdfBlobUrl = pdfBlobUrlProp === undefined ? storePdfBlobUrl : pdfBlobUrlProp;
+  const isPdfLoading = isPdfLoadingProp ?? storeIsPdfLoading;
+  const pdfPageCount = pdfPageCountProp ?? storePdfPageCount;
   const [fullscreen, setFullscreen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
   const [iframeHeight, setIframeHeight] = useState(0);
 
+  // Hauteur du document : largeur × √2 (format A4) × nombre de pages, mesurée sur le panneau.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -38,114 +83,96 @@ export function PdfPreview() {
       .join(' ');
     const a = document.createElement('a');
     a.href = pdfBlobUrl;
-    a.download = buildCvPdfFilename(name);
+    a.download = downloadFilename ?? buildCvPdfFilename(name);
     a.click();
   };
 
+  const generating = isPdfLoading && !pdfBlobUrl;
+  const Icon = icon;
+
+  const emptyState = (
+    <Empty className="h-full min-h-40 py-8">
+      <EmptyHeader>
+        <EmptyMedia variant="icon" className="rounded-full">
+          {generating ? <Spinner className="size-4" /> : <Icon className="size-5" />}
+        </EmptyMedia>
+        <EmptyTitle>{generating ? 'Génération du PDF…' : emptyLabel}</EmptyTitle>
+        {generating ? null : <EmptyDescription>{emptyDescription}</EmptyDescription>}
+      </EmptyHeader>
+    </Empty>
+  );
+
   return (
     <>
-      <div ref={containerRef} className="flex flex-col rounded-2xl glass-panel overflow-hidden">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="flex items-center text-sm font-semibold text-foreground">
-            <FileText className="mr-2 h-4 w-4 text-accent" />
-            Aperçu PDF
-          </h2>
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setFullscreen(true)}
-              disabled={!pdfBlobUrl}
-              className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDownload}
-              disabled={!pdfBlobUrl}
-              className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
-            >
-              <Download className="mr-1.5 h-3.5 w-3.5" />
-              Télécharger
-            </Button>
-          </div>
-        </div>
+      <Panel ref={containerRef} className={cn('overflow-hidden', className)} aria-label={title}>
+        <PanelHeader
+          title={title}
+          icon={icon}
+          count={pdfBlobUrl && pdfPageCount > 0 ? formatPageCount(pdfPageCount) : undefined}
+          className="shrink-0"
+          actions={
+            <>
+              {isPdfLoading && pdfBlobUrl ? (
+                <Spinner className="mr-1 text-muted-foreground" aria-label="Génération du PDF en cours" />
+              ) : null}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setFullscreen(true)}
+                disabled={!pdfBlobUrl}
+                aria-label="Afficher en plein écran"
+              >
+                <Maximize2 />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDownload} disabled={!pdfBlobUrl}>
+                <Download data-icon="inline-start" />
+                Télécharger
+              </Button>
+            </>
+          }
+        />
 
-        <div className="relative bg-background dark:bg-shell">
-          {isPdfLoading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          )}
-
+        <PanelBody padded={false} className="min-h-0 overflow-auto bg-background">
           {pdfBlobUrl ? (
             <iframe
               src={pdfEmbedSrc(pdfBlobUrl)}
               style={{ height: iframeHeight || undefined }}
-              className="w-full bg-background dark:bg-shell"
-              title="CV Preview"
+              className="block w-full bg-background"
+              title="Aperçu du CV"
             />
           ) : (
-            <div className="flex h-64 flex-col items-center justify-center text-muted-foreground">
-              <FileText className="mb-2 h-10 w-10" />
-              <p className="text-sm">Le PDF apparaîtra ici</p>
-            </div>
+            emptyState
           )}
-        </div>
-      </div>
+        </PanelBody>
+      </Panel>
 
       <Dialog open={fullscreen} onOpenChange={setFullscreen}>
-        <DialogContent
-          className="sm:max-w-[90vw] h-[90vh] flex flex-col gap-0 p-0 bg-background dark:bg-shell border border-border"
-          showCloseButton={false}
-        >
-          <div className="flex items-center justify-between border-b border-border px-5 py-3">
-            <DialogTitle className="flex items-center text-sm font-semibold text-foreground">
-              <FileText className="mr-2 h-4 w-4 text-accent" />
-              Aperçu PDF
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownload}
-                disabled={!pdfBlobUrl}
-                className="border-accent/40 text-accent hover:bg-accent/15 hover:text-accent-foreground dark:text-accent-foreground"
-              >
-                <Download className="mr-1.5 h-3.5 w-3.5" />
+        <DialogContent className="flex h-[90vh] flex-col gap-0 p-0 sm:max-w-[90vw]" showCloseButton={false}>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-2">
+            <DialogTitle className="text-sm font-semibold leading-6 text-foreground">{title}</DialogTitle>
+            <div className="flex items-center gap-1">
+              {isPdfLoading ? (
+                <Spinner className="mr-1 text-muted-foreground" aria-label="Génération du PDF en cours" />
+              ) : null}
+              <Button variant="outline" size="sm" onClick={handleDownload} disabled={!pdfBlobUrl}>
+                <Download data-icon="inline-start" />
                 Télécharger
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFullscreen(false)}
-                className="text-muted-foreground hover:text-foreground hover:bg-overlay/10"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setFullscreen(false)}>
                 Fermer
               </Button>
             </div>
           </div>
 
-          <div className="relative flex-1 min-h-0 bg-background dark:bg-shell">
-            {isPdfLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 dark:bg-shell/70">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            )}
-
+          <div className="min-h-0 flex-1 bg-background">
             {pdfBlobUrl ? (
               <iframe
                 src={pdfEmbedSrc(pdfBlobUrl)}
-                className="h-full w-full bg-background dark:bg-shell"
-                title="CV Preview — Plein écran"
+                className="block h-full w-full bg-background"
+                title="Aperçu du CV en plein écran"
               />
             ) : (
-              <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-                <FileText className="mb-2 h-10 w-10" />
-                <p className="text-sm">Le PDF apparaîtra ici</p>
-              </div>
+              emptyState
             )}
           </div>
         </DialogContent>
