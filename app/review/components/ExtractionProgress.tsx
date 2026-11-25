@@ -1,6 +1,7 @@
 'use client';
 
-import { AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, Sparkles } from 'lucide-react';
 import { AiGenerationInfoIcon } from '@/components/ai/ai-generation-info';
 import type { ExtractedCV } from '@/lib/schema';
 import type { CvExtractionStreamMeta } from '@/lib/types/cv-extraction-stream';
@@ -9,6 +10,8 @@ import type { StepStateRow } from '@/lib/workflow/compute-step-status';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
+import { Panel, PanelBody, PanelHeader } from '@/components/app/panel';
+import { StatusBadge } from '@/components/app/status-badge';
 import { formatExtractionSummary } from './format-extraction-summary';
 
 interface Step {
@@ -77,7 +80,7 @@ function phaseLabel(data: Partial<ExtractedCV> | null, streamMeta: CvExtractionS
   if (streamMeta?.phase === 'transcription') {
     const chars = streamMeta.transcriptionChars;
     return chars != null && chars > 0
-      ? `Transcription du PDF… ${chars.toLocaleString('fr-FR')} caractères`
+      ? `Transcription du PDF… ${chars.toLocaleString('fr-FR')} caractères`
       : 'Transcription du PDF…';
   }
   if (streamMeta?.phase === 'reading') return 'Lecture du document Word…';
@@ -115,12 +118,16 @@ export interface ExtractionProgressProps {
   extractionModelsByTask?: Record<string, string> | null;
 }
 
+const DETAILS_ID = 'cv-extraction-steps';
+
 /**
- * Zone `status` de l'en-tête (DESIGN.md § L'état de l'IA) : un seul endroit, trois états.
- * - en cours : une ligne (phase en cours, compteur mono), puis `WorkflowStepList` ;
- * - terminé : une ligne mono « Extraction terminée en 42 s · 5 étapes », détail dans un `<details>` ;
- * - échec : `Alert` destructive avec « Réessayer », les étapes restent visibles dessous.
- * `WorkflowStepList` porte l'unique région `aria-live`.
+ * Zone `status` de l'en-tête (DESIGN.md § L'état de l'IA, § Révision v2) : un panneau
+ * compact, un seul endroit, trois états.
+ * - en cours : en-tête (« Extraction », compteur mono, phase en cours, pastille qui respire),
+ *   corps = `WorkflowStepList` (unique région `aria-live`) ;
+ * - terminé : une ligne de 44 px (en-tête seul) avec la synthèse mono et « Voir le détail »
+ *   qui déplie les étapes ;
+ * - échec : pastille « Échec », `Alert` destructive avec « Réessayer », les étapes dessous.
  */
 export function ExtractionProgress({
   data,
@@ -135,6 +142,7 @@ export function ExtractionProgress({
   extractionModelsLabel,
   extractionModelsByTask,
 }: ExtractionProgressProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const completedCount = steps.filter((s) => s.check(data)).length;
   const infoIcon = (
     <AiGenerationInfoIcon
@@ -147,60 +155,95 @@ export function ExtractionProgress({
 
   if (!error && !isStreaming && !showSteps && !completed) return null;
 
-  return (
-    <div className="flex flex-col gap-3">
-      {error ? (
-        <Alert variant="destructive">
-          <AlertCircle />
-          <AlertTitle>L&apos;extraction a échoué</AlertTitle>
-          <AlertDescription>{error.message}</AlertDescription>
-          <AlertAction>
-            <Button variant="outline" size="sm" onClick={error.onRetry} disabled={error.retryPending}>
-              {error.retryPending && <Spinner data-icon="inline-start" />}
-              Réessayer
-            </Button>
-          </AlertAction>
-        </Alert>
-      ) : null}
+  const count = `${completedCount}/${steps.length}`;
+  const hasRows = rows.length > 0;
 
-      {isStreaming ? (
-        <div className="flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-sm text-foreground">{phaseLabel(data, streamMeta)}</p>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="font-mono text-xs tabular-nums text-muted-foreground">
-              {completedCount}/{steps.length}
-            </span>
-            {infoIcon}
-          </div>
-        </div>
-      ) : null}
-
-      {showSteps && rows.length > 0 ? (
-        <WorkflowStepList rows={rows} summaryLine={error ? summaryLine : null} />
-      ) : null}
-
-      {completed ? (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="font-mono text-xs tabular-nums text-muted-foreground">
+  // ─── Terminé : une ligne, le détail à la demande ─────────────────────────
+  if (completed && !error) {
+    const open = detailsOpen && hasRows;
+    return (
+      <Panel aria-label="État de l’extraction">
+        <PanelHeader
+          as="h2"
+          title="Extraction"
+          icon={Sparkles}
+          count={count}
+          className={open ? undefined : 'border-b-0'}
+          actions={
+            <>
+              <span className="hidden font-mono text-xs tabular-nums text-muted-foreground sm:inline">
+                {formatExtractionSummary({ durationMs, stepCount: rows.length })}
+              </span>
+              {hasRows ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setDetailsOpen((v) => !v)}
+                  aria-expanded={open}
+                  aria-controls={DETAILS_ID}
+                >
+                  {open ? 'Masquer le détail' : 'Voir le détail'}
+                </Button>
+              ) : null}
+              {infoIcon}
+            </>
+          }
+        />
+        {open ? (
+          <PanelBody id={DETAILS_ID} className="space-y-3">
+            <p className="font-mono text-xs tabular-nums text-muted-foreground sm:hidden">
               {formatExtractionSummary({ durationMs, stepCount: rows.length })}
             </p>
+            <WorkflowStepList rows={rows} summaryLine={null} />
+          </PanelBody>
+        ) : null}
+      </Panel>
+    );
+  }
+
+  // ─── En cours ou en échec ────────────────────────────────────────────────
+  const showBody = !!error || (showSteps && hasRows);
+  return (
+    <Panel aria-label="État de l’extraction" aria-busy={!error && isStreaming ? true : undefined}>
+      <PanelHeader
+        as="h2"
+        title="Extraction"
+        icon={Sparkles}
+        count={count}
+        description={!error && isStreaming ? phaseLabel(data, streamMeta) : undefined}
+        className={showBody ? undefined : 'border-b-0'}
+        actions={
+          <>
+            {error ? (
+              <StatusBadge tone="err">Échec</StatusBadge>
+            ) : (
+              <StatusBadge tone="info" pulse>
+                En cours
+              </StatusBadge>
+            )}
             {infoIcon}
-          </div>
-          {rows.length > 0 ? (
-            <details className="group text-xs">
-              <summary className="w-fit cursor-pointer list-none text-muted-foreground underline-offset-4 hover:text-foreground hover:underline [&::-webkit-details-marker]:hidden">
-                <span className="group-open:hidden">Voir le détail des étapes</span>
-                <span className="hidden group-open:inline">Masquer le détail des étapes</span>
-              </summary>
-              <div className="mt-3 border-t border-border pt-3">
-                <WorkflowStepList rows={rows} summaryLine={null} />
-              </div>
-            </details>
+          </>
+        }
+      />
+      {showBody ? (
+        <PanelBody className="space-y-3">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircle />
+              <AlertTitle>L&apos;extraction a échoué</AlertTitle>
+              <AlertDescription>{error.message}</AlertDescription>
+              <AlertAction>
+                <Button variant="outline" size="sm" onClick={error.onRetry} disabled={error.retryPending}>
+                  {error.retryPending && <Spinner data-icon="inline-start" />}
+                  Réessayer
+                </Button>
+              </AlertAction>
+            </Alert>
           ) : null}
-        </div>
+          {showSteps && hasRows ? <WorkflowStepList rows={rows} summaryLine={error ? summaryLine : null} /> : null}
+        </PanelBody>
       ) : null}
-    </div>
+    </Panel>
   );
 }
 

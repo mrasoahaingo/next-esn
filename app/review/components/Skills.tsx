@@ -1,13 +1,14 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
-import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Sparkles, Star, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Sparkles, Star, ChevronDown, ChevronUp, Wrench } from 'lucide-react';
 import { memo, useState } from 'react';
 import type { ExtractedCV, Skill } from '@/lib/schema';
-import { FIELD_LABEL_CLASS, SectionHeading } from './SectionHeading';
+import { CvSectionPanel, FIELD_LABEL_CLASS, type CvSectionStatus } from './CvSectionPanel';
+import { SpacingSlider } from './SpacingSlider';
+import { countIncludedSkills } from './count-included-skills';
 
 type SkillsData = Partial<ExtractedCV['skills']>;
 
@@ -17,6 +18,7 @@ interface SkillsProps {
   readOnly?: boolean;
   spacingAfter?: number;
   onSpacingChange?: (value: number) => void;
+  status?: CvSectionStatus;
 }
 
 const CATEGORIES: { key: keyof NonNullable<SkillsData>; label: string }[] = [
@@ -63,7 +65,7 @@ function SkillBadge({ skill }: { skill: Skill }) {
   return badge;
 }
 
-function CategorySection({
+function CategoryRow({
   categoryKey,
   label,
   items,
@@ -127,11 +129,14 @@ function CategorySection({
   };
 
   return (
-    <FieldGroup className="gap-2">
-      <p className={FIELD_LABEL_CLASS}>{label}</p>
-      {!readOnly && (
-        <Field orientation="horizontal" className="flex-row items-end gap-2">
-          <div className="min-w-0 flex-1">
+    <div className="space-y-2.5 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className={FIELD_LABEL_CLASS}>
+          {label}
+          <span className="ml-1.5 font-mono font-normal tabular-nums">{added.length}</span>
+        </p>
+        {!readOnly && (
+          <Field orientation="horizontal" className="w-auto flex-row items-center gap-1.5">
             <FieldLabel htmlFor={`skill-add-${categoryKey}`} className="sr-only">
               Ajouter une compétence : {label}
             </FieldLabel>
@@ -142,21 +147,22 @@ function CategorySection({
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
               onKeyDown={handleKeyDown}
+              className="h-7 w-40 text-[0.8rem] sm:w-52"
             />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={handleAdd}
-            aria-label={`Ajouter à ${label}`}
-          >
-            <Plus />
-          </Button>
-        </Field>
-      )}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              onClick={handleAdd}
+              aria-label={`Ajouter à ${label}`}
+            >
+              <Plus />
+            </Button>
+          </Field>
+        )}
+      </div>
       {/* Incluses dans le PDF */}
-      <div className="flex flex-wrap gap-1.5">{added.map(toggleButton)}</div>
+      {added.length > 0 ? <div className="flex flex-wrap gap-1.5">{added.map(toggleButton)}</div> : null}
       {/* Mises de côté : un clic les inclut */}
       {notAdded.length > 0 && (
         <>
@@ -169,16 +175,23 @@ function CategorySection({
             aria-expanded={showOthers}
           >
             {showOthers ? <ChevronUp /> : <ChevronDown />}
-            {notAdded.length} autre{notAdded.length > 1 ? 's' : ''}
+            {notAdded.length} mise{notAdded.length > 1 ? 's' : ''} de côté
           </Button>
           {showOthers && <div className="flex flex-wrap gap-1.5">{notAdded.map(toggleButton)}</div>}
         </>
       )}
-    </FieldGroup>
+    </div>
   );
 }
 
-export const Skills = memo(function Skills({ data, onChange, readOnly, spacingAfter, onSpacingChange }: SkillsProps) {
+export const Skills = memo(function Skills({
+  data,
+  onChange,
+  readOnly,
+  spacingAfter,
+  onSpacingChange,
+  status,
+}: SkillsProps) {
   const safeData = data ?? {};
 
   const normalizeItems = (items: (Skill | string)[] | undefined): Skill[] =>
@@ -199,37 +212,44 @@ export const Skills = memo(function Skills({ data, onChange, readOnly, spacingAf
     onChange({ ...safeData, [key]: current });
   };
 
+  const includedCount = countIncludedSkills(safeData);
+  const rows = CATEGORIES.map((cat) => ({ ...cat, items: normalizeItems(safeData[cat.key]) })).filter(
+    (cat) => cat.items.length > 0,
+  );
+
   return (
-    <section aria-labelledby="cv-section-skills">
-      <SectionHeading id="cv-section-skills" title="Compétences" />
-      <FieldGroup className="gap-5">
-        {CATEGORIES.map((cat) => (
-          <CategorySection
-            key={cat.key}
-            categoryKey={cat.key}
-            label={cat.label}
-            items={normalizeItems(safeData[cat.key])}
-            onAdd={(value) => handleAdd(cat.key, value)}
-            onToggleAdded={(index) => handleToggleAdded(cat.key, index)}
-            readOnly={readOnly}
-          />
-        ))}
-      </FieldGroup>
-      {!readOnly && onSpacingChange && (
-        <Field className="mt-5">
-          <FieldLabel htmlFor="skills-spacing" className={FIELD_LABEL_CLASS}>
-            Marge en dessous : <span className="font-mono tabular-nums">{spacingAfter ?? 0}&nbsp;pt</span>
-          </FieldLabel>
-          <Slider
-            id="skills-spacing"
-            min={0}
-            max={100}
-            step={2}
-            value={[spacingAfter ?? 0]}
-            onValueChange={(v) => onSpacingChange(Array.isArray(v) ? v[0] : v)}
-          />
-        </Field>
+    <CvSectionPanel
+      id="cv-section-skills"
+      title="Compétences"
+      icon={Wrench}
+      count={includedCount > 0 ? includedCount : undefined}
+      status={status}
+      flush
+      footer={
+        !readOnly && onSpacingChange ? (
+          <SpacingSlider id="skills-spacing" value={spacingAfter} onChange={onSpacingChange} />
+        ) : undefined
+      }
+    >
+      {rows.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-muted-foreground">
+          {readOnly ? 'Les compétences apparaîtront ici.' : 'Aucune compétence extraite.'}
+        </p>
+      ) : (
+        <div className="divide-y divide-border">
+          {rows.map((cat) => (
+            <CategoryRow
+              key={cat.key}
+              categoryKey={cat.key}
+              label={cat.label}
+              items={cat.items}
+              onAdd={(value) => handleAdd(cat.key, value)}
+              onToggleAdded={(index) => handleToggleAdded(cat.key, index)}
+              readOnly={readOnly}
+            />
+          ))}
+        </div>
       )}
-    </section>
+    </CvSectionPanel>
   );
 });

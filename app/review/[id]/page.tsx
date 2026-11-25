@@ -1,4 +1,4 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R5 V3 */
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R4 V4 · v2 */
 'use client';
 
 import { useLayoutEffect, useCallback, useMemo, useRef, useEffect } from 'react';
@@ -21,7 +21,8 @@ import { formatDuration, formatSeconds } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/app/status-badge';
+import { InitialsAvatar } from '@/components/app/initials-avatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Trash2 } from 'lucide-react';
+import { AlignLeft, Briefcase, GraduationCap, Trash2, User, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/app/page-header';
@@ -385,13 +386,22 @@ export default function ReviewPage() {
     return name.length > 0 ? name : null;
   }, [cvData, candidateData?.extracted_data]);
 
-  const title =
+  const titleText =
     candidateName ??
     (isExtractionWorkflowActive
       ? 'CV en cours d’extraction'
       : needsManualExtraction
         ? 'CV à extraire'
         : (candidateNameFromFile(originalFileUrl) ?? 'CV'));
+  // Signe de vie (DESIGN.md § Révision v2) : l'avatar à initiales devant le nom du candidat.
+  const title = candidateName ? (
+    <span className="flex min-w-0 items-center gap-3">
+      <InitialsAvatar name={candidateName} size="lg" />
+      <span className="truncate">{titleText}</span>
+    </span>
+  ) : (
+    titleText
+  );
 
   const importDate = formatImportDate((candidateData as { created_at?: string } | undefined)?.created_at);
   const description = !candidateData ? 'Chargement…' : importDate ? `CV importé le ${importDate}` : null;
@@ -400,15 +410,17 @@ export default function ReviewPage() {
   const showSessionTime = totalSessionMs > 0;
   const saveBadge =
     isDirty && !isLoading ? (
-      <Badge variant="outline" className="border-warning/40 font-sans text-warning">
+      <StatusBadge tone="warn" className="font-sans">
         Modifications non sauvegardées
-      </Badge>
+      </StatusBadge>
     ) : isReady && !isDirty ? (
-      <Badge variant="outline" className="border-success/40 font-sans text-success">
+      <StatusBadge tone="ok" className="font-sans">
         Validé
-      </Badge>
+      </StatusBadge>
     ) : hasData && !isLoading ? (
-      <span>Enregistré</span>
+      <StatusBadge tone="neutral" className="font-sans">
+        Enregistré
+      </StatusBadge>
     ) : null;
 
   const meta =
@@ -512,23 +524,25 @@ export default function ReviewPage() {
   const showForm = hasData || isLoading;
 
   return (
-    <div className="min-h-full bg-background px-4 py-5 text-foreground md:px-6">
+    <div className="min-h-full bg-shell px-4 py-6 text-foreground md:px-6">
       <PageHeader title={title} description={description} meta={meta} actions={actions} status={statusZone} />
 
       {/* Diptyque asymétrique : le dossier à gauche, ce qu'il devient à droite */}
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <div className="min-w-0 space-y-8 lg:col-span-7">
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div className="min-w-0 space-y-4 lg:col-span-7">
           {showForm ? (
             <>
-              <SectionShell status={status('personalInfo')} label={SECTION_LABELS.personalInfo}>
+              <SectionShell status={status('personalInfo')} label={SECTION_LABELS.personalInfo} title="Identité" icon={User}>
                 <PersonalInfo
+                  status={status('personalInfo')}
                   data={safeData?.personalInfo}
                   onChange={handlePersonalInfo}
                   readOnly={isLoading}
                 />
               </SectionShell>
-              <SectionShell status={status('summary')} label={SECTION_LABELS.summary}>
+              <SectionShell status={status('summary')} label={SECTION_LABELS.summary} title="Résumé" icon={AlignLeft}>
                 <Summary
+                  status={status('summary')}
                   data={safeData?.summary}
                   onChange={handleSummary}
                   readOnly={isLoading}
@@ -536,8 +550,9 @@ export default function ReviewPage() {
                   onSpacingChange={(v) => handleSectionSpacing('summary', v)}
                 />
               </SectionShell>
-              <SectionShell status={status('skills')} label={SECTION_LABELS.skills}>
+              <SectionShell status={status('skills')} label={SECTION_LABELS.skills} title="Compétences" icon={Wrench}>
                 <Skills
+                  status={status('skills')}
                   data={safeSkills}
                   onChange={handleSkills}
                   readOnly={isLoading}
@@ -545,15 +560,17 @@ export default function ReviewPage() {
                   onSpacingChange={(v) => handleSectionSpacing('skills', v)}
                 />
               </SectionShell>
-              <SectionShell status={status('education')} label={SECTION_LABELS.education}>
+              <SectionShell status={status('education')} label={SECTION_LABELS.education} title="Formations" icon={GraduationCap}>
                 <Education
+                  status={status('education')}
                   data={safeEducation}
                   onChange={handleEducation}
                   readOnly={isLoading}
                 />
               </SectionShell>
-              <SectionShell status={status('experiences')} label={SECTION_LABELS.experiences}>
+              <SectionShell status={status('experiences')} label={SECTION_LABELS.experiences} title="Expériences" icon={Briefcase}>
                 <Experiences
+                  status={status('experiences')}
                   data={safeExperiences}
                   onChange={handleExperiences}
                   skills={safeSkills}
@@ -565,26 +582,26 @@ export default function ReviewPage() {
           ) : (
             <>
               {/* Établi vide : les mêmes sections, en attente */}
-              <SectionShell status="pending" label="Identité">
+              <SectionShell status="pending" label="Identité" title="Identité" icon={User}>
                 {null}
               </SectionShell>
-              <SectionShell status="pending" label="Résumé">
+              <SectionShell status="pending" label="Résumé" title="Résumé" icon={AlignLeft}>
                 {null}
               </SectionShell>
-              <SectionShell status="pending" label="Compétences">
+              <SectionShell status="pending" label="Compétences" title="Compétences" icon={Wrench}>
                 {null}
               </SectionShell>
-              <SectionShell status="pending" label="Formations">
+              <SectionShell status="pending" label="Formations" title="Formations" icon={GraduationCap}>
                 {null}
               </SectionShell>
-              <SectionShell status="pending" label="Expériences">
+              <SectionShell status="pending" label="Expériences" title="Expériences" icon={Briefcase}>
                 {null}
               </SectionShell>
             </>
           )}
         </div>
 
-        <aside className="min-w-0 lg:sticky lg:top-5 lg:col-span-5 lg:self-start" aria-label="Aperçu PDF">
+        <aside className="min-w-0 lg:sticky lg:top-6 lg:col-span-5 lg:self-start" aria-label="Aperçu PDF">
           {showForm ? (
             <PdfPreviewSync
               data={cvData}
@@ -592,7 +609,7 @@ export default function ReviewPage() {
               templateId={pdfTemplateId}
             />
           ) : null}
-          <PdfPreview title="Aperçu" className="lg:max-h-[calc(100svh-6.5rem)]" />
+          <PdfPreview title="Aperçu" className="lg:max-h-[calc(100svh-7rem)]" />
         </aside>
       </div>
     </div>
