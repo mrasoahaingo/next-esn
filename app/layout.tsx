@@ -70,7 +70,7 @@ export default function RootLayout({
   return (
     <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${albert.variable} app-surface antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${albert.variable} bg-shell antialiased`}
       >
         <ClerkProvider
           afterSignOutUrl="/sign-in"
