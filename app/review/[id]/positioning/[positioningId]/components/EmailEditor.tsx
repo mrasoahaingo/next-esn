@@ -54,8 +54,8 @@ function ToolbarButton({
 }
 
 /**
- * Un e-mail (objet + corps TipTap). C'est un document : la carte est justifiée
- * (`bg-card border rounded-xl`), sans verre.
+ * Un e-mail (objet + corps TipTap), sans carte propre : il vit dans le corps d'un
+ * panneau « E-mail client » ou « E-mail candidat », dont l'en-tête porte le titre visible.
  */
 export function EmailEditor({
   email,
@@ -106,8 +106,7 @@ export function EmailEditor({
   }, [editor, email?.body]);
 
   return (
-    <section className="rounded-xl border border-border bg-card p-4" aria-label={title}>
-      <h3 className="mb-4 text-sm font-semibold text-foreground">{title}</h3>
+    <section aria-label={title}>
       <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor={subjectId} className="text-xs text-muted-foreground">
