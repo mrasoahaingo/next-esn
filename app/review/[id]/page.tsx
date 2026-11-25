@@ -1,7 +1,7 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md · designed-as-app · critique: P4 H4 E4 S4 R4 V4 · v2 */
 'use client';
 
-import { useLayoutEffect, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useLayoutEffect, useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -34,10 +34,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AlignLeft, Briefcase, GraduationCap, Trash2, User, Wrench } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageHeader } from '@/components/app/page-header';
+import { Panel } from '@/components/app/panel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import { PersonalInfo } from '../components/PersonalInfo';
 import { Skills } from '../components/Skills';
 import { Experiences } from '../components/Experiences';
@@ -48,6 +51,18 @@ import { PdfPreviewSync } from '../components/PdfPreviewSync';
 import { SectionShell } from '../components/SectionShell';
 import { ExtractionProgress, getSectionStatus } from '../components/ExtractionProgress';
 import { candidateFileName, candidateNameFromFile } from '../components/candidate-file-name';
+import { countIncludedSkills } from '../components/count-included-skills';
+
+type SectionKey = 'personalInfo' | 'summary' | 'skills' | 'education' | 'experiences';
+
+/** Onglets du dossier, dans l'ordre du CV. */
+const SECTION_TABS: { key: SectionKey; label: string }[] = [
+  { key: 'personalInfo', label: 'Identité' },
+  { key: 'summary', label: 'Résumé' },
+  { key: 'skills', label: 'Compétences' },
+  { key: 'education', label: 'Formations' },
+  { key: 'experiences', label: 'Expériences' },
+];
 
 const SECTION_LABELS = {
   personalInfo: 'Extraction de l’identité…',
@@ -64,6 +79,17 @@ function formatImportDate(iso: string | null | undefined): string | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   return IMPORT_DATE_FORMAT.format(date);
+}
+
+/** Corps d'un onglet en attente : le squelette calme de `SectionShell`, avec le padding du panneau. */
+function TabSkeleton({ label }: { label: string }) {
+  return (
+    <div className="p-4">
+      <SectionShell status="pending" label={label}>
+        {null}
+      </SectionShell>
+    </div>
+  );
 }
 
 /** Supprimer : `ghost` icône derrière l'`AlertDialog`, la seule confirmation de l'écran. */
@@ -523,25 +549,74 @@ export default function ReviewPage() {
 
   const showForm = hasData || isLoading;
 
+  // ─── Onglets du dossier : choix de l'utilisateur, sinon la section en cours ──
+  const [chosenTab, setChosenTab] = useState<SectionKey | null>(null);
+  const streamingTab = isLoading ? SECTION_TABS.find((t) => status(t.key) === 'streaming')?.key : undefined;
+  const activeTab: SectionKey = chosenTab ?? streamingTab ?? 'personalInfo';
+  const tabCounts: Partial<Record<SectionKey, number>> = {
+    skills: countIncludedSkills(safeSkills),
+    education: safeEducation.length,
+    experiences: safeExperiences.length,
+  };
+
   return (
     <div className="min-h-full bg-shell px-4 py-6 text-foreground md:px-6">
       <PageHeader title={title} description={description} meta={meta} actions={actions} status={statusZone} />
 
       {/* Diptyque asymétrique : le dossier à gauche, ce qu'il devient à droite */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="min-w-0 space-y-4 lg:col-span-7">
-          {showForm ? (
-            <>
-              <SectionShell status={status('personalInfo')} label={SECTION_LABELS.personalInfo} title="Identité" icon={User}>
+        <Panel className="min-w-0 lg:col-span-7" aria-label="Dossier du candidat">
+          <Tabs value={activeTab} onValueChange={(v) => setChosenTab(String(v) as SectionKey)} className="gap-0">
+            {/* Bande d'onglets : défile horizontalement sous md, sans faire défiler la page */}
+            <div className="overflow-x-auto border-b border-border px-4">
+              <TabsList variant="line" className="h-11 gap-5 p-0">
+                {SECTION_TABS.map((tab) => {
+                  const tabStatus = isLoading ? status(tab.key) : 'done';
+                  return (
+                    <TabsTrigger key={tab.key} value={tab.key} className="h-full flex-none px-0 after:bottom-0">
+                      {tabStatus !== 'done' ? (
+                        <span
+                          className={cn(
+                            'size-1.5 shrink-0 rounded-full',
+                            tabStatus === 'streaming'
+                              ? 'bg-primary animate-pulse motion-reduce:animate-none'
+                              : 'bg-muted-foreground/40',
+                          )}
+                          aria-hidden
+                        />
+                      ) : null}
+                      {tab.label}
+                      {tabCounts[tab.key] ? (
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">
+                          {tabCounts[tab.key]}
+                        </span>
+                      ) : null}
+                      {tabStatus !== 'done' ? (
+                        <span className="sr-only">{tabStatus === 'streaming' ? ' (en cours)' : ' (en attente)'}</span>
+                      ) : null}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
+
+            <TabsContent value="personalInfo">
+              {showForm && status('personalInfo') !== 'pending' ? (
                 <PersonalInfo
+                  embedded
                   status={status('personalInfo')}
                   data={safeData?.personalInfo}
                   onChange={handlePersonalInfo}
                   readOnly={isLoading}
                 />
-              </SectionShell>
-              <SectionShell status={status('summary')} label={SECTION_LABELS.summary} title="Résumé" icon={AlignLeft}>
+              ) : (
+                <TabSkeleton label={SECTION_LABELS.personalInfo} />
+              )}
+            </TabsContent>
+            <TabsContent value="summary">
+              {showForm && status('summary') !== 'pending' ? (
                 <Summary
+                  embedded
                   status={status('summary')}
                   data={safeData?.summary}
                   onChange={handleSummary}
@@ -549,9 +624,14 @@ export default function ReviewPage() {
                   spacingAfter={sectionSpacing.summary}
                   onSpacingChange={(v) => handleSectionSpacing('summary', v)}
                 />
-              </SectionShell>
-              <SectionShell status={status('skills')} label={SECTION_LABELS.skills} title="Compétences" icon={Wrench}>
+              ) : (
+                <TabSkeleton label={SECTION_LABELS.summary} />
+              )}
+            </TabsContent>
+            <TabsContent value="skills">
+              {showForm && status('skills') !== 'pending' ? (
                 <Skills
+                  embedded
                   status={status('skills')}
                   data={safeSkills}
                   onChange={handleSkills}
@@ -559,17 +639,27 @@ export default function ReviewPage() {
                   spacingAfter={sectionSpacing.skills}
                   onSpacingChange={(v) => handleSectionSpacing('skills', v)}
                 />
-              </SectionShell>
-              <SectionShell status={status('education')} label={SECTION_LABELS.education} title="Formations" icon={GraduationCap}>
+              ) : (
+                <TabSkeleton label={SECTION_LABELS.skills} />
+              )}
+            </TabsContent>
+            <TabsContent value="education">
+              {showForm && status('education') !== 'pending' ? (
                 <Education
+                  embedded
                   status={status('education')}
                   data={safeEducation}
                   onChange={handleEducation}
                   readOnly={isLoading}
                 />
-              </SectionShell>
-              <SectionShell status={status('experiences')} label={SECTION_LABELS.experiences} title="Expériences" icon={Briefcase}>
+              ) : (
+                <TabSkeleton label={SECTION_LABELS.education} />
+              )}
+            </TabsContent>
+            <TabsContent value="experiences">
+              {showForm && status('experiences') !== 'pending' ? (
                 <Experiences
+                  embedded
                   status={status('experiences')}
                   data={safeExperiences}
                   onChange={handleExperiences}
@@ -577,29 +667,12 @@ export default function ReviewPage() {
                   onSkillsChange={handleSkills}
                   readOnly={isLoading}
                 />
-              </SectionShell>
-            </>
-          ) : (
-            <>
-              {/* Établi vide : les mêmes sections, en attente */}
-              <SectionShell status="pending" label="Identité" title="Identité" icon={User}>
-                {null}
-              </SectionShell>
-              <SectionShell status="pending" label="Résumé" title="Résumé" icon={AlignLeft}>
-                {null}
-              </SectionShell>
-              <SectionShell status="pending" label="Compétences" title="Compétences" icon={Wrench}>
-                {null}
-              </SectionShell>
-              <SectionShell status="pending" label="Formations" title="Formations" icon={GraduationCap}>
-                {null}
-              </SectionShell>
-              <SectionShell status="pending" label="Expériences" title="Expériences" icon={Briefcase}>
-                {null}
-              </SectionShell>
-            </>
-          )}
-        </div>
+              ) : (
+                <TabSkeleton label={SECTION_LABELS.experiences} />
+              )}
+            </TabsContent>
+          </Tabs>
+        </Panel>
 
         <aside className="min-w-0 lg:sticky lg:top-6 lg:col-span-5 lg:self-start" aria-label="Aperçu PDF">
           {showForm ? (
